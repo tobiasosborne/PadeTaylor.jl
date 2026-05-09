@@ -2,6 +2,6 @@
   "database": "dolt",
   "backend": "dolt",
   "dolt_mode": "embedded",
-  "dolt_database": "PadeTaylor.jl",
-  "project_id": "bb0762d3-85ce-4295-943b-8efe0fa0e992"
+  "dolt_database": "padetaylor",
+  "project_id": "bd821ce7-7be6-4812-81e9-c57cef64ebcf"
 }
