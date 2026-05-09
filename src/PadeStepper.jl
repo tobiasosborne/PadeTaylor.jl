@@ -1,13 +1,316 @@
 """
     PadeTaylor.PadeStepper
 
-Orchestrates one Taylor → Padé → step pipeline iteration. Composes
-`Coefficients`, `RobustPade`, `StepControl`. See DESIGN.md §1 + ADR-0001.
+Take one Padé-Taylor step of a second-order analytic ODE
+`u'' = f(z, u, u')` from a current state `(z, u, u')` to a new state
+`(z+h, u(z+h), u'(z+h))` via the Fornberg–Weideman 2011 inner-loop
+recipe: build a high-order local Taylor jet, rescale-and-convert it to
+a robust Padé rational, evaluate the rational (and its derivative) at
+the corresponding unit point.  This module is the first place in the
+four-layer architecture where the whole pipeline runs end-to-end.
 
-Stubbed during Phase Z; implementation in Phase 5.
+## Where this fits — the four-layer architecture (ADR-0001)
+
+The Phase-3 `Coefficients` module produces a coefficient vector
+`[c_0, c_1, …, c_order]` of `u(z + h')`'s local Taylor expansion about
+the current `z`.  The Phase-2 `RobustPade` module turns that vector
+into a `PadeApproximant{T}` — a numerator/denominator pair whose
+analytic continuation domain extends *past* the radius of convergence
+of the Taylor series, capturing nearby poles of the solution by
+arranging for the denominator to vanish at the right place rather than
+allowing the numerator to blow up.  This module composes the two: it
+is the consumer of both, and the producer for the higher-level
+`Problems.solve_pade` driver in Phase 6.
+
+The state object `PadeStepperState{T}` is deliberately minimal — three
+scalar fields `z`, `u`, `up`.  We do not cache the `PadeApproximant`
+across calls; each step re-computes from scratch.  Storage and dense
+output (the *trajectory*) is Phase 6's concern, kept out of this layer.
+
+## The 5-step algorithm
+
+For `pade_step!(state, f, order, h)`:
+
+  1. **Taylor jet.**  Call `Coefficients.taylor_coefficients_2nd(f,
+     state.z, state.u, state.up, order)` to get `coefs_u`, the length-
+     `(order+1)` Taylor coefficients of `u(z + h')` about `h' = 0`.
+  2. **Rescale & Padé of u.**  Form `c̃_k = h^k · c_k` (the Taylor
+     coefficients of `u(z + h·t)` in the variable `t`), then build the
+     diagonal Padé approximant `P_u = robust_pade(c̃, m, n)` with
+     `m = n = order ÷ 2`.  See "Why we rescale by h^k" below; the
+     rescaling is essential to keep `RobustPade`'s special-case-zero
+     and trim-near-zero thresholds from misfiring on near-pole jets.
+  3. **Evaluate at `t = 1`.**  `new_u = P_u(1)` — Horner-Horner-divide.
+     Because of the `h^k` rescaling, `t = 1` corresponds to the
+     original step `h`, not the original `z + h`: the Padé is *local*
+     to the expansion centre, in the rescaled variable.
+  4. **Evaluate `u'` via the chain rule.**  `u(z + h') = P_u(h'/h)`
+     ⇒ `u'(z + h) = P_u'(1) / h`, where `P_u'` is the analytic
+     derivative of the rational `P_u` (numerator-and-denominator
+     differentiation; see `_evaluate_pade_deriv`).  No second SVD;
+     no second `robust_pade` call.  See "Why analytic differentiation
+     beats re-Padé" below for the empirical numbers that motivated
+     this choice.
+  5. **Mutate state.**  `state.z += h`; `state.u`, `state.up` get the
+     new values.  Return the same `state` object.
+
+Each subcall (Coefficients, RobustPade, evaluation) inherits the fail-
+fast contract: a singular `C̃` in the SVD step, a denominator that
+vanishes at `t = 1`, an unsupported `order` — all throw with context
+rather than returning silently-wrong values.
+
+## Why we rescale by `h^k`
+
+`RobustPade.robust_pade` carries two scale-sensitive thresholds (it
+faithfully ports Chebfun's `padeapprox.m`, lines 69 and 134):
+
+  - The "function ≡ 0" special case fires when
+    `max|c[1:m+1]| ≤ tol · max|c|`.
+  - The trailing-near-zero numerator trim fires when
+    `|a[k]| ≤ tol · ‖c‖₂`.
+
+Near a pole, the raw Taylor coefficients of the *solution* span
+many orders of magnitude — `c_0 ≈ u(z)` may be `O(10²)` while `c_30 ≈
+3·10³³` (case 5.1.4 in `test/padestepper_test.jl`, with `z = 0.9` near
+a Weierstrass-℘ pole at `z = 1`).  `tol · ‖c‖∞` is then `tol ·
+3·10³³ ≈ 3·10¹⁹`, comfortably above `c_0 = 100` — the special-case-
+zero check fires spuriously and `robust_pade` returns the literal
+function `r ≡ 0`.
+
+The standard FW-2011 fix (FW 2011 §3.2 line 396 in
+`references/markdown/FW2011_painleve_methodology_JCP230/
+FW2011_painleve_methodology_JCP230.md`) is to absorb the step length
+into the variable: substitute `h' = h · t`, so the Taylor series in
+`h'` becomes `Σ c_k h^k · t^k = Σ c̃_k t^k`, with `c̃_k = h^k · c_k`.
+The rescaled `c̃` reflect *the coefficients' actual contributions to
+the value at `h`*, so they have comparable magnitudes whenever the
+step is well-chosen, and the special-case threshold no longer
+misfires.  After Padé-converting `c̃`, evaluation at `t = 1` recovers
+the original `Σ c_k h^k`.
+
+This is also why the RobustPade module *itself* does not scale: that
+layer is a faithful port of `padeapprox.m` (its determinism contract
+is bit-identical to the Octave oracle).  The scaling is the
+caller's job and lives here.
+
+## Why analytic differentiation beats re-Padé for `u'`
+
+A natural-looking alternative is to build a *separate* Padé from the
+formally-differentiated coefficients `coefs_up[k] = (k+1)·coefs_u[k+1]`
+and evaluate that.  The argument for it is structural: the analytic
+derivative of an `(m, n)` rational is an `(m + n - 1, 2n)` rational,
+breaking diagonal Padé's degree-balance, while a fresh Padé of the
+derivative coefficients restores diagonality.
+
+Empirically (see the four oracle cases in `test/padestepper_test.jl`),
+that argument loses to a more practical effect: the formally-
+differentiated coefficients `(k+1)·c_{k+1}` have a *steeper* growth
+than `c_k` itself by the factor `k+1`, so the resulting `c̃'` after
+`h^k` rescaling is more skewed than `c̃`, and the `(14, 14)` Padé
+inherits worse conditioning than the `(15, 15)` parent.  In test
+5.1.2 (compose two ℘-steps to land near the pole) the re-Padé path
+hits relative error `2.7·10⁻¹¹` for `u'`, while the analytic-
+derivative path hits `7·10⁻¹³` — a `40×` improvement, and the
+difference between failing and passing the spec.
+
+The analytic-derivative path also saves one `robust_pade` call
+(one fewer SVD per step, ≈ 30% wall time on Float64 at order 30).
+The argument we lose — that the `(m+n-1, 2n)` rational degrades
+extrapolation near the pole boundary — is real, but only matters
+for *evaluating P_u' at points distant from `t = 1`*.  We evaluate
+at exactly one point (`t = 1`), so the degree-imbalance argument
+does not apply.
+
+## Diagonal-Padé default `(order ÷ 2, order ÷ 2)`
+
+FW 2011 §5.1 line 277 in `references/markdown/FW2011_painleve_methodology_JCP230/
+FW2011_painleve_methodology_JCP230.md:271-281` settles on `(15, 15)`
+for `order = 30`.  We generalise to `(order÷2, order÷2)`.  For odd
+`order`, integer division biases `m = n` downward by one — losing one
+denominator-degree; this is acceptable because the FW recipe is
+empirically insensitive to ±1 in `(m, n)` provided diagonality is
+preserved (RESEARCH.md §7.1).
+
+## References
+
+  - FW 2011 §3.1 (pole handling rationale), §3.2 (step rescaling),
+    §5.1 line 277 (`(15, 15)` default) —
+    `references/markdown/FW2011_painleve_methodology_JCP230/
+    FW2011_painleve_methodology_JCP230.md:271-281`.
+  - `src/Coefficients.jl` — Phase-3 Taylor jet generator.
+  - `src/RobustPade.jl` — Phase-2 `PadeApproximant{T}` + `robust_pade`.
+  - `external/probes/padestepper-oracle/` — three-source oracle
+    (Mathematica `WeierstrassP` + `NDSolve`, `mpmath.odefun`).
+  - ADR-0001 — four-layer architecture rationale.
 """
 module PadeStepper
 
-function pade_step! end  # placeholder
+using ..Coefficients: taylor_coefficients_2nd
+using ..RobustPade:   PadeApproximant, robust_pade
+
+export PadeStepperState, pade_step!
+
+# -----------------------------------------------------------------------------
+# State
+# -----------------------------------------------------------------------------
+
+"""
+    PadeStepperState{T}(z, u, up)
+
+Mutable state for one Padé-Taylor stepper integrating a 2nd-order ODE
+`u'' = f(z, u, u')`.  Three scalar fields, all of element type `T`:
+
+  - `z::T`  — current independent variable.
+  - `u::T`  — `u(z)` at the current point.
+  - `up::T` — `u'(z)` at the current point.
+
+The constructor coerces its arguments to `T` (`PadeStepperState{Float64}(0,
+1, 2)` works even though `0`, `1`, `2` are `Int`s).
+"""
+mutable struct PadeStepperState{T}
+    z::T
+    u::T
+    up::T
+
+    # Inner constructor: coerce to T so callers can pass mixed-type
+    # literals (`PadeStepperState{Float64}(0, 1.5, 2)` works) without
+    # the outer-constructor / default-inner-constructor recursion trap
+    # (an outer `PadeStepperState{T}(z, u, up) where {T}` form would
+    # call itself, since computed `T(z)` values are dispatch-equivalent
+    # to the unconstrained outer signature).
+    PadeStepperState{T}(z, u, up) where {T} = new{T}(T(z), T(u), T(up))
+end
+
+# -----------------------------------------------------------------------------
+# One step
+# -----------------------------------------------------------------------------
+
+"""
+    pade_step!(state::PadeStepperState{T}, f, order::Int, h::Real) -> state
+
+Take one Padé-Taylor step of the 2nd-order ODE `u'' = f(z, u, u')`,
+mutating `state` in place: `state.z += h`, and `state.u`, `state.up`
+become the values of `u(z+h)`, `u'(z+h)` produced by the local diagonal
+Padé approximation in the rescaled variable `t = h'/h`.
+
+The 5-step algorithm and the rationale for `h^k` rescaling, diagonal
+Padé, evaluation at `t = 1`, and analytic differentiation for `u'`
+are in the module docstring.
+
+Throws if any subcall throws — the failure modes inherited from
+`Coefficients` (`order < 2`) and `RobustPade` (singular SVD, near-zero
+denominator), or the local check for a denominator that vanishes
+exactly at `t = 1` (`DomainError`).
+"""
+function pade_step!(state::PadeStepperState{T}, f,
+                    order::Int, h::Real) where {T}
+    order ≥ 2 || throw(ArgumentError(
+        "pade_step!: order must be ≥ 2 (got $order); the 2nd-order " *
+        "Taylor recursion needs at least two passes."))
+
+    h_T = T(h)
+
+    # Step 1: Taylor coefficients of u about the current z.
+    coefs_u = taylor_coefficients_2nd(f, state.z, state.u, state.up, order)
+
+    # Step 2: rescale c̃_k = h^k · c_k and Padé in the unit variable.
+    coefs_u_scaled = _rescale_by_powers(coefs_u, h_T)
+    m = n = order ÷ 2
+    P_u = robust_pade(coefs_u_scaled, m, n)
+
+    # Steps 3 & 4: evaluate u and u' at t = 1.  u'(z+h) = P_u'(1)/h
+    # follows from the chain rule on u(z + h') = P_u(h'/h).
+    one_T  = one(T)
+    new_u  = _evaluate_pade(P_u, one_T)
+    new_up = _evaluate_pade_deriv(P_u, one_T) / h_T
+
+    # Step 5: mutate state.
+    state.z  = state.z + h_T
+    state.u  = new_u
+    state.up = new_up
+    return state
+end
+
+# -----------------------------------------------------------------------------
+# Helpers
+# -----------------------------------------------------------------------------
+
+"""
+    _rescale_by_powers(c::Vector{T}, h::T) -> Vector{T}
+
+Return the rescaled coefficient vector `c̃[k+1] = h^k · c[k+1]`,
+implementing the variable substitution `h' → h · t` discussed in the
+module docstring.  Computed by an accumulator `h_pow *= h` to avoid
+the `O(N)` cost of a fresh `h^k` per coefficient and the catastrophic
+loss of precision at large `k` from a separate `pow` per index.
+"""
+function _rescale_by_powers(c::Vector{T}, h::T) where {T}
+    out = Vector{T}(undef, length(c))
+    h_pow = one(T)
+    @inbounds for k in 1:length(c)
+        out[k] = c[k] * h_pow
+        h_pow = h_pow * h
+    end
+    return out
+end
+
+"""
+    _evaluate_pade(P::PadeApproximant{T}, z::T) -> T
+
+Evaluate `P(z) = (Σ a[k+1] z^k) / (Σ b[k+1] z^k)` with Horner's rule
+on numerator and denominator separately, then divide.  Throws
+`DomainError(z, …)` if the denominator vanishes exactly at `z` —
+treated as a fail-fast signal that the step landed on a pole of the
+local Padé (Rule 1).
+
+Two-pass Horner (rather than fused) keeps the numerical paths
+identical to a hand evaluation of `Σ a[k+1] z^k`; we don't try to
+balance numerator-denominator scale here because `b` is already
+normalised to `b[1] = 1` by `RobustPade._trim_and_normalise`, so the
+denominator's leading magnitude is `O(1)` for small `z`.
+"""
+function _evaluate_pade(P::PadeApproximant{T}, z::T) where {T}
+    num = zero(T)
+    @inbounds for k in length(P.a):-1:1
+        num = num * z + P.a[k]
+    end
+    den = zero(T)
+    @inbounds for k in length(P.b):-1:1
+        den = den * z + P.b[k]
+    end
+    iszero(den) && throw(DomainError(z,
+        "PadeStepper._evaluate_pade: denominator vanishes at z=$z; the " *
+        "step landed exactly on a pole of the local Padé approximant. " *
+        "Suggestion: shorten the step length, or step around the pole " *
+        "in the complex plane."))
+    return num / den
+end
+
+"""
+    _evaluate_pade_deriv(P::PadeApproximant{T}, z::T) -> T
+
+Evaluate `(d/dz) P(z)` via the quotient rule:
+`P' = (N' · D - N · D') / D²`, where `N(z) = Σ a[k+1] z^k`,
+`D(z) = Σ b[k+1] z^k`, and the derivative coefficients are
+`N'[k] = k · a[k+1]` (and similarly for `D'`).
+
+Implemented by four Horner sweeps (N, N', D, D') sharing the loop
+counter; cost is one `_evaluate_pade` plus three Horner passes.
+Throws `DomainError(z, …)` if `D(z) = 0` (same fail-fast pole-
+detection as `_evaluate_pade`).
+"""
+function _evaluate_pade_deriv(P::PadeApproximant{T}, z::T) where {T}
+    n = length(P.a)
+    m = length(P.b)
+    N = zero(T); @inbounds for k in n:-1:1; N = N * z + P.a[k]; end
+    D = zero(T); @inbounds for k in m:-1:1; D = D * z + P.b[k]; end
+    Nt = zero(T); @inbounds for k in n:-1:2; Nt = Nt * z + (k - 1) * P.a[k]; end
+    Dt = zero(T); @inbounds for k in m:-1:2; Dt = Dt * z + (k - 1) * P.b[k]; end
+    iszero(D) && throw(DomainError(z,
+        "PadeStepper._evaluate_pade_deriv: denominator vanishes at z=$z; " *
+        "the step landed exactly on a pole of the local Padé approximant. " *
+        "Suggestion: shorten the step length."))
+    return (Nt * D - N * Dt) / (D * D)
+end
 
 end # module PadeStepper

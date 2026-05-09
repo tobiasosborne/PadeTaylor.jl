@@ -1,0 +1,18 @@
+# Phase 5 PadeStepper oracle (Python mpmath cross-check).
+# Cross-validates capture.wl (wolframscript NDSolve) at 40 dps.
+
+# Case 5.1.1 -- mpmath.odefun on u'' = 6u^2 to z=0.5.
+u_5_1_1_at_05_py  = 4.004464669003085
+up_5_1_1_at_05_py = 15.964278048239478
+
+# Case 5.1.2 -- mpmath.odefun on u'' = 6u^2 to z=0.9.
+u_5_1_2_at_09_py  = 100.0000071428569
+up_5_1_2_at_09_py = 1999.999714285702
+
+# Case 5.1.3 -- mpmath.odefun on u'' = 6u^2 + z (PI) to z=0.5.
+u_5_1_3_PI_at_05_py  = 4.03401777189584
+up_5_1_3_PI_at_05_py = 16.20453545986487
+
+# Case 5.1.4 -- mpmath.odefun on u'' = 6u^2 to z=0.95 (near pole at z=1).
+u_5_1_4_at_095_py  = 400.0000004464263
+up_5_1_4_at_095_py = 15999.999964285582

@@ -407,37 +407,57 @@ function step_pade_root end
 `StepControl`. **This is where the whole pipeline first runs end-to-
 end.**
 
-**Public API**:
+**Public API (as shipped 2026-05-09)**:
 ```julia
-struct PadeStepperState{T} ... end  # current z, y, y', last PadeApproximant
+mutable struct PadeStepperState{T}
+    z::T
+    u::T
+    up::T
+end
 
 """
-    pade_step!(state::PadeStepperState{T}, prob::PadeTaylorProblem)
+    pade_step!(state::PadeStepperState{T}, f, order::Int, h::Real) -> state
 
-Take one Padé-Taylor step. Returns the new state. Algorithm:
-1. Compute Taylor coefs at current `(z, y, y')` to `prob.order`.
-2. Convert to Padé approximant via `robust_pade`.
-3. Compute step length via `step_control(prob.step_strategy, …)`.
-4. Determine direction (5-direction sampling or steepest-descent).
-5. Evaluate Padé at `z + h·dir` to get next `(y, y')`.
-6. Update state.
+Take one Padé-Taylor step of `u'' = f(z, u, u')`, mutating state in
+place.  Step direction (5-direction / steepest-descent) and adaptive
+step-size selection are deferred to Phase 6's solve_pade — Phase 5
+accepts an explicit `h`.
 """
 function pade_step! end
 ```
+
+**Algorithm (5 steps, as shipped — corrected from DESIGN's original
+6-step sketch)**:
+1. Generate Taylor coefs of u via `Coefficients.taylor_coefficients_2nd`.
+2. **Rescale `c̃_k = h^k · c_k`** (variable substitution `h' = h·t` per
+   FW 2011 §3.2; absolutely necessary near poles where raw Taylor
+   coefs span 30+ orders of magnitude and `RobustPade`'s
+   `tol·‖c‖∞`-based zero-detection fires spuriously). Build diagonal
+   Padé `P_u = robust_pade(c̃, m, n)` with `m = n = order ÷ 2`.
+3. Evaluate `new_u = P_u(1)`.
+4. **Compute `new_up` via analytic differentiation of P_u at t=1**,
+   then divide by h (chain rule from `u(z+h') = P_u(h'/h)`).  NOT a
+   second `robust_pade` call on the formal-derivative coefficients —
+   empirically the re-Padé path loses ~40× accuracy on test 5.1.2.
+5. Mutate state.
+
+See `src/PadeStepper.jl`'s top docstring + `docs/worklog/003-phase-5-
+padestepper.md` for the rationale on (a) the h^k rescaling and (b) the
+analytic-differentiation choice.
 
 **TDD step 5.1**:
 
 | test | input | expected | shape |
 |---|---|---|---|
-| 5.1.1 | one ℘ step at `(z=0, h=0.5, order=30)` from FW 2011 ICs | `u(0.5)` matches closed-form ℘ to `1e-13` rel | port-and-verify (FW 2011 ref data) |
-| 5.1.2 | one ℘ step at `(z=0.5, h=0.5)` continuing from 5.1.1 | `u(1.0)` matches closed-form to `1e-13` rel | spec-from-scratch (compose) |
-| 5.1.3 | one PI step at tritronquée IC, `h=0.5` | `u(0.5)` finite (no NaN/Inf), differs from ℘ by `O(0.5²)` (z-term contribution) | spec-from-scratch |
-| 5.1.4 | step right next to a ℘ pole — `(z = 1.36, h = 0.05)` (pole at `z ≈ 1.363`) | step succeeds; result has finite magnitude; agrees with closed-form to `1e-10` (loosened due to cancellation) | spec-from-scratch |
-| 5.1.5 | mutation-proof: invert the sign of `(z + h)` in the Padé evaluation → 5.1.1 fails | RED | mutation-proof |
+| 5.1.1 | one ℘ step at `(z=0, h=0.5, order=30)` from FW ICs | `u(0.5), u'(0.5)` match ℘ closed-form to 1e-13 rel | port-and-verify (3-source oracle: closed-form ≡ NDSolve ≡ mpmath.odefun) |
+| 5.1.2 | compose: continue 5.1.1 to z=0.9 (h=0.4) | matches ℘ closed-form to 1e-12 rel [DEVIATION: DESIGN said z=1.0, but z=1.0 IS the pole] | port-and-verify |
+| 5.1.3 | one PI step at FW ICs (`u'' = 6u² + z`) | `u(0.5)` finite, matches NDSolve oracle to 1e-13 rel; differs from ℘ by ≈0.0296 | port-and-verify [DEVIATION: DESIGN said tritronquée IC; no paper-pinned tritronquée IC at high precision available, FW IC tests same pipeline + +z RHS] |
+| 5.1.4 | near-pole step (z=0.9 → 0.95, h=0.05) on u''=6u² | matches closed-form to 1e-11 rel [DEVIATION: DESIGN said z=1.36 pole; the actual pole on this lattice is z=1, oracle confirms 1/u(1)=0] | port-and-verify |
+| 5.1.5 | mutation-proof: (A) sign flip on Padé eval point bites all `state.u`; (C) chain-rule `*h_T` instead of `/h_T` bites all `state.up` | RED | mutation-proof |
 
-**Acceptance for Phase 5**: all 5 tests pass; commit. **After this
-commit, the inner-loop algorithm is proven correct**; remaining
-phases are scaffolding.
+**Acceptance for Phase 5**: all tests pass (16 individual @test calls
+across 4 testsets, 207/207 total). **The inner-loop algorithm is
+proven correct**; remaining phases are scaffolding.
 
 ### Phase 6 — `Problems` (Tier 4, ~150 LOC + ~150 LOC tests)
 
