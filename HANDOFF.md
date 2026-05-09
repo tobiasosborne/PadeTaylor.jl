@@ -215,48 +215,42 @@ Test summary: 66/66 GREEN (61 + 5 new).
 
 ## Specific instructions for Phase 4 (`StepControl`)
 
-### Goal
+### Status — Phase 4 SHIPPED 2026-05-09
 
-Implement two step-size strategies:
+Phase 4 is complete (commit recording StepControl, three-source oracle,
+DESIGN.md correction). 192/192 tests GREEN. The original spec text
+below contained an incorrect formula; the corrections (and the rest
+of the paragraph) are kept here as a record of the spec drift caught
+at implementation time. **Read `src/StepControl.jl`'s top docstring +
+`docs/worklog/002-phase-4-spec-correction.md` before changing this
+module.**
+
+### Goal (as shipped)
+
+Two step-size strategies in `src/StepControl.jl`:
 - `step_jorba_zou(coefs, ε_abs; ε_rel = ε_abs)` — Jorba-Zou 2005
-  §3.2 eq. 3-8 verbatim.
-- `step_pade_root(P::PadeApproximant{T}, z_current, target)` — FW
-  2011 §3.1 path heuristic via denominator-root distance.
+  **§3.3.1 eq. 11** in the fixed-order form (TI.jl-equivalent), NOT
+  §3.2 eq. 3-8. The `0.7`-safety factor cited in the original spec
+  has no source.
+- `step_pade_root(P, z_current, target)` — FW 2011 §3.1 forward-
+  projection-onto-direction heuristic.
 
-### Ground truth
+### Ground truth (verified)
 
-- `RESEARCH.md §3.5` — the Jorba-Zou formula spelled out.
 - `references/markdown/JorbaZou2005_taylor_IVP_package_ExpMath14/
-  JorbaZou2005_taylor_IVP_package_ExpMath14.md` — §3.2 of the paper
-  (the marker-converted markdown is in `references/markdown/` once
-  you confirm the file exists; it was a marker job in Stage 0).
-- `external/TaylorIntegration.jl/src/integrator/stepsize.jl` line 26 —
-  the verbatim Julia implementation we cross-validate against.
-- `RESEARCH.md §1.1.4` — FW 2011 path-direction options.
-- `DESIGN.md §4 Phase 4` — the 5-test test plan.
+  JorbaZou2005_taylor_IVP_package_ExpMath14.md:613-645` — §3.3.1 first
+  step-size control, eq. 11.
+- `external/TaylorIntegration.jl/src/integrator/stepsize.jl:17-89` —
+  ported verbatim (`stepsize` + `_second_stepsize`).
+- `external/probes/stepcontrol-oracle/{capture.jl, capture.py,
+  capture.wl, verify.jl}` — three-source pin: TI.jl ≡ mpmath ≡
+  wolframscript at 47 decimal digits on the canonical case.
 
-### Test plan
+### Polynomials.jl roots with Arb element type — still open
 
-5 tests in DESIGN.md. The load-bearing one is **4.1.2**: our
-`step_jorba_zou` output must match TaylorIntegration.jl's
-`stepsize.jl:line 26` implementation to 1e-15 relative on the same
-coefficient input. **Capture the TI.jl oracle output before writing
-the impl.**
-
-### Key gotcha
-
-Jorba-Zou eq. 3-8 has a `safety factor` `exp(-0.7 / (p - 1))`.  Watch
-the sign and the integer `p` (= `length(coefs) - 1`); off-by-ones
-here are a classic source of "passes the test by accident" bugs.
-
-### Polynomials.jl roots with Arb element type — open question
-
-Per `RESEARCH.md §8 Q3`, `Polynomials.jl::roots` with `Arb` element
-type is unverified. For `step_pade_root` you'll need to compute roots
-of `Q(z) = sum b[k] z^(k-1)`. **Probe this empirically before
-committing** to `Polynomials.jl::roots`. If it fails, fall back to a
-generic companion-matrix eigenvalue solve via `GenericSchur.jl` (and
-file a bead for the regression).
+`Polynomials.roots` is validated for `Float64` / `Complex{Float64}`
+only.  Arb element type for the Padé-root step is deferred to v2; see
+the deferred bead `padetaylor-…` (file at session close per Rule 9).
 
 ## Specific instructions for Phase 5 (`PadeStepper`)
 

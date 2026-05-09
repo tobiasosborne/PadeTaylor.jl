@@ -356,12 +356,24 @@ else.
     step_jorba_zou(coefs::Vector{T}, eps_abs::Real; eps_rel = eps_abs)
         -> T
 
-Estimated step length per Jorba-Zou 2005 §3.2 eq. 3-8. With p = order
-of the Taylor expansion (= `length(coefs) - 1`):
-    ρ = min((eps_abs / |c[p]|)^(1/p), (eps_abs / |c[p-1]|)^(1/(p-1)))
-    h = (ρ / e²) · exp(-0.7 / (p - 1))
-Plus secondary control: largest h such that all |c[j]|·h^j ≤ eps_abs.
-Returns h.
+Estimated step length per Jorba-Zou 2005 §3.3.1 eq. 11, in the
+fixed-order form ported verbatim from `TaylorIntegration.jl::stepsize`.
+With p = `length(coefs) - 1`:
+    h = min over k ∈ {p-1, p} of (ε / |c[k+1]|)^(1/k)
+where `ε = eps_abs` if `eps_abs ≥ eps_rel · |c₀|` else `eps_rel · |c₀|`
+(TI.jl ε-resolution).  Zero candidates are skipped; if both are zero,
+fall back to the TI.jl `_second_stepsize` scan.
+
+CORRECTED 2026-05-09 (commit fixing Phase 4): an earlier version of
+this spec asserted `h = (ρ/e²)·exp(-0.7/(p-1))`.  The `0.7` constant
+has no source in either the paper or TI.jl (grep both: zero matches);
+it was a hallucination at spec-write time.  The paper's `/e²` is for
+the asymptotically-optimal-(p,h) regime where p is also free; we fix
+p = 30 (FW 2011), so the `/e²` is absorbed into the ε substitution
+(see the worked algebra in `src/StepControl.jl`'s top-of-file
+docstring).  Three-source consensus on the canonical test case
+(c[k]=1/k!, p=30, ε=1e-12): TI.jl ≡ mpmath ≡ wolframscript =
+4.50120637033898607690318848315848021108523516609 (47 decimal digits).
 """
 function step_jorba_zou end
 
@@ -381,11 +393,11 @@ function step_pade_root end
 
 | test | input | expected | shape |
 |---|---|---|---|
-| 4.1.1 | `coefs = [1, 1, 1/2, …, 1/30!]`, `eps_abs = 1e-12` | `h ≈ ρ_jorba_zou(p=30, ε=1e-12)` ≈ `(1e-12 · 30!)^(1/30) / e²` | port-and-verify (Jorba-Zou eq. 3-8) |
-| 4.1.2 | match TaylorIntegration.jl's `stepsize.jl:line 26` output for the same `coefs` to `1e-15` rel | exact (TI.jl is verified Jorba-Zou) | port-and-verify |
-| 4.1.3 | `P = (1)/(1 - z/2)`, `z_current = 0`, `target = 5` | step ≤ `2 - 0 = 2` (pole at `z = 2`) | spec-from-scratch |
-| 4.1.4 | `P = 1/(1 + (z - 3)²)`, `z_current = 0`, `target = 5` | step ≈ `3` (pole at `z = 3 ± i`) along real axis | spec-from-scratch |
-| 4.1.5 | mutation-proof: change `0.7` to `0.07` in step_jorba_zou → assert 4.1.2 fails | RED | mutation-proof |
+| 4.1.1 | `coefs = [1/k! for k=0..30]`, `eps_abs = 1e-12` | `h = 4.501206370338986` (three-source consensus pinned in `test/_oracle_stepcontrol.jl`) | port-and-verify (paper §3.3.1 + TI.jl) |
+| 4.1.2 | same input | round-trip equality with `TaylorIntegration.stepsize` to 1e-15 rel | port-and-verify |
+| 4.1.3 | `P = 1/(1 - z/2)`, `z_current = 0`, `target = 5` | step = `2` (pole at `z = 2`) | spec-from-scratch |
+| 4.1.4 | `P = 1/(1 + (z - 3)²)`, `z_current = 0`, `target = 5` | step = `3` (real-axis projection of `3 ± i` poles) | spec-from-scratch |
+| 4.1.5 | mutation-proof: change exponent `1/k → 1/(k+1)` in step_jorba_zou → 4.1.1/4.1.2 RED; change `real → imag` in step_pade_root projection → 4.1.3/4.1.4 RED | RED | mutation-proof |
 
 **Acceptance for Phase 4**: all 5 tests pass.
 

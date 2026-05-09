@@ -1,0 +1,17 @@
+# Phase 4 StepControl oracle (Python mpmath/sympy cross-check).
+# Cross-validates capture.jl (TI.jl) and capture.wl (wolframscript).
+
+# Case 4.1.1 -- (eps · k!)^(1/k) for k in {29, 30}, eps = 1e-12.
+# Source: mpmath at 50 decimal digits.
+h_4_1_1_at_29 = 4.501206370338986
+h_4_1_1_at_30 = 4.795000636590567
+h_4_1_1_min   = 4.501206370338986
+h_4_1_1_min_50dps = "4.50120637033898607690318848315848021108523516609"
+
+# Case 4.1.3 -- roots of Q(z) = 1 - z/2.  Pole at z = 2.
+roots_4_1_3 = ComplexF64[(2+0j)]
+step_4_1_3_expected = 2.0
+
+# Case 4.1.4 -- roots of Q(z) = 1 - 0.6 z + 0.1 z^2.  Poles at z = 3 ± i.
+roots_4_1_4 = ComplexF64[(3-1j), (3+1j)]
+step_4_1_4_expected = 3.0
