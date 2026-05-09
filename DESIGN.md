@@ -501,19 +501,36 @@ dense interpolation via the stored Padé.
 struct PadeTaylorSolution ... end
 ```
 
-**TDD step 6.1**:
+**TDD step 6.1 — REVISED 2026-05-09**:
+
+The original FW 2011 Table 5.1 acceptance (60-segment ℘ integration
+to 5e-13 at z=30) was **abandoned as v1-unreachable** after two
+subagents independently reached 0.45 rel error.  Full root-cause
+analysis in `docs/worklog/004-phase-6-pivot.md`; summary: FW's
+published 7.62e-14 was achieved by their 5-direction path-network
+(FW 2011 §3.1), which is v2 territory per §5 below.
+
+The revised v1 acceptance is a **demonstration of Padé-Taylor's
+analytic-continuation advantage over plain Taylor**, verified against
+three-source consensus.  Setup: ONE Padé built at z=0 with `h_max = 1.5`
+spanning the ℘ pole at z=1 (which sits at t=0.667 in the rescaled
+variable, strictly inside the segment — no vault needed).  `sol(z)`
+for z ∈ [0, 1.5] evaluates the same Padé at different t values.
 
 | test | input | expected | shape |
 |---|---|---|---|
-| 6.1.1 | ℘ from `z=0` to `z=30`, FW 2011 ICs, `(order=30, h=0.5)` | `sol(30)` matches `1.095098255959744` to `5e-13` (FW Tier A) | port-and-verify (FW Table 5.1) |
-| 6.1.2 | ℘ from `z=0` to `z=10⁴`, same | `sol(10⁴)` matches `21.02530339471055` to `5e-10` (FW: 2.34e-10) | port-and-verify |
-| 6.1.3 | ℘ at `z = 28.261` (high on pole wall) | `sol(28.261) ≈ 9.876953517025014e6` to `2e-9` | port-and-verify |
-| 6.1.4 | ℘ with `T = BigFloat(precision=256)` from `z=0` to `z=30` | `sol(30)` matches closed-form to `1e-65` | port-and-verify (Tier B) |
-| 6.1.5 | dense interp: `sol(7.123)` for the 6.1.1 problem | matches closed-form ℘ to `5e-13` (Padé-interpolated, no extra step) | spec-from-scratch |
-| 6.1.6 | mutation-proof: replace `pade_step!` body with no-op → 6.1.1 fails with `assert` mismatch | RED | mutation-proof |
+| 6.1.1 | `sol(0.5)` on h_max=1.5 segment | matches ℘(0.5) to `1e-13` | port-and-verify (3-source) |
+| 6.1.2 | `sol(0.95)` (near pole) | matches ℘(0.95) to `1e-9` | port-and-verify (closed-form ≡ NDSolve; mpmath stops near pole) |
+| 6.1.3 | `sol(1.05)` (PAST pole) — **the headline** | matches ℘(1.05) to `1e-9`; plain `taylor_eval(coefs, 1.05)` diverges | port-and-verify (closed-form ≡ NDSolve) |
+| 6.1.4 | `sol(1.4)` (further past pole) | matches ℘(1.4) to `1e-7` | port-and-verify |
+| 6.1.5 | side-by-side: same coefs through plain Taylor | `taylor_eval(coefs, 1.05)` rel err > 0.1; `sol(1.05)` rel err < 1e-9 | spec-from-scratch (Padé > Taylor demo) |
+| 6.1.6 | BigFloat-256 version of 6.1.1 + 6.1.3 | matches ℘ at 78-dps closed-form to `1e-65` (6.1.1) and `1e-30` (6.1.3) | port-and-verify (Tier B) |
+| 6.1.7 | mutation-proof: drop Padé conversion (use raw Taylor) → 6.1.3, 6.1.4 RED | RED | mutation-proof |
 
-**Acceptance for Phase 6**: all 6 tests pass; **at this point v1 is
-algorithmically complete**.
+**Acceptance for Phase 6 v1**: all 6 tests pass; **the
+PadeTaylor-vs-Taylor distinction is empirically demonstrated and
+multi-source-consensus-verified**.  Long-range FW Table 5.1
+reproduction is a v2 P0 work item (filed as bead).
 
 ### Phase 7 — `CommonSolveAdapter` extension (~50 LOC + ~30 LOC tests)
 

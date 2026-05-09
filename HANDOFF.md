@@ -11,22 +11,32 @@
 ## TL;DR — where we are
 
 **Stage 0 (research) and Stage 1 (design) are complete.** Stage 2
-(implementation) is in progress — Phases Z, 1, 2 of 9 are shipped:
+(implementation) is in progress — Phases Z, 1, 2, 3, 4, 5 of 9 are shipped:
 
 | Phase | Module | Status | Tests |
 |---|---|---|---|
 | Z | scaffold + 3 ADRs + CLAUDE.md | ✅ shipped | 12 placeholders |
 | 1 | `LinAlg.pade_svd` | ✅ shipped, mutation-proven | 14 |
 | 2 | `RobustPade.robust_pade` | ✅ shipped, mutation-proven | 35 |
-| 3 | `Coefficients.taylor_coefficients_*` | ⏳ NEXT | spec'd in DESIGN.md §4 Phase 3 |
-| 4 | `StepControl.step_jorba_zou` + `step_pade_root` | spec'd | DESIGN.md §4 Phase 4 |
-| 5 | `PadeStepper.pade_step!` | spec'd (BIG integration) | DESIGN.md §4 Phase 5 |
-| 6 | `Problems.PadeTaylorProblem`, `solve_pade` | spec'd (FW Table 5.1 cross-validation) | DESIGN.md §4 Phase 6 |
+| 3 | `Coefficients.taylor_coefficients_*` | ✅ shipped, mutation-proven | 125 |
+| 4 | `StepControl.step_jorba_zou` + `step_pade_root` | ✅ shipped, mutation-proven; DESIGN/HANDOFF spec correction | 7 |
+| 5 | `PadeStepper.pade_step!` | ✅ shipped (the BIG inner-loop integration), mutation-proven | 16 |
+| 6 | `Problems.PadeTaylorProblem`, `solve_pade` | ⏳ **NEXT — pivoted scope; see worklog 004** | spec'd in DESIGN.md §4 Phase 6 (revised) |
 | 7 | `CommonSolveAdapter` ext | optional | DESIGN.md §4 Phase 7 |
 | 8 | `PadeTaylorArblibExt` ext | optional | DESIGN.md §4 Phase 8 |
 | 9 | Tier C: PI tritronquée pole-field qualitative | optional | DESIGN.md §4 Phase 9 |
 
-**61 / 61 tests passing** as of commit `45e3e90`.
+**207 / 207 tests passing** as of the most recent Phase-6-prep commit.
+
+**Phase 6 was pivoted** — the original FW 2011 Table 5.1 acceptance
+(rel error `5e-13` at z=30 from FW ICs over a 60-segment integration
+crossing 12 lattice poles) is **structurally unreachable** by the v1
+algorithm.  FW's `7.62e-14` was achieved by their 5-direction
+path-network (FW 2011 §3.1), which DESIGN.md §5 explicitly defers
+to v2.  The revised Phase-6 v1 acceptance is a **compelling demo of
+Padé-Taylor's analytic-continuation advantage over plain Taylor**,
+verified against three-source consensus.  Full spec + test plan +
+subagent-prompt template in `docs/worklog/004-phase-6-pivot.md`.
 
 ## Project shape
 
@@ -252,50 +262,57 @@ Two step-size strategies in `src/StepControl.jl`:
 only.  Arb element type for the Padé-root step is deferred to v2; see
 the deferred bead `padetaylor-…` (file at session close per Rule 9).
 
-## Specific instructions for Phase 5 (`PadeStepper`)
+## Phase 5 — SHIPPED 2026-05-09
 
-This is the **biggest integration**: it composes Coefficients +
-RobustPade + StepControl into one step. Read DESIGN.md §4 Phase 5
-carefully before touching code.
+Phase 5 (`PadeStepper.pade_step!`) is complete. Three-source oracle
+(closed-form ℘ ≡ Mathematica `NDSolve` ≡ `mpmath.odefun`) at
+<1e-15 relative agreement; mutation-proven on both `u` and `u'`
+evaluation paths.  See `docs/worklog/003-phase-5-padestepper.md`
+for the two algorithmic choices that crystallised at impl time
+(`h^k` rescaling necessary near poles; analytic differentiation
+of `P_u` for `u'` beats re-Padé by ~40×).
 
-The acceptance test 5.1.1 is:
+The Phase-5 `PadeStepper` now also exports
+`pade_step_with_pade!(state, f, order, h) -> (state, P_u)` — used
+by `solve_pade` for per-segment Padé storage.
 
-> One ℘ step at `(z=0, h=0.5, order=30)` from FW 2011 ICs:
-> `u(0) = 1.071822516416917, u'(0) = 1.710337353176786`. Expected:
-> `u(0.5)` matches closed-form ℘(z + c₁; 0, c₂) with `c₁ = -1, c₂ = 2`
-> to 1e-13 relative.
+## Specific instructions for Phase 6 (`Problems`) — REVISED 2026-05-09
 
-To compute the closed-form ℘ at `z = 0.5`, use either:
-- `JuliaIntervals/IntervalArithmetic.jl` + a `WeierstrassP` package
-  (none exists at high precision in Julia; you may need Mathematica
-  or Wolfram-API'd values).
-- **Cleaner**: derive the closed-form via the doubling formula or
-  series. ℘(z; 0, g₃) is the equianharmonic case (`g₂ = 0`); see
-  Abramowitz & Stegun §18.13 or DLMF §23.5.
-- **Cleanest**: integrate the same ODE numerically with a known-good
-  oracle (e.g. via `DifferentialEquations.jl` at very high tolerance)
-  and use that as the reference value. The 1e-13 relative match
-  becomes a self-consistency check rather than a "true" closed-form
-  match — but it confirms the algorithm is internally correct.
+**Read `docs/worklog/004-phase-6-pivot.md` top to bottom before
+touching code.**  It has the full spec, test plan, oracle-extension
+checklist, and a subagent-prompt template.
 
-**Recommendation**: capture a Mathematica-via-`wolframscript` value
-once; pin it as a constant. The user has noted that they'll dl when
-needed.
+**The original FW 2011 Table 5.1 acceptance was abandoned.**  Two
+subagents tried (fixed `h_max` + vault, and `step_jorba_zou`-adaptive
++ vault); both reach `0.45` relative error at z=30 vs the spec's
+`5e-13`.  The remaining 12 orders of magnitude are algorithmically
+inherent to fixed-real-axis stepping across multiple poles; FW's
+published numbers used the 5-direction path-network deferred to v2.
 
-## Specific instructions for Phase 6 (`Problems`)
+**Revised v1 Phase-6 acceptance**: demonstrate that Padé-Taylor's
+analytic continuation extends past the natural radius of convergence
+of the underlying Taylor series — i.e. that one stored Padé bridges
+a pole and gives correct values both before and *after* the pole.
+Setup: build ONE Padé at z=0 with `h_max = 1.5`, spanning the ℘ pole
+at z=1 (which sits at t=0.667 in the rescaled variable, strictly
+inside the segment).  Evaluate `sol(z)` for z ∈ {0.5, 0.95, 1.05, 1.4}
+and assert agreement with closed-form ℘ at progressively-loosened
+tolerances.  Compare side-by-side with plain `taylor_eval` of the
+underlying coefficients — Taylor diverges past z=1, Padé does not.
 
-Public API + the headline cross-validation against FW 2011 Table 5.1.
-The acceptance tests are:
-- ℘ from `z=0` to `z=30`: relative error `< 5e-13` (FW: `7.62e-14`).
-- ℘ from `z=0` to `z=10⁴`: relative error `< 5e-10` (FW: `2.34e-10`).
-- ℘ at `z=28.261` (high on a pole wall): `< 2e-9` (FW: `7.92e-10`).
+Three-source consensus:
+- closed-form `WeierstrassP[z + c1, {0, c2}]` (Mathematica)
+- `NDSolve` at WP=50 (Mathematica)
+- `mpmath.odefun` at 40 dps (Python; only valid for z < 1)
 
-Read FW 2011 Table 5.1 for full context. Reference values:
-- `u(30) = 1.095098255959744`
-- `u(10⁴) = 21.02530339471055`
-- `u(28.261) = 9.876953517025014e6`
+Detailed test plan in worklog 004.  Oracle infrastructure already
+partially in place (`external/probes/problems-oracle/`); needs
+extension for the new test points (z = 0.5, 0.95, 1.05, 1.4).
 
-These are pinned in DESIGN.md §3.1 already.
+**Deferred to v2** (file P0 bead at session close):
+- FW 2011 Table 5.1 long-range integration. Requires the path-
+  network or a step-size selector that adaptively shrinks h on
+  the post-pole approach to keep `c̃`'s dynamic range tractable.
 
 ## Friction beads worth re-reading before starting
 

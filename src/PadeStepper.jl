@@ -148,7 +148,7 @@ module PadeStepper
 using ..Coefficients: taylor_coefficients_2nd
 using ..RobustPade:   PadeApproximant, robust_pade
 
-export PadeStepperState, pade_step!
+export PadeStepperState, pade_step!, pade_step_with_pade!
 
 # -----------------------------------------------------------------------------
 # State
@@ -204,9 +204,36 @@ exactly at `t = 1` (`DomainError`).
 """
 function pade_step!(state::PadeStepperState{T}, f,
                     order::Int, h::Real) where {T}
+    pade_step_with_pade!(state, f, order, h)
+    return state
+end
+
+"""
+    pade_step_with_pade!(state::PadeStepperState{T}, f, order::Int, h::Real)
+        -> (state, P_u::PadeApproximant{T})
+
+Like `pade_step!`, but additionally returns the per-step Padé
+approximant `P_u` built from the rescaled Taylor coefficients
+`c̃_k = h^k · c_k`.  `P_u` is the rational approximant in the
+*rescaled* variable `t = h'/h`: `u(state.z_old + h'·) = P_u(h'/h)`,
+so it interpolates the segment `[state.z_old, state.z_old + h]`
+when evaluated at `t ∈ [0, 1]`.
+
+This is the function `Problems.solve_pade` calls inside its main
+loop: it needs both the advanced state (to keep stepping) *and*
+the Padé (to store for dense interpolation, per the per-segment
+Padé idea in `Problems.PadeTaylorSolution`).  `pade_step!` is the
+backwards-compatible wrapper that discards the Padé — Phase 5's
+existing tests do not need the Padé and continue to work
+unchanged.
+
+Same fail-fast contract as `pade_step!`.
+"""
+function pade_step_with_pade!(state::PadeStepperState{T}, f,
+                              order::Int, h::Real) where {T}
     order ≥ 2 || throw(ArgumentError(
-        "pade_step!: order must be ≥ 2 (got $order); the 2nd-order " *
-        "Taylor recursion needs at least two passes."))
+        "pade_step_with_pade!: order must be ≥ 2 (got $order); the " *
+        "2nd-order Taylor recursion needs at least two passes."))
 
     h_T = T(h)
 
@@ -228,7 +255,7 @@ function pade_step!(state::PadeStepperState{T}, f,
     state.z  = state.z + h_T
     state.u  = new_u
     state.up = new_up
-    return state
+    return state, P_u
 end
 
 # -----------------------------------------------------------------------------
