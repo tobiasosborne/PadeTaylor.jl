@@ -2,11 +2,39 @@
 # Captured by: wolframscript -file external/probes/problems-oracle/capture.wl
 # Format: Julia-readable literals.
 
-# FW 2011 Table 5.1 cross-validation targets, c1 = -1, c2 = g3 = 2.
-# Reference values pinned in FW 2011:
-#   u(30)     = 1.095098255959744                  (line 301)
-#   u(10^4)   = 21.02530339471055                   (line 301)
-#   u(28.261) = 9.876953517025014e6                 (line 372)
+# (A) Pole-bridge demo (worklog 004; new Phase-6 v1 acceptance):
+#       z a^\210\210 {0.5, 0.95, 1.05, 1.4}; pole at z=1.
+# (B) FW 2011 Table 5.1 reference values (deferred to v2):
+#       u(30)     = 1.095098255959744                  (line 301)
+#       u(10^4)   = 21.02530339471055                   (line 301)
+#       u(28.261) = 9.876953517025014e6                 (line 372)
+
+# z = 0.5 (BEFORE pole at z=1) -- closed-form + NDSolve cross-check.
+u_at_0_5             = 4.0044646690030875
+up_at_0_5            = 15.964278048239492
+u_at_0_5_via_NDSolve  = 4.0044646690030852
+up_at_0_5_via_NDSolve = 15.964278048239479
+
+# z = 0.95 (NEAR pole, just BEFORE z=1) -- closed-form + NDSolve.
+u_at_0_95             = 400.00000044642857
+up_at_0_95            = 15999.999964285714
+u_at_0_95_via_NDSolve  = 400.00000044642635
+up_at_0_95_via_NDSolve = 15999.999964285581
+
+# z = 1.05 (PAST pole at z=1) -- closed-form sole primary source;
+# mpmath.odefun cannot integrate through the pole.  PadA~(c) bridges it.
+u_at_1_05  = 400.00000044642857
+up_at_1_05 = -15999.999964285714
+# z = 1.05 at 80-digit precision (for BigFloat-256 round-trip).
+u_at_1_05_80dps_str  = "400.00000044642857146689805730209434335396271221358299108294803421544061930158100"
+up_at_1_05_80dps_str = "-15999.99996428571427804895996788240039359399706995053158246775877918937602098080000"
+
+# z = 1.4 (further past pole) -- closed-form sole primary source.
+u_at_1_4  = 6.2518286125821094
+up_at_1_4 = -31.231713256866332
+# NDSolve restart from closed-form IC at z=1.05, integrated to z=1.4.
+u_at_1_4_via_NDSolve_restart  = 6.2518286125821094
+up_at_1_4_via_NDSolve_restart = -31.231713256866332
 
 # Test 6.1.1 -- u(30) and u'(30); FW reference 1.095098255959744.
 u_at_30        = 1.0950982559597442

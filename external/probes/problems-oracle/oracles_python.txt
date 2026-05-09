@@ -1,0 +1,11 @@
+# Phase 6 Problems oracle (Python mpmath cross-check).
+# Range integrated: z in [0, 0.95] at 40 dps.  Past z=1 (the
+# pole), mpmath.odefun cannot continue; closed-form is sole source.
+
+# u(0.5) and u'(0.5) via mpmath.odefun (BEFORE pole at z=1).
+u_at_0_5_py  = 4.004464669003085
+up_at_0_5_py = 15.964278048239478
+
+# u(0.95) and u'(0.95) via mpmath.odefun (NEAR pole, BEFORE z=1).
+u_at_0_95_py  = 400.0000004464263
+up_at_0_95_py = 15999.999964285582

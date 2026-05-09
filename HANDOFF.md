@@ -11,7 +11,7 @@
 ## TL;DR — where we are
 
 **Stage 0 (research) and Stage 1 (design) are complete.** Stage 2
-(implementation) is in progress — Phases Z, 1, 2, 3, 4, 5 of 9 are shipped:
+(implementation) is in progress — Phases Z, 1–6 of 9 are shipped:
 
 | Phase | Module | Status | Tests |
 |---|---|---|---|
@@ -21,22 +21,23 @@
 | 3 | `Coefficients.taylor_coefficients_*` | ✅ shipped, mutation-proven | 125 |
 | 4 | `StepControl.step_jorba_zou` + `step_pade_root` | ✅ shipped, mutation-proven; DESIGN/HANDOFF spec correction | 7 |
 | 5 | `PadeStepper.pade_step!` | ✅ shipped (the BIG inner-loop integration), mutation-proven | 16 |
-| 6 | `Problems.PadeTaylorProblem`, `solve_pade` | ⏳ **NEXT — pivoted scope; see worklog 004** | spec'd in DESIGN.md §4 Phase 6 (revised) |
-| 7 | `CommonSolveAdapter` ext | optional | DESIGN.md §4 Phase 7 |
+| 6 | `Problems.PadeTaylorProblem`, `solve_pade` | ✅ shipped (Padé-vs-Taylor pole-bridge demo), mutation-proven; see worklog 005 | 11 |
+| 7 | `CommonSolveAdapter` ext | ⏳ **NEXT** | DESIGN.md §4 Phase 7 |
 | 8 | `PadeTaylorArblibExt` ext | optional | DESIGN.md §4 Phase 8 |
 | 9 | Tier C: PI tritronquée pole-field qualitative | optional | DESIGN.md §4 Phase 9 |
 
-**207 / 207 tests passing** as of the most recent Phase-6-prep commit.
+**218 / 218 tests passing** as of the Phase-6 GREEN commit.
 
-**Phase 6 was pivoted** — the original FW 2011 Table 5.1 acceptance
-(rel error `5e-13` at z=30 from FW ICs over a 60-segment integration
-crossing 12 lattice poles) is **structurally unreachable** by the v1
-algorithm.  FW's `7.62e-14` was achieved by their 5-direction
-path-network (FW 2011 §3.1), which DESIGN.md §5 explicitly defers
-to v2.  The revised Phase-6 v1 acceptance is a **compelling demo of
-Padé-Taylor's analytic-continuation advantage over plain Taylor**,
-verified against three-source consensus.  Full spec + test plan +
-subagent-prompt template in `docs/worklog/004-phase-6-pivot.md`.
+**Phase 6 shipped 2026-05-09 on the pivoted scope** — the v1
+acceptance is a Padé-vs-Taylor pole-bridge demonstration (one stored
+Padé bridges the lattice pole of `℘(z + c₁; 0, c₂)` at `z = 1`,
+giving correct values at `z ∈ {0.5, 0.95, 1.05, 1.4}` while plain
+truncation diverges past `z = 1`); see `docs/worklog/005-phase-6-
+implementation.md` for the GREEN report and the order/rtol coupling
+caught at impl time.  The original FW 2011 Table 5.1 long-range
+acceptance is **deferred to v2** under bead `padetaylor-8cr`
+(requires the FW §3.1 path-network).  Pivot rationale + failure
+analysis in `docs/worklog/004-phase-6-pivot.md`.
 
 ## Project shape
 
@@ -276,43 +277,71 @@ The Phase-5 `PadeStepper` now also exports
 `pade_step_with_pade!(state, f, order, h) -> (state, P_u)` — used
 by `solve_pade` for per-segment Padé storage.
 
-## Specific instructions for Phase 6 (`Problems`) — REVISED 2026-05-09
+## Phase 6 — SHIPPED 2026-05-09
 
-**Read `docs/worklog/004-phase-6-pivot.md` top to bottom before
-touching code.**  It has the full spec, test plan, oracle-extension
-checklist, and a subagent-prompt template.
+Phase 6 (`Problems.PadeTaylorProblem`, `solve_pade`,
+`PadeTaylorSolution`, `taylor_eval`) is complete on the pivoted v1
+acceptance.  218/218 tests GREEN.  Three-source oracle (closed-form
+`WeierstrassP` ≡ Mathematica `NDSolve` ≡ `mpmath.odefun`); BF-256
+fourth source via `WeierstrassP[..., 80]` for the high-precision
+test.  Mutation-proven on both the `robust_pade` call and the dense-
+interpolation formula.
 
-**The original FW 2011 Table 5.1 acceptance was abandoned.**  Two
-subagents tried (fixed `h_max` + vault, and `step_jorba_zou`-adaptive
-+ vault); both reach `0.45` relative error at z=30 vs the spec's
-`5e-13`.  The remaining 12 orders of magnitude are algorithmically
-inherent to fixed-real-axis stepping across multiple poles; FW's
-published numbers used the 5-direction path-network deferred to v2.
+**Headline empirical result.**  At `z = 1.05` (just past the lattice
+pole at `z = 1`), the Padé conversion of the local Taylor jet beats
+plain Taylor truncation by ≈ 9.86 orders of magnitude on identical
+input coefficients (rel-err `3.45e-10` vs `2.50`).  Tests 6.1.3 +
+6.1.5 are the compelling pair — same jet, two paths, ten orders of
+magnitude apart.
 
-**Revised v1 Phase-6 acceptance**: demonstrate that Padé-Taylor's
-analytic continuation extends past the natural radius of convergence
-of the underlying Taylor series — i.e. that one stored Padé bridges
-a pole and gives correct values both before and *after* the pole.
-Setup: build ONE Padé at z=0 with `h_max = 1.5`, spanning the ℘ pole
-at z=1 (which sits at t=0.667 in the rescaled variable, strictly
-inside the segment).  Evaluate `sol(z)` for z ∈ {0.5, 0.95, 1.05, 1.4}
-and assert agreement with closed-form ℘ at progressively-loosened
-tolerances.  Compare side-by-side with plain `taylor_eval` of the
-underlying coefficients — Taylor diverges past z=1, Padé does not.
+**Algorithmic finding caught at impl time.**  Test 6.1.6's BF-256
+acceptance was bumped from `order = 30` to `order = 40`: at
+`order = 30` both Float64 and BF-256 saturate at the same `(15, 15)`
+Padé approximation-error floor (~3.5e-10 at `t = 0.7`), so BF-256
+adds no value over Float64.  Only at `order = 40` does Float64
+degrade to ~1.6e-8 (SVD ill-conditioning of the 41-by-41 Toeplitz
+block) while BF-256 cleanly converges to ~5e-15 — making BF-256
+required, not optional.  Full sweep + rationale in
+`docs/worklog/005-phase-6-implementation.md` §"Algorithmic finding".
 
-Three-source consensus:
-- closed-form `WeierstrassP[z + c1, {0, c2}]` (Mathematica)
-- `NDSolve` at WP=50 (Mathematica)
-- `mpmath.odefun` at 40 dps (Python; only valid for z < 1)
+**Deferred to v2** (bead `padetaylor-8cr`):
+- FW 2011 Table 5.1 long-range integration via the FW §3.1
+  path-network and/or a step-size selector that composes with
+  Padé-bridge stepping.  Failure analysis of fixed-`h_max` +
+  pole-vault + Jorba-Zou-adaptive in
+  `docs/worklog/004-phase-6-pivot.md` §"What was tried, what failed".
 
-Detailed test plan in worklog 004.  Oracle infrastructure already
-partially in place (`external/probes/problems-oracle/`); needs
-extension for the new test points (z = 0.5, 0.95, 1.05, 1.4).
+## Specific instructions for Phase 7 (`CommonSolveAdapter` ext)
 
-**Deferred to v2** (file P0 bead at session close):
-- FW 2011 Table 5.1 long-range integration. Requires the path-
-  network or a step-size selector that adaptively shrinks h on
-  the post-pole approach to keep `c̃`'s dynamic range tractable.
+This is your immediate next task.  Phase 7 is an optional package
+extension wiring `PadeTaylorProblem` / `solve_pade` into the
+`CommonSolve.jl` `init`/`step!`/`solve!` interface, so PadeTaylor.jl
+plays cleanly with the wider `SciML` solver ecosystem.
+
+**Read first** (in order):
+1. `DESIGN.md §4 Phase 7` — Phase-7 acceptance + interface sketch.
+2. `docs/adr/0003-*.md` — the ADR governing extension boundaries.
+3. `src/Problems.jl` — the public driver this layer wraps.
+4. `docs/worklog/005-phase-6-implementation.md` — the most recent
+   shipped phase; orchestration pattern + mutation-proof discipline.
+
+**Suggested workflow** (mirror Phase 3's "read first → test plan →
+implementation skeleton" pattern from this HANDOFF lines ~96-225):
+
+  - Stub `ext/CommonSolveAdapter/CommonSolveAdapter.jl` (a Julia
+    weakdep extension on `CommonSolve`); update `Project.toml`'s
+    `[weakdeps]` and `[extensions]` tables.
+  - Sketch the test plan: at minimum, `init(prob; h_max) → integrator`,
+    `step!(integrator) → (z, y)`, `solve!(integrator) → solution`,
+    each cross-checked against the equivalent direct `solve_pade`
+    call on the same problem.
+  - Mutation-proof: drop the integrator's `pade` accumulator; assert
+    the cross-check fails.
+
+Phase 7 is **optional** per `DESIGN.md §4`: skip it if Phase 8
+(`PadeTaylorArblibExt`) is the higher priority for downstream use.
+The Phase-4 friction bead on `Polynomials.roots` over `Arb` element
+type is a prerequisite for Phase 8 but unrelated to Phase 7.
 
 ## Friction beads worth re-reading before starting
 
@@ -353,9 +382,20 @@ Quick summary:
    attempt.** Documented the *correct* mutation in the test comments.
    When you write Phase 3 mutation-proofs, verify the mutation
    actually bites before committing the procedure.
+7. **Empirically sweep `order` before pinning `rtol` on near-pole
+   tests.** The `(m, n)`-Padé approximation-error floor depends on
+   `m + n` and the distance to the next singularity, NOT on
+   arithmetic precision; BF-256 only helps once you push past
+   Float64's SVD-conditioning limit (typically `order ≥ 40`).
+   Phase-6 test 6.1.6 hit this: at `order = 30` Float64 and BF-256
+   both saturated at `~3.5e-10` (the `(15, 15)` Padé floor at
+   `t = 0.7`); only at `order = 40` did BF-256 buy two extra
+   orders of accuracy.  See `docs/worklog/005-phase-6-implementation
+   .md` §"Algorithmic finding".
 
 ## Last commit before this handoff
 
-`45e3e90` — Phase 2 GREEN. `git log --oneline` to see history.
+Phase 6 GREEN.  Run `git log --oneline` to see the full history (Phases
+Z, 1, 2, 3, 4, 5, 6 each have their own commit + 6's pivot worklog).
 
 Goodluck. Read CLAUDE.md again before you start.
