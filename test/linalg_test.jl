@@ -83,6 +83,31 @@ using PadeTaylor: LinAlg
     end
 
     # -------------------------------------------------------------------------
+    # 1.1.3b — full=true exposes the (n+1)-th column of V for n × (n+1)
+    # Toeplitz matrices.
+    #
+    # Load-bearing for RobustPade: GGT 2013 Algorithm 2 reads
+    # `b = V[:, n+1]` as the null right singular vector of an `n × (n+1)`
+    # Toeplitz matrix.  In thin SVD V is `(n+1) × n` and the `(n+1)`-th
+    # column does not exist; with `full=true`, Vt is `(n+1) × (n+1)`
+    # and `Vt[end, :]'` is the null vector.
+    # -------------------------------------------------------------------------
+    @testset "1.1.3b full=true gives n+1 × n+1 Vt for wide matrix" begin
+        # 3 × 4 matrix.  Build it deliberately rank-deficient: the 4th
+        # column is in the span of the first three, so the null space is
+        # non-trivial.
+        A = Float64[1 0 0 1; 0 1 0 2; 0 0 1 3]
+        U, S, Vt = LinAlg.pade_svd(A; full = true)
+        @test size(U)  == (3, 3)
+        @test length(S) == 3
+        @test size(Vt) == (4, 4)
+        # The 4th column of V (= Vt'[:, 4] = Vt[4, :]) is the null vector.
+        # `A * v_null` should be zero.
+        v_null = vec(Vt[end, :])
+        @test norm(A * v_null) < 1e-13 * norm(A)
+    end
+
+    # -------------------------------------------------------------------------
     # 1.1.4 — Rank-deficient [1 2; 2 4] BigFloat — small SV is genuinely zero.
     #
     # The matrix [1 2; 2 4] has rank 1 exactly: column 2 = 2·column 1.  A
