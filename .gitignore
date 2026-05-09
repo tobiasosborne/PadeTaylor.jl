@@ -3,3 +3,15 @@
 .dolt/
 *.db
 .beads-credential-key
+
+# External cloned repos for ecosystem audit / reference reading.
+# Keep the parent dir for the empirical-probe scripts (external/probes/),
+# but skip the upstream clones — they are reproducible via shallow clone.
+external/Arblib.jl/
+external/Polynomials.jl/
+external/TaylorIntegration.jl/
+external/TaylorSeries.jl/
+external/chebfun/
+
+# Marker page-image extractions — keep the .md files, skip the bulky .jpeg.
+references/markdown/**/*.jpeg

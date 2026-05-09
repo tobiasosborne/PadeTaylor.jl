@@ -1,0 +1,1072 @@
+{
+  "table_of_contents": [
+    {
+      "title": "Physica D",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          262.7430114746094,
+          95.7607421875
+        ],
+        [
+          325.35546875,
+          95.7607421875
+        ],
+        [
+          325.35546875,
+          112.3218994140625
+        ],
+        [
+          262.7430114746094,
+          112.3218994140625
+        ]
+      ]
+    },
+    {
+      "title": "A computational overview of the solution space of the imaginary\nPainlev\u00e9 II equation",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          29.1015625,
+          175.6259765625
+        ],
+        [
+          448.3136291503906,
+          175.6259765625
+        ],
+        [
+          448.3136291503906,
+          209.33074951171875
+        ],
+        [
+          29.1015625,
+          209.33074951171875
+        ]
+      ]
+    },
+    {
+      "title": "h i g h l i g h t s",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          30.84765625,
+          278.82440185546875
+        ],
+        [
+          115.89852905273438,
+          278.82440185546875
+        ],
+        [
+          115.89852905273438,
+          288.8330078125
+        ],
+        [
+          30.84765625,
+          288.8330078125
+        ]
+      ]
+    },
+    {
+      "title": "g r a p h i c a l a b s t r a c t",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          193.81640625,
+          278.8243408203125
+        ],
+        [
+          346.30859375,
+          278.8243408203125
+        ],
+        [
+          346.30859375,
+          288.7869567871094
+        ],
+        [
+          193.81640625,
+          288.7869567871094
+        ]
+      ]
+    },
+    {
+      "title": "a r t i c l e i n f o",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          32.59375,
+          485.6929931640625
+        ],
+        [
+          127.3547592163086,
+          485.6929931640625
+        ],
+        [
+          127.3547592163086,
+          497.41308593749994
+        ],
+        [
+          32.59375,
+          497.41308593749994
+        ]
+      ]
+    },
+    {
+      "title": "a b s t r a c t",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          193.81640625,
+          484.97540283203125
+        ],
+        [
+          262.49609375,
+          484.97540283203125
+        ],
+        [
+          262.49609375,
+          494.93798828125
+        ],
+        [
+          193.81640625,
+          494.93798828125
+        ]
+      ]
+    },
+    {
+      "title": "1. Introduction",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          57.62109375,
+          657.3227233886719
+        ],
+        [
+          364.18701171875,
+          657.3227233886719
+        ],
+        [
+          364.18701171875,
+          671.1005859375
+        ],
+        [
+          57.62109375,
+          671.1005859375
+        ]
+      ]
+    },
+    {
+      "title": "2. Overview of the main features of solutions to \\operatorname{Im} P_{II}",
+      "heading_level": null,
+      "page_id": 1,
+      "polygon": [
+        [
+          40.16015625,
+          681.1806640625
+        ],
+        [
+          258.96725440806046,
+          681.1806640625
+        ],
+        [
+          258.96725440806046,
+          692.032105760151
+        ],
+        [
+          40.16015625,
+          692.032105760151
+        ]
+      ]
+    },
+    {
+      "title": "2.1. General properties",
+      "heading_level": null,
+      "page_id": 1,
+      "polygon": [
+        [
+          40.53400503778337,
+          702.8916015625
+        ],
+        [
+          127.60705289672543,
+          702.8916015625
+        ],
+        [
+          127.60705289672543,
+          713.0254957507082
+        ],
+        [
+          40.53400503778337,
+          713.7752596789423
+        ]
+      ]
+    },
+    {
+      "title": "2.2. Leading asymptotic behaviors for x \\to \\pm \\infty",
+      "heading_level": null,
+      "page_id": 1,
+      "polygon": [
+        [
+          309.640625,
+          332.89518413597733
+        ],
+        [
+          488.6599496221662,
+          332.89518413597733
+        ],
+        [
+          488.6599496221662,
+          342.3349609375
+        ],
+        [
+          309.640625,
+          342.3349609375
+        ]
+      ]
+    },
+    {
+      "title": "2.3. An overview of some solution features",
+      "heading_level": null,
+      "page_id": 1,
+      "polygon": [
+        [
+          310.7607052896725,
+          662.0415486307837
+        ],
+        [
+          467.6423173803526,
+          662.0415486307837
+        ],
+        [
+          467.6423173803526,
+          671.1005859375
+        ],
+        [
+          310.7607052896725,
+          671.1005859375
+        ]
+      ]
+    },
+    {
+      "title": "2.4. Oscillations along the real axis",
+      "heading_level": null,
+      "page_id": 4,
+      "polygon": [
+        [
+          298.291015625,
+          527.8338054768649
+        ],
+        [
+          430.1108312342569,
+          527.8338054768649
+        ],
+        [
+          430.1108312342569,
+          537.7333984375
+        ],
+        [
+          298.291015625,
+          537.7333984375
+        ]
+      ]
+    },
+    {
+      "title": "3. Tronqu\u00e9e solutions",
+      "heading_level": null,
+      "page_id": 4,
+      "polygon": [
+        [
+          301.00251889168766,
+          716.7743153918791
+        ],
+        [
+          391.8287153652393,
+          716.7743153918791
+        ],
+        [
+          391.8287153652393,
+          726.9287109375
+        ],
+        [
+          301.00251889168766,
+          726.9287109375
+        ]
+      ]
+    },
+    {
+      "title": "3.1. Isolated cases",
+      "heading_level": null,
+      "page_id": 5,
+      "polygon": [
+        [
+          40.53400503778337,
+          538.5087890625
+        ],
+        [
+          109.59193954659949,
+          538.5087890625
+        ],
+        [
+          109.59193954659949,
+          548.0774315391878
+        ],
+        [
+          40.53400503778337,
+          548.0774315391878
+        ]
+      ]
+    },
+    {
+      "title": "3.1.1. Non-oscillatory convergence to 0 for x \\to -\\infty",
+      "heading_level": null,
+      "page_id": 5,
+      "polygon": [
+        [
+          40.7421875,
+          561.5731822474032
+        ],
+        [
+          237.94962216624685,
+          561.5731822474032
+        ],
+        [
+          237.94962216624685,
+          571.8505859375
+        ],
+        [
+          40.7421875,
+          571.8505859375
+        ]
+      ]
+    },
+    {
+      "title": "3.1.2. Non-oscillatory convergence to \\pm \\sqrt{x/2} for x \\to +\\infty",
+      "heading_level": null,
+      "page_id": 5,
+      "polygon": [
+        [
+          310.7607052896725,
+          558.5741265344665
+        ],
+        [
+          531.39453125,
+          558.5741265344665
+        ],
+        [
+          531.39453125,
+          568.7490234375
+        ],
+        [
+          310.7607052896725,
+          568.7490234375
+        ]
+      ]
+    },
+    {
+      "title": "3.2. Ablowitz-Segur (AS) solutions",
+      "heading_level": null,
+      "page_id": 6,
+      "polygon": [
+        [
+          301.00251889168766,
+          606.5590179414542
+        ],
+        [
+          429.360201511335,
+          606.5590179414542
+        ],
+        [
+          429.360201511335,
+          615.2724609375
+        ],
+        [
+          301.00251889168766,
+          615.2724609375
+        ]
+      ]
+    },
+    {
+      "title": "3.2.1. Parametrization of the AS curves",
+      "heading_level": null,
+      "page_id": 6,
+      "polygon": [
+        [
+          301.00251889168766,
+          705.9931640625
+        ],
+        [
+          445.1234256926952,
+          705.9931640625
+        ],
+        [
+          445.1234256926952,
+          715.2747875354107
+        ],
+        [
+          301.00251889168766,
+          715.2747875354107
+        ]
+      ]
+    },
+    {
+      "title": "4. Conclusions",
+      "heading_level": null,
+      "page_id": 8,
+      "polygon": [
+        [
+          300.91015625,
+          665.0406043437205
+        ],
+        [
+          362.5541561712846,
+          665.0406043437205
+        ],
+        [
+          362.5541561712846,
+          674.2021484375
+        ],
+        [
+          300.91015625,
+          674.2021484375
+        ]
+      ]
+    },
+    {
+      "title": "Appendix. Additional observations on the B(\\alpha; z) asymptotic expansion",
+      "heading_level": null,
+      "page_id": 9,
+      "polygon": [
+        [
+          309.05859375,
+          691.2823418319168
+        ],
+        [
+          564.4735516372796,
+          691.2823418319168
+        ],
+        [
+          564.4735516372796,
+          710.0264400377714
+        ],
+        [
+          309.05859375,
+          710.0264400377714
+        ]
+      ]
+    },
+    {
+      "title": "References",
+      "heading_level": null,
+      "page_id": 10,
+      "polygon": [
+        [
+          301.00251889168766,
+          337.6826171875
+        ],
+        [
+          345.7265625,
+          337.6826171875
+        ],
+        [
+          345.7265625,
+          344.8914069877242
+        ],
+        [
+          301.00251889168766,
+          344.8914069877242
+        ]
+      ]
+    }
+  ],
+  "page_stats": [
+    {
+      "page_id": 0,
+      "text_extraction_method": "pdftext",
+      "block_counts": [
+        [
+          "Span",
+          185
+        ],
+        [
+          "Line",
+          59
+        ],
+        [
+          "Text",
+          9
+        ],
+        [
+          "SectionHeader",
+          7
+        ],
+        [
+          "ListItem",
+          6
+        ],
+        [
+          "Picture",
+          3
+        ],
+        [
+          "Reference",
+          3
+        ],
+        [
+          "ListGroup",
+          2
+        ],
+        [
+          "PageHeader",
+          1
+        ],
+        [
+          "Figure",
+          1
+        ],
+        [
+          "Equation",
+          1
+        ],
+        [
+          "Footnote",
+          1
+        ],
+        [
+          "PageFooter",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    },
+    {
+      "page_id": 1,
+      "text_extraction_method": "surya",
+      "block_counts": [
+        [
+          "Span",
+          187
+        ],
+        [
+          "Line",
+          138
+        ],
+        [
+          "Text",
+          15
+        ],
+        [
+          "Reference",
+          6
+        ],
+        [
+          "Equation",
+          5
+        ],
+        [
+          "SectionHeader",
+          4
+        ],
+        [
+          "PageHeader",
+          2
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    },
+    {
+      "page_id": 2,
+      "text_extraction_method": "surya",
+      "block_counts": [
+        [
+          "Span",
+          86
+        ],
+        [
+          "TableCell",
+          53
+        ],
+        [
+          "Line",
+          49
+        ],
+        [
+          "Text",
+          5
+        ],
+        [
+          "Caption",
+          3
+        ],
+        [
+          "Reference",
+          3
+        ],
+        [
+          "PageHeader",
+          2
+        ],
+        [
+          "Figure",
+          2
+        ],
+        [
+          "FigureGroup",
+          2
+        ],
+        [
+          "Table",
+          1
+        ],
+        [
+          "TableGroup",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    },
+    {
+      "page_id": 3,
+      "text_extraction_method": "surya",
+      "block_counts": [
+        [
+          "Line",
+          39
+        ],
+        [
+          "Span",
+          24
+        ],
+        [
+          "PageHeader",
+          2
+        ],
+        [
+          "Figure",
+          2
+        ],
+        [
+          "Caption",
+          2
+        ],
+        [
+          "FigureGroup",
+          2
+        ],
+        [
+          "Reference",
+          2
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    },
+    {
+      "page_id": 4,
+      "text_extraction_method": "surya",
+      "block_counts": [
+        [
+          "Span",
+          62
+        ],
+        [
+          "Line",
+          59
+        ],
+        [
+          "Text",
+          8
+        ],
+        [
+          "Equation",
+          3
+        ],
+        [
+          "Reference",
+          3
+        ],
+        [
+          "PageHeader",
+          2
+        ],
+        [
+          "SectionHeader",
+          2
+        ],
+        [
+          "Figure",
+          1
+        ],
+        [
+          "Caption",
+          1
+        ],
+        [
+          "FigureGroup",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    },
+    {
+      "page_id": 5,
+      "text_extraction_method": "surya",
+      "block_counts": [
+        [
+          "Line",
+          94
+        ],
+        [
+          "Span",
+          68
+        ],
+        [
+          "Text",
+          9
+        ],
+        [
+          "Reference",
+          5
+        ],
+        [
+          "Equation",
+          4
+        ],
+        [
+          "SectionHeader",
+          3
+        ],
+        [
+          "PageHeader",
+          2
+        ],
+        [
+          "Figure",
+          2
+        ],
+        [
+          "Caption",
+          2
+        ],
+        [
+          "FigureGroup",
+          2
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    },
+    {
+      "page_id": 6,
+      "text_extraction_method": "surya",
+      "block_counts": [
+        [
+          "Span",
+          74
+        ],
+        [
+          "Line",
+          67
+        ],
+        [
+          "Text",
+          6
+        ],
+        [
+          "Reference",
+          4
+        ],
+        [
+          "PageHeader",
+          2
+        ],
+        [
+          "Figure",
+          2
+        ],
+        [
+          "Caption",
+          2
+        ],
+        [
+          "SectionHeader",
+          2
+        ],
+        [
+          "FigureGroup",
+          2
+        ],
+        [
+          "Equation",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    },
+    {
+      "page_id": 7,
+      "text_extraction_method": "surya",
+      "block_counts": [
+        [
+          "Span",
+          119
+        ],
+        [
+          "Line",
+          84
+        ],
+        [
+          "Text",
+          9
+        ],
+        [
+          "Reference",
+          4
+        ],
+        [
+          "PageHeader",
+          2
+        ],
+        [
+          "Figure",
+          2
+        ],
+        [
+          "Caption",
+          2
+        ],
+        [
+          "Equation",
+          2
+        ],
+        [
+          "FigureGroup",
+          2
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    },
+    {
+      "page_id": 8,
+      "text_extraction_method": "surya",
+      "block_counts": [
+        [
+          "Span",
+          61
+        ],
+        [
+          "Line",
+          57
+        ],
+        [
+          "Text",
+          5
+        ],
+        [
+          "Figure",
+          3
+        ],
+        [
+          "Caption",
+          3
+        ],
+        [
+          "FigureGroup",
+          3
+        ],
+        [
+          "Reference",
+          3
+        ],
+        [
+          "PageHeader",
+          2
+        ],
+        [
+          "SectionHeader",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    },
+    {
+      "page_id": 9,
+      "text_extraction_method": "surya",
+      "block_counts": [
+        [
+          "Span",
+          63
+        ],
+        [
+          "Line",
+          53
+        ],
+        [
+          "Text",
+          4
+        ],
+        [
+          "PageHeader",
+          2
+        ],
+        [
+          "Reference",
+          2
+        ],
+        [
+          "Figure",
+          1
+        ],
+        [
+          "Caption",
+          1
+        ],
+        [
+          "SectionHeader",
+          1
+        ],
+        [
+          "FigureGroup",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    },
+    {
+      "page_id": 10,
+      "text_extraction_method": "surya",
+      "block_counts": [
+        [
+          "Line",
+          113
+        ],
+        [
+          "Span",
+          87
+        ],
+        [
+          "ListItem",
+          17
+        ],
+        [
+          "Reference",
+          17
+        ],
+        [
+          "Text",
+          3
+        ],
+        [
+          "PageHeader",
+          2
+        ],
+        [
+          "Equation",
+          2
+        ],
+        [
+          "Figure",
+          1
+        ],
+        [
+          "Caption",
+          1
+        ],
+        [
+          "SectionHeader",
+          1
+        ],
+        [
+          "FigureGroup",
+          1
+        ],
+        [
+          "ListGroup",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    }
+  ],
+  "debug_data_path": "debug_data/FW2015_imaginary_PII_PhysicaD309"
+}

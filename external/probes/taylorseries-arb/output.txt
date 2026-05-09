@@ -1,0 +1,63 @@
+======================================================================
+PadeTaylor.jl Stage-0 Probe: TaylorSeries.jl + Arblib.jl
+Julia version: 1.12.3
+======================================================================
+
+--- PROBE 1: Construction ---
+┌ Warning: Assignment to `probe1_pass` in soft scope is ambiguous because a global variable by the same name exists: `probe1_pass` will be treated as a new local. Disambiguate by using `local probe1_pass` to suppress this warning or `global probe1_pass` to assign to the existing global variable.
+└ @ ~/Projects/PadeTaylor.jl/external/probes/taylorseries-arb/probe.jl:42
+  Taylor1(Arb, 60) => Taylor1{Arb} order=60
+  Taylor1([Arb(1), Arb(2), Arb(0.5)], 60) => Taylor1{Arb} order=60
+  PASS: Both constructors work; coefficient indexing verified.
+
+--- PROBE 2: Arithmetic ---
+┌ Warning: Assignment to `probe2_pass` in soft scope is ambiguous because a global variable by the same name exists: `probe2_pass` will be treated as a new local. Disambiguate by using `local probe2_pass` to suppress this warning or `global probe2_pass` to assign to the existing global variable.
+└ @ ~/Projects/PadeTaylor.jl/external/probes/taylorseries-arb/probe.jl:86
+  (1+x)^2 via ^2:    1.0 + 2.0 t + 1.0 t² + 𝒪(t⁶¹)
+  (1+x)^2 via mult:  1.0 + 2.0 t + 1.0 t² + 𝒪(t⁶¹)
+  All 61 coefficients of (1+x)^2 match between the two methods.
+  Addition, subtraction, multiplication, division: all executed.
+
+--- PROBE 3: Transcendentals (order 60) ---
+┌ Warning: Assignment to `probe3_pass` in soft scope is ambiguous because a global variable by the same name exists: `probe3_pass` will be treated as a new local. Disambiguate by using `local probe3_pass` to suppress this warning or `global probe3_pass` to assign to the existing global variable.
+└ @ ~/Projects/PadeTaylor.jl/external/probes/taylorseries-arb/probe.jl:196
+  Computing exp(x)...
+  exp(x) computed, type: Taylor1{Arb}
+  exp(x): all 61 coefficients correct (overlap with 1/k!).
+  Computing sin(x)...
+  sin(x): all 61 coefficients correct.
+  Computing cos(x)...
+  cos(x): all 61 coefficients correct.
+  Computing log(1+x)...
+  log(1+x): all 61 coefficients correct.
+
+--- PROBE 4: High-order stress (order 80) ---
+┌ Warning: Assignment to `probe4_pass` in soft scope is ambiguous because a global variable by the same name exists: `probe4_pass` will be treated as a new local. Disambiguate by using `local probe4_pass` to suppress this warning or `global probe4_pass` to assign to the existing global variable.
+└ @ ~/Projects/PadeTaylor.jl/external/probes/taylorseries-arb/probe.jl:242
+  Computing exp(x)^2 at order 80...
+  Computing exp(2x) at order 80...
+  exp(x)^2 and exp(2x) agree on all 81 coefficients at order 80.
+
+--- PROBE 5: Arb precision propagation (256-bit) ---
+┌ Warning: Assignment to `probe5_pass` in soft scope is ambiguous because a global variable by the same name exists: `probe5_pass` will be treated as a new local. Disambiguate by using `local probe5_pass` to suppress this warning or `global probe5_pass` to assign to the existing global variable.
+└ @ ~/Projects/PadeTaylor.jl/external/probes/taylorseries-arb/probe.jl:292
+  Arb precision set to 256 bits.
+  exp(x) computed at 256-bit precision.
+  Max radius across all exp(x) coefficients: 2.1590421387736112e-78
+  Threshold (2^-200): 6.223015277861142e-61
+  exp coeff[60] = [1.20178049364932267021937386416586257652800811579212837697174634066971427199e-82 +/- 2.18e-157]
+  1/60! (Arb)   = [1.2017804936493226702193738641658625765280081157921283769717463406697142719889e-82 +/- 2.73e-159]
+  Overlap: true
+  PASS: All radii < 2^-200; precision is genuinely 256-bit.
+
+======================================================================
+SUMMARY
+======================================================================
+  probe1: PASS
+  probe2: PASS
+  probe3: PASS
+  probe4: PASS
+  probe5: PASS: max_radius=2.1590421387736112e-78 < 2^-200=6.223015277861142e-61
+
+Overall: ALL PASS
+======================================================================

@@ -1,0 +1,1662 @@
+{
+  "table_of_contents": [
+    {
+      "title": "Journal of Computational Physics",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          158.0712890625,
+          82.35400390625
+        ],
+        [
+          384.7998046875,
+          82.35400390625
+        ],
+        [
+          384.7998046875,
+          98.6162109375
+        ],
+        [
+          158.0712890625,
+          98.6162109375
+        ]
+      ]
+    },
+    {
+      "title": "A numerical methodology for the Painlev\u00e9 equations",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          34.0625,
+          163.2568359375
+        ],
+        [
+          368.30078125,
+          163.2568359375
+        ],
+        [
+          368.30078125,
+          178.7847900390625
+        ],
+        [
+          34.0625,
+          178.7847900390625
+        ]
+      ]
+    },
+    {
+      "title": "article info",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          35.6591796875,
+          246.56875610351562
+        ],
+        [
+          131.4599609375,
+          246.56875610351562
+        ],
+        [
+          131.4599609375,
+          255.53506469726562
+        ],
+        [
+          35.6591796875,
+          255.53506469726562
+        ]
+      ]
+    },
+    {
+      "title": "abstract",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          195.76058959960938,
+          246.85223388671875
+        ],
+        [
+          261.85546875,
+          246.85223388671875
+        ],
+        [
+          261.85546875,
+          255.81854248046875
+        ],
+        [
+          195.76058959960938,
+          255.81854248046875
+        ]
+      ]
+    },
+    {
+      "title": "1. Introduction",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          35.39306640625,
+          431.36083984375
+        ],
+        [
+          97.0582046508789,
+          431.36083984375
+        ],
+        [
+          97.0582046508789,
+          442.3207702636719
+        ],
+        [
+          35.39306640625,
+          442.3207702636719
+        ]
+      ]
+    },
+    {
+      "title": "2. Pad\u00e9 method for solving ODE IVPs",
+      "heading_level": null,
+      "page_id": 1,
+      "polygon": [
+        [
+          38.8525390625,
+          544.55224609375
+        ],
+        [
+          189.17355371900825,
+          544.55224609375
+        ],
+        [
+          189.17355371900825,
+          553.3138244197779
+        ],
+        [
+          38.8525390625,
+          553.3138244197779
+        ]
+      ]
+    },
+    {
+      "title": "2.1. Taylor series methods",
+      "heading_level": null,
+      "page_id": 2,
+      "polygon": [
+        [
+          35.28236914600551,
+          52.2421875
+        ],
+        [
+          130.66162109375,
+          52.2421875
+        ],
+        [
+          130.66162109375,
+          61.479313824419776
+        ],
+        [
+          35.28236914600551,
+          61.479313824419776
+        ]
+      ]
+    },
+    {
+      "title": "2.1.1. Inefficient version",
+      "heading_level": null,
+      "page_id": 2,
+      "polygon": [
+        [
+          35.126953125,
+          138.70332996972755
+        ],
+        [
+          123.86363636363636,
+          138.70332996972755
+        ],
+        [
+          123.86363636363636,
+          146.9505549949546
+        ],
+        [
+          35.126953125,
+          146.9505549949546
+        ]
+      ]
+    },
+    {
+      "title": "2.1.2. Efficient versions",
+      "heading_level": null,
+      "page_id": 2,
+      "polygon": [
+        [
+          35.126953125,
+          297.85302734375
+        ],
+        [
+          120.11019283746556,
+          297.85302734375
+        ],
+        [
+          120.11019283746556,
+          306.6468213925328
+        ],
+        [
+          35.126953125,
+          306.6468213925328
+        ]
+      ]
+    },
+    {
+      "title": "2.2. Pad\u00e9 version of the Taylor series method",
+      "heading_level": null,
+      "page_id": 2,
+      "polygon": [
+        [
+          35.126953125,
+          464.84359233097877
+        ],
+        [
+          199.6831955922865,
+          464.84359233097877
+        ],
+        [
+          199.6831955922865,
+          474.17041015625
+        ],
+        [
+          35.126953125,
+          474.17041015625
+        ]
+      ]
+    },
+    {
+      "title": "2.2.1. Comparison between Taylor and Pad\u00e9 integration",
+      "heading_level": null,
+      "page_id": 2,
+      "polygon": [
+        [
+          34.0625,
+          593.89208984375
+        ],
+        [
+          238.71900826446281,
+          593.89208984375
+        ],
+        [
+          238.71900826446281,
+          602.7971745711402
+        ],
+        [
+          34.0625,
+          602.7971745711402
+        ]
+      ]
+    },
+    {
+      "title": "3. Computational aspects of the Pad\u00e9 method when applied to 2-D pole fields",
+      "heading_level": null,
+      "page_id": 3,
+      "polygon": [
+        [
+          39.384765625,
+          271.369140625
+        ],
+        [
+          350.8997802734375,
+          271.369140625
+        ],
+        [
+          350.8997802734375,
+          280.2355041503906
+        ],
+        [
+          39.384765625,
+          280.2355041503906
+        ]
+      ]
+    },
+    {
+      "title": "3.1. Selection of integration paths",
+      "heading_level": null,
+      "page_id": 4,
+      "polygon": [
+        [
+          36.19140625,
+          167.24755859375
+        ],
+        [
+          158.35304260253906,
+          167.24755859375
+        ],
+        [
+          158.35304260253906,
+          177.564208984375
+        ],
+        [
+          36.19140625,
+          177.564208984375
+        ]
+      ]
+    },
+    {
+      "title": "3.2. Numerical solution method for smooth regions",
+      "heading_level": null,
+      "page_id": 5,
+      "polygon": [
+        [
+          39.78650137741047,
+          194.18466195761854
+        ],
+        [
+          226.70798898071624,
+          194.18466195761854
+        ],
+        [
+          226.70798898071624,
+          202.80126953125
+        ],
+        [
+          39.78650137741047,
+          202.80126953125
+        ]
+      ]
+    },
+    {
+      "title": "3.2.1. BVP solvers",
+      "heading_level": null,
+      "page_id": 5,
+      "polygon": [
+        [
+          39.384765625,
+          303.6478304742684
+        ],
+        [
+          105.09641873278237,
+          302.1483350151362
+        ],
+        [
+          105.09641873278237,
+          311.14530776992933
+        ],
+        [
+          39.384765625,
+          311.89505549949547
+        ]
+      ]
+    },
+    {
+      "title": "3.2.2. Pole field edge detection",
+      "heading_level": null,
+      "page_id": 6,
+      "polygon": [
+        [
+          35.28236914600551,
+          384.92333984375
+        ],
+        [
+          147.13498622589532,
+          384.92333984375
+        ],
+        [
+          147.13498622589532,
+          394.36730575176585
+        ],
+        [
+          35.28236914600551,
+          394.36730575176585
+        ]
+      ]
+    },
+    {
+      "title": "4. Some further illustrations of P_I solutions",
+      "heading_level": null,
+      "page_id": 6,
+      "polygon": [
+        [
+          35.28236914600551,
+          561.96630859375
+        ],
+        [
+          210.9435261707989,
+          561.96630859375
+        ],
+        [
+          210.9435261707989,
+          571.3077699293642
+        ],
+        [
+          35.28236914600551,
+          571.3077699293642
+        ]
+      ]
+    },
+    {
+      "title": "4.1. The tritronqu\u00e9e case",
+      "heading_level": null,
+      "page_id": 6,
+      "polygon": [
+        [
+          35.28236914600551,
+          618.5418768920282
+        ],
+        [
+          126.866391184573,
+          618.5418768920282
+        ],
+        [
+          126.866391184573,
+          627.99462890625
+        ],
+        [
+          35.28236914600551,
+          627.99462890625
+        ]
+      ]
+    },
+    {
+      "title": "4.2. NIST Handbook example",
+      "heading_level": null,
+      "page_id": 7,
+      "polygon": [
+        [
+          40.18310546875,
+          524.23583984375
+        ],
+        [
+          145.03173828125,
+          524.23583984375
+        ],
+        [
+          145.03173828125,
+          532.8025665283203
+        ],
+        [
+          40.18310546875,
+          532.8025665283203
+        ]
+      ]
+    },
+    {
+      "title": "4.3. Overview of tronqu\u00e9e solutions",
+      "heading_level": null,
+      "page_id": 7,
+      "polygon": [
+        [
+          40.71533203125,
+          637.42724609375
+        ],
+        [
+          169.4762420654297,
+          637.42724609375
+        ],
+        [
+          169.4762420654297,
+          648.3990631103516
+        ],
+        [
+          40.71533203125,
+          648.3990631103516
+        ]
+      ]
+    },
+    {
+      "title": "4.4. Creation of a smooth band far out in left half-plane",
+      "heading_level": null,
+      "page_id": 8,
+      "polygon": [
+        [
+          35.126953125,
+          544.55224609375
+        ],
+        [
+          240.22038567493112,
+          544.55224609375
+        ],
+        [
+          240.22038567493112,
+          553.3138244197779
+        ],
+        [
+          35.126953125,
+          553.3138244197779
+        ]
+      ]
+    },
+    {
+      "title": "4.5. Transitions in pole field patterns",
+      "heading_level": null,
+      "page_id": 9,
+      "polygon": [
+        [
+          39.65087890625,
+          608.40380859375
+        ],
+        [
+          173.92919921875,
+          608.40380859375
+        ],
+        [
+          173.92919921875,
+          617.0485382080078
+        ],
+        [
+          39.65087890625,
+          617.0485382080078
+        ]
+      ]
+    },
+    {
+      "title": "5. Discussion of implementation options",
+      "heading_level": null,
+      "page_id": 10,
+      "polygon": [
+        [
+          35.28236914600551,
+          337.38647830474264
+        ],
+        [
+          199.6831955922865,
+          337.38647830474264
+        ],
+        [
+          199.6831955922865,
+          346.830078125
+        ],
+        [
+          35.28236914600551,
+          346.830078125
+        ]
+      ]
+    },
+    {
+      "title": "5.1. Choice of order for the Pad\u00e9 integrator",
+      "heading_level": null,
+      "page_id": 10,
+      "polygon": [
+        [
+          35.28236914600551,
+          401.1150353178607
+        ],
+        [
+          193.6776859504132,
+          401.1150353178607
+        ],
+        [
+          193.6776859504132,
+          410.31884765625
+        ],
+        [
+          35.28236914600551,
+          410.31884765625
+        ]
+      ]
+    },
+    {
+      "title": "5.1.1. Test problem \u2013 Weierstrass \u2118-function",
+      "heading_level": null,
+      "page_id": 10,
+      "polygon": [
+        [
+          35.126953125,
+          455.8466195761856
+        ],
+        [
+          199.6831955922865,
+          455.8466195761856
+        ],
+        [
+          199.6831955922865,
+          465.46337890625
+        ],
+        [
+          35.126953125,
+          465.46337890625
+        ]
+      ]
+    },
+    {
+      "title": "5.1.2. Accuracy and time comparisons",
+      "heading_level": null,
+      "page_id": 12,
+      "polygon": [
+        [
+          35.6591796875,
+          605.50146484375
+        ],
+        [
+          173.80767822265625,
+          605.50146484375
+        ],
+        [
+          173.80767822265625,
+          614.7238464355469
+        ],
+        [
+          35.6591796875,
+          614.7238464355469
+        ]
+      ]
+    },
+    {
+      "title": "5.2. Toeplitz-based implementation vs. the \\epsilon-algorithm",
+      "heading_level": null,
+      "page_id": 13,
+      "polygon": [
+        [
+          38.8525390625,
+          53.23208879919273
+        ],
+        [
+          242.4724517906336,
+          53.23208879919273
+        ],
+        [
+          242.4724517906336,
+          61.479313824419776
+        ],
+        [
+          38.8525390625,
+          61.479313824419776
+        ]
+      ]
+    },
+    {
+      "title": "5.3. Choice of directions for the ODE steps",
+      "heading_level": null,
+      "page_id": 13,
+      "polygon": [
+        [
+          39.78650137741047,
+          596.79443359375
+        ],
+        [
+          193.6776859504132,
+          596.79443359375
+        ],
+        [
+          193.6776859504132,
+          605.7961654894046
+        ],
+        [
+          39.78650137741047,
+          605.7961654894046
+        ]
+      ]
+    },
+    {
+      "title": "5.4. Comparisons between some different ODE solvers",
+      "heading_level": null,
+      "page_id": 14,
+      "polygon": [
+        [
+          35.28236914600551,
+          53.23208879919273
+        ],
+        [
+          232.71349862258953,
+          53.23208879919273
+        ],
+        [
+          232.71349862258953,
+          61.479313824419776
+        ],
+        [
+          35.28236914600551,
+          61.479313824419776
+        ]
+      ]
+    },
+    {
+      "title": "5.4.1. Stage 1: Integration along 'valleys', and near a pole at a known location",
+      "heading_level": null,
+      "page_id": 14,
+      "polygon": [
+        [
+          35.28236914600551,
+          140.95257315842582
+        ],
+        [
+          322.04545454545456,
+          140.95257315842582
+        ],
+        [
+          322.04545454545456,
+          149.94954591321897
+        ],
+        [
+          35.28236914600551,
+          149.94954591321897
+        ]
+      ]
+    },
+    {
+      "title": "5.4.2. Stage 2: Evaluations at lattice points, with poles present at unknown locations",
+      "heading_level": null,
+      "page_id": 15,
+      "polygon": [
+        [
+          41.15899658203125,
+          107.74951171875
+        ],
+        [
+          348.076171875,
+          107.74951171875
+        ],
+        [
+          348.076171875,
+          117.07275390625
+        ],
+        [
+          41.15899658203125,
+          117.07275390625
+        ]
+      ]
+    },
+    {
+      "title": "5.5. 'Tuning' of random path selection strategy",
+      "heading_level": null,
+      "page_id": 15,
+      "polygon": [
+        [
+          39.9169921875,
+          215.13623046875
+        ],
+        [
+          209.83763122558594,
+          215.13623046875
+        ],
+        [
+          209.83763122558594,
+          223.88140869140625
+        ],
+        [
+          39.9169921875,
+          223.88140869140625
+        ]
+      ]
+    },
+    {
+      "title": "6. Conclusions",
+      "heading_level": null,
+      "page_id": 15,
+      "polygon": [
+        [
+          39.9169921875,
+          323.24853515625
+        ],
+        [
+          98.39472961425781,
+          323.24853515625
+        ],
+        [
+          98.39472961425781,
+          332.39093017578125
+        ],
+        [
+          39.9169921875,
+          332.39093017578125
+        ]
+      ]
+    },
+    {
+      "title": "Acknowledgements",
+      "heading_level": null,
+      "page_id": 15,
+      "polygon": [
+        [
+          39.384765625,
+          608.40380859375
+        ],
+        [
+          119.21875,
+          608.40380859375
+        ],
+        [
+          119.21875,
+          617.0458908081055
+        ],
+        [
+          39.384765625,
+          617.0458908081055
+        ]
+      ]
+    },
+    {
+      "title": "References",
+      "heading_level": null,
+      "page_id": 16,
+      "polygon": [
+        [
+          35.39306640625,
+          95.41455078125
+        ],
+        [
+          79.95419311523438,
+          95.41455078125
+        ],
+        [
+          79.95419311523438,
+          104.430419921875
+        ],
+        [
+          35.39306640625,
+          104.430419921875
+        ]
+      ]
+    }
+  ],
+  "page_stats": [
+    {
+      "page_id": 0,
+      "text_extraction_method": "pdftext",
+      "block_counts": [
+        [
+          "Span",
+          188
+        ],
+        [
+          "Line",
+          60
+        ],
+        [
+          "Text",
+          10
+        ],
+        [
+          "SectionHeader",
+          5
+        ],
+        [
+          "Picture",
+          2
+        ],
+        [
+          "ListItem",
+          2
+        ],
+        [
+          "PageHeader",
+          1
+        ],
+        [
+          "Footnote",
+          1
+        ],
+        [
+          "PageFooter",
+          1
+        ],
+        [
+          "ListGroup",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    },
+    {
+      "page_id": 1,
+      "text_extraction_method": "surya",
+      "block_counts": [
+        [
+          "Line",
+          61
+        ],
+        [
+          "Span",
+          46
+        ],
+        [
+          "Text",
+          10
+        ],
+        [
+          "Equation",
+          5
+        ],
+        [
+          "PageHeader",
+          2
+        ],
+        [
+          "Figure",
+          1
+        ],
+        [
+          "Caption",
+          1
+        ],
+        [
+          "SectionHeader",
+          1
+        ],
+        [
+          "FigureGroup",
+          1
+        ],
+        [
+          "Reference",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    },
+    {
+      "page_id": 2,
+      "text_extraction_method": "surya",
+      "block_counts": [
+        [
+          "Line",
+          64
+        ],
+        [
+          "Span",
+          47
+        ],
+        [
+          "Text",
+          12
+        ],
+        [
+          "Equation",
+          6
+        ],
+        [
+          "SectionHeader",
+          5
+        ],
+        [
+          "PageHeader",
+          2
+        ],
+        [
+          "ListItem",
+          2
+        ],
+        [
+          "ListGroup",
+          1
+        ],
+        [
+          "Reference",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    },
+    {
+      "page_id": 3,
+      "text_extraction_method": "pdftext",
+      "block_counts": [
+        [
+          "Span",
+          146
+        ],
+        [
+          "Line",
+          27
+        ],
+        [
+          "Text",
+          3
+        ],
+        [
+          "PageHeader",
+          2
+        ],
+        [
+          "Figure",
+          2
+        ],
+        [
+          "Caption",
+          2
+        ],
+        [
+          "FigureGroup",
+          2
+        ],
+        [
+          "SectionHeader",
+          1
+        ],
+        [
+          "Reference",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    },
+    {
+      "page_id": 4,
+      "text_extraction_method": "pdftext",
+      "block_counts": [
+        [
+          "Span",
+          101
+        ],
+        [
+          "Line",
+          25
+        ],
+        [
+          "Text",
+          4
+        ],
+        [
+          "PageHeader",
+          2
+        ],
+        [
+          "ListItem",
+          2
+        ],
+        [
+          "SectionHeader",
+          1
+        ],
+        [
+          "Figure",
+          1
+        ],
+        [
+          "Caption",
+          1
+        ],
+        [
+          "FigureGroup",
+          1
+        ],
+        [
+          "ListGroup",
+          1
+        ],
+        [
+          "Reference",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    },
+    {
+      "page_id": 5,
+      "text_extraction_method": "surya",
+      "block_counts": [
+        [
+          "Span",
+          107
+        ],
+        [
+          "Line",
+          67
+        ],
+        [
+          "Text",
+          11
+        ],
+        [
+          "Equation",
+          3
+        ],
+        [
+          "PageHeader",
+          2
+        ],
+        [
+          "SectionHeader",
+          2
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    },
+    {
+      "page_id": 6,
+      "text_extraction_method": "surya",
+      "block_counts": [
+        [
+          "Span",
+          46
+        ],
+        [
+          "Line",
+          44
+        ],
+        [
+          "Text",
+          5
+        ],
+        [
+          "SectionHeader",
+          3
+        ],
+        [
+          "PageHeader",
+          2
+        ],
+        [
+          "Figure",
+          1
+        ],
+        [
+          "Caption",
+          1
+        ],
+        [
+          "Equation",
+          1
+        ],
+        [
+          "FigureGroup",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    },
+    {
+      "page_id": 7,
+      "text_extraction_method": "pdftext",
+      "block_counts": [
+        [
+          "Span",
+          180
+        ],
+        [
+          "Line",
+          33
+        ],
+        [
+          "Text",
+          5
+        ],
+        [
+          "PageHeader",
+          2
+        ],
+        [
+          "SectionHeader",
+          2
+        ],
+        [
+          "Figure",
+          1
+        ],
+        [
+          "Caption",
+          1
+        ],
+        [
+          "Equation",
+          1
+        ],
+        [
+          "FigureGroup",
+          1
+        ],
+        [
+          "Reference",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    },
+    {
+      "page_id": 8,
+      "text_extraction_method": "surya",
+      "block_counts": [
+        [
+          "Line",
+          47
+        ],
+        [
+          "Span",
+          45
+        ],
+        [
+          "PageHeader",
+          2
+        ],
+        [
+          "Figure",
+          2
+        ],
+        [
+          "Caption",
+          2
+        ],
+        [
+          "Text",
+          2
+        ],
+        [
+          "FigureGroup",
+          2
+        ],
+        [
+          "SectionHeader",
+          1
+        ],
+        [
+          "Reference",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    },
+    {
+      "page_id": 9,
+      "text_extraction_method": "pdftext",
+      "block_counts": [
+        [
+          "Span",
+          104
+        ],
+        [
+          "Line",
+          19
+        ],
+        [
+          "PageHeader",
+          2
+        ],
+        [
+          "Figure",
+          2
+        ],
+        [
+          "Caption",
+          2
+        ],
+        [
+          "Text",
+          2
+        ],
+        [
+          "FigureGroup",
+          2
+        ],
+        [
+          "SectionHeader",
+          1
+        ],
+        [
+          "Reference",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    },
+    {
+      "page_id": 10,
+      "text_extraction_method": "surya",
+      "block_counts": [
+        [
+          "Line",
+          55
+        ],
+        [
+          "Span",
+          55
+        ],
+        [
+          "Text",
+          9
+        ],
+        [
+          "Equation",
+          4
+        ],
+        [
+          "SectionHeader",
+          3
+        ],
+        [
+          "PageHeader",
+          2
+        ],
+        [
+          "Figure",
+          1
+        ],
+        [
+          "Caption",
+          1
+        ],
+        [
+          "FigureGroup",
+          1
+        ],
+        [
+          "Reference",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    },
+    {
+      "page_id": 11,
+      "text_extraction_method": "pdftext",
+      "block_counts": [
+        [
+          "Span",
+          45
+        ],
+        [
+          "Line",
+          10
+        ],
+        [
+          "PageHeader",
+          2
+        ],
+        [
+          "Figure",
+          1
+        ],
+        [
+          "Caption",
+          1
+        ],
+        [
+          "Text",
+          1
+        ],
+        [
+          "FigureGroup",
+          1
+        ],
+        [
+          "Reference",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    },
+    {
+      "page_id": 12,
+      "text_extraction_method": "pdftext",
+      "block_counts": [
+        [
+          "Span",
+          162
+        ],
+        [
+          "Line",
+          29
+        ],
+        [
+          "Figure",
+          3
+        ],
+        [
+          "Caption",
+          3
+        ],
+        [
+          "FigureGroup",
+          3
+        ],
+        [
+          "PageHeader",
+          2
+        ],
+        [
+          "SectionHeader",
+          1
+        ],
+        [
+          "Text",
+          1
+        ],
+        [
+          "Reference",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    },
+    {
+      "page_id": 13,
+      "text_extraction_method": "surya",
+      "block_counts": [
+        [
+          "Line",
+          57
+        ],
+        [
+          "Span",
+          50
+        ],
+        [
+          "Text",
+          8
+        ],
+        [
+          "PageHeader",
+          2
+        ],
+        [
+          "SectionHeader",
+          2
+        ],
+        [
+          "Equation",
+          2
+        ],
+        [
+          "ListItem",
+          2
+        ],
+        [
+          "ListGroup",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    },
+    {
+      "page_id": 14,
+      "text_extraction_method": "surya",
+      "block_counts": [
+        [
+          "Span",
+          74
+        ],
+        [
+          "Line",
+          64
+        ],
+        [
+          "TableCell",
+          39
+        ],
+        [
+          "Text",
+          10
+        ],
+        [
+          "PageHeader",
+          2
+        ],
+        [
+          "SectionHeader",
+          2
+        ],
+        [
+          "Equation",
+          1
+        ],
+        [
+          "Caption",
+          1
+        ],
+        [
+          "Table",
+          1
+        ],
+        [
+          "TableGroup",
+          1
+        ],
+        [
+          "Reference",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    },
+    {
+      "page_id": 15,
+      "text_extraction_method": "pdftext",
+      "block_counts": [
+        [
+          "Span",
+          144
+        ],
+        [
+          "Line",
+          54
+        ],
+        [
+          "Text",
+          8
+        ],
+        [
+          "ListItem",
+          5
+        ],
+        [
+          "SectionHeader",
+          4
+        ],
+        [
+          "PageHeader",
+          2
+        ],
+        [
+          "ListGroup",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    },
+    {
+      "page_id": 16,
+      "text_extraction_method": "pdftext",
+      "block_counts": [
+        [
+          "Span",
+          98
+        ],
+        [
+          "Line",
+          44
+        ],
+        [
+          "ListItem",
+          31
+        ],
+        [
+          "PageHeader",
+          2
+        ],
+        [
+          "Text",
+          1
+        ],
+        [
+          "SectionHeader",
+          1
+        ],
+        [
+          "ListGroup",
+          1
+        ],
+        [
+          "Reference",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    }
+  ],
+  "debug_data_path": "debug_data/FW2011_painleve_methodology_JCP230"
+}
