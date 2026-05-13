@@ -13,6 +13,7 @@ using PadeTaylor
         @test isdefined(PadeTaylor, :PathNetwork)
         @test isdefined(PadeTaylor, :BVP)
         @test isdefined(PadeTaylor, :Dispatcher)
+        @test isdefined(PadeTaylor, :EdgeDetector)
     end
 
     # Per-module test files. Each file is a self-contained @testset.
@@ -27,6 +28,7 @@ using PadeTaylor
     include("pathnetwork_test.jl")
     include("bvp_test.jl")
     include("dispatcher_test.jl")
+    include("edge_detector_test.jl")
     include("ext_commonsolve_test.jl")
     include("ext_arblib_test.jl")
 end

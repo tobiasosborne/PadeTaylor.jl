@@ -20,6 +20,7 @@ Four algorithmically independent layers, per ADR-0001:
   7. `PathNetwork`   — FW 2011 §3.1 5-direction wedge path-tree (Tier-2).
   8. `BVP`           — Chebyshev-Newton spectral BVP solver (Tier-3).
   9. `Dispatcher`    — 1D IVP↔BVP chain composition per FW 2011 §4.4.
+ 10. `EdgeDetector`  — 5-point Laplacian pole-field classifier (FW §3.2.2).
 
 ## Determinism
 
@@ -62,6 +63,7 @@ include("Problems.jl")
 include("PathNetwork.jl")
 include("BVP.jl")
 include("Dispatcher.jl")
+include("EdgeDetector.jl")
 
 # Public API (re-exported from sub-modules).
 using .Problems:    PadeTaylorProblem, solve_pade, PadeTaylorSolution, taylor_eval
@@ -70,6 +72,7 @@ using .Coefficients: taylor_coefficients_1st, taylor_coefficients_2nd
 using .PathNetwork: path_network_solve, PathNetworkSolution
 using .BVP:         bvp_solve, BVPSolution
 using .Dispatcher:  dispatch_solve, DispatcherSolution, IVPSegment, BVPSegment
+using .EdgeDetector: laplacian_residual, pole_field_mask
 
 # CommonSolve adapter: the algorithm struct is declared HERE in the main
 # module so users can construct it after `using PadeTaylor, CommonSolve`
@@ -97,6 +100,7 @@ export taylor_coefficients_1st, taylor_coefficients_2nd
 export path_network_solve, PathNetworkSolution
 export bvp_solve, BVPSolution
 export dispatch_solve, DispatcherSolution, IVPSegment, BVPSegment
+export laplacian_residual, pole_field_mask
 export PadeTaylorAlg
 
 end # module PadeTaylor
