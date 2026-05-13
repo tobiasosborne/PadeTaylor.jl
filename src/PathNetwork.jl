@@ -199,10 +199,19 @@ function path_network_solve(prob::PadeTaylorProblem,
                 "path_network_solve: all 5 wedge candidates failed at " *
                 "z=$z_cur (target=$target); shrink h or widen wedge."))
 
+            # Canonical (real-h) Padé centered at z_new, per ADR-0004's
+            # design decision: Stage 2 always interpolates inside |t| ≤ 1
+            # of a REAL-direction disc.  The wedge-direction `pade_sel`
+            # above is consumed by step selection only; storing it as the
+            # visited node's Padé would invalidate the `t = (z_f - z_v)/h`
+            # Stage-2 evaluation (which assumes real h).  Cost: one extra
+            # Coefficients + RobustPade per visited node.
+            pade_canonical = _local_pade(prob.f, z_new, u_new, up_new, order, h_T)
+
             push!(visited_z, z_new)
             push!(visited_u, u_new)
             push!(visited_up, up_new)
-            push!(visited_pade, pade_sel)
+            push!(visited_pade, pade_canonical)
             push!(visited_h, h_T)
 
             z_cur, u_cur, up_cur = z_new, u_new, up_new

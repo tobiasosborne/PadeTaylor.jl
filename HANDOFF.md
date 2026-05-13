@@ -27,13 +27,13 @@ docs/design_section_6_path_network.md scope), are all shipped:
 | 7 | `CommonSolveAdapter` ext | ⏸  P1, deferred | DESIGN.md §4 Phase 7 |
 | 8 | `PadeTaylorArblibExt` ext | ⏸  P1, optional | DESIGN.md §4 Phase 8 |
 | 9 | Tier C: PI tritronquée pole-field qualitative | ⏸  P1, optional | DESIGN.md §4 Phase 9 |
-| **10** | `PathNetwork.path_network_solve` | ✅ **shipped (Tier-2 path-network)**, mutation-proven; see worklog 006 | 21 |
+| **10** | `PathNetwork.path_network_solve` | ✅ **shipped + FW Table 5.1 GREEN @ 2.13e-14 BF-256 (beats FW's 8.34e-14)**; see worklogs 006 + 008 | 33 |
 | **11** | `BVP.bvp_solve` | ✅ **shipped (Tier-3 Chebyshev-Newton BVP)**, mutation-proven; see worklog 006 | 43 |
 | **12** | `Dispatcher.dispatch_solve` (1D chain v1) | ✅ **shipped (Tier-3 IVP↔BVP chain composition)**, mutation-proven; see worklog 007 | 45 |
 | 13 | `CoordTransforms` (FFW 2017 PIII/PV) | ⏸  P2, bead `padetaylor-bvh` | Tier-4 |
 | 14 | `SheetTracker` (FFW 2017 PVI) | ⏸  P2, bead `padetaylor-grc` | Tier-5 |
 
-**329 / 329 tests passing** as of the Phase-12 GREEN commit.
+**340 / 340 tests passing** as of the PN.2.2-bugfix GREEN commit.
 
 **Phase 6 shipped 2026-05-09 on the pivoted scope** — the v1
 acceptance is a Padé-vs-Taylor pole-bridge demonstration (one stored
@@ -389,15 +389,14 @@ type is a prerequisite for Phase 8 but unrelated to Phase 7.
 bd ready -n 30
 ```
 
-Open beads at end of Phase 12 commit (13 total; `padetaylor-8lk` closed):
-- `padetaylor-1jf` **P0** — Path-network module (Phase 10 shipped;
-  bead stays open until PN.2.2 + PN.3.1 land via `padetaylor-yt1`).
-- `padetaylor-8cr` **P0** — v2 umbrella FW Table 5.1 long-range.
-- `padetaylor-yt1` **P1** — PathNetwork tuning: FW Table 5.1
-  quantitative + :steepest_descent.
+Open beads at end of PN.2.2-bugfix commit (11 total; `padetaylor-yt1`,
+`padetaylor-1jf` closed):
+- `padetaylor-8cr` **P0** — v2 umbrella FW Table 5.1 long-range
+  (largely **subsumed** by PN.2.2 — u(z=30) now achieves 2.13e-14
+  BF-256; bead may close after a confirmation pass at z=10⁴).
 - `padetaylor-rgp` **P1** — Figure-acceptance catalogue (tracking).
 - `padetaylor-c2p` **P1** — Edge detector (now consumed by Phase 12 v2 / `padetaylor-k31`).
-- `padetaylor-k31` **P1 NEW** — Phase 12 v2: 2D lattice dispatcher with automatic edge detection.
+- `padetaylor-k31` **P1** — Phase 12 v2: 2D lattice dispatcher with automatic edge detection.
 - `padetaylor-kvi` **P1** — Phase 9 Tier C qualitative.
 - `padetaylor-jhq` **P1** — Phase 8 ArblibExt.
 - `padetaylor-2vz` **P1** — Phase 7 CommonSolveAdapter.
@@ -406,12 +405,11 @@ Open beads at end of Phase 12 commit (13 total; `padetaylor-8lk` closed):
 - `padetaylor-61j` **P2** — Willers 1974 acquisition.
 - `padetaylor-8pi` **P2** — GenericLinearAlgebra svd! piracy friction.
 
-**Next P0 work item**: `padetaylor-1jf` / `padetaylor-yt1` (PathNetwork
-PN.2.2 quantitative FW Table 5.1 + PN.3.1 :steepest_descent), OR
-`padetaylor-8cr` umbrella (v2 long-range integration).  Phase 12 v2
-(`padetaylor-k31`) is P1 and waits for an authentic Tier-3 figure
-target — its dependencies (PathNetwork + BVP + the inline 5-point
-Laplacian classifier formerly in `padetaylor-c2p`) are all in tree.
+**Next work item**: `padetaylor-8cr` (verify u(z=10⁴) = 21.0253033947…
+matches FW Table 5.1 row 2 — should be straightforward now), then move
+to Tier-3 figure reproduction via the Dispatcher.  Or attack figure
+reproduction directly via `padetaylor-rgp` (e.g. FW Fig 4.6 BVP demo,
+already in-tree as a BVP test).
 
 ## Hard-won lessons (don't repeat these)
 
@@ -482,6 +480,23 @@ Quick summary:
     2004 (SIAM Review) directly from publishers.  When user activates
     the VPN, attempt direct publisher URLs before preprint fallback.
     Saved as reference memory `reference-tib-vpn-paywalls`.
+
+12. **ADR-specified invariants need invariant tests, not approximation
+    tests**.  PN.2.2 surfaced a Phase-10 bug where the visited-node
+    canonical-Padé invariant (specified in ADR-0004 + worklog 006) was
+    NOT enforced in code — only the FW Table 5.1 long-range test at
+    z=30 caught it (~22% rel-err Float64 AND BF-256).  No test asserted
+    the invariant directly (e.g., "evaluating visited[k]'s stored Padé
+    at t=0 returns visited_u[k]"); such a test would have caught the
+    bug immediately at Phase-10 GREEN.  See worklog 008 §"What changed"
+    and §"Hard-won lessons".
+
+13. **When numerical error is invariant to precision, suspect the
+    algorithm**.  PN.2.2's bug showed identical 22% rel-err at Float64
+    AND BF-256.  Float64-rel-err == BF-256-rel-err is a strong signal
+    that the issue is structural, not roundoff/truncation.  A
+    pre-emptive BF-256 probe is worth the ~50× wall-time cost when a
+    result smells wrong.  See worklog 008 §"Frictions surfaced" F3.
 
 ## Last commit before this handoff
 

@@ -138,6 +138,75 @@ include(joinpath(@__DIR__, "_oracle_problems.jl"))
         @test_throws ArgumentError path_network_solve(prob, grid; h = 0.0)
     end
 
+    @testset "PN.2.2: FW Table 5.1 z=30 long-range integration" begin
+        # FW 2011 Fig 5.1 / Table 5.1: u(z=30) of the equianharmonic ℘
+        # trajectory with FW IC matches `1.0950982559597442` to ≤1e-13
+        # at BigFloat-256 (FW reports their own 8.34e-14 in the paper;
+        # `docs/figure_catalogue.md §1 row FW2011 Fig 5.1`).
+        #
+        # This test exercises the path-network's load-bearing canonical-
+        # Padé-per-visited-node invariant (ADR-0004 design decision):
+        # each visited node z_v must store a REAL-h-direction Padé so
+        # Stage 2's `t = (z_f - z_v) / h_v` interpolation lands inside
+        # the disc.  See worklog 008 §"The wedge-vs-canonical-Padé bug
+        # at long range".
+
+        # Float64 path: rel-err ≤ 1e-9 acceptance.  ~75 visited nodes
+        # for h=0.5, order=30.
+        prob_f64 = PadeTaylorProblem(fW, (u_0_FW, up_0_FW), (0.0, 30.0);
+                                     order = 30)
+        sol_f64 = path_network_solve(prob_f64, ComplexF64[30.0 + 0im];
+                                     h = 0.5, max_steps_per_target = 200)
+        u30_f64 = sol_f64.grid_u[1]
+        @test isapprox(u30_f64, u_at_30_FW_ref; rtol = 1e-9)
+        @test abs(imag(u30_f64)) < 1e-9        # Real solution on real axis.
+
+        # BF-256 path: rel-err ≤ 1e-13 acceptance per FW Table 5.1.
+        # ~50s wall time; the dominant test cost in the suite.
+        setprecision(BigFloat, 256) do
+            u0_bf  = big"1.071822516416917"
+            up0_bf = big"1.710337353176786"
+            ref_bf = big"1.0950982559597442"
+            prob_bf = PadeTaylorProblem(fW, (u0_bf, up0_bf),
+                                        (big(0.0), big(30.0)); order = 30)
+            sol_bf = path_network_solve(prob_bf,
+                                        Complex{BigFloat}[Complex{BigFloat}(big(30.0))];
+                                        h = big(0.5), max_steps_per_target = 200)
+            u30_bf = sol_bf.grid_u[1]
+            rel = abs(u30_bf - ref_bf) / abs(ref_bf)
+            @test rel ≤ big"1e-13"
+            @test abs(imag(u30_bf)) < big"1e-15"
+        end
+    end
+
+    @testset "PN.3.1: :steepest_descent path agrees with :min_u (pole-bridge)" begin
+        # FW 2011 §5.4.1 (line 362-368) introduces `:steepest_descent`
+        # as a perf-tuned alternative to `:min_u`: pick the wedge angle
+        # closest to θ_sd = arg(-u/u') instead of evaluating all five
+        # |u| values.  On any smooth-region grid + pole-bridge grid
+        # where both rules agree on the wedge index at each step, the
+        # two paths should produce identical visited-node values to
+        # within Padé approximation noise (≤1e-10).
+        #
+        # We use targets that REQUIRE stepping (distance > h) including
+        # one pole-bridge case (z=1.4 past the lattice pole at z≈1.13),
+        # so the step-selection logic is exercised.  Both rules' answer
+        # at z=1.4 is u≈6.2518 (Phase-10 PN.1.2 ground truth).
+        prob = PadeTaylorProblem(fW, (u_0_FW, up_0_FW), (0.0, 2.0); order = 30)
+        grid = ComplexF64[1.4 + 0im, 1.2 + 0.4im, 0.6 + 0.3im]
+        sol_min     = path_network_solve(prob, grid; h = 0.5,
+                                         step_selection = :min_u)
+        sol_descent = path_network_solve(prob, grid; h = 0.5,
+                                         step_selection = :steepest_descent)
+        @test length(sol_min.grid_u) == length(sol_descent.grid_u)
+        for i in eachindex(sol_min.grid_u)
+            Δu  = abs(sol_min.grid_u[i]  - sol_descent.grid_u[i])
+            Δup = abs(sol_min.grid_up[i] - sol_descent.grid_up[i])
+            @test Δu  ≤ 1e-10
+            @test Δup ≤ 1e-9   # u' carries the 1/h chain-rule factor; looser tol.
+        end
+    end
+
 end # @testset PathNetwork
 
 # PN.5.1  Mutation-proof procedure (verified manually before commit; see
@@ -164,6 +233,26 @@ end # @testset PathNetwork
 #     as predicted — the NaN-sentinel logic is load-bearing across all
 #     Stage-2 tests.
 #
-# Restoration: both mutations restored before commit.  PN.2.2 (FW Table 5.1
-# z=30 to ≤1e-13) + PN.3.1 (:steepest_descent ≡ :min_u to ≤1e-10) deferred
-# to a follow-up commit per ADR-0004's v1/v2 split.
+# Restoration: both mutations restored before commit.
+#
+# PN.2.2 + PN.3.1 follow-up mutations (verified 2026-05-13 with bead
+# `padetaylor-yt1` in flight):
+#
+#   Mutation E  --  in PathNetwork.jl Stage-1 loop, restore the pre-bugfix
+#     behaviour of storing the wedge-direction `pade_sel` instead of the
+#     canonical-direction `pade_canonical` per visited node.  This is the
+#     bug worklog 008 diagnosed; restoring it MUST bite PN.2.2.
+#     Verified bite: 4 fails on PN.2.2 — F64 rel-err 0.218 >> 1e-9, F64
+#     imag(u) 7.2e-3 >> 1e-9, BF-256 rel-err 0.218 >> 1e-13, BF-256 imag
+#     7.2e-3 >> 1e-15.  Algorithmic error invariant to arithmetic precision.
+#
+#   Mutation F  --  in `_select_candidate` :steepest_descent branch,
+#     flip the sign in `θ_sd = angle(-u/u')` to `θ_sd = angle(u/u')`,
+#     steering toward poles instead of away.
+#     Verified bite: 4 fails on PN.3.1 — |Δu| at z=1.4 reaches 6.25
+#     (steepest_descent returns 0+0im on a failed pole crossing while
+#     :min_u correctly gives u≈6.2518); |Δu| at z=1.2+0.4i reaches 5.00;
+#     |Δu'| reaches 31.2 and 22.3 respectively.  Way above the 1e-10 /
+#     1e-9 tolerance.
+#
+# Restoration: both mutations restored before commit.
