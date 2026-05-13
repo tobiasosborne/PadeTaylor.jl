@@ -12,29 +12,37 @@ where naïve truncation diverges.
 
 ## Status
 
-**Research-grade, in progress.**  Phases Z, 1–6 of a 9-phase
-implementation plan are shipped; the package is not yet registered in
-the Julia general registry.  218 / 218 tests passing.
+**v0.1.0 — research-grade, all architectural tiers shipped.**  All
+four algorithmic layers and five composition tiers complete; the
+package is not yet registered in the Julia general registry.
+1311 / 1311 tests passing.
 
-| Phase | Module | Status |
+| Phase | Module / Feature | Status |
 |---|---|---|
-| Z | scaffold + ADRs + project discipline | ✅ |
-| 1 | `LinAlg.pade_svd` | ✅ |
-| 2 | `RobustPade.robust_pade` | ✅ |
-| 3 | `Coefficients.taylor_coefficients_*` | ✅ |
-| 4 | `StepControl.step_jorba_zou` + `step_pade_root` | ✅ |
-| 5 | `PadeStepper.pade_step!` | ✅ |
-| 6 | `Problems.PadeTaylorProblem` + `solve_pade` | ✅ |
-| 7 | `CommonSolveAdapter` extension (SciML) | ⏳ next |
-| 8 | `PadeTaylorArblibExt` extension (Arb arbitrary precision) | optional |
-| 9 | Tier C: PI tritronquée pole-field qualitative | optional |
+| Z | scaffold + ADRs + project discipline | ✅ shipped |
+| 1 | `LinAlg.pade_svd` | ✅ shipped |
+| 2 | `RobustPade.robust_pade` | ✅ shipped |
+| 3 | `Coefficients.taylor_coefficients_*` | ✅ shipped |
+| 4 | `StepControl.step_jorba_zou` + `step_pade_root` | ✅ shipped |
+| 5 | `PadeStepper.pade_step!` | ✅ shipped |
+| 6 | `Problems.PadeTaylorProblem` + `solve_pade` | ✅ shipped |
+| 7 | `CommonSolveAdapter` extension (SciML) | ✅ shipped |
+| 8 | `PadeTaylorArblibExt` extension (Arb arbitrary precision) | ✅ shipped |
+| 9 | PI tritronquée pole-field qualitative reproduction | ✅ shipped |
+| 10 | `PathNetwork.path_network_solve` (Tier 2) | ✅ shipped |
+| 11 | `BVP.bvp_solve` (Chebyshev–Newton, Tier 3) | ✅ shipped |
+| 12 | `Dispatcher.dispatch_solve` + `LatticeDispatcher` (Tier 3) | ✅ shipped |
+| 13 | `CoordTransforms` (PIII / PV, Tier 4) | ✅ shipped |
+| 14 | `SheetTracker` (PVI ζ-plane + winding, Tier 5) | ✅ shipped |
 
-The v1 acceptance criterion at this stage is a *demonstration* of the
-analytic-continuation advantage on a single representative problem, not
-the long-range integration of the original FW 2011 Table 5.1
-(`u(z = 30)` to relative error `5·10⁻¹³`).  The latter requires the
-five-direction path-network of FW 2011 §3.1 and is deferred to v2.
-See `docs/worklog/004-phase-6-pivot.md` for the failure analysis.
+The headline empirical result for the FW 2011 Table 5.1 long-range
+integration of the equianharmonic Weierstrass-℘ function to `z = 30`
+is `2.13·10⁻¹⁴` relative error in `BigFloat`-256 — beats the
+`8.34·10⁻¹⁴` reference reported by Fornberg & Weideman 2011.
+
+See `CHANGELOG.md` for the full v0.1.0 release notes including
+per-tier deliverables, headline empirical results, and known
+limitations.
 
 ## Headline: Padé bridges the pole, plain Taylor diverges
 

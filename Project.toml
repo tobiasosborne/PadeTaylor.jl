@@ -1,6 +1,6 @@
 name = "PadeTaylor"
 uuid = "00000000-0000-0000-0000-000000000001"
-version = "0.1.0-dev"
+version = "0.1.0"
 authors = ["Tobias Osborne <tobias.j.osborne@gmail.com>"]
 
 [deps]
