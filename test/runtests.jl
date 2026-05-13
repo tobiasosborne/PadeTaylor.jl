@@ -15,6 +15,7 @@ using PadeTaylor
         @test isdefined(PadeTaylor, :Dispatcher)
         @test isdefined(PadeTaylor, :EdgeDetector)
         @test isdefined(PadeTaylor, :LatticeDispatcher)
+        @test isdefined(PadeTaylor, :CoordTransforms)
     end
 
     # Per-module test files. Each file is a self-contained @testset.
@@ -35,4 +36,5 @@ using PadeTaylor
     include("ext_commonsolve_test.jl")
     include("ext_arblib_test.jl")
     include("fw_fig_41_test.jl")
+    include("coord_transforms_test.jl")
 end

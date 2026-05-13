@@ -22,6 +22,7 @@ Four algorithmically independent layers, per ADR-0001:
   9. `Dispatcher`    — 1D IVP↔BVP chain composition per FW 2011 §4.4.
  10. `EdgeDetector`  — 5-point Laplacian pole-field classifier (FW §3.2.2).
  11. `LatticeDispatcher` — 2D-lattice composition with per-row BVP fill (FW §4.4).
+ 12. `CoordTransforms`   — Exponential coordinate maps for PIII / PV (FFW 2017 §2.1, Tier-4).
 
 ## Determinism
 
@@ -66,6 +67,7 @@ include("BVP.jl")
 include("Dispatcher.jl")
 include("EdgeDetector.jl")
 include("LatticeDispatcher.jl")
+include("CoordTransforms.jl")
 
 # Public API (re-exported from sub-modules).
 using .Problems:    PadeTaylorProblem, solve_pade, PadeTaylorSolution, taylor_eval
@@ -76,6 +78,8 @@ using .BVP:         bvp_solve, BVPSolution
 using .Dispatcher:  dispatch_solve, DispatcherSolution, IVPSegment, BVPSegment
 using .EdgeDetector: laplacian_residual, pole_field_mask
 using .LatticeDispatcher: lattice_dispatch_solve, LatticeSolution
+using .CoordTransforms: pIII_transformed_rhs, pV_transformed_rhs,
+                        pIII_z_to_ζ, pIII_ζ_to_z, pV_z_to_ζ, pV_ζ_to_z
 
 # CommonSolve adapter: the algorithm struct is declared HERE in the main
 # module so users can construct it after `using PadeTaylor, CommonSolve`
@@ -105,6 +109,8 @@ export bvp_solve, BVPSolution
 export dispatch_solve, DispatcherSolution, IVPSegment, BVPSegment
 export laplacian_residual, pole_field_mask
 export lattice_dispatch_solve, LatticeSolution
+export pIII_transformed_rhs, pV_transformed_rhs,
+       pIII_z_to_ζ, pIII_ζ_to_z, pV_z_to_ζ, pV_ζ_to_z
 export PadeTaylorAlg
 
 end # module PadeTaylor

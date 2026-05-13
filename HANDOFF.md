@@ -35,7 +35,7 @@ docs/design_section_6_path_network.md scope), are all shipped:
 | 13 | `CoordTransforms` (FFW 2017 PIII/PV) | ⏸  P2, bead `padetaylor-bvh` | Tier-4 |
 | 14 | `SheetTracker` (FFW 2017 PVI) | ⏸  P2, bead `padetaylor-grc` | Tier-5 |
 
-**1262 / 1262 tests passing** as of the FW Fig 4.1 step-(i) BVP pin GREEN commit (session 2026-05-13 late evening, worklog 016).
+**1285 / 1285 tests passing** as of the CoordTransforms PIII/PV GREEN commit (session 2026-05-13 late evening, worklog 017).
 
 **Phase 6 shipped 2026-05-09 on the pivoted scope** — the v1
 acceptance is a Padé-vs-Taylor pole-bridge demonstration (one stored
@@ -499,6 +499,71 @@ Quick summary:
     result smells wrong.  See worklog 008 §"Frictions surfaced" F3.
 
 ## Last commit before this handoff
+
+CoordTransforms PIII/PV GREEN (bead `padetaylor-bvh` closed) — worklog 017.
+
+### Session 2026-05-13 late evening (part 3) — `padetaylor-bvh` closed
+
+One GREEN commit lands this session: Phase 13 / Tier-4 exponential
+coordinate transforms for PIII and PV per FFW 2017 §2.1.
+
+  - `padetaylor-bvh` **closed** — new module `src/CoordTransforms.jl`
+    (~100 LOC) exports:
+    - `pIII_transformed_rhs(α, β, γ, δ) -> (ζ, w, wp) -> w''` and
+      same for PV — RHS factory closures ready for `PadeTaylorProblem`.
+    - `pIII_z_to_ζ` / `pIII_ζ_to_z` and `pV_z_to_ζ` / `pV_ζ_to_z` —
+      forward + inverse IC conversions at a single point.
+    Module-header chapter cites FFW2017...md:39-48 verbatim (the two
+    transformed equations P̃_III and P̃_V) and documents the
+    deferrals (non-uniform Stage-1 nodes, adaptive Padé `h`, multi-
+    sheet recovery).
+  - **23 new assertions** across 6 testsets (CT.1.1-CT.1.6):
+    IC round-trips, hand-pinned symbolic RHS values, end-to-end
+    agreement direct-vs-transformed at one Padé step (≤1e-10).
+  - Mutation-proven: Mutations L (PIII RHS `/4 → /3`) + M (PIII IC
+    sign flip) + N (PV RHS `(w+1)/(w-1)` swap) all bit as predicted.
+  - `docs/figure_catalogue.md §6` row T4 marked PARTIAL — ExpCoords
+    shipped; non-uniform nodes + adaptive `h` are independent
+    follow-ups, not filed as beads.
+
+Test suite: 1262 → **1285 GREEN** (+22 CT.1.* + 1 umbrella `isdefined`).
+Wall ~1m56s.
+
+### Beads filed this session (part 3)
+
+None.
+
+### Open beads end-of-session (worklog 017)
+
+Three P2 beads remain — same set as after worklog 016, minus `padetaylor-bvh`:
+  - `padetaylor-grc` (Phase 14 SheetTracker — PVI, Tier-5),
+  - `padetaylor-61j` (Willers 1974 acquisition),
+  - `padetaylor-8pi` (GLA piracy friction).
+
+No P0 or P1 beads open.
+
+### Hard-won lessons added this session (worklog 017)
+
+26. **Hand-derive IC-conversion factors on paper before coding**.
+    PIII's `w' = (z u + z² u') / 2` has a load-bearing `z²` (not `z`)
+    on the `u'` term, from the `dz/dζ = z/2` factor in the chain rule.
+    Pin the result in a test with a hand-computed value (CT.1.1's
+    `5/8`); mutation-test the sign + factor.
+
+27. **End-to-end agreement is a stronger spec than a symbolic RHS pin**.
+    Symbolic pins (CT.1.2, CT.1.5) catch transcription errors with
+    crisp messages; direct-vs-transformed agreement (CT.1.3, CT.1.6)
+    catches algebra errors that compensate at one sample point.  Ship
+    both.
+
+28. **Helpers-only module beats premature driver abstraction**.  Phase
+    13's scope could have been a full `pIII_pV_solve(...)` driver.
+    Choosing helpers-only (RHS factory + IC conversion) lets callers
+    compose with `PadeTaylorProblem` + `path_network_solve` naturally,
+    ~`100 LOC` source vs ~`250 LOC` for a driver wrapper, same
+    downstream usability.
+
+## Last commit before this handoff (previous session)
 
 FW 2011 Fig 4.1 step-(i) BVP quantitative pin GREEN (bead `padetaylor-0c3` closed) — worklog 016.
 
