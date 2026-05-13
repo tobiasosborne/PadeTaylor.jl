@@ -35,7 +35,7 @@ docs/design_section_6_path_network.md scope), are all shipped:
 | 13 | `CoordTransforms` (FFW 2017 PIII/PV) | ⏸  P2, bead `padetaylor-bvh` | Tier-4 |
 | 14 | `SheetTracker` (FFW 2017 PVI) | ⏸  P2, bead `padetaylor-grc` | Tier-5 |
 
-**1311 / 1311 tests passing** as of the SheetTracker PVI GREEN commit (session 2026-05-13 late evening, worklog 018).
+**1314 / 1314 tests passing** as of the PN.2.3 + PathNetwork verbose/threading commit (`29de074`, worklog 019).  **v0.1.0 tagged** (`38a49ae`, `CHANGELOG.md` ships); **Documenter site** generated (`30b3298`); **classical-Padé probe** complete (worklog 020) — three beads filed for the F64 accuracy upgrade work.
 
 **Phase 6 shipped 2026-05-09 on the pivoted scope** — the v1
 acceptance is a Padé-vs-Taylor pole-bridge demonstration (one stored
@@ -500,7 +500,176 @@ Quick summary:
 
 ## Last commit before this handoff
 
-SheetTracker PVI GREEN (bead `padetaylor-grc` closed) — worklog 018.
+Classical-Padé probe (worklog 020) — investigation only, no impl commit; three follow-up beads filed (`padetaylor-txg` P1, `padetaylor-7zw` P2, `padetaylor-u7o` superseded).  Previous in-tree commit: PN.2.3 + verbose/threading PathNetwork (`29de074`, worklog 019).
+
+### Session 2026-05-13 (post-v0.1.0, part 3) — classical-Padé Toeplitz `\` finding (worklog 020)
+
+User-driven investigation: "did FW use arb prec?"  Answer: no.  FW
+2011 line 350 explicitly describes their Padé method —
+**Toeplitz approach + MATLAB `\` (LU/QR), no SVD anywhere**.  GGT
+2013 (which we port via `src/RobustPade.jl`) was published two
+years after FW 2011 and replaces `\` with SVD for robustness
+against Froissart doublets.  For well-conditioned cases (℘ on the
+equianharmonic trajectory), SVD's robustness is unused and costs
+both per-step accuracy and wall time.
+
+Empirical wedge-walker probe (5-direction `:min_u`, h=0.5, order=30,
+F64):
+
+| target | method     | wall (s) | rel-err   | vs FW Table 5.1   |
+|--------|------------|----------|-----------|-------------------|
+| z=30   | :svd       | 5.84     | 6.6e-12   | 87× worse         |
+| z=30   | :classical | 0.01     | 1.54e-13  | 2× worse          |
+| z=10⁴  | :svd       | 17.76    | 6.05e-6   | 25,800× worse     |
+| z=10⁴  | :classical | 3.45     | 6.15e-11  | **3.8× BETTER**   |
+
+Per-step probe (10-step trace along 22.5° wedge, F64 vs BF-256
+truth): step 3 (closest to the z=1 lattice pole) — SVD 6.2e-10,
+classical 7.1e-13 — **870× per-step accuracy improvement**.
+
+**Beads filed (3)**:
+
+  - `padetaylor-txg` **P1** — *Ship classical-Padé as F64 default*.
+    Add `classical_pade_diagonal(c, m)` to `src/RobustPade.jl` per
+    `FW2011_*.md:346-350`; dispatch by element type (classical for
+    `Float64`/`Float32`/their complex, SVD-with-Jacobi for
+    `BigFloat`/`Arb`); fallback to SVD on singular Toeplitz.
+    Tightens PN.2.2 rtol `1e-9 → ~1e-12` and PN.2.3 rtol
+    `5e-5 → ~1e-10`.  Acceptance + ADR-0005 sketched in the bead
+    description.
+  - `padetaylor-7zw` **P2** — *BF-256 tritronquée pin: rerun FW
+    Fig 4.1 step-(i) BVP at BigFloat-256*.  BVP is already generic
+    in `T <: AbstractFloat` (BV.5.1 confirms); test/fw_fig_41_test.jl
+    just needs a parallel BF-256 testset.
+  - `padetaylor-u7o` **superseded by padetaylor-txg** — the four
+    speculative attack vectors are obsolete; classical-Padé is the
+    answer.
+
+No source changes committed yet — the implementation work is the
+next session, blocking on the new P1 bead.
+
+### Session 2026-05-13 (post-v0.1.0, part 2) — z=10⁴ investigation + PathNetwork enhancements (worklog 019, commit 29de074)
+
+Pivot from naive "rerun PN.2.2 at z=10⁴ BF-256" (~4.5 h wall) to a
+Float64 investigation question driven by what FW actually claimed.
+
+  - **PN.2.3 testset** (`test/pathnetwork_test.jl`): routine Float64
+    z=10⁴ regression test, `rtol = 5e-5` vs `u_at_10000_FW_ref =
+    21.02530339471055`, plus `|imag(u)| < 5e-5` and `length(visited_z)
+    > 20_000` (step-count regression detector).  Mutation E
+    (canonical-Padé invariant) re-verified — bites PN.2.2 + PN.2.3 +
+    cascade through Phase-9 / LatticeDispatcher.
+  - **PathNetwork.path_network_solve enhancements**: new opt-in
+    kwargs `verbose::Bool = false` + `progress_every::Integer = 500`
+    for eager-flushed Stage-1 progress lines; `_wedge_evaluations`
+    now runs the 5 wedge candidates under `Threads.@threads` (per-
+    thread `PadeStepperState`, deterministic argmin by index).
+    User RHS `f` must be thread-safe (documented in docstring).
+    Measured 1.32× speedup at 8 threads on full `Pkg.test()`.
+  - **F64 sweep over `(order, h, z)`** documented in worklog 019.
+    Finding: `order` saturates by 30 in F64 long-range (truncation
+    below roundoff); raising `order` does NOT close the FW gap.
+  - **`external/probes/pathnetwork-long-range/capture.jl`**: offline
+    BF-256 sweep probe over `z ∈ {30, 100, 500, 1000, 10000}`,
+    ~3.3 h wall at 8 threads, re-runnable.  Not committed with full
+    `oracles.txt` (multi-hour run; placeholder in commit).
+  - `Project.toml`: add `Printf` (stdlib) for verbose-mode
+    `@sprintf` / `@printf` helpers.
+
+Test suite: 1311 → **1314 GREEN** (+3 PN.2.3 assertions).  Wall
+~1m45s at 8 threads.
+
+### Session 2026-05-13 (post-v0.1.0, part 1) — Documenter site + v0.1.0 release (commits 30b3298, 38a49ae, tag v0.1.0)
+
+Two P1 beads closed:
+
+  - **`padetaylor-36w`** — Documenter.jl docs site at `docs/{Project.toml,
+    make.jl, src/*.md}`.  Self-bootstrapping build (`julia
+    --project=docs docs/make.jl`); local-only per CLAUDE.md Rule 11
+    (no `deploydocs`, no CI).  Sections: Home (overview + Phase-6
+    pole-bridge headline + 14-tier status table), Architecture
+    (synthesis of all four ADRs), API (per-module `@autodocs`
+    blocks for all 14 modules + extensions), Figures (curated
+    tier-by-tier from `docs/figure_catalogue.md`).
+  - **`padetaylor-8ll`** — v0.1.0 release: Project.toml bumped
+    `0.1.0-dev → 0.1.0`; new `CHANGELOG.md` with Keep-a-Changelog
+    v0.1.0 entry covering all 14 phases + headline empirical
+    results + known limitations; README.md status table refreshed
+    (Phases Z-6 → all 14 tiers; tests 218 → 1311); annotated
+    `git tag v0.1.0`.  **Not pushed** per CLAUDE.md Rule 6.
+
+Local branch: 7 commits ahead of `origin/main`, tag `v0.1.0`,
+nothing pushed.
+
+### Beads filed this session (parts 1-3)
+
+  - `padetaylor-36w`, `padetaylor-8ll`, `padetaylor-g9x` — all closed.
+  - `padetaylor-txg` **P1** (classical-Padé F64 default) — open.
+  - `padetaylor-7zw` **P2** (BF-256 tritronquée pin) — open.
+  - `padetaylor-u7o` — superseded by `padetaylor-txg`.
+
+### Open beads end-of-session (post worklog 020)
+
+One P1 + several P2/P3:
+
+  - **`padetaylor-txg`** P1 — classical-Padé default (next session).
+  - `padetaylor-7zw` P2 — BF-256 tritronquée pin.
+  - `padetaylor-g9x` (closed), `padetaylor-bhw`, `padetaylor-bho`,
+    `padetaylor-8ui`, `padetaylor-1a3`, `padetaylor-gky`,
+    `padetaylor-8pi`, `padetaylor-61j` — see `bd ready -n 30`.
+
+### Hard-won lessons added this session (worklogs 019-020)
+
+**32. Read the paper's wall times to constrain its arithmetic
+precision.**  FW Table 5.1's 26.5 s for z=10⁴ Padé rules out
+`vpa` — MATLAB's arbitrary-precision arithmetic is ~100× slower
+than `double`.  Their numbers MUST be `Float64`.  When a paper
+claims a specific rel-err number, the only-arithmetic-that-fits-
+the-wall-time is often diagnostic of the underlying impl choices.
+
+**33. Per-step roundoff amplifies non-linearly near pole crossings.**
+10-step path-network probe at h=0.5 along 22.5° wedge sees two
+algebraically-equivalent `h^k` rescaling schemes diverge by
+2.5e-10 after just 10 steps — most concentrated in the single step
+crossing the `z = 1` lattice pole (~65× amplification).  Intrinsic
+to the flow near singularities, not a bug.
+
+**34. `order` saturates at roundoff long before truncation in
+Float64 long-range.**  Order 30, 40, 50 give identical rel-err at
+z=10⁴ in Float64.  Raising `order` cannot close the FW gap; the
+gap is roundoff-limited.
+
+**35. When porting from a paper, port the actual algorithm, not
+the "modern equivalent".**  We adopted GGT 2013 Algorithm 2 (Robust
+Padé via SVD) — published two years AFTER FW 2011.  FW used
+classical Padé via Toeplitz `\`.  Algorithmic progress moved the
+recipe in a direction (SVD robustness) that costs accuracy on the
+well-conditioned case.  When reproducing a paper's published
+numbers, port the paper's algorithm.
+
+**36. "Modern equivalent" sometimes means "added work the paper
+didn't need".**  GGT 2013's robustness is real (Froissart
+doublets, near-singular blocks).  On Painlevé pole-fields the
+robustness machinery is unused; the bidiagonalization +
+iterative diagonalization + tolerance-based degree-reduction cost
+580–1000× per-step accuracy AND 5-580× wall time relative to
+classical `\` on the smooth case.  Robustness has a price; spend
+it only where needed.
+
+**37. The right precision dispatch is element-type-driven.**  At
+`Float64` the dynamic range is narrow and Demmel-Kahan SVD (or
+LU) suffices.  At `BigFloat` it opens up and relative-accuracy
+Jacobi SVD is the load-bearing tool.  Dispatch by `T`; default to
+the right method per tier; expose alternatives as opt-in.
+
+**38. Classical Padé via Toeplitz `\` is both faster AND more
+accurate than GGT 2013 SVD for well-conditioned F64 Padé tables.**
+Probe (z=10⁴, h=0.5, order=30, F64): SVD 17.8 s / 6.05e-6 rel-err;
+classical 3.5 s / 6.15e-11 rel-err.  Classical beats FW's published
+2.34e-10 by 3.8×.  See worklog 020 for full empirical table +
+dispatch design (`padetaylor-txg`).
+
+## Previous handoff content (pre-v0.1.0)
 
 ### Session 2026-05-13 late evening (part 4) — `padetaylor-grc` closed
 
