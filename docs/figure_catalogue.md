@@ -143,14 +143,14 @@ Per the RF2014+FFW2017 subagent: introduces five new architectural moves — exp
 
 ## §6. Tier-aggregated work plan
 
-| tier | figures covered | required modules | open beads |
+| tier | figures covered | required modules | status |
 |---|---|---|---|
-| T0 | (Phase 6 ℘-function bridge) | shipped | — |
-| T1 | FW2011 Fig 2.1, 5.2 | shipped | — |
-| **T2** | FW2011 Fig 3.1–3.3, 4.2–4.5, 4.7–4.8, 5.1; most FW2014 + FW2015 + RF2014 | `padetaylor-1jf` PathNetwork + `padetaylor-c2p` EdgeDetector (optional) | `padetaylor-1jf`, `padetaylor-c2p` |
-| **T3** | FW2011 Fig 4.1, 4.5, 4.6; FW2014 Fig 10, 11, 12, 16, 25; FW2015 Fig 7, 8, 9, 11; RF2014 Fig 2, 7, 15 | T2 + BVP module + Dispatcher | (BVP bead just filed); a Dispatcher bead to be added |
-| **T4** | FFW2017 Fig 1, 4, 5, 6 | T3 + ExpCoords transform + non-uniform node placement + adaptive Padé h | New beads, P2. |
-| **T5** | FFW2017 Fig 2, 3, 7 | T4 + SheetTracker + branch-cut routing | New beads, P2. |
+| T0 | (Phase 6 ℘-function bridge) | shipped Phase 6 | ✓ shipped |
+| T1 | FW2011 Fig 2.1, 5.2 | shipped (Phase 6 stepper) | ✓ shipped |
+| **T2** | FW2011 Fig 3.1–3.3, 4.2–4.5, 4.7–4.8, 5.1; most FW2014 + FW2015 + RF2014 | PathNetwork (Phase 10, `padetaylor-1jf` ✓) + EdgeDetector (Phase 12.5, `padetaylor-c2p` ✓) | ✓ infrastructure shipped; per-figure pinning still required for individual rows |
+| **T3** | FW2011 Fig 4.1, 4.5, 4.6; FW2014 Fig 10, 11, 12, 16, 25; FW2015 Fig 7, 8, 9, 11; RF2014 Fig 2, 7, 15 | T2 + BVP (Phase 11, `padetaylor-???` ✓) + Dispatcher v1 (Phase 12, `padetaylor-8lk` ✓) | ✓ 1D-chain infrastructure shipped; 2D lattice dispatcher (`padetaylor-k31`) for full per-figure pinning |
+| **T4** | FFW2017 Fig 1, 4, 5, 6 | T3 + ExpCoords transform + non-uniform node placement + adaptive Padé h | ⏸ open: `padetaylor-bvh` Phase 13 |
+| **T5** | FFW2017 Fig 2, 3, 7 | T4 + SheetTracker + branch-cut routing | ⏸ open: `padetaylor-grc` Phase 14 |
 
 ## §7. Provenance notes
 
@@ -162,5 +162,8 @@ Per the RF2014+FFW2017 subagent: introduces five new architectural moves — exp
 ## §8. Pointers
 
 - Existing tests at `test/problems_test.jl` already demonstrate Tier 0+1 acceptance (the Phase 6 pole-bridge demo).
-- Live beads: `padetaylor-8cr` (umbrella P0; this catalogue is its concrete scope), `padetaylor-1jf` (path-network), `padetaylor-c2p` (edge detector), `padetaylor-rgp` (this catalogue), plus the BVP-module bead.
+- Existing tests at `test/pathnetwork_test.jl` demonstrate **Fig 5.1** (FW Table 5.1) acceptance at `u(z=30)` to 2.13e-14 BF-256 — beats FW's published 8.34e-14 (worklog 008).
+- Existing tests at `test/phase9_tritronquee_test.jl` demonstrate **Fig 3.1 PARTIAL** acceptance — qualitative 4-of-5 pole-free sectors at 25×25 [-4,4]² (worklog 012).
+- Live beads (post-2026-05-13): `padetaylor-k31` (Phase 12 v2 2D dispatcher — the next "graduation" for Tier-2/3 rows), `padetaylor-bvh` (Phase 13), `padetaylor-grc` (Phase 14), `padetaylor-61j` (Willers 1974), `padetaylor-8pi` (GLA piracy friction).
+- Closed prerequisite beads: `padetaylor-1jf` (PathNetwork), `padetaylor-c2p` (EdgeDetector), `padetaylor-8lk` (Dispatcher v1), `padetaylor-???` (BVP), `padetaylor-jhq` (ArblibExt), `padetaylor-2vz` (CommonSolveAdapter), `padetaylor-kvi` (Phase 9), `padetaylor-yt1` (PathNetwork tuning), `padetaylor-8cr` (FW Table 5.1 long-range, subsumed by yt1), `padetaylor-rgp` (this catalogue, living document).
 - Ground truth: every figure references its `references/markdown/<paper>/<file>.md:<lines>` so any future agent can re-read the source.
