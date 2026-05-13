@@ -102,7 +102,7 @@ Throws `ErrorException` on:
     equations*, J. Comput. Phys. 230 (2011) 5957–5973, §4.4 +
     line 190 (the "161 BVPs, one per grid line" line).
   - `references/markdown/FW2011_*.md:190, 218-222, 249-261`.
-  - [`docs/adr/0004-path-network-architecture.md`](../adr/0004-path-network-architecture.md).
+  - `docs/adr/0004-path-network-architecture.md`.
 """
 module LatticeDispatcher
 

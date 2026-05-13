@@ -21,3 +21,11 @@ references/markdown/**/*.jpeg
 examples/*.png
 examples/*.svg
 examples/*.pdf
+
+# Documenter build output + per-environment manifest — regenerable via
+# `julia --project=docs docs/make.jl`.
+docs/build/
+docs/Manifest.toml
+
+# Local scheduling lockfiles.
+.claude/scheduled_tasks.lock
