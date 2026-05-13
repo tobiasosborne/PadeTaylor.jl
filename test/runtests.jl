@@ -14,6 +14,7 @@ using PadeTaylor
         @test isdefined(PadeTaylor, :BVP)
         @test isdefined(PadeTaylor, :Dispatcher)
         @test isdefined(PadeTaylor, :EdgeDetector)
+        @test isdefined(PadeTaylor, :LatticeDispatcher)
     end
 
     # Per-module test files. Each file is a self-contained @testset.
@@ -30,6 +31,7 @@ using PadeTaylor
     include("dispatcher_test.jl")
     include("edge_detector_test.jl")
     include("phase9_tritronquee_test.jl")
+    include("lattice_dispatcher_test.jl")
     include("ext_commonsolve_test.jl")
     include("ext_arblib_test.jl")
 end
