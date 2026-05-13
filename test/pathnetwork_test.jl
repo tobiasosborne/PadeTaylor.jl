@@ -151,15 +151,20 @@ include(joinpath(@__DIR__, "_oracle_problems.jl"))
         # the disc.  See worklog 008 §"The wedge-vs-canonical-Padé bug
         # at long range".
 
-        # Float64 path: rel-err ≤ 1e-9 acceptance.  ~75 visited nodes
-        # for h=0.5, order=30.
+        # Float64 path: rel-err ≤ 1e-12 acceptance.  Tightened from `1e-9`
+        # in bead `padetaylor-txg`: switching the F64 Padé default from
+        # GGT 2013 SVD to FW 2011 classical-via-Toeplitz-`\\` recovers the
+        # per-step accuracy that GGT's robustness machinery was throwing
+        # away.  Worklog 020 probe measured `1.54e-13` rel-err at z=30
+        # under classical; the test bound carries an order-of-magnitude
+        # cross-platform margin.  ~75 visited nodes at h=0.5, order=30.
         prob_f64 = PadeTaylorProblem(fW, (u_0_FW, up_0_FW), (0.0, 30.0);
                                      order = 30)
         sol_f64 = path_network_solve(prob_f64, ComplexF64[30.0 + 0im];
                                      h = 0.5, max_steps_per_target = 200)
         u30_f64 = sol_f64.grid_u[1]
-        @test isapprox(u30_f64, u_at_30_FW_ref; rtol = 1e-9)
-        @test abs(imag(u30_f64)) < 1e-9        # Real solution on real axis.
+        @test isapprox(u30_f64, u_at_30_FW_ref; rtol = 1e-12)
+        @test abs(imag(u30_f64)) < 1e-12       # Real solution on real axis.
 
         # BF-256 path: rel-err ≤ 1e-13 acceptance per FW Table 5.1.
         # ~50s wall time; the dominant test cost in the suite.
@@ -197,12 +202,21 @@ include(joinpath(@__DIR__, "_oracle_problems.jl"))
         # `docs/worklog/019-fw-table-51-z10000.md`) — wall time at
         # BF-256 is ~4.5 h, untenable in the routine suite.
 
-        # Float64 path: rel-err ≤ 5e-5 acceptance.  Measured 6.05e-6
-        # on the canonical (h=0.5, order=30) walk over 24,236 visited
-        # nodes; the bound carries an ~8× cross-platform margin.  At
-        # this regime Float64 roundoff dominates — the gap vs FW's
-        # 2.34e-10 BF reference is a precision artefact, not an
-        # algorithmic defect.
+        # Float64 path: rel-err ≤ 5·10⁻¹⁰ acceptance.  Tightened from
+        # `5·10⁻⁵` in bead `padetaylor-txg`: classical Padé via Toeplitz
+        # `\\` (FW 2011 §5.1.4) replaces GGT 2013 SVD as the F64 default
+        # and closes the long-range accuracy gap.  Measured: rel-err
+        # `1.4·10⁻¹⁰`, |imag(u)| `2.6·10⁻⁹` at the full PathNetwork
+        # (Stage 1 + Stage 2 interpolation).  We compare against FW's
+        # published `2.34·10⁻¹⁰` (Table 5.1 column b) — classical at
+        # full-PathNetwork still BEATS FW by 1.7×, vs `6.05·10⁻⁶` under
+        # SVD (~5 orders worse than FW).  Margins: ~3.6× on rtol, ~3.8×
+        # on imag, both holding tight under classical roundoff.
+        #
+        # The worklog 020 number `6.15·10⁻¹¹` was from a custom wedge
+        # walker (Stage 1 only) — the full PathNetwork is ~2× looser
+        # because Stage 2's barycentric interpolation adds a Padé-eval
+        # step at the target.  Closing further would need BF-256.
         prob_f64 = PadeTaylorProblem(fW, (u_0_FW, up_0_FW), (0.0, 10000.0);
                                      order = 30)
         sol_f64 = path_network_solve(prob_f64,
@@ -210,8 +224,8 @@ include(joinpath(@__DIR__, "_oracle_problems.jl"))
                                      h = 0.5,
                                      max_steps_per_target = 200_000)
         u10k_f64 = sol_f64.grid_u[1]
-        @test isapprox(u10k_f64, u_at_10000_FW_ref; rtol = 5e-5)
-        @test abs(imag(u10k_f64)) < 5e-5     # Real solution on real axis.
+        @test isapprox(u10k_f64, u_at_10000_FW_ref; rtol = 5e-10)
+        @test abs(imag(u10k_f64)) < 1e-8     # Real solution on real axis.
         @test length(sol_f64.visited_z) > 20_000  # Stage-1 walked ~24k nodes.
     end
 

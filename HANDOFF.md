@@ -35,7 +35,7 @@ docs/design_section_6_path_network.md scope), are all shipped:
 | 13 | `CoordTransforms` (FFW 2017 PIII/PV) | ⏸  P2, bead `padetaylor-bvh` | Tier-4 |
 | 14 | `SheetTracker` (FFW 2017 PVI) | ⏸  P2, bead `padetaylor-grc` | Tier-5 |
 
-**1314 / 1314 tests passing** as of the PN.2.3 + PathNetwork verbose/threading commit (`29de074`, worklog 019).  **v0.1.0 tagged** (`38a49ae`, `CHANGELOG.md` ships); **Documenter site** generated (`30b3298`); **classical-Padé probe** complete (worklog 020) — three beads filed for the F64 accuracy upgrade work.
+**1377 / 1377 tests passing** as of the classical-Padé F64 default commit (worklog 021, bead `padetaylor-txg` closed).  **v0.1.0 tagged** (`38a49ae`, `CHANGELOG.md` ships); **Documenter site** generated (`30b3298`); **classical-Padé probe + ship** complete (worklogs 020 + 021) — F64 path now beats FW Table 5.1's z=10⁴ rel-err by 1.7× at full PathNetwork (1.4e-10 vs 2.34e-10); test acceptance tightened PN.2.2 z=30 F64 `1e-9 → 1e-12` and PN.2.3 z=10⁴ F64 `5e-5 → 5e-10`.
 
 **Phase 6 shipped 2026-05-09 on the pivoted scope** — the v1
 acceptance is a Padé-vs-Taylor pole-bridge demonstration (one stored
@@ -500,7 +500,36 @@ Quick summary:
 
 ## Last commit before this handoff
 
-Classical-Padé probe (worklog 020) — investigation only, no impl commit; three follow-up beads filed (`padetaylor-txg` P1, `padetaylor-7zw` P2, `padetaylor-u7o` superseded).  Previous in-tree commit: PN.2.3 + verbose/threading PathNetwork (`29de074`, worklog 019).
+Classical-Padé F64 default shipped (worklog 021, bead `padetaylor-txg` closed) — `src/RobustPade.jl` gains `classical_pade_diagonal` (~100 LOC) + element-type `method` dispatch.  F64 / Complex{F64} default `:classical`; BigFloat / Arb default `:svd`.  Singular Toeplitz auto-falls-back to `:svd`.  ADR-0005 documents.  Empirical: PN.2.3 z=10⁴ F64 rel-err `1.4e-10` (vs FW `2.34e-10` — beat by 1.7×) at full PathNetwork; worklog 020's `6.15e-11` was a wedge-walker-only number, Stage 2 interpolation adds ~2×.
+
+### Session 2026-05-13 (post worklog 020) — `padetaylor-txg` closed (worklog 021)
+
+  - **`src/RobustPade.jl`** — new `classical_pade_diagonal(c, m)` implementing FW 2011 §5.1.4 eqs. (5.4)+(5.5) via `lu(... ; check=false)` + `\`; throws `SingularException` on `!issuccess(F)`.  New `method::Symbol` kwarg on `robust_pade` with element-type-driven defaults (`_default_pade_method`).  Off-diagonal `(m≠n)` and singular Toeplitz both auto-route to existing SVD path.
+  - **`test/classical_pade_test.jl`** (new, ~250 LOC) — 9 testsets / 63 assertions CP.1.1-9; mutation-proven (4 mutations P1-P4, all bite, all restored).  Bite cascades: P1 (sign-flip) cascades to 60+ RED across Phase 5/6/9 + PathNetwork + LatticeDispatcher; P3 (revert F64 default) bites 8 RED including the new rtol tightenings (proves they're load-bearing); P2 (drop fallback) bites 5; P4 (drop off-diagonal route) bites 4.
+  - **`test/robustpade_test.jl`** — tests 2.1.2-4 + 2.1.6 (SVD-specific behaviour: diagonal-hop reduction, Froissart suppression, noise-thresholded recovery) explicitly pass `method=:svd` to keep testing GGT 2013 Algorithm 2 specifically.
+  - **`test/pathnetwork_test.jl`** — PN.2.2 z=30 F64 rtol `1e-9 → 1e-12` (1000×); PN.2.3 z=10⁴ F64 rtol `5e-5 → 5e-10` (100,000×).  Both hold under classical.
+  - **`docs/adr/0005-classical-pade-default-at-float64.md`** (new, ~150 lines) — element-type dispatch decision + when each method is right.
+  - **`docs/worklog/021-classical-pade-default.md`** (new) — implementation log + mutation-proof bite counts + frictions.
+  - Test suite: 1314 → **1377 GREEN** (+63 CP.1.* assertions).  Wall ~1m45s at 8 threads.
+
+### Beads filed / closed this session
+
+  - `padetaylor-txg` **closed** — classical-Padé F64 default shipped.
+
+### Open beads end-of-session (worklog 021)
+
+One P2 with concrete scope:
+  - `padetaylor-7zw` P2 — BF-256 tritronquée pin (parallel testset for `test/fw_fig_41_test.jl`).
+
+Plus existing P2/P3 admin / figure-pinning / perf beads (`padetaylor-bhw`, `-bho`, `-8ui`, `-1a3`, `-gky`, `-8pi`, `-61j`, and six P3s).  No P0 / P1 open.
+
+### Hard-won lessons added this session (worklog 021)
+
+**39. Mutation cascades expose architectural load-bearing-ness.** Mutation P1 (sign-flip on classical's RHS) was expected to bite ~10 CP.1.* assertions; it actually bit 60+ across Phase 5/6/9 + PathNetwork + LatticeDispatcher.  The mutation count is a direct measure of how deep an algorithm sits in the dependency graph; classical Padé is consumed by every step in every IVP path-network walk.  Lesson: don't pre-judge mutation bite scope — run it and see.
+
+**40. Worklog 020's wedge-walker number is NOT the full-PathNetwork number.** Worklog 020 probed via a custom 5-direction wedge walker (Stage 1 only); the full `path_network_solve` adds Stage 2 barycentric interpolation, which is an extra Padé eval per target.  At z=10⁴ F64 this adds ~2× to the rel-err (6.15e-11 → 1.4e-10).  Lesson: when a probe simulates a stage, the production code's full pipeline carries additional error.  Always re-measure under the production code path before pinning test bounds.
+
+**41. Degenerate test inputs are easier to construct by accident than expected.** CP.1.7's first attempt used `c_k = (1/2)^k` (geometric series) intending to demonstrate classical's no-reduction property — but the resulting Toeplitz is rank-1 (every row is a scaled copy of row 1), so classical correctly throws SingularException.  The "well-conditioned" claim of a Taylor series is a property of its convergence radius, NOT of the Toeplitz it builds.  Lesson: when picking a non-degenerate test case, compute or estimate the Toeplitz's rank explicitly before pinning expected behaviour.
 
 ### Session 2026-05-13 (post-v0.1.0, part 3) — classical-Padé Toeplitz `\` finding (worklog 020)
 

@@ -24,6 +24,7 @@ using PadeTaylor
     # Dispatcher fill in these.
     include("linalg_test.jl")
     include("robustpade_test.jl")
+    include("classical_pade_test.jl")
     include("coefficients_test.jl")
     include("stepcontrol_test.jl")
     include("padestepper_test.jl")

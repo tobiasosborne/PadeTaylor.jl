@@ -50,7 +50,11 @@ include("_oracles.jl")
     # -------------------------------------------------------------------------
     @testset "2.1.2 exp(z) (20,20) reduces to (7,7)" begin
         c = Float64.([1 / factorial(big(k)) for k = 0:40])
-        P = robust_pade(c, 20, 20)
+        # `method = :svd` is explicit here: bead `padetaylor-txg` changed
+        # the F64 default to :classical (which does NOT diagonal-hop, so
+        # it would return full (20, 20)).  This test is specifically the
+        # GGT 2013 Algorithm 2 reduction invariant; we keep it under :svd.
+        P = robust_pade(c, 20, 20; method = :svd)
         # Load-bearing structural assertions: the diagonal-stripe
         # reduction is the GGT 2013 Algorithm 2 invariant.
         @test P.μ == test_2_1_2_exp_20_20_mu  # 7
@@ -96,7 +100,7 @@ include("_oracles.jl")
         for k = 1:40
             c[k+1] = -1.0 / (k * 1.2^k)
         end
-        P = robust_pade(c, 20, 20)
+        P = robust_pade(c, 20, 20; method = :svd)
         # Load-bearing structural reduction.
         @test P.μ == test_2_1_3_log12_20_20_mu  # 10
         @test P.ν == test_2_1_3_log12_20_20_nu  # 10
@@ -144,7 +148,8 @@ include("_oracles.jl")
         # what padeapprox saw.  The function `tan(z⁴)` has only every 4th
         # coefficient nonzero, starting at z⁴.
         c = real.(test_2_1_4_tan_z4_20_20_coefs)
-        P = robust_pade(c, 20, 20)
+        # Froissart doublet removal is GGT 2013 Algorithm 2 specific.
+        P = robust_pade(c, 20, 20; method = :svd)
         @test P.μ == test_2_1_4_tan_z4_20_20_mu  # 20
         @test P.ν == test_2_1_4_tan_z4_20_20_nu  # 16
     end
@@ -182,7 +187,10 @@ include("_oracles.jl")
         rng = MersenneTwister(42)
         n_coefs = 21
         c = ones(Float64, n_coefs) .+ 1e-6 .* randn(rng, n_coefs)
-        P = robust_pade(c, 10, 10; tol = 1e-5)
+        # Noise-thresholded recovery uses the tol knob inside the SVD
+        # diagonal-hop loop; classical has no tol knob, so this is an
+        # SVD-only test.
+        P = robust_pade(c, 10, 10; tol = 1e-5, method = :svd)
         @test P.μ == 0
         @test P.ν == 1
     end
