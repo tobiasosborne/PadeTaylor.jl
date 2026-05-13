@@ -207,6 +207,120 @@ include(joinpath(@__DIR__, "_oracle_problems.jl"))
         end
     end
 
+    @testset "PN.6.1: enforce_real_axis_symmetry — bit-exact u(z̄) = ū(z)" begin
+        # Bead `padetaylor-dtj` + worklog 014.  For ODEs that preserve
+        # complex conjugation (real coefficients, real ICs on the real
+        # axis), the analytic solution satisfies the Schwarz reflection
+        # `u(z̄) = ū(z)`.  The default path-network breaks this — the
+        # `shuffle(rng, targets)` step at PathNetwork.jl:173 creates an
+        # asymmetric visited tree whose Stage-2 nearest-visited lookup
+        # propagates 4-5 orders of magnitude into `|u|` at conjugate-pair
+        # grid cells (worklog 014 §"Bug 1").  Opt-in kwarg
+        # `enforce_real_axis_symmetry=true` walks only upper-half + on-
+        # axis targets, then mirrors lower-half via conj — bit-exact.
+        prob = PadeTaylorProblem(fW, (u_0_FW, up_0_FW), (0.0, 1.0); order = 30)
+
+        # 5×5 conjugate-symmetric grid, well inside `|z| < 1` (clear of
+        # the lattice pole at z = 1).  This keeps each Stage-1 walk short
+        # so the test costs <1 s.
+        xs = range(-0.3, 0.3; length = 5)
+        ys = range(-0.3, 0.3; length = 5)   # symmetric around 0
+        grid = ComplexF64[x + im*y for x in xs for y in ys]
+
+        sol = path_network_solve(prob, grid; h = 0.5,
+                                  enforce_real_axis_symmetry = true)
+
+        # Coverage: every grid point evaluated to a finite value.
+        @test all(isfinite, real.(sol.grid_u))
+        @test all(isfinite, imag.(sol.grid_u))
+        @test all(isfinite, real.(sol.grid_up))
+        @test all(isfinite, imag.(sol.grid_up))
+
+        # Bit-exact Schwarz reflection: for every off-axis pair (z,
+        # conj(z)) in the grid, `grid_u[z] == conj(grid_u[conj(z)])`.
+        # Zero floating-point slack (the mirror is exact `conj()` of the
+        # upper-half walk, not a re-walk).  On-axis cells (z == conj(z))
+        # are skipped — the pair is trivial; the path-network's natural
+        # complex output is preserved as-is on the real axis.
+        idx_of = Dict(z => i for (i, z) in enumerate(sol.grid_z))
+        max_asym_u  = 0.0
+        max_asym_up = 0.0
+        n_offaxis_pairs = 0
+        for (i, z) in enumerate(sol.grid_z)
+            imag(z) == 0 && continue
+            j = idx_of[conj(z)]
+            n_offaxis_pairs += 1
+            max_asym_u  = max(max_asym_u,  abs(sol.grid_u[i]  - conj(sol.grid_u[j])))
+            max_asym_up = max(max_asym_up, abs(sol.grid_up[i] - conj(sol.grid_up[j])))
+        end
+        @test n_offaxis_pairs == 20   # 5×5 grid, 5 on-axis, 20 off-axis cells
+        @test max_asym_u  == 0.0
+        @test max_asym_up == 0.0
+    end
+
+    @testset "PN.6.2: enforce_real_axis_symmetry — visited tree confined to Im(z) ≥ 0" begin
+        # The walker should NOT descend into the lower half-plane when
+        # the kwarg is on.  Sanity-checks that the implementation is
+        # actually filtering targets — not just doing the mirror on the
+        # full-walk result.
+        #
+        # Grid contains lower-half targets > h from the IC so that Stage-1
+        # would walk into the lower half if the filter weren't applied.
+        # Without the kwarg, this grid produces an asymmetric visited tree
+        # spanning both halves (worklog 014); with the kwarg, the lower-
+        # half targets are reflected to the upper half before walking.
+        prob = PadeTaylorProblem(fW, (u_0_FW, up_0_FW), (0.0, 2.0); order = 30)
+        grid = ComplexF64[0.7-1.2im, 0.7+1.2im,
+                          -0.5-0.8im, -0.5+0.8im,
+                          0.3+0.0im]
+        sol = path_network_solve(prob, grid; h = 0.5,
+                                  enforce_real_axis_symmetry = true)
+        @test length(sol.visited_z) > 1                                  # walked
+        @test all(z -> imag(z) ≥ -10*eps(Float64), sol.visited_z)        # upper-only
+    end
+
+    @testset "PN.6.3: enforce_real_axis_symmetry — input grid order preserved" begin
+        # Existing invariant for the default path; the kwarg must NOT
+        # reorder the output.  Callers index sol.grid_u/grid_up by input
+        # position (see examples/tritronquee_3d.jl's per-cell loop).
+        prob = PadeTaylorProblem(fW, (u_0_FW, up_0_FW), (0.0, 1.0); order = 30)
+        grid = ComplexF64[-0.2+0.1im, 0.1-0.3im, 0.0+0.2im, 0.2+0.0im,
+                          -0.1-0.2im, 0.1+0.3im]
+        sol = path_network_solve(prob, grid; h = 0.5,
+                                  enforce_real_axis_symmetry = true)
+        @test sol.grid_z == grid
+    end
+
+    @testset "PN.6.4: enforce_real_axis_symmetry — fail-fast on off-axis IC" begin
+        # Schwarz-reflection holds globally only if the IC sits on the
+        # real axis (so `u(z̄) = ū(z)` at one point ⇒ at all points by
+        # uniqueness).  An off-axis IC silently breaks the assumption;
+        # the kwarg must fail loud (CLAUDE.md Rule 1).
+
+        # zspan[1] off-axis.
+        prob_zoff = PadeTaylorProblem(fW, (u_0_FW + 0.0im, up_0_FW + 0.0im),
+                                       (0.0 + 0.1im, 1.0 + 0.0im); order = 30)
+        @test_throws ArgumentError path_network_solve(
+            prob_zoff, ComplexF64[0.1+0.2im];
+            h = 0.5, enforce_real_axis_symmetry = true)
+
+        # u_0 off-axis.
+        prob_uoff = PadeTaylorProblem(fW,
+                                       (u_0_FW + 0.1im, up_0_FW + 0.0im),
+                                       (0.0 + 0.0im, 1.0 + 0.0im); order = 30)
+        @test_throws ArgumentError path_network_solve(
+            prob_uoff, ComplexF64[0.1+0.2im];
+            h = 0.5, enforce_real_axis_symmetry = true)
+
+        # up_0 off-axis.
+        prob_upoff = PadeTaylorProblem(fW,
+                                        (u_0_FW + 0.0im, up_0_FW + 0.1im),
+                                        (0.0 + 0.0im, 1.0 + 0.0im); order = 30)
+        @test_throws ArgumentError path_network_solve(
+            prob_upoff, ComplexF64[0.1+0.2im];
+            h = 0.5, enforce_real_axis_symmetry = true)
+    end
+
 end # @testset PathNetwork
 
 # PN.5.1  Mutation-proof procedure (verified manually before commit; see
@@ -256,3 +370,24 @@ end # @testset PathNetwork
 #     1e-9 tolerance.
 #
 # Restoration: both mutations restored before commit.
+#
+# PN.6.* (enforce_real_axis_symmetry, bead `padetaylor-dtj`, worklog 014):
+#
+#   Mutation G  --  in `_solve_with_schwarz_reflection`'s output-build loop,
+#     drop the `conj(...)` calls in the `imag(z) < 0` branch so lower-half
+#     cells inherit the upper-half walk's value as-is (no reflection).
+#     Verified bite (2026-05-13): PN.6.1 lines 257-258 RED — `max_asym_u`
+#     and `max_asym_up` non-zero (the Schwarz mirror is broken).  PN.6.2-4
+#     stay GREEN, as predicted (they don't depend on the mirror itself).
+#
+#   Mutation I  --  in `_solve_with_schwarz_reflection`, replace
+#     `complex(real(z), abs(imag(z)))` with `complex(real(z), imag(z))`
+#     (drop `abs`).  The upper-canon collapse breaks: lower-half cells
+#     map to themselves, the recursive walk visits both halves, and the
+#     mirror-branch conj is applied to an asymmetric walk's value.
+#     Verified bite (2026-05-13): PN.6.1 lines 257-258 RED (asymmetric
+#     visited tree breaks bit-exact symmetry) AND PN.6.2 line 279 RED
+#     (visited_z contains Im<0 nodes).  Validates BOTH the symmetry
+#     mirror AND the upper-half filter as load-bearing.
+#
+# Restoration: both mutations restored before commit (GREEN at 1250).

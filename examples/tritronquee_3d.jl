@@ -50,43 +50,38 @@ prob  = PadeTaylorProblem(f_PI, (u_tri, up_tri), zspan; order = 30)
 
 # --- Solve with reflection-symmetry enforcement ---------------------------
 # Real ICs (u₀, u'₀ ∈ ℝ) ⇒ u(z̄) = ū(z) globally (Schwarz reflection).
-# The path-network's `shuffle(rng, targets)` step creates an asymmetric
-# walk-tree even when the problem is conjugate-symmetric (e.g., the
-# tree gains ~25 more nodes on one half-plane than the other for a
-# 81×81 [-20, 20]² PI tritronquée grid), and the asymmetric Stage-2
-# nearest-visited lookup then cascades 4-5 orders of magnitude into
-# the per-cell |u| values for conjugate-pair cells.  Fix: walk only the
-# upper half + real axis; mirror to the lower half via `u(z̄) = ū(z)`.
-# This is bit-exact symmetric, runs roughly 2× faster than walking the
-# full grid, and is correct *because* the ODE coefficients are real.
-# (For non-real ICs / complex-coefficient ODEs the mirror trick is
-# inapplicable; use `path_network_solve` directly on the full grid.)
+# The default path-network's `shuffle(rng, targets)` step creates an
+# asymmetric walk-tree even when the problem is conjugate-symmetric
+# (worklog 014 §"Bug 1"), and the asymmetric Stage-2 nearest-visited
+# lookup then cascades 4-5 orders of magnitude into the per-cell |u|
+# values for conjugate-pair cells.  The opt-in kwarg
+# `enforce_real_axis_symmetry = true` (bead `padetaylor-dtj`) walks
+# only upper-half + on-axis targets and mirrors lower-half via conj —
+# bit-exact symmetric, roughly 2× faster than a full-plane walk, and
+# correct *because* the ODE coefficients are real.  For non-real ICs /
+# complex-coefficient ODEs the kwarg is inapplicable; the call would
+# throw on the IC validation, so leave it `false`.
+#
+# Even N is still recommended.  With odd N the grid has a cell exactly
+# at y = 0; the wedge walker computes that cell on a special direction
+# (the goal-aligned axis), producing the "low-level ridges in flat
+# areas" artifact (FW2011...md:208, worklog 014 §"Bug 2") visible as a
+# horizontal stripe of false-pole flags in the asymptotic smooth region.
+# Even N avoids the y = 0 row entirely.
 
-# Walk strictly upper-half cells (ys[j] > 0).  With even N this is
-# exactly half the grid; with odd N we'd have an extra y=0 row that
-# would need special handling — see N's docstring.
-@assert iseven(N) "N must be even — see the comment above."
-upper_grid  = ComplexF64[]
-upper_to_ij = Tuple{Int, Int}[]
-for i in 1:N, j in 1:N
-    if ys[j] > 0
-        push!(upper_grid, xs[i] + im * ys[j])
-        push!(upper_to_ij, (i, j))
-    end
-end
+@assert iseven(N) "N must be even — see the comment above (worklog 014 §Bug 2)."
+grid_mat = ComplexF64[xs[i] + im * ys[j] for i in 1:N, j in 1:N]
+grid_vec = vec(grid_mat)   # column-major; reshape preserves the matrix layout
 
-println("Solving PI tritronquée on $(N)×$(N) grid over [$(Int(minimum(xs))), $(Int(maximum(xs)))]² (upper-half walk + conjugate mirror)...")
-@time sol = path_network_solve(prob, upper_grid; h = 0.5,
-                                max_steps_per_target = 2000)
-println("  Upper-half targets: $(length(upper_grid))")
-println("  Visited nodes: $(length(sol.visited_z))")
-println("  Grid coverage: $(count(isfinite.(real.(sol.grid_u))))/$(length(upper_grid))")
+println("Solving PI tritronquée on $(N)×$(N) grid over [$(Int(minimum(xs))), $(Int(maximum(xs)))]² (enforce_real_axis_symmetry)...")
+@time sol = path_network_solve(prob, grid_vec; h = 0.5,
+                                max_steps_per_target = 2000,
+                                enforce_real_axis_symmetry = true)
+println("  Total targets: $(length(grid_vec))")
+println("  Visited nodes (upper-half only): $(length(sol.visited_z))")
+println("  Grid coverage: $(count(isfinite.(real.(sol.grid_u))))/$(length(grid_vec))")
 
-u_grid = Matrix{ComplexF64}(undef, N, N)
-for (idx, (i, j)) in enumerate(upper_to_ij)
-    u_grid[i, j] = sol.grid_u[idx]
-    u_grid[i, N + 1 - j] = conj(sol.grid_u[idx])   # mirror to lower
-end
+u_grid = reshape(sol.grid_u, (N, N))
 h_grid = step(xs)
 
 # Clamp the pole spikes so the surface plot doesn't get dominated by a

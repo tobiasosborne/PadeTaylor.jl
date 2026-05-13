@@ -49,6 +49,29 @@ Padé), never extrapolates past `t = 1`.  For Tier-2 ship this
 simplifies the dense-output code and avoids accuracy loss on off-
 direction lattice nodes.
 
+## Schwarz-reflection symmetry (opt-in, worklog 014 + bead `padetaylor-dtj`)
+
+For ODEs that preserve complex conjugation — real-coefficient `f` AND
+real IC on the real axis (`Im(z₀) = Im(u₀) = Im(u'₀) = 0`) — the
+analytic solution satisfies `u(z̄) = ū(z)` globally (Schwarz reflection
+of an analytic function across its real-axis trace).  The default path-
+network is **not** numerically Schwarz-symmetric: the `shuffle(rng,
+targets)` step (FW 2011 line 156) creates an asymmetric visited tree,
+and the Stage-2 nearest-visited lookup at `z` and `conj(z)` can land on
+non-conjugate visited nodes — cascading 4-5 orders of magnitude into
+`|u|` at far-from-IC conjugate-pair grid cells.
+
+The opt-in kwarg `enforce_real_axis_symmetry = true` cures this: walk
+the unique upper-half + on-axis representatives only, then populate the
+output `grid_u` / `grid_up` by indexing the upper-walk's outputs
+(mirroring via `conj` for input cells with `Im(z) < 0`).  The result is
+bit-exact symmetric across conjugate pairs and runs roughly 2× faster
+than a full-plane walk.  The validity precondition (real coefficients
+in `f`) cannot be checked at this layer and is the caller's promise;
+the IC-on-real-axis precondition IS checked and throws an
+`ArgumentError` if violated (CLAUDE.md Rule 1).  Default `false`
+preserves the FW 2011 algorithm verbatim.
+
 ## Tier-3-to-5 deferrals (per ADR-0004)
 
   - **BVP composition (Tier 3)**: stub comment at end of this file.
@@ -107,7 +130,8 @@ end
                        step_selection=:min_u,
                        step_size_policy=:fixed,
                        max_steps_per_target=1000,
-                       rng_seed=0) -> PathNetworkSolution
+                       rng_seed=0,
+                       enforce_real_axis_symmetry=false) -> PathNetworkSolution
 
 Build the FW 2011 §3.1 path-network covering `grid::AbstractVector{<:Complex}`
 from `prob`'s IC, then return the Stage-1 tree + Stage-2 evaluations.
@@ -123,6 +147,16 @@ Kwargs:
   - `step_size_policy`   — `:fixed` (Tier-2 only); `:adaptive_ffw` throws.
   - `max_steps_per_target` — cap per-target Stage-1 walk length.
   - `rng_seed::Integer`  — for deterministic target shuffle (tests).
+  - `enforce_real_axis_symmetry::Bool` — opt-in.  When `true`, walk only
+    upper-half + on-axis targets (`Im(z) ≥ 0`) and populate the lower
+    half via Schwarz reflection `u(z̄) = ū(z)`.  Correct iff the ODE
+    coefficients are real *and* the IC sits on the real axis (`Im(z₀)
+    = Im(u₀) = Im(u'₀) = 0`); we validate the latter and trust the
+    caller on the former.  Eliminates the `shuffle(rng, targets)`-
+    induced visited-tree asymmetry that costs 4-5 orders of magnitude
+    on conjugate-pair cells far from the IC (worklog 014 §"Bug 1",
+    bead `padetaylor-dtj`); roughly halves wall time on full-plane
+    fills.  Default `false` preserves the FW 2011 algorithm verbatim.
 
 Throws if Stage 1 cannot reach a target within `max_steps_per_target`
 steps, if all 5 wedge candidates fail, or if `:adaptive_ffw` is
@@ -136,7 +170,14 @@ function path_network_solve(prob::PadeTaylorProblem,
                             step_selection::Symbol  = :min_u,
                             step_size_policy::Symbol = :fixed,
                             max_steps_per_target::Integer = 1000,
-                            rng_seed::Integer = 0)
+                            rng_seed::Integer = 0,
+                            enforce_real_axis_symmetry::Bool = false)
+
+    if enforce_real_axis_symmetry
+        return _solve_with_schwarz_reflection(
+            prob, grid; h, order, wedge_angles, step_selection,
+            step_size_policy, max_steps_per_target, rng_seed)
+    end
 
     step_size_policy === :fixed || throw(ArgumentError(
         "path_network_solve: :adaptive_ffw step-size policy is a Tier-4 " *
@@ -245,6 +286,96 @@ end
 # -----------------------------------------------------------------------------
 # Helpers
 # -----------------------------------------------------------------------------
+
+# Schwarz-reflection driver (worklog 014 §"Bug 1", bead `padetaylor-dtj`).
+#
+# For ODEs that preserve complex conjugation (real-coefficient `f`, real
+# IC on the real axis), the analytic solution satisfies `u(z̄) = ū(z)`
+# globally.  The default `shuffle(rng, targets)` step breaks this
+# numerically — the visited-tree order is shuffle-dependent, so the
+# Stage-2 nearest-visited lookup at `z` and `conj(z)` may land on
+# non-conjugate visited nodes, blowing `|u|` apart by 4-5 orders of
+# magnitude at far-from-IC conjugate pairs.
+#
+# Cure: walk the unique upper-half-or-on-axis representatives only, then
+# build the requested grid by indexing the upper-walk's outputs (mirror
+# via `conj` for input cells with `Im(z) < 0`).  Bit-exact symmetric;
+# roughly half the wall-time of a full-plane walk.
+#
+# Correctness preconditions: the caller's `f` has real coefficients
+# (cannot be checked at this layer; opt-in kwarg pushes the burden onto
+# the caller) AND the IC `(z₀, u₀, u'₀)` lies on the real axis (we DO
+# check this — fail loud per CLAUDE.md Rule 1).
+function _solve_with_schwarz_reflection(prob::PadeTaylorProblem,
+                                         grid::AbstractVector{<:Complex};
+                                         h::Real,
+                                         order::Integer,
+                                         wedge_angles::AbstractVector{<:Real},
+                                         step_selection::Symbol,
+                                         step_size_policy::Symbol,
+                                         max_steps_per_target::Integer,
+                                         rng_seed::Integer)
+    T  = float(typeof(real(first(grid))))
+    CT = Complex{T}
+    tol = 10 * eps(T)
+
+    abs(imag(prob.zspan[1])) <= tol || throw(ArgumentError(
+        "path_network_solve: enforce_real_axis_symmetry=true requires " *
+        "imag(zspan[1]) ≈ 0 (got $(prob.zspan[1])).  Schwarz reflection " *
+        "u(z̄) = ū(z) is exact only when the IC sits on the real axis. " *
+        "Suggestion: shift the IC onto the real axis, or set the kwarg false."))
+
+    u0, up0 = prob.y0[1], prob.y0[2]
+    abs(imag(u0)) <= tol || throw(ArgumentError(
+        "path_network_solve: enforce_real_axis_symmetry=true requires " *
+        "imag(y0[1]) ≈ 0 (got $u0).  Suggestion: real ICs only, " *
+        "or set the kwarg false."))
+    abs(imag(up0)) <= tol || throw(ArgumentError(
+        "path_network_solve: enforce_real_axis_symmetry=true requires " *
+        "imag(y0[2]) ≈ 0 (got $up0).  Suggestion: real ICs only, " *
+        "or set the kwarg false."))
+
+    # Map each input cell to its upper-half-or-on-axis canonical
+    # representative.  `complex(real(z), abs(imag(z)))` collapses the
+    # ±0.0im signed-zero ambiguity to +0.0im for on-axis cells, so the
+    # `idx_of` dict lookup below is deterministic.
+    grid_input  = collect(CT, grid)
+    upper_canon = CT[complex(real(z), abs(imag(z))) for z in grid_input]
+    upper_unique = unique(upper_canon)
+
+    sol_upper = path_network_solve(
+        prob, upper_unique;
+        h = h, order = order, wedge_angles = wedge_angles,
+        step_selection = step_selection,
+        step_size_policy = step_size_policy,
+        max_steps_per_target = max_steps_per_target,
+        rng_seed = rng_seed,
+        enforce_real_axis_symmetry = false)
+
+    idx_of = Dict{CT, Int}()
+    for (i, z) in enumerate(sol_upper.grid_z)
+        idx_of[z] = i
+    end
+
+    n = length(grid_input)
+    grid_u  = Vector{CT}(undef, n)
+    grid_up = Vector{CT}(undef, n)
+    for (i, z) in enumerate(grid_input)
+        j = idx_of[upper_canon[i]]
+        if imag(z) < 0
+            grid_u[i]  = conj(sol_upper.grid_u[j])
+            grid_up[i] = conj(sol_upper.grid_up[j])
+        else
+            grid_u[i]  = sol_upper.grid_u[j]
+            grid_up[i] = sol_upper.grid_up[j]
+        end
+    end
+
+    return PathNetworkSolution{T}(
+        sol_upper.visited_z, sol_upper.visited_u, sol_upper.visited_up,
+        sol_upper.visited_pade, sol_upper.visited_h,
+        grid_input, grid_u, grid_up)
+end
 
 # Compute the canonical local Padé centered at (z, u, up) with real step h.
 # We clone the state so the IC isn't mutated.

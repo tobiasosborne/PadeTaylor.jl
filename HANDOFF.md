@@ -35,7 +35,7 @@ docs/design_section_6_path_network.md scope), are all shipped:
 | 13 | `CoordTransforms` (FFW 2017 PIII/PV) | ⏸  P2, bead `padetaylor-bvh` | Tier-4 |
 | 14 | `SheetTracker` (FFW 2017 PVI) | ⏸  P2, bead `padetaylor-grc` | Tier-5 |
 
-**1237 / 1237 tests passing** as of the Phase 12 v2 LatticeDispatcher GREEN commit (session 2026-05-13 evening).
+**1250 / 1250 tests passing** as of the Schwarz-reflection kwarg GREEN commit (session 2026-05-13 late evening, worklog 015).
 
 **Phase 6 shipped 2026-05-09 on the pivoted scope** — the v1
 acceptance is a Padé-vs-Taylor pole-bridge demonstration (one stored
@@ -500,7 +500,74 @@ Quick summary:
 
 ## Last commit before this handoff
 
-Phase 12 v2 LatticeDispatcher GREEN (this commit).
+PathNetwork `enforce_real_axis_symmetry` kwarg GREEN (bead `padetaylor-dtj` closed) — worklog 015.
+
+### Session 2026-05-13 late evening — `padetaylor-dtj` closed
+
+One GREEN commit lands this session: the library-level cure for the
+y-asymmetry bug surfaced in worklog 014.
+
+  - `padetaylor-dtj` **closed** — `PathNetwork.path_network_solve` gains
+    opt-in `enforce_real_axis_symmetry::Bool` kwarg.  When `true`, walks
+    only upper-half + on-axis canonical representatives (collapses ±0.0im
+    signed zeros via `complex(real(z), abs(imag(z)))`) and mirrors lower-
+    half outputs via `conj`.  Bit-exact `u(z̄) = ū(z)` invariant; roughly
+    2× faster than full-plane walk.  Validates IC-on-real-axis precondition
+    (throws `ArgumentError` if `Im(z₀) > tol`, `Im(u₀) > tol`, or
+    `Im(u'₀) > tol`); trusts caller on real-coefficient `f`.  Default
+    `false` preserves FW 2011 algorithm verbatim.
+  - **4 new testsets / 13 assertions** PN.6.1-PN.6.4, mutation-proven
+    (Mutations G + I bite as predicted; see worklog 015).
+  - `examples/tritronquee_3d.jl` simplified — drops the user-space upper-
+    half walk + manual mirror in favor of the kwarg.  Net -15 LOC user
+    code, same PNG output.
+  - `src/PathNetwork.jl` gains a new module-header chapter "Schwarz-
+    reflection symmetry (opt-in)" documenting the algorithmic correctness
+    preconditions and the design choices (signed-zero collapse, recursive
+    call into the unkwarged path, on-axis output handling).
+
+Test suite: 1237 → **1250 GREEN** (+12 PN.6.* + 1 extra in PN.6.2 for
+`length(visited_z) > 1` walked-tree check).  Wall ~1m47s.
+
+### Beads filed this session
+
+None.
+
+### Open beads end-of-session (worklog 015)
+
+Five P2 beads remain — same set as before, minus `padetaylor-dtj`:
+  - `padetaylor-bvh` (Phase 13 CoordTransforms),
+  - `padetaylor-grc` (Phase 14 SheetTracker),
+  - `padetaylor-61j` (Willers 1974 acquisition),
+  - `padetaylor-8pi` (GLA piracy friction),
+  - `padetaylor-0c3` (Fig 4.1 quantitative pin).
+
+No P0 or P1 beads open.
+
+### Hard-won lessons added this session (worklog 015)
+
+20. **Julia `isequal(+0.0, -0.0) == false`** — and the same for
+    `+0.0im` vs `-0.0im`.  Dict-keying on `Complex{Float64}` with
+    on-axis cells is a footgun.  `complex(real(z), abs(imag(z)))`
+    canonicalizes to `+0.0im` and eliminates the ambiguity.  Caught
+    in PN.6.1's first GREEN attempt; documented in worklog 015 + the
+    `_solve_with_schwarz_reflection` helper's docstring.
+
+21. **Visited-tree-property tests need grids that force walking**.
+    PN.6.2's first cut used a grid entirely within `h` of the IC ⇒
+    Stage-1 took 0 steps ⇒ `visited_z == [IC]` regardless of mutation
+    ⇒ Mutation I didn't bite the test.  Rewrote with off-axis targets
+    > `h` from IC to force multi-step walks.  Lesson: when asserting
+    properties of the visited tree, design the grid to grow it.
+
+22. **Promote validated user-space workarounds to library API**.
+    Worklog 014's `examples/tritronquee_3d.jl` carried the Schwarz-
+    reflection workaround as 15 LOC of grid-partitioning user code.
+    This session lifts it to an opt-in kwarg — the workaround was
+    already exercised on the canonical PI tritronquée case, so the
+    library version inherits the empirical validation.  Test plan
+    just adds the bit-exact-symmetry invariants the user-space code
+    couldn't easily assert.
 
 ### Session 2026-05-13 evening — all 4 P1 beads closed
 
