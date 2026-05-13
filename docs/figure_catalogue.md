@@ -35,7 +35,7 @@ Exact criteria per figure are stated in the rightmost column. "Defer" = no accep
 |---|---|---|---|---|
 | 1.1 | 42–43 | — | Schematic cartoon of PI pole-field sectors | Excluded (non-numerical). |
 | 2.1 | 131–135 | T1 | Taylor vs Padé on `y' = t² + y²`, near first pole | Rel-err at z=z_pole−ε ≤1e-9 for Padé arm; Taylor arm rel-err > 1e-1. (Already shipped pattern in Phase 6 test 6.1.5.) |
-| 3.1 | 143–145 | T2 | PI pole field on 20×20 square, near-tritronquée ICs | Pole count + location vs RF2014-style verification; visual match. |
+| 3.1 | 143–145 | T2 | PI pole field on 20×20 square, near-tritronquée ICs | Pole count + location vs RF2014-style verification; visual match. **PARTIAL — Phase 9 ships qualitative reproduction at 25×25 [-4,4]² (4-of-5 pole-free sectors, conjugate symmetry, leading-pole magnitude); FW's full 161² Fig 3.1 acceptance deferred to Phase 12 v2 (`padetaylor-k31`).** |
 | 3.2 | 160–164 | T2 | PI integration path tree, h=0.3, 40×40 coarse grid | Path topology matches FW's tree visually (no quantitative criterion in paper). |
 | 3.3 | 197–208 | T2+edge | log₁₀\|Δu\| for pole-field edge detection; level 0.001 | Edge-detector bitmap on 20×20 lattice matches FW's level-0.001 contour to ≤2 lattice cells off. |
 | 4.1 | 218–222 | **T3** | Near-tritronquée: two pole fields + smooth imaginary-axis band; BVP solver path shown | u(0), u'(0), u(20i), u'(20i) recovered to ≤1e-10 abs; complete pole field's pole locations agree with FW Table 5.1 reference values. |
