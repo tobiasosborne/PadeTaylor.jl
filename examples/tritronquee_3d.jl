@@ -28,10 +28,11 @@ u_tri  = -0.1875543083404949
 up_tri =  0.3049055602612289
 
 # Grid resolution.  At [-20, 20]² (5× the linear extent of FW Fig 3.1,
-# 25× the area), 121×121 (h_grid = 0.333) is a good visual default —
-# captures the ~O(R^{5/2}) pole density out to R = 20 in ≈ 11 s.  For
-# the tighter [-4, 4]² FW Fig 3.1 window, use N = 41.
-N = 121
+# 25× the area), 501×501 (h_grid = 0.08) gives FW Fig 3.1-style detail
+# (their figure was 161×161 over [-10, 10]²; we're a hair denser per
+# unit area).  Wall ≈ 100 s.  Drop to N = 251 (~25 s) for faster
+# iteration; N = 121 (~11 s) for a quick sanity check.
+N = 501
 xs = range(-20.0, 20.0; length = N)
 ys = range(-20.0, 20.0; length = N)
 
