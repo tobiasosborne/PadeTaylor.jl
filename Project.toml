@@ -7,6 +7,7 @@ version = "0.1.0-dev"
 GenericLinearAlgebra = "14197337-ba66-59df-a3e3-ca00e7dcff7a"
 LinearAlgebra        = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Polynomials          = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
+Random               = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 TaylorSeries         = "6aa5eb33-94cf-58f4-a9d0-e4b2c4fc25ea"
 
 [weakdeps]
@@ -27,8 +28,7 @@ TaylorSeries         = "0.21"
 julia                = "1.10"
 
 [extras]
-Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
-Test   = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Random", "Test"]
+test = ["Test"]

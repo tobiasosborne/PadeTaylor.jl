@@ -186,12 +186,17 @@ end
 # -----------------------------------------------------------------------------
 
 """
-    pade_step!(state::PadeStepperState{T}, f, order::Int, h::Real) -> state
+    pade_step!(state::PadeStepperState{T}, f, order::Int, h::Number) -> state
 
 Take one Padé-Taylor step of the 2nd-order ODE `u'' = f(z, u, u')`,
 mutating `state` in place: `state.z += h`, and `state.u`, `state.up`
 become the values of `u(z+h)`, `u'(z+h)` produced by the local diagonal
 Padé approximation in the rescaled variable `t = h'/h`.
+
+`h` is a `Number` rather than a `Real`: when `T <: Complex` (path-
+network mode), `h` is the complex displacement `h·exp(iθ)` along a
+wedge direction.  When `T <: Real`, `h` must be real — the inner
+`T(h)` coercion enforces this at runtime via `InexactError`.
 
 The 5-step algorithm and the rationale for `h^k` rescaling, diagonal
 Padé, evaluation at `t = 1`, and analytic differentiation for `u'`
@@ -203,13 +208,13 @@ denominator), or the local check for a denominator that vanishes
 exactly at `t = 1` (`DomainError`).
 """
 function pade_step!(state::PadeStepperState{T}, f,
-                    order::Int, h::Real) where {T}
+                    order::Int, h::Number) where {T}
     pade_step_with_pade!(state, f, order, h)
     return state
 end
 
 """
-    pade_step_with_pade!(state::PadeStepperState{T}, f, order::Int, h::Real)
+    pade_step_with_pade!(state::PadeStepperState{T}, f, order::Int, h::Number)
         -> (state, P_u::PadeApproximant{T})
 
 Like `pade_step!`, but additionally returns the per-step Padé
@@ -227,10 +232,16 @@ backwards-compatible wrapper that discards the Padé — Phase 5's
 existing tests do not need the Padé and continue to work
 unchanged.
 
+`PathNetwork.path_network_solve` (Phase 10) also calls this, passing
+a *complex* `h` representing a wedge-direction step in the complex
+plane.  In that mode, `T = Complex{S}` and the rescaled coefficients
+`c̃_k = h^k · c_k` are complex; `RobustPade.robust_pade` handles the
+complex linear algebra unchanged.
+
 Same fail-fast contract as `pade_step!`.
 """
 function pade_step_with_pade!(state::PadeStepperState{T}, f,
-                              order::Int, h::Real) where {T}
+                              order::Int, h::Number) where {T}
     order ≥ 2 || throw(ArgumentError(
         "pade_step_with_pade!: order must be ≥ 2 (got $order); the " *
         "2nd-order Taylor recursion needs at least two passes."))
