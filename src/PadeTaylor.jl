@@ -57,16 +57,19 @@ include("StepControl.jl")
 include("PadeStepper.jl")
 include("Problems.jl")
 include("PathNetwork.jl")
+include("BVP.jl")
 
 # Public API (re-exported from sub-modules).
 using .Problems:    PadeTaylorProblem, solve_pade, PadeTaylorSolution, taylor_eval
 using .RobustPade:  robust_pade, PadeApproximant
 using .Coefficients: taylor_coefficients_1st, taylor_coefficients_2nd
 using .PathNetwork: path_network_solve, PathNetworkSolution
+using .BVP:         bvp_solve, BVPSolution
 
 export PadeTaylorProblem, solve_pade, PadeTaylorSolution, taylor_eval
 export robust_pade, PadeApproximant
 export taylor_coefficients_1st, taylor_coefficients_2nd
 export path_network_solve, PathNetworkSolution
+export bvp_solve, BVPSolution
 
 end # module PadeTaylor
