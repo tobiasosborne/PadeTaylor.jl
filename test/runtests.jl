@@ -34,4 +34,5 @@ using PadeTaylor
     include("lattice_dispatcher_test.jl")
     include("ext_commonsolve_test.jl")
     include("ext_arblib_test.jl")
+    include("fw_fig_41_test.jl")
 end

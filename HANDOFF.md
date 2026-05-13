@@ -35,7 +35,7 @@ docs/design_section_6_path_network.md scope), are all shipped:
 | 13 | `CoordTransforms` (FFW 2017 PIII/PV) | ⏸  P2, bead `padetaylor-bvh` | Tier-4 |
 | 14 | `SheetTracker` (FFW 2017 PVI) | ⏸  P2, bead `padetaylor-grc` | Tier-5 |
 
-**1250 / 1250 tests passing** as of the Schwarz-reflection kwarg GREEN commit (session 2026-05-13 late evening, worklog 015).
+**1262 / 1262 tests passing** as of the FW Fig 4.1 step-(i) BVP pin GREEN commit (session 2026-05-13 late evening, worklog 016).
 
 **Phase 6 shipped 2026-05-09 on the pivoted scope** — the v1
 acceptance is a Padé-vs-Taylor pole-bridge demonstration (one stored
@@ -499,6 +499,68 @@ Quick summary:
     result smells wrong.  See worklog 008 §"Frictions surfaced" F3.
 
 ## Last commit before this handoff
+
+FW 2011 Fig 4.1 step-(i) BVP quantitative pin GREEN (bead `padetaylor-0c3` closed) — worklog 016.
+
+### Session 2026-05-13 late evening (part 2) — `padetaylor-0c3` closed
+
+One GREEN commit lands this session: reproduce the tritronquée FW
+eq. 4.1 reference values via the FW Fig 4.1 step-(i) recipe.
+
+  - `padetaylor-0c3` **closed** — `test/fw_fig_41_test.jl` (new ~110
+    LOC) demonstrates the canonical FW Fig 4.1 step (i): Chebyshev-
+    Newton BVP for `u'' = 6u² + z` on `[-20i, +20i]` with leading-term
+    `u(z) = -√(-z/6)` Dirichlet BCs.  At N=240, `u(0)` pins to ≤3.5e-13
+    and `u'(0)` to ≤5.3e-11 vs FW eq. 4.1 — both well under the bead's
+    1e-10 spec.  6 testsets / 12 assertions; structural mutation-self-
+    proof at FF.1.6 (the `+√` branch diverges).
+  - **No `src/` changes**.  The recipe is the test itself; encapsulating
+    it in a `fw_fig_41_axis_bvp(z_max; ...)` wrapper would be premature
+    abstraction (no downstream caller, the bead is a pin not a feature).
+  - `docs/figure_catalogue.md` row 4.1 marked PARTIAL with the step-(i)
+    pin shipped + deferral notes for steps (ii) and (iii).
+
+Test suite: 1250 → **1262 GREEN** (+12 FF.1.*).  Wall ~1m49s.
+
+### Beads filed this session (part 2)
+
+None.
+
+### Open beads end-of-session (worklog 016)
+
+Four P2 beads remain — same set as after worklog 015, minus
+`padetaylor-0c3`:
+  - `padetaylor-bvh` (Phase 13 CoordTransforms),
+  - `padetaylor-grc` (Phase 14 SheetTracker),
+  - `padetaylor-61j` (Willers 1974 acquisition),
+  - `padetaylor-8pi` (GLA piracy friction).
+
+No P0 or P1 beads open.
+
+### Hard-won lessons added this session (worklog 016)
+
+23. **The leading-term Dirichlet BC pins `u` exactly but not `u'`**.
+    For BVP step-(i) recipes that derive `u'(endpoint)` from the BVP
+    (no Neumann BC), the converged `u'` differs from the analytical
+    leading-term derivative by an o(1) correction.  At `z = ±20i` for
+    tritronquée: gap ≈ 2.5e-4.  Use a looser tolerance documenting
+    the gap, or fetch an independent oracle for a tighter pin.
+
+24. **N-tuning probe before pinning rtol on a fresh BVP**.  Different
+    segments need different N.  `[-18, -14]` (Fig 4.6): N=20 suffices.
+    `[-20i, +20i]` (Fig 4.1): N=240 for ≤1e-10.  Probe spectral
+    convergence empirically (each +20 in N typically buys ~10× error
+    reduction) BEFORE committing test's N parameter.
+
+25. **`residual_inf` is not a convergence metric for spectral BVPs**.
+    The BVP's step-norm Newton (worklog 006 lesson 8) converges in
+    `‖Δu‖_∞ ≤ eps^(3/4)` while `‖R‖_∞` floats at `N²·eps(T)` or higher.
+    Gating tests on `residual_inf ≤ TINY` is structurally wrong —
+    Newton CAN converge with `‖R‖_∞ ~ 1e-8` at N=200 and still deliver
+    `u(0)` to 1e-13.  Gate on per-eval error against the oracle, not
+    on the residual.
+
+## Last commit before this handoff (previous session)
 
 PathNetwork `enforce_real_axis_symmetry` kwarg GREEN (bead `padetaylor-dtj` closed) — worklog 015.
 
