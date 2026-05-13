@@ -536,6 +536,11 @@ shipped phases).  Wall ~1m45s.
     compositional pattern (vertical BVP + two outward pole fields)
     than v1's line-190 horizontal-row algorithm.  See worklog 013
     §"v1 scope decision".
+  - `padetaylor-dtj` **P2** PathNetwork: add `enforce_real_axis_symmetry`
+    kwarg.  `path_network_solve`'s `shuffle(rng, targets)` breaks
+    conjugate symmetry for real-coeff/real-IC problems.  Workaround
+    lives in `examples/tritronquee_3d.jl`; library-level kwarg is the
+    proper fix.  See worklog 014.
 
 ### Open beads end-of-session
 
@@ -568,5 +573,42 @@ No P0 or P1 beads remain open.
     deliverables (different compositional patterns).  v1 ships the
     machinery; v2.1 ships the specific case.  See worklog 013 §"v1
     scope decision".
+
+17. **`shuffle(rng, targets)` in PathNetwork breaks conjugate symmetry
+    even when the underlying ODE preserves it**.  For real-coeff
+    real-IC problems, the shuffle's random target order creates an
+    asymmetric visited tree whose Stage-2 cascade can blow `|u|` apart
+    by 4-5 orders of magnitude at conjugate-pair cells.  Fix: walk
+    only upper-half + mirror via `u(z̄) = ū(z)`.  See worklog 014 §
+    "Bug 1".
+
+18. **Use even N for 2D Cartesian grids centred on a symmetry axis**.
+    With odd N, the centre cell sits on the axis and gets walked
+    along a special direction, producing path-dependent discontinuity
+    from off-axis cells.  Even N avoids the special-case row.  See
+    worklog 014 §"Bug 2".
+
+19. **FW Fig 4.1 geometry ≠ line-190 horizontal-row algorithm**.
+    FW Fig 4.1's vertical BVP with asymptotic BCs serves *open*
+    smooth regions extending to infinity; line-190's horizontal-row
+    BVP fill serves *interior* smooth runs bounded on both sides by
+    pole fields.  Pure tritronquée has no bridgeable interior runs
+    — the horizontal-row cure does not apply.  See worklog 014
+    §"BVP-cure exploration".
+
+### Examples directory shipped
+
+`examples/` ships two working scripts + its own Project.toml/Manifest.toml:
+  - `tritronquee_3d.jl` — 3D surface + 2D heatmap + EdgeDetector mask
+    for PI tritronquée at 500×500 over `[-20, 20]²` in ~17 s.  Uses
+    upper-half walk + conjugate mirror (Bug 1 workaround) + even N
+    (Bug 2 workaround).  Reproduces the canonical FW Fig 3.1
+    tritronquée pole-field qualitatively.
+  - `tritronquee_bvp_compose.jl` — investigative reference for the
+    "BVP-fill cures tritronquée artifact" claim (does not — 0 BVPs
+    trigger on the pure tritronquée geometry).
+
+PNGs are gitignored; regenerate via `julia --project=examples
+examples/<name>.jl`.
 
 Goodluck. Read CLAUDE.md again before you start.
