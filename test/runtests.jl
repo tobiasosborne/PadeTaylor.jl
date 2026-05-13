@@ -28,4 +28,5 @@ using PadeTaylor
     include("bvp_test.jl")
     include("dispatcher_test.jl")
     include("ext_commonsolve_test.jl")
+    include("ext_arblib_test.jl")
 end
