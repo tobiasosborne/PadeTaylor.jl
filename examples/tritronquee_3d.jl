@@ -27,24 +27,29 @@ f_PI(z, u, up) = 6 * u^2 + z
 u_tri  = -0.1875543083404949
 up_tri =  0.3049055602612289
 
-# Grid resolution.  41×41 takes ~5 s on this hardware; 51×51 ~10 s.
-N = 41
-xs = range(-4.0, 4.0; length = N)
-ys = range(-4.0, 4.0; length = N)
+# Grid resolution.  At [-20, 20]² (5× the linear extent of FW Fig 3.1,
+# 25× the area), 121×121 (h_grid = 0.333) is a good visual default —
+# captures the ~O(R^{5/2}) pole density out to R = 20 in ≈ 11 s.  For
+# the tighter [-4, 4]² FW Fig 3.1 window, use N = 41.
+N = 121
+xs = range(-20.0, 20.0; length = N)
+ys = range(-20.0, 20.0; length = N)
 
 # Flat-vector form for the path-network driver.
 grid_mat = ComplexF64[xs[i] + im * ys[j] for i in 1:N, j in 1:N]
 grid_vec = vec(grid_mat)
 
 # `zspan[2]` is unused for path-network-only callers; non-degenerate
-# placeholder satisfies the PadeTaylorProblem guard.
-zspan = (0.0 + 0.0im, ComplexF64(4 * sqrt(2)))
+# placeholder satisfies the PadeTaylorProblem guard.  Use the farthest
+# grid corner.
+zspan = (0.0 + 0.0im, ComplexF64(maximum(abs, xs) * sqrt(2)))
 prob  = PadeTaylorProblem(f_PI, (u_tri, up_tri), zspan; order = 30)
 
 # --- Solve -----------------------------------------------------------------
 
-println("Solving PI tritronquée on $(N)×$(N) grid over [-4, 4]²...")
-@time sol = path_network_solve(prob, grid_vec; h = 0.5)
+println("Solving PI tritronquée on $(N)×$(N) grid over [$(Int(minimum(xs))), $(Int(maximum(xs)))]²...")
+@time sol = path_network_solve(prob, grid_vec; h = 0.5,
+                                max_steps_per_target = 2000)
 println("  Visited nodes: $(length(sol.visited_z))")
 println("  Grid coverage: $(count(isfinite.(real.(sol.grid_u))))/$(N*N)")
 
@@ -70,7 +75,7 @@ plt_3d = surface(
     xlabel = "x = Re(z)",
     ylabel = "y = Im(z)",
     zlabel = "log₁₀|u(z)|",
-    title  = "PI tritronquée — u'' = 6u² + z, IC (FW eq. 4.1)\nlog₁₀|u(z)| over [-4, 4]²",
+    title  = "PI tritronquée — u'' = 6u² + z, IC (FW eq. 4.1)\nlog₁₀|u(z)| over [$(Int(minimum(xs))), $(Int(maximum(xs)))]²",
     color  = :viridis,
     camera = (40, 35),       # azimuth, elevation
     size   = (1000, 800),
