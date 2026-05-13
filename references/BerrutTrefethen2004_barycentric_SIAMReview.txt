@@ -1,0 +1,1275 @@
+c 2004 Society for Industrial and Applied Mathematics
+
+
+SIAM REVIEW
+Vol. 46, No. 3, pp. 501–517
+
+Barycentric Lagrange
+Interpolation∗
+Jean-Paul Berrut†
+Lloyd N. Trefethen‡
+Dedicated to the memory of Peter Henrici (1923–1987)
+Abstract. Barycentric interpolation is a variant of Lagrange polynomial interpolation that is fast and
+stable. It deserves to be known as the standard method of polynomial interpolation.
+Key words. barycentric formula, interpolation
+AMS subject classiﬁcations. 65D05, 65D25
+DOI. 10.1137/S0036144502417715
+
+1. Introduction. “Lagrangian interpolation is praised for analytic utility and
+beauty but deplored for numerical practice.” This heading, from the extended table
+of contents of one of the most enjoyable textbooks of numerical analysis [1], expresses
+a widespread view.
+In the present work we shall show that, on the contrary, the Lagrange approach
+is in most cases the method of choice for dealing with polynomial interpolants. The
+key is that the Lagrange polynomial must be manipulated through the formulas of
+barycentric interpolation. Barycentric interpolation is not new, but most students,
+most mathematical scientists, and even many numerical analysts do not know about
+it. This simple and powerful idea deserves a place at the heart of introductory courses
+and textbooks in numerical analysis.1
+As always with polynomial interpolation, unless the degree of the polynomial is
+low, it is usually not a good idea to use uniformly spaced interpolation points. Instead
+one should use Chebyshev points or other systems of points clustered at the boundary
+of the interval of approximation.
+2. Lagrange and Newton Interpolation. Let n + 1 distinct interpolation points
+(nodes) xj , j = 0, . . . , n, be given, together with corresponding numbers fj , which
+may or may not be samples of a function f . Unless stated otherwise, we assume
+that the nodes are real, although most of our results and comments generalize to the
+∗ Received by the editors November 8, 2002; accepted for publication (in revised form) December
+24, 2003; published electronically July 30, 2004.
+http://www.siam.org/journals/sirev/46-3/41771.html
+† Département de Mathématiques, Université de Fribourg, 1700 Fribourg/Pérolles, Switzerland
+(Jean-Paul.Berrut@unifr.ch). The work of this author was supported by the Swiss National Science
+Foundation, grant 21–59272.99.
+‡ Computing Laboratory, Oxford University, Oxford, UK (LNT@comlab.ox.ac.uk).
+1 We are speaking here of a method of interpolating data in one space dimension by a polynomial.
+The “barycentric coordinates” popular in computational geometry for representing data on triangles
+and tetrahedra are related, but diﬀerent.
+
+501
+
+502
+
+JEAN-PAUL BERRUT AND LLOYD N. TREFETHEN
+
+complex plane. Let Πn denote the vector space of all polynomials of degree at most
+n. The classical problem addressed here is that of ﬁnding the polynomial p ∈ Πn that
+interpolates f at the points xj , i.e.,
+p(xj ) = fj ,
+
+j = 0, . . . , n.
+
+The problem is well-posed; i.e., it has a unique solution that depends continuously on
+the data. Moreover, as explained in virtually every introductory numerical analysis
+text, the solution can be written in Lagrange form [44]:
+(2.1)
+
+p(x) =
+
+n
+
+
+n
+fj j (x),
+
+k=0, k=j (x − xk )
+
+j (x) = n
+
+k=0, k=j (xj − xk )
+
+j=0
+
+.
+
+The Lagrange polynomial j corresponding to the node xj has the property
+
+(2.2)
+
+j (xk ) =
+
+1, j = k,
+0, otherwise,
+
+j, k = 0, . . . , n.
+
+At this point, many authors specialize Lagrange’s formula (2.1) for small numbers n of nodes, before asserting that certain shortcomings make it a bad choice for
+practical computations. Among the shortcomings sometimes claimed are these:
+1. Each evaluation of p(x) requires O(n2 ) additions and multiplications.
+2. Adding a new data pair (xn+1 , fn+1 ) requires a new computation from scratch.
+3. The computation is numerically unstable.
+From here it is commonly concluded that the Lagrange form of p is mainly a theoretical tool for proving theorems. For computations, it is generally recommended that
+one should instead use Newton’s formula, which requires only O(n) ﬂops for each
+evaluation of p once some numbers, which are independent of the evaluation point x,
+have been computed.2
+Newton’s approach consists of two steps. First, compute the Newton tableau of
+divided diﬀerences
+f [x0 ]
+f [x0 , x1 ]
+f [x1 ]
+
+f [x0 , x1 , x2 ]
+f [x1 , x2 ]
+
+f [x2 ]
+f [x2 , x3 ]
+f [x3 ]
+..
+.
+
+f [x0 , x1 , x2 , x3 ]
+f [x1 , x2 , x3 ]
+
+..
+.
+
+..
+.
+
+..
+.
+f [xn−3 , . . . , xn ]
+f [xn−2 , xn−1 , xn ]
+
+..
+
+.
+
+...
+
+f [x0 , x1 , x2 , . . ., xn ]
+
+f [xn−1 , xn ]
+
+f [xn ]
+
+2 We deﬁne a ﬂop—ﬂoating point operation—as a multiplication or division plus an addition or
+subtraction. This is quite a simpliﬁcation of the reality of computer hardware, since divisions are
+much slower than multiplications on many processors, but this matter is not of primary importance
+for our discussion since we are mainly interested in the larger diﬀerences between O(n) and O(n2 )
+or O(n2 ) and O(n3 ). As usual, O(np ) means ≤ cnp for some constant c.
+
+BARYCENTRIC LAGRANGE INTERPOLATION
+
+503
+
+by the recursive formula
+(2.3)
+
+f [xj , xj+1 , . . . , xk−1 , xk ] =
+
+f [xj+1 , . . . , xk ] − f [xj , . . . , xk−1 ]
+xk − xj
+
+with initial condition f [xj ] = fj . This requires about n2 subtractions and n2 /2
+divisions. Second, for each x, evaluate p(x) by the Newton interpolation formula
+p(x) = f [x0 ] + f [x0 , x1 ](x − x0 ) + f [x0 , x1 , x2 ](x − x0 )(x − x1 ) + · · ·
+(2.4)
+
++ f [x0 , x1 , . . . , xn ](x − x0 )(x − x1 ) · · · (x − xn−1 ).
+
+This requires a mere n ﬂops when carried out by nested multiplication, much less
+than the O(n2 ) required for direct application of (2.1).
+3. An Improved Lagrange Formula. The ﬁrst purpose of the present work is
+to emphasize that the Lagrange formula (2.1) can be rewritten in such a way that it
+too can be evaluated and updated in O(n) operations, just like its Newton counterpart (2.4). To this end, it suﬃces to note that the numerator of j in (2.1) can be
+written as the quantity
+(3.1)
+
+(x) = (x − x0 )(x − x1 ) · · · (x − xn )
+
+divided by x − xj . ( is denoted by Ω or ω in many texts.) If we deﬁne the barycentric
+weights by3
+(3.2)
+
+wj = 
+
+1
+,
+k=j (xj − xk )
+
+j = 0, . . . , n,
+
+that is, wj = 1/ (xj ) [37, p. 243], we can thus write j as
+j (x) = (x)
+
+wj
+.
+x − xj
+
+Now we note that all the terms of the sum in (2.1) contain the factor (x), which does
+not depend on j. This factor may therefore be brought in front of the sum to yield
+(3.3)
+
+p(x) = (x)
+
+n
+
+
+wj
+fj .
+x − xj
+j=0
+
+That’s it! Now Lagrange interpolation too is a formula requiring O(n2 ) ﬂops for
+calculating some quantities independent of x, the numbers wj , followed by O(n) ﬂops
+for evaluating p once these numbers are known. Rutishauser [51] called (3.3) the “ﬁrst
+form of the barycentric interpolation formula.”
+What about updating? A look at (3.2) shows that incorporating a new node xn+1
+entails two calculations:
+• Divide each wj , j = 0, . . . , n, by xj − xn+1 (one ﬂop for each point), for a
+cost of n + 1 ﬂops.
+• Compute wn+1 with formula (3.2), for another n + 1 ﬂops.
+3 In practice, in view of the remarks of the previous footnote, one would normally choose to
+implement this formula by n multiplications followed by a single division.
+
+504
+
+JEAN-PAUL BERRUT AND LLOYD N. TREFETHEN
+
+The Lagrange interpolant can thus also be updated with O(n) ﬂops! By applying this
+update recursively while minimizing the number of divisions, we get the following
+(n)
+algorithm for computing wj = wj , j = 0, . . . , n:
+(0)
+
+w0 = 1
+for j = 1 to n do
+for k = 0 to j − 1 do
+(j)
+(j−1)
+wk = (xk − xj )wk
+end 
+(j)
+j−1
+wj = k=0 (xj − xk )
+end
+for j = 0 to n do
+(j)
+(j)
+wj = 1/wj
+end
+This algorithm performs the same operations as (3.2), only in a diﬀerent order.4
+A remarkable advantage of Lagrange over Newton interpolation, rarely mentioned
+in the literature, is that the quantities that have to be computed in O(n2 ) operations
+do not depend on the data fj . This feature permits the interpolation of as many
+functions as desired in O(n) operations each once the weights wj are known, whereas
+Newton interpolation requires the recomputation of the divided diﬀerence tableau for
+each new function.
+Another advantage of the Lagrange formula is that it does not depend on the order
+in which the nodes are arranged. In the Newton formula, the divided diﬀerences do
+have such a dependence. This seems odd aesthetically, and it has a computational
+consequence: for larger values of n, many orderings lead to numerical instability. For
+stability, it is necessary to select the points in a van der Corput or Leja sequence or in
+another related sequence based on a certain equidistribution property [18, 23, 61, 67].
+This is not to say that Newton interpolation has no advantages. One is that it
+leads to elegant methods for incorporating information on derivatives f (p) (xj ) when
+solving so-called Hermite interpolation problems. Another may be its ability to accommodate vector or matrix interpolation from scalar data [60]; using a representation
+like (3.3) would require costly matrix inversion. There are also some theoretical instances in which Newton interpolation is preferable, e.g., the construction of multistep
+formulas for the solution of ordinary diﬀerential equations [33, 45].
+4. The Barycentric Formula. Equation (3.3) is not the end of the story: it can
+be modiﬁed to an even more elegant formula, the one that is often used in practice.
+Suppose we interpolate, besides the data fj , the constant function 1, whose interpolant is of course itself. Inserting into (3.3), we get
+
+(4.1)
+
+1 =
+
+n
+
+j=0
+
+j (x) = (x)
+
+n
+
+
+wj
+.
+x
+−
+xj
+j=0
+
+Dividing (3.3) by this expression and cancelling the common factor (x), we obtain
+4 This contrasts with a somewhat faster but unstable [28, p. 96] algorithm that takes advantage
+
+of the relation
+
+j
+
+k=0
+
+(j)
+
+wk
+
+= 0 [67].
+
+BARYCENTRIC LAGRANGE INTERPOLATION
+
+505
+
+the barycentric formula for p:
+n
+
+
+(4.2)
+
+p(x) =
+
+wj
+fj
+x
+−
+xj
+j=0
+n
+
+
+wj
+x
+−
+xj
+j=0
+
+BARYCENTRIC
+FORMULA
+
+where wj is still deﬁned by (3.2). Rutishauser [51] called (4.2) the “second (true) form
+of the barycentric formula.” See p. 229 of [39] for comments on this terminology.
+We see that the barycentric formula is a Lagrange formula, but one with a special
+and beautiful symmetry. The weights wj appear in the denominator exactly as in the
+numerator, except without the data factors fj . This means that any common factor
+in all the weights wj may be cancelled without aﬀecting the value of pn , and in the
+discussion to follow we will use this freedom.
+Like (3.3), (4.2) can also take advantage of the updating of the weights wj in
+O(n) ﬂops to incorporate a new data pair (xn+1 , fn+1 ).
+5. Chebyshev and Other Point Distributions. For certain special sets of nodes
+xj , one can give explicit formulas for the barycentric weights wj . The obvious place
+to start is equidistant nodes with spacing h = 2/n on the
+interval [−1, 1]. Here the
+ 
+weights can be directly calculated to be wj = (−1)n−j nj (hn n!) [55], which after
+cancelling the factors independent of j yields
+
+n
+(5.1)
+.
+wj = (−1)j
+j
+For the interval [a, b] we would multiply the original formula for wj by 2n (b − a)−n ,
+but this constant factor too can be dropped, so we end up with (5.1) again, regardless
+of a and b.
+A glance at (5.1) reveals that if n is large, the weights wj for equispaced barycentric interpolation vary by exponentially large factors, of order approximately 2n . This
+sounds dangerous, and it is. The eﬀect will be that even small data near the center of
+the interval are associated with large oscillations in the interpolant, on the order of 2n
+times bigger, near the edge of the interval [40, 65]. This so-called Runge phenomenon
+is not a problem with the barycentric formula, but is intrinsic in the underlying interpolation problem. Among other things it implies that polynomial interpolation in
+equally spaced points is highly ill-conditioned: small changes in the data may cause
+huge changes in the interpolant.
+For polynomial interpolation to be a well-conditioned process, unless n is rather
+small, one must dispense with equally spaced points [59, Thm. 6.21.3]. As is well
+known in approximation theory, the right approach is to use point sets that are clustered at the endpoints of the interval with an asymptotic density proportional to
+(1 − x2 )−1/2 as n → ∞. Remarkably, this is the same asymptotic density one gets if
+[−1, 1] is interpreted as a conducting wire and the points xj are interpreted as point
+charges that repel one another with an inverse-linear force and that are allowed to
+move along the wire to ﬁnd their equilibrium conﬁguration [64, Chap. 5]. And it
+is precisely the same asymptotic density that is required to make the weights wj of
+comparable scale in the sense that although they may not all be exactly equal, they
+do not vary by factors exponentially large in n.
+
+506
+
+JEAN-PAUL BERRUT AND LLOYD N. TREFETHEN
+
+The simplest examples of clustered point sets are the families of Chebyshev points,
+obtained by projecting equally spaced points on the unit circle down to the unit
+interval [−1, 1]. Four standard varieties of such points have been deﬁned, and for each,
+there is an explicit formula for  in (3.1) that may be easily diﬀerentiated [9, 35, 47].
+From the identity
+(5.2)
+
+wj =
+
+1
+ (xj )
+
+mentioned earlier, we accordingly obtain explicit formulas for the weights wj .
+The Chebyshev points of the ﬁrst kind are given by
+xj = cos
+
+(2j + 1)π
+,
+2n + 2
+
+j = 0, . . . , n.
+
+In this case after cancelling factors independent of j we ﬁnd [40, p. 249]
+wj = (−1)j sin
+
+(5.3)
+
+(2j + 1)π
+.
+2n + 2
+
+Note that these numbers vary by factors O(n), not exponentially, reﬂecting the good
+distribution of the points. The Chebyshev points of the second kind are given by
+xj = cos
+
+jπ
+,
+n
+
+j = 0, . . . , n.
+
+Here we ﬁnd [52]
+
+(5.4)
+
+j
+
+wj = (−1) δj ,
+
+δj =
+
+1/2, j = 0 or j = n,
+1,
+otherwise;
+
+all but two of the weights are exactly equal. Formulas for the Chebyshev points of
+the third and fourth kinds can be found in [9].
+For all of these sets of Chebyshev points, if the interval [−1, 1] is linearly transformed to [a, b], the weights as deﬁned by (3.2) all get multiplied by 2n (b − a)−n .
+However, as this factor cancels out in the barycentric formula, there is again no need
+to include it (and it is safer not to—see section 7).
+One sees that, with equidistant or Chebyshev points, no expensive computations
+are needed to get the weights wj , and thus only O(n) operations are required for
+evaluating pn . No other interpolation method seems to achieve this, for as mentioned
+in section 3, Newton interpolation always requires O(n2 ) operations for the divided
+diﬀerences.
+Here is a Matlab code segment that samples the function f (x) = |x| + x/2 − x2
+in 1001 Chebyshev points of the second kind and evaluates the barycentric interpolant
+in 5000 points. One would rarely use so many points in practice; we pick such large
+values just to illustrate the eﬀectiveness of the formula. (At the end of section 7 we
+shall modify this program to avoid failure when x = xi .)
+n = 1000;
+fun = inline(’abs(x)+.5*x-x.ˆ2’);
+x = cos(pi*(0:n)’/n);
+f = fun(x);
+c = [1/2; ones(n-1,1); 1/2].*(-1).ˆ((0:n)’);
+
+507
+
+BARYCENTRIC LAGRANGE INTERPOLATION
+
+n=20
+0.5
+
+0
+
+−0.5
+−1
+
+−0.5
+
+0
+
+0.5
+
+1
+
+−0.5
+
+0
+
+0.5
+
+1
+
+n=100
+0.5
+
+0
+
+−0.5
+−1
+
+Fig. 5.1
+
+Barycentric interpolation of the function f (x) = |x| + x/2 − x2 in 21 and 101 Chebyshev
+points of the second kind on [−1, 1]. The dots mark the interpolated values fj .
+
+xx = linspace(-1,1,5000)’;
+numer = zeros(size(xx));
+denom = zeros(size(xx));
+for j = 1:n+1
+xdiff = xx-x(j);
+temp = c(j)./xdiff;
+numer = numer + temp*f(j);
+denom = denom + temp;
+end
+ff = numer./denom;
+plot(x,f,’.’,xx,ff,’-’)
+On one of our workstations this code runs in about 1 second, producing a plot like
+those shown in Figure 5.1 but for the case n = 1000. For further numerical examples
+of barycentric interpolation, see [6] and [40].
+Other point sets with the asymptotic distribution (1 − x2 )−1/2 also lead to wellconditioned polynomial approximation, notably the Legendre points—zeros or extrema
+of the Legendre polynomials. However, explicit formulas for the weights wj are not
+known for Legendre points.
+6. Convergence Rates for Smooth Functions. If a smooth function f deﬁned
+on the interval [−1, 1] is interpolated by polynomials in Chebyshev points or in any
+other system of points with the asymptotic density (1 − x2 )−1/2 , the rate of convergence of the interpolants to f as n → ∞ is remarkably fast. In particular, suppose
+that f is a function that can be analytically continued to a function f (z) that is
+analytic (holomorphic) in a neighborhood of [−1, 1] in the complex plane. Then the
+
+508
+
+JEAN-PAUL BERRUT AND LLOYD N. TREFETHEN
+
+0
+
+10
+
+−4
+
+error
+
+10
+
+−8
+
+10
+
+−12
+
+10
+
+−16
+
+10
+
+0
+
+50
+
+100
+
+150
+
+200
+
+n
+Fig. 6.1
+
+Convergence of the error (6.1) in polynomial interpolation of two smooth functions f
+in Chebyshev points of the second kind in [−1, 1]. The lower curve corresponds to f (x) =
+exp(x)/ cos(x), and the upper curve to f (x) = (1+16x2 )−1 . In both cases we observe steady
+convergence down to the level of rounding errors. The wiggles in the second function arise
+from the missing central node for odd n.
+
+interpolants pn satisfy an error estimate
+(6.1)
+
+max |f (x) − pn (x)| ≤ CK −n
+
+x∈[−1,1]
+
+for some constants C and K > 1 [24, p. 173]. The bigger the region of analyticity,
+the bigger we may take K to be. To be precise, if f is analytic on and inside an
+ellipse in the complex plane with foci ±1 and axis lengths 2L and 2, then we may
+take K = L +  [64, Chap. 5].
+Figure 6.1 illustrates this fast convergence for two smooth functions. The convergence rate for f (x) = exp(x)/ cos(x) is determined by the poles of f (z) at z = ±π/2;
+we have
+π
++ π 2 − 1 ≈ 2.7822.
+K =
+2
+The convergence rate for f (x) = (1 + 16x2 )−1 is determined by the poles of this
+function at z = ±i/4; we have
+K =
+
+1
++
+4
+
+17
+≈ 1.2808.
+16
+
+These facts about convergence pertain to polynomial interpolation in general, not
+barycentric interpolation per se, but the latter has a special feature that might be
+well suited to taking advantage of such convergence rates under certain circumstances.
+Suppose we apply the barycentric formula to Chebyshev points associated with values
+n = 2, 4, 8, 16, . . . . Then it is possible to compute the interpolants recursively, reusing
+the previous function values fj each time n is doubled [39]. If f is analytic in a
+neighborhood of [−1, 1], each doubling of n results approximately in a squaring of the
+error; one has quadratic convergence of the overall process.
+A function f may be less smooth than the class we have considered (e.g., twice
+continuously diﬀerentiable, or inﬁnitely diﬀerentiable); or it may be smoother (e.g.,
+
+BARYCENTRIC LAGRANGE INTERPOLATION
+
+509
+
+analytic in the entire complex plane). A great deal is known about exactly how
+the convergence rates of polynomial interpolants depend on the precise degree of
+smoothness of f . See Chapter 5 of [64] for an introduction and [58] for a more
+advanced treatment.
+7. Numerical Stability. Polynomial interpolation is an area in which the errors
+introduced by computer arithmetic are often a problem. One of the major advantages
+of the barycentric formula is its good behavior in this respect. But this is a subject
+where confusion is widespread, and one must be sure to distinguish several diﬀerent
+phenomena.
+One phenomenon to be clear about is that for improperly distributed sets of nodes,
+as discussed in section 5, the underlying interpolation problem is ill-conditioned: small
+changes in the data may cause large changes in the interpolant, typically manifested
+as large oscillations near the endpoints. Unless the nodes converge to the (1 − x2 )−1/2
+distribution, the condition numbers grow exponentially as n → ∞. In such circumstances polynomial interpolation is usually not a good method for applications,
+regardless of whether one uses a Lagrange, Newton, or any other formulation. Even
+though the interpolants may converge to f in theory as n → ∞ when f is suﬃciently
+smooth, rounding errors will destroy the convergence in practice, since the rounding
+errors are not smooth and thus get multiplied by exponentially large factors.
+Let us suppose, then, that we are working with a set of points that are clustered
+in the above sense, such as Chebyshev or Legendre points. The barycentric formula
+is now stable provided that two matters described below are attended to. For years
+this conclusion has been “folklore” in certain circles, and a rigorous analysis will be
+provided in a forthcoming paper by N. J. Higham that was motivated by reading
+an early draft of the present article [41]. (In a word, Higham shows that (3.3) is
+unconditionally stable and that (4.2) is stable too, provided one has a clustered set
+of interpolation points.)
+The ﬁrst matter is the question of underﬂow and overﬂow in the computation of
+the weights in cases where we are working from the general formula (3.2) rather than
+from well-behaved explicit expressions like (5.3) and (5.4). In most cases diﬃculties
+can be avoided as follows. Suppose we are working on an interval [a, b] of length 4C.
+(In the ﬁeld of complex analysis, C is called the capacity of the interval. The following
+remarks generalize to approximation on more complicated sets in the complex plane
+besides intervals.) Then as n → ∞, the scale of the weights wj as deﬁned by (3.2)
+will grow or decay exponentially at the rate C −n , and the concern about under- or
+overﬂow corresponds to situations where n is large or C is far from 1. To minimize
+the risk, one can multiply each factor xj − xk in (3.3) by C −1 . This has the eﬀect of
+rescaling all the weights uniformly by a factor C n . It is very likely that the resulting
+numbers will be bigger than 10−290 and smaller than 10290 —and since the underand overﬂow thresholds in IEEE double precision arithmetic are 10−308 and 10308 ,
+this will be enough to ensure that no digits of accuracy are lost. Exponent exception
+during computation is still possible in extreme cases, since the absolute values of the
+(j)
+quantities wk in the algorithm in section 3 may grow signiﬁcantly before decreasing
+again (or vice versa). In rare situations where n is so large that this is a concern,
+the problem can be addressed by taking the factors in a random or, better, van der
+Corput or Leja ordering [18].
+The other matter is less trivial but also easily coped with: what if the value of
+x in (4.2) is very close to one of the interpolation points xk or, in an extreme case,
+exactly equal? Consider ﬁrst the case in which x ≈ xk but x = xk . The quotient
+
+510
+
+JEAN-PAUL BERRUT AND LLOYD N. TREFETHEN
+
+wk /(x − xk ) will be very large, and it would seem that there might be a risk of
+inaccuracy in this number associated with the subtraction of two nearby quantities
+in the denominator. However, as pointed out by Henrici [39], this is not in fact a
+problem. Loosely speaking, there is indeed inaccuracy of this kind, but the same
+inaccurate numbers appear in both the numerator and the denominator of (4.2), and
+these inaccuracies cancel out; the formula remains stable overall. Rigorous arguments
+that make this intuitive idea precise are provided by Higham [41].
+If x = xk exactly, on the other hand, something must certainly be done: the
+barycentric formulas require a division by zero, and if the Matlab code segment
+given earlier is run in standard IEEE arithmetic, the corresponding values of the
+interpolant ff will come out as NaN, i.e., not-a-number. One can solve the problem
+by adding three lines containing a new variable exact to the kernel of the Matlab
+code, as follows:
+numer = zeros(size(xx));
+denom = zeros(size(xx));
+exact = zeros(size(xx));
+for j = 1:n+1
+xdiff = xx-x(j);
+temp = c(j)./xdiff;
+numer = numer + temp*f(j);
+denom = denom + temp;
+exact(xdiff==0) = 1;
+end
+ff = numer./denom;
+jj = find(exact); ff(jj) = f(exact(jj));
+The above observations seem to make barycentric interpolation entirely reliable
+in practice.
+The barycentric interpolation formula has a further kind of stability or robustness
+property that proves advantageous in some applications. Suppose (4.2) is applied
+with an arbitrary set of positive weights wj , not necessarily those given by (3.2). For
+example, the weights might have been computed somehow with large errors. It is
+easily seen that the resulting function p(x) still interpolates the data f , even though
+it is no longer in general a polynomial (see section 9.2).
+8. Trigonometric, Sinc, and Laurent Interpolation. Polynomial interpolation
+in Chebyshev points on [−1, 1] is equivalent to other familiar interpolation problems,
+and accordingly, these too have barycentric formulas. For example, one can transplant
+any function f deﬁned on [−1, 1] to a 2π-periodic, even function F deﬁned on [−π, π]
+by changing variables to θ = cos−1 x and deﬁning F (θ) = f (x) = f (cos θ) [58]. The
+barycentric formula becomes [9]
+n
+
+
+(8.1)
+
+tn (θ) =
+
+wj
+Fj
+cos
+θ
+−
+cos θj
+j=0
+n
+
+
+wj
+cos θ − cos θj
+j=0
+
+,
+
+1
+
+wj =
+
+(cos θj − cos θk )
+
+,
+
+k=j
+
+with θj = cos−1 xj and Fj = F (θj ). Since tn (θ) = pn (x) is a polynomial of degree
+≤ n in cos θ, it is a trigonometric polynomial of degree ≤ n in θ [49, p. 3], and (8.1)
+is the trigonometric interpolant of F . For Chebyshev points of the second kind {xj },
+
+511
+
+BARYCENTRIC LAGRANGE INTERPOLATION
+
+the transplanted nodes {θj } are equally spaced, and by (5.4), (8.1) becomes
+tn (θ) =
+
+n
+
+
+(−1)j δj
+Fj
+cos θ − cos θj
+j=0
+
+n
+
+
+(−1)j δj
+.
+cos θ − cos θj
+j=0
+
+This formula is a special case of the trigonometric interpolant of degree ≤ n of an
+arbitrary function F in an even number 2n of equidistant nodes θj = jπ/n, j =
+0, . . . , 2n − 1, on the interval [0, 2π] [39]:
+(8.2)
+
+t(θ) =
+
+2n−1
+
+
+(−1)j cot
+
+j=0
+
+θ − θj
+F (θj )
+2
+
+2n−1
+
+
+(−1)j cot
+
+j=0
+
+θ − θj
+.
+2
+
+The last expression can be further generalized. The function t is nothing but the
+so-called cardinal or sinc interpolant Sh of the 2π-periodically extended function F at
+the equidistant points θj = jh, h = π/n, j = −∞, . . . , ∞ on the whole real line R [56].
+After replacement of the cotangent with its Mittag–Leﬄer series, (8.2) becomes the
+barycentric formula for Sh [10],
+∞
+
+(−1)j
+F (θj )
+Sh (θ) =
+θ − θj
+j=−∞
+
+∞
+
+(−1)j
+.
+θ − θj
+j=−∞
+
+In this way we recover the sinc interpolant for more general functions on R (i.e.,
+nonperiodic). Gautschi has recently found another way of evaluating Sh that is more
+eﬃcient in many cases [29].
+Another closely related problem is that of polynomial interpolation in equally
+spaced points on the unit circle in the complex plane.
+ For the n roots of unity
+zj = exp(2πij/n), j = 0, . . . , n − 1, one has (z) = j (z − zj ) = z n − 1, and the
+simpliﬁed weights are easily computed from (5.2) as wj = zj , yielding the barycentric
+formula [32, 40]
+pn (z) =
+
+n−1
+
+
+zj
+f (zj )
+z − zj
+j=0
+
+n−1
+
+
+zj
+.
+z − zj
+j=0
+
+This is a starting point for all kinds of computations related to Cauchy integrals and
+Taylor and Laurent series in complex analysis [38].
+9. Further Uses of the Lagrange Representation. Lagrange and barycentric
+formulas for polynomial interpolation have many other uses. Here are a few.
+9.1. Estimation of the Lebesgue Constant. We mentioned in section 5 that
+some sets of interpolation points are better than others. Famous mathematicians,
+among them P. Erdős, have given much eﬀort to studies of which point sets are good
+or best, and how such matters can be quantiﬁed. A crucial observation is that, for a
+ﬁxed set of n + 1 nodes xj , the operator Pn that maps a function f to its interpolating
+polynomial pn is a linear projection, with Pn pn = pn . A good measure of the behavior
+of the interpolation problem is the norm of Pn , known as the Lebesgue constant,
+(9.1)
+
+Λn = Pn  =
+
+Pn f 
+,
+f ∈C[a,b] f 
+sup
+
+512
+
+JEAN-PAUL BERRUT AND LLOYD N. TREFETHEN
+
+where f  = maxx∈[a,b] |f (x)| and C[a, b] denotes the space of all continuous functions
+on [a, b]. This number can be shown to be a function of the Lagrange polynomials j
+of (2.1) [48, 58]:
+Λn = max
+
+x∈[a,b]
+
+n
+
+
+|j (x)| .
+
+j=0
+
+For some sets of interpolation points, the values of Λn have been determined or estimated theoretically; see [17], [28, p. 121], and [36]. For any nodes, we can use the
+computed weights (3.2) to yield a lower bound:
+Λn ≥
+
+(9.2)
+
+1 max0≤j≤n |wj |
+.
+2n2 min0≤j≤n |wj |
+
+This inequality can be derived by applying Markov’s inequality on the size of derivatives of polynomials [12]. Notice that it quantiﬁes the observation of section 5 that if
+the barycentric weights vary widely, the interpolation problem must be ill-conditioned.
+Other illustrations of the relevance of the quotient of the barycentric weights can be
+found in [27] and [67].
+9.2. Rational Interpolation. It was mentioned in section 7 that if the barycentric
+formula (4.2) is applied with an arbitrary set of weights wj , not necessarily those given
+by (3.2), then the resulting function p(x) still interpolates the data f even though
+it is no longer in general a polynomial. Back-multiplication of the numerator and
+denominator by (x) shows that p(x) is in fact the quotient of two polynomials of
+degree at most n, i.e., a rational interpolant of f . It is easy to see that, conversely,
+every rational function r that interpolates the data fj in the points xj can be written
+in the form (4.2) for some weights wj [12, p. 79]. These observations lead to an
+eﬃcient method for computing rational interpolants based on computing the kernel
+of a variant type of Vandermonde matrix [13]. The barycentric representation of
+rational interpolants has several advantages over other representations, besides those
+it shares with polynomial interpolation. In particular, it allows for an easier detection
+of so-called unattainable points and of poles in the interval of interpolation [11, 54].
+9.3. Differentiation of Polynomial Interpolants. Suppose we have
+n a function
+u represented by a polynomial interpolant in Lagrange form, u(x) = j=0 uj j (x).
+Then the ﬁrst and second derivatives of u are
+(9.3)
+
+u (x) =
+
+n
+
+
+uj j (x),
+
+u (x) =
+
+j=0
+
+n
+
+
+uj j (x).
+
+j=0
+
+Now by (4.2), the barycentric representation of j is
+j (x) =
+
+wj
+x − xj
+
+n
+
+k=0
+
+wk
+.
+x − xk
+
+Multiplying through, and then multiplying both sides by x − xi to render them differentiable at x = xi , we have
+j (x)
+
+n
+
+
+k=0
+
+wk
+
+x − xi
+x − xi
+= wj
+,
+x − xk
+x − xj
+
+513
+
+BARYCENTRIC LAGRANGE INTERPOLATION
+
+from which it follows with s(x) =
+
+n
+
+k=0 wk (x − xi )/(x − xk ) that
+
+j (x)s(x) + j (x)s (x) = wj
+
+
+
+x − xi
+x − xj
+
+and
+j (x)s(x) + 2j (x)s (x) + j (x)s (x) = wj
+
+
+
+
+
+x − xi
+x − xj
+
+
+
+.
+
+General formulas for j (x) and j (x) can be derived from these
+ expressions. At
+x = xi , straightforward computations yield s(xi ) = wi , s (xi ) = k=i wk /(xi − xk ),
+
+and s (xi ) = −2 k=i wk /(xi − xk )2 , from which, together with j (xi ) = 0, we get
+for i = j
+
+
+wj /wi
+wj /wi  wk /wi
+1
+(9.4)
+.
+j (xi ) =
+,
+j (xi ) = −2
+−
+xi − xj
+xi − xj
+xi − xk
+xi − xj
+k=i
+
+n
+(m)
+As for the case i = j, (4.1) implies j=0 j (x) = 0 for each diﬀerentiation order m
+and thus
+
+
+j (xj ) = −
+(9.5)
+j (xi ),
+j (xj ) = −
+j (xi ).
+i=j
+
+i=j
+
+The advantages of (9.5) from the point of view of numerical stability are discussed
+in [2, 3, 5, 7].
+What we have just achieved with the aid of Lagrange interpolation formulas is the
+computation of the entries of what are commonly known as ﬁrst- and second-order
+diﬀerentiation matrices D(1) and D(2) :
+(9.6)
+
+Dij = j (xi ),
+(1)
+
+Dij = j (xi ).
+(2)
+
+These matrices have a simple interpretation. If f is a vector of function values associated with the grid {xj }, then D(1) f is the vector obtained by interpolating these
+data, then diﬀerentiating the interpolant at the grid points—and similarly for D(2) .
+These formulas hold virtually unchanged for rational interpolation [4]; see [54] for a
+more general diﬀerentiation formula.
+9.4. Spectral Methods for Differential Equations. Diﬀerentiation of interpolants
+is the basis of one of the most important applications of polynomial interpolation:
+spectral collocation methods for the numerical solution of ordinary and partial diﬀerential equations. Suppose f is a function on [−1, 1], for example, and we want to
+solve numerically the boundary value problem
+(9.7)
+
+d2 u
+= f,
+dx2
+
+−1 < x < 1,
+
+together with boundary conditions u(−1) = u(1) = 0. One way to do this is to set
+up a Chebyshev grid and consider the (n − 1) × (n − 1) matrix problem
+Dv = f,
+where D is the matrix consisting of the interior rows and columns of the matrix D(2)
+of (9.6), v is an (n − 1)-vector of unknown approximations to u at the interior grid
+
+514
+
+JEAN-PAUL BERRUT AND LLOYD N. TREFETHEN
+
+points, and f is now the (n − 1)-vector of values of f (x) sampled at these same grid
+points. If a continuous function v(x) is constructed by barycentric interpolation from
+the solution vector v together with boundary values zero, then v may be an extremely
+good approximation to the exact solution u. If f is analytic in a neighborhood of
+[−1, 1], for example, the accuracy will improve geometrically at the rate discussed
+in section 6 as n → ∞.
+Spectral collocation methods have aroused great interest in recent decades and
+have given rise to a large body of literature, including the books [16, 24, 64] (practically
+oriented) and [19, 25, 66] (more advanced). These are the high-accuracy, “p versions”
+of the more general class of ﬁnite element (and spectral element) methods for the
+numerical solution of diﬀerential equations, a subject in which polynomials written in
+Lagrange form also play an important role [22].
+9.5. Fast Multipole Methods. Finally, the barycentric formula has natural advantages for applications to fast multipole methods, which are fast algorithms invented
+by Rokhlin [50] and Greengard [31] for evaluating certain sums [15]. In [21], multipole
+methods are applied to the evaluation of interpolating polynomials of large degrees
+by means of the ﬁrst form of the barycentric formula (3.3). Tests based on the second
+formula (4.2) are described in [14].
+10. Historical Notes. Why is barycentric interpolation not better known?
+It seems that the ﬁrst appearance of the barycentric representation is in the
+article [62], in which W. Taylor restricted himself to equidistant points. The term
+“barycentric” seems to appear for the ﬁrst time in [20] (although Hamming implicitly
+attributed it to Taylor in [34]). Did Dupuy know of Taylor’s work? He did not cite it.
+Kuntzmann wrote the ﬁrst book with extensive discussion of barycentric formulas [43],
+but his work did not have much impact in the USA.
+In the ﬁrst edition of his very inﬂuential text [34], Hamming presented the
+barycentric formula very nicely just after introducing “the Lagrange method of interpolation” and commented that the formula is “easier to use than the Lagrange
+formula.” Why did he discard this paragraph in the second edition? His comment
+may show that he mainly had hand calculations in mind and believed the advent of the
+computer would render obsolete any better way of evaluating the formula. This very
+unfortunate omission would probably have been avoided had Winrich’s 1969 paper
+[68], which clearly documented the superiority of the barycentric formula for every
+n > 3, appeared a little earlier. In [37], another inﬂuential book of the 1960s and
+1970s, Henrici did not mention barycentric formulas either.
+Barycentric formulas were certainly noticed by Rutishauser and Stiefel at the
+ETH in Zurich. Rutishauser coauthored the chapter on interpolation in [53] with
+Bulirsch, and he presented barycentric formulas in his classes at the ETH in the 1960s.
+However, his lecture notes were only published much later by M. Gutknecht [51].
+Stiefel emphasized the barycentric formula in [57], as did Henrici in his later text [40].
+However, the former is in German, and the second did not have the impact of [37]
+in the USA. Schwarz’s book, ﬁrst in German and then in an English translation,
+followed Stiefel’s work and retained the barycentric formula [55]. Some French and
+German authors have described the barycentric representation [46, 63], and in the
+USA it sometimes appears as an exercise [42, 64]. A recent (transatlantic) text that
+treats barycentric formulas nicely is the textbook by Gautschi [28], who, as it happens,
+was the translator of Rutishauser’s lecture notes into English [51].
+The ﬁrst publication mentioning that the Lagrange representation can be updated
+seems to be the important paper by Werner [67]. (If Werner’s paper had attracted
+
+BARYCENTRIC LAGRANGE INTERPOLATION
+
+515
+
+more attention, there would have been less need for this one!) Werner’s algorithm
+is in fact twice as fast as the one we give in section 3, but replaces the quotient
+(j)
+deﬁning wj with a long, unstable sum, a drawback also experienced by Gautschi
+in the related application of the construction of quadrature rules [27]. It should be
+noted that in 1973 Gander had already updated Lagrange and barycentric formulas
+for the special case of the extrapolation to the limit [26].
+Schneider and Werner were the ﬁrst to notice that the advantages of the barycentric representation carry over from polynomial to rational interpolation, as mentioned
+in section 9.2. The ﬁrst publication of a diﬀerentiation matrix as in section 9.3 seems
+to have been by Bellman et al. [8] as a special case of the general method of diﬀerential quadrature introduced by these authors. In the context of spectral methods, the
+ﬁrst appearance may have been in [30]. In general, however, the literature on spectral
+methods makes almost no mention of barycentric formulas.
+If you look in the index of a book of numerical analysis, you probably won’t ﬁnd
+“barycentric.” Let us hope it will be diﬀerent a generation from now.
+
+Acknowledgments. We are indebted to Walter Gautschi for reading and amending a ﬁrst draft of this work, and to Nick Higham and Pete Stewart for detailed
+comments and suggestions that have led to many improvements.
+REFERENCES
+[1] F. S. Acton, Numerical Methods That [Usually] Work, AMS, Providence, RI, 1990.
+[2] R. Baltensperger, Improving the accuracy of the matrix diﬀerentiation method for arbitrary
+collocation points, Appl. Numer. Math., 33 (2000), pp. 143–149.
+[3] R. Baltensperger and J.-P. Berrut, The errors in calculating the pseudospectral diﬀerentiation matrices for Čebyšev–Gauss–Lobatto points, Comput. Math. Appl., 37 (1999), pp.
+41–48 (errata: Comput. Math. Appl., 38 (1999), p. 119).
+[4] R. Baltensperger and J.-P. Berrut, The linear rational collocation method, J. Comput.
+Appl. Math., 134 (2001), pp. 243–258.
+[5] R. Baltensperger and M. R. Trummer, Spectral diﬀerencing with a twist, SIAM J. Sci.
+Comput., 24 (2003), pp. 1465–1487.
+[6] Z. Battles and L. N. Trefethen, An extension of MATLAB to continuous functions and
+operators, SIAM J. Sci. Comput., to appear.
+[7] A. Bayliss, A. Class, and B. Matkowsky, Roundoﬀ error in computing derivatives using
+the Chebyshev diﬀerentiation matrix, J. Comput. Phys., 116 (1994), pp. 380–383.
+[8] R. Bellman, B. G. Kashef, and J. Casti, Diﬀerential quadrature: A technique for the rapid
+solution of nonlinear partial diﬀerential equations, J. Comput. Phys., 10 (1972), pp. 40–52.
+[9] J.-P. Berrut, Baryzentrische Formeln zur trigonometrischen Interpolation I, Z. Angew. Math.
+Phys. (ZAMP), 35 (1984), pp. 91–105.
+[10] J.-P. Berrut, Barycentric formulae for cardinal (SINC-)interpolants, Numer. Math., 54
+(1989), pp. 703–718 (erratum: Numer. Math, 55 (1989), p. 747).
+[11] J.-P. Berrut, Linear rational interpolation of continuous functions over an interval, in Mathematics of Computation 1943–1993: A Half-Century of Computational Mathematics, Proceedings of Symposia in Applied Mathematics, W. Gautschi, ed., AMS, Providence, RI,
+1994, pp. 261–264.
+[12] J.-P. Berrut and H. Mittelmann, Lebesgue constant minimizing linear rational interpolation
+of continuous functions over the interval, Comput. Math. Appl., 33 (1997), pp. 77–86.
+[13] J.-P. Berrut and H. Mittelmann, Matrices for the direct determination of the barycentric
+weights of rational interpolation, J. Comput. Appl. Math., 78 (1997), pp. 355–370.
+[14] M. Blöchliger, Ein Spezialfall der Multipolmethode für baryzentrische Formeln, Diploma
+thesis, University of Fribourg, Switzerland, 1998.
+[15] J. P. Boyd, Multipole expansions and pseudospectral cardinal functions: A new generalization
+of the Fast Fourier Transform, J. Comp. Phys., 102 (1992), pp. 184–186.
+[16] J. P. Boyd, Chebyshev and Fourier Spectral Methods, 2nd ed., Dover, New York, 2001.
+
+516
+
+JEAN-PAUL BERRUT AND LLOYD N. TREFETHEN
+
+[17] L. Brutman, Lebesgue functions for polynomial interpolation—a survey, in The Heritage of
+P. L. Chebyshev: A Festschrift in Honor of the 70th Birthday of T. J. Rivlin, Ann. Numer.
+Math., 4 (1997), pp. 111–127.
+[18] D. Calvetti and L. Reichel, On the evaluation of polynomial coeﬃcients, Numer. Algebra,
+33 (2003), pp. 153–161.
+[19] C. Canuto, M. Y. Hussaini, A. Quarteroni, and T. A. Zang, Spectral Methods in Fluid
+Dynamics, Springer-Verlag, New York, 1988.
+[20] M. Dupuy, Le calcul numérique des fonctions par l’interpolation barycentrique, C.R. Acad.
+Sci., 226 (1948), pp. 158–159.
+[21] A. Dutt, M. Gu, and V. Rokhlin, Fast algorithms for polynomial interpolation, integration,
+and diﬀerentiation, SIAM J. Numer. Anal., 33 (1996), pp. 1689–1711.
+[22] K. Eriksson, D. Estep, P. Hansbo, and C. Johnson, Introduction to Computational Methods
+for Diﬀerential Equations, Clarendon Press, Oxford, 1995.
+[23] B. Fischer and L. Reichel, Newton interpolation in Fejér and Chebyshev points, Math.
+Comp., 53 (1989), pp. 265–278.
+[24] B. Fornberg, A Practical Guide to Pseudospectral Methods, Cambridge University Press,
+Cambridge, UK, 1996.
+[25] D. Funaro, Polynomial Approximation of Diﬀerential Equations, Springer-Verlag, Berlin,
+1992.
+[26] W. Gander, Numerische Implementationen des Rombergschen Extrapolationsverfahrens, mit
+Anwendungen auf die Summation unendlicher Reihen, ETH Doctoral Thesis 5172, Zürich,
+1973.
+[27] W. Gautschi, Moments in quadrature problems, Comput. Math. Appl., 33 (1997), pp. 105–118.
+[28] W. Gautschi, Numerical Analysis: An Introduction, Birkhäuser, Boston, 1997.
+[29] W. Gautschi, Barycentric formulae for cardinal (SINC-)interpolants by Jean–Paul Berrut
+(Remark), Numer. Math., 87 (2001), pp. 791–792.
+[30] D. Gottlieb, M. Y. Hussaini, and S. A. Orszag, Theory and applications of spectral methods,
+in Spectral Methods for Partial Diﬀerential Equations, R. J. Voigt, D. Gottlieb, and M. Y.
+Hussaini, eds., SIAM, Philadelphia, 1984, pp. 1–54.
+[31] L. Greengard, The Rapid Evaluation of Potential Fields in Particle Systems, MIT Press,
+Cambridge, MA, 1988.
+[32] M. H. Gutknecht, Numerical conformal mapping methods based on function conjugation, J.
+Comput. Appl. Math., 14 (1986), pp. 31–78.
+[33] E. Hairer, S. P. Nørsett, and G. Wanner, Solving Ordinary Diﬀerential Equations I. Nonstiﬀ Problems, Springer-Verlag, Berlin, 1987.
+[34] R. W. Hamming, Numerical Methods for Scientists and Engineers, 2nd ed., McGraw–Hill, New
+York, 1973.
+[35] D. C. Handscomb and J. C. Mason, Chebyshev Polynomials, Chapman & Hall/CRC, Boca
+Raton, FL, 2003.
+[36] W. Heinrichs, Strong convergence estimates for pseudospectral methods, Appl. Math., 37
+(1992), pp. 401–417.
+[37] P. Henrici, Elements of Numerical Analysis, Wiley, New York, 1962.
+[38] P. Henrici, Fast Fourier methods in computational complex analysis, SIAM Rev., 21 (1979),
+pp. 481–527.
+[39] P. Henrici, Barycentric formulas for interpolating trigonometric polynomials and their conjugates, Numer. Math., 33 (1979), pp. 225–234.
+[40] P. Henrici, Essentials of Numerical Analysis, Wiley, New York, 1982.
+[41] N. J. Higham, The numerical stability of barycentric Lagrange interpolation, IMA J. Numer.
+Anal., to appear.
+[42] D. Kincaid and W. Cheney, Numerical Analysis: Mathematics of Scientiﬁc Computing,
+Wadsworth, Belmont, CA, 1991.
+[43] J. Kuntzmann, Méthodes Numériques: Interpolation—Dérivées, Dunod, Paris, 1959.
+[44] J. L. Lagrange, Leçons élémentaires sur les mathématiques, données à l’Ecole Normale en
+1795, in Oeuvres VII, Gauthier–Villars, Paris, 1877, pp. 183–287.
+[45] J. D. Lambert, Numerical Methods for Ordinary Diﬀerential Systems, Wiley, Chichester, UK,
+1991.
+[46] G. Maess, Vorlesungen über numerische Mathematik, II. Analysis, Birkhäuser, Basel, 1988.
+[47] J. C. Mason, Chebyshev polynomials of the second, third and fourth kinds in approximation,
+indeﬁnite integration and integral transforms, J. Comput. Appl. Math., 49 (1993), pp.
+169–178.
+[48] M. J. D. Powell, Approximation Theory and Methods, Cambridge University Press, Cambridge, UK, 1981.
+
+BARYCENTRIC LAGRANGE INTERPOLATION
+
+517
+
+[49] T. J. Rivlin, The Chebyshev Polynomials, Wiley, New York, 1974.
+[50] V. Rokhlin, Rapid solution of integral equations of classical potential theory, J. Comput. Phys.,
+60 (1985), pp. 187–207.
+[51] H. Rutishauser, Vorlesungen über numerische Mathematik, Vol. 1, Birkhäuser, Basel,
+Stuttgart, 1976; English translation, Lectures on Numerical Mathematics, Walter Gautschi,
+ed., Birkhäuser, Boston, 1990.
+[52] H. E. Salzer, Lagrangian interpolation at the Chebyshev points xn,ν , = cos(νπ/n), ν = 0(1)n;
+some unnoted advantages, Comput. J., 15 (1972), pp. 156–159.
+[53] R. Sauer and I. Szabó, Mathematische Hilfsmittel des Ingenieurs, Springer-Verlag, Berlin,
+Heidelberg, 1968.
+[54] C. Schneider and W. Werner, Some new aspects of rational interpolation, Math. Comp., 47
+(1986), pp. 285–299.
+[55] H. R. Schwarz, Numerische Mathematik, 4th ed., Teubner, Stuttgart, 1997; English translation of the 2nd edition, Numerical Analysis: A Comprehensive Introduction, Wiley, New
+York, 1989.
+[56] F. Stenger, Numerical Methods Based on Sinc and Analytic Functions, Springer-Verlag, New
+York, 1993.
+[57] E. Stiefel, Einführung in die numerische Mathematik, Teubner, Stuttgart, 1961.
+[58] J. Szabados and P. Vértesi, Interpolation of Functions, World Scientiﬁc, Singapore, 1990.
+[59] G. Szegő, Orthogonal Polynomials, AMS, Providence, RI, 1978.
+[60] H. Tal-Ezer, Polynomial approximation of functions of matrices and applications, J. Sci.
+Comput., 4 (1989), pp. 25–60.
+[61] H. Tal-Ezer, High degree polynomial interpolation in Newton form, SIAM J. Sci. Statist.
+Comput., 12 (1991), pp. 648–667.
+[62] W. J. Taylor, Method of Lagrangian curvilinear interpolation, J. Res. Nat. Bur. Standards,
+35 (1945), pp. 151–155.
+[63] R. Théodor, Initiation à l’Analyse Numérique, Masson, Paris, 1989.
+[64] L. N. Trefethen, Spectral Methods in MATLAB, SIAM, Philadelphia, 2000.
+[65] L. N. Trefethen and J. A. C. Weideman, Two results on polynomial interpolation in equally
+spaced points, J. Approx. Theory, 65 (1991), pp. 247–260.
+[66] R. J. Voigt, D. Gottlieb, and M. Y. Hussaini, Spectral Methods for Partial Diﬀerential
+Equations, SIAM, Philadelphia, 1984.
+[67] W. Werner, Polynomial interpolation: Lagrange versus Newton, Math. Comp., 43 (1984), pp.
+205–217.
+[68] L. B. Winrich, Note on a comparison of evaluation schemes for the interpolating polynomial,
+Comput. J., 12 (1969), pp. 154–155.
+
+

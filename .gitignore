@@ -12,6 +12,7 @@ external/Polynomials.jl/
 external/TaylorIntegration.jl/
 external/TaylorSeries.jl/
 external/chebfun/
+external/DMSUITE/
 
 # Marker page-image extractions — keep the .md files, skip the bulky .jpeg.
 references/markdown/**/*.jpeg
