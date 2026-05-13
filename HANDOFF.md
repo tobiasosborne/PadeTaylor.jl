@@ -11,7 +11,9 @@
 ## TL;DR — where we are
 
 **Stage 0 (research) and Stage 1 (design) are complete.** Stage 2
-(implementation) is in progress — Phases Z, 1–6 of 9 are shipped:
+(implementation) is in progress — Phases Z, 1–6 (original DESIGN.md
+scope), plus the path-network and BVP modules (Phases 10–11, new
+docs/design_section_6_path_network.md scope), are all shipped:
 
 | Phase | Module | Status | Tests |
 |---|---|---|---|
@@ -19,25 +21,63 @@
 | 1 | `LinAlg.pade_svd` | ✅ shipped, mutation-proven | 14 |
 | 2 | `RobustPade.robust_pade` | ✅ shipped, mutation-proven | 35 |
 | 3 | `Coefficients.taylor_coefficients_*` | ✅ shipped, mutation-proven | 125 |
-| 4 | `StepControl.step_jorba_zou` + `step_pade_root` | ✅ shipped, mutation-proven; DESIGN/HANDOFF spec correction | 7 |
-| 5 | `PadeStepper.pade_step!` | ✅ shipped (the BIG inner-loop integration), mutation-proven | 16 |
+| 4 | `StepControl.step_jorba_zou` + `step_pade_root` | ✅ shipped, mutation-proven | 7 |
+| 5 | `PadeStepper.pade_step!` | ✅ shipped, mutation-proven | 16 |
 | 6 | `Problems.PadeTaylorProblem`, `solve_pade` | ✅ shipped (Padé-vs-Taylor pole-bridge demo), mutation-proven; see worklog 005 | 11 |
-| 7 | `CommonSolveAdapter` ext | ⏳ **NEXT** | DESIGN.md §4 Phase 7 |
-| 8 | `PadeTaylorArblibExt` ext | optional | DESIGN.md §4 Phase 8 |
-| 9 | Tier C: PI tritronquée pole-field qualitative | optional | DESIGN.md §4 Phase 9 |
+| 7 | `CommonSolveAdapter` ext | ⏸  P1, deferred | DESIGN.md §4 Phase 7 |
+| 8 | `PadeTaylorArblibExt` ext | ⏸  P1, optional | DESIGN.md §4 Phase 8 |
+| 9 | Tier C: PI tritronquée pole-field qualitative | ⏸  P1, optional | DESIGN.md §4 Phase 9 |
+| **10** | `PathNetwork.path_network_solve` | ✅ **shipped (Tier-2 path-network)**, mutation-proven; see worklog 006 | 21 |
+| **11** | `BVP.bvp_solve` | ✅ **shipped (Tier-3 Chebyshev-Newton BVP)**, mutation-proven; see worklog 006 | 43 |
+| 12 | `Dispatcher` — compose PathNetwork + EdgeDetector + BVP | ⏳ **NEXT (P0)**, bead `padetaylor-8lk` | TBD |
+| 13 | `CoordTransforms` (FFW 2017 PIII/PV) | ⏸  P2, bead `padetaylor-bvh` | Tier-4 |
+| 14 | `SheetTracker` (FFW 2017 PVI) | ⏸  P2, bead `padetaylor-grc` | Tier-5 |
 
-**218 / 218 tests passing** as of the Phase-6 GREEN commit.
+**284 / 284 tests passing** as of the Phase-11 GREEN commit (`cc7d8ca`).
 
 **Phase 6 shipped 2026-05-09 on the pivoted scope** — the v1
 acceptance is a Padé-vs-Taylor pole-bridge demonstration (one stored
 Padé bridges the lattice pole of `℘(z + c₁; 0, c₂)` at `z = 1`,
 giving correct values at `z ∈ {0.5, 0.95, 1.05, 1.4}` while plain
 truncation diverges past `z = 1`); see `docs/worklog/005-phase-6-
-implementation.md` for the GREEN report and the order/rtol coupling
-caught at impl time.  The original FW 2011 Table 5.1 long-range
-acceptance is **deferred to v2** under bead `padetaylor-8cr`
-(requires the FW §3.1 path-network).  Pivot rationale + failure
-analysis in `docs/worklog/004-phase-6-pivot.md`.
+implementation.md`.  Pivot rationale + failure analysis in
+`docs/worklog/004-phase-6-pivot.md`.
+
+**Phases 10 + 11 shipped 2026-05-13** — Tier-2 path-network +
+Tier-3 Chebyshev-Newton BVP solver, both GREEN + mutation-proven.
+Three commits land (`910aab9` BVP ground truth; `0ada60f` Phase 10;
+`cc7d8ca` Phase 11).  The session's deliverables include:
+
+  - Phase 10 `PathNetwork.path_network_solve`: FW 2011 §3.1 5-direction
+    wedge path-tree + Stage-2 fine-grid barycentric extrapolation.
+    Generic in `T <: AbstractFloat` for `Float64` + `Complex{T}`.
+    PN.1.1, PN.1.2, PN.2.1, PN.4.1 GREEN; PN.2.2 (FW Table 5.1
+    quantitative ≤1e-13) + PN.3.1 (:steepest_descent test) deferred
+    to follow-up bead `padetaylor-yt1`.
+  - Phase 11 `BVP.bvp_solve`: Chebyshev spectral collocation per FW
+    2011 §3.2 + Trefethen SMIM ch.6/13.  Generic in `T <: AbstractFloat`
+    for `Float64` + `BigFloat-256` + `Complex{T}`.  Step-norm Newton
+    convergence (eps^(3/4) default).  BV.1.1-BV.5.1 GREEN.
+  - Full **figure-acceptance catalogue** at `docs/figure_catalogue.md`
+    — 79 FW-family figures tiered T0-T5 with per-row acceptance.
+  - **Unified path-network spec** at `docs/unified_path_network_spec.md`
+    — 14 sections synthesised across all 5 FW-family papers.
+  - **ADR-0004** at `docs/adr/0004-path-network-architecture.md`.
+  - **BVP canonical recipe** at `references/bvp_recipe.md`
+    — 8 sections covering Chebyshev nodes, D₁/D₂, Newton, barycentric.
+  - **Octave oracle** at `external/probes/bvp-oracle/{capture.m, oracles.txt}`
+    using DMSUITE chebdif/chebint; 47 pinned constants in
+    `test/_oracle_bvp.jl`.
+  - **Marker-converted primary refs**: Weideman-Reddy 2000 (DMSUITE),
+    Trefethen SMIM 2000, Berrut-Trefethen 2004 (SIAM Review).  All
+    paywalled, acquired via TIB VPN.
+  - **DMSUITE source** at `external/DMSUITE/` (gitignored, MIT/public).
+
+The session's worklog at `docs/worklog/006-phases-10-11-path-network-bvp.md`
+covers orchestration pattern (Opus codes, Sonnet does grunt work),
+algorithmic findings (step-norm vs residual-norm Newton convergence,
+the Octave oracle's PI vs equianharmonic-℘ spec-drift catch), and
+mutation-proof procedures for both modules.
 
 ## Project shape
 
@@ -349,12 +389,23 @@ type is a prerequisite for Phase 8 but unrelated to Phase 7.
 bd ready -n 30
 ```
 
-The currently-open beads at session end:
-- Phase 3-9 implementation tasks
-- `padetaylor-<id>`: GenericLinearAlgebra pirates into LinearAlgebra.svd!
-  (Stage 0 / Phase 1 finding)
-- `padetaylor-<id>`: Polynomials.jl roots with Arb — Phase 4 probe
-- Willers 1974 acquisition (low priority)
+Open beads at end of 2026-05-13 session (10 total):
+- `padetaylor-8lk` **P0 NEXT** — Phase 12 Dispatcher (compose
+  PathNetwork + EdgeDetector + BVP).
+- `padetaylor-1jf` **P0** — Path-network module (Phase 10 shipped;
+  bead stays open until PN.2.2 + PN.3.1 land).
+- `padetaylor-8cr` **P0** — v2 umbrella FW Table 5.1 long-range.
+- `padetaylor-yt1` **P1** — PathNetwork tuning: FW Table 5.1
+  quantitative + :steepest_descent.
+- `padetaylor-rgp` **P1** — Figure-acceptance catalogue (tracking).
+- `padetaylor-c2p` **P1** — Edge detector (Phase 12 prerequisite).
+- `padetaylor-kvi` **P1** — Phase 9 Tier C qualitative.
+- `padetaylor-jhq` **P1** — Phase 8 ArblibExt.
+- `padetaylor-2vz` **P1** — Phase 7 CommonSolveAdapter.
+- `padetaylor-bvh` **P2** — Phase 13 CoordTransforms (Tier-4).
+- `padetaylor-grc` **P2** — Phase 14 SheetTracker (Tier-5).
+- `padetaylor-61j` **P2** — Willers 1974 acquisition.
+- `padetaylor-8pi` **P2** — GenericLinearAlgebra svd! piracy friction.
 
 ## Hard-won lessons (don't repeat these)
 
@@ -393,9 +444,45 @@ Quick summary:
    orders of accuracy.  See `docs/worklog/005-phase-6-implementation
    .md` §"Algorithmic finding".
 
+8. **Step-norm Newton convergence, NOT residual-norm, for spectral
+   BVPs.**  The discrete residual `‖R‖_∞` floors at `cond(D₂) ·
+   eps(T) ≈ N² · eps(T)` — an irreducible "spectral truncation"
+   floor.  A residual-norm Newton tolerance below that floor is
+   structurally unachievable; convergence loops forever / errors.
+   The right choice is step-norm `‖Δu‖_∞ ≤ tol` with default
+   `eps(T)^(3/4)` (production-Newton standard, NLsolve.jl-style).
+   Phase-11 hit this on first cut; default was `100·eps(T) ≈ 2.2e-14`
+   while PI N=20 floors at ~1e-12.  See
+   `docs/worklog/006-phases-10-11-path-network-bvp.md` §"Step-norm
+   Newton convergence".
+
+9. **Oracle subagents can catch spec drift you didn't write.**
+   Phase-11's Octave oracle subagent caught that the existing
+   Phase-6 problems-oracle's `u_at_0_5 = 4.0044…` was for
+   `u'' = 6u²` (equianharmonic ℘) NOT `u'' = 6u² + z` (Painlevé I).
+   Recomputed via mpmath at 40 dps, cross-validated to ~1e-10.
+   Lesson: oracle files should state their ODE prominently;
+   `test/_oracle_problems.jl` line 1 should add a header comment
+   distinguishing PI from equianharmonic ℘.  Recorded in worklog 006
+   §"Spec-drift catch by the Octave oracle subagent".
+
+10. **`marker_single` lives in `~/Projects/<project>/.venv/bin/`,
+    not on system PATH.**  Same for many other Python tools (mpmath
+    via uv, etc.).  Scan venvs before declaring a tool absent.  Saved
+    as user memory `user-python-tools-venv-pattern`.
+
+11. **TIB VPN gives access to paywalled SIAM/ACM/Elsevier journals.**
+    Phase-11 acquired Weideman-Reddy 2000 (ACM TOMS) + Berrut-Trefethen
+    2004 (SIAM Review) directly from publishers.  When user activates
+    the VPN, attempt direct publisher URLs before preprint fallback.
+    Saved as reference memory `reference-tib-vpn-paywalls`.
+
 ## Last commit before this handoff
 
-Phase 6 GREEN.  Run `git log --oneline` to see the full history (Phases
-Z, 1, 2, 3, 4, 5, 6 each have their own commit + 6's pivot worklog).
+`cc7d8ca` Phase 11 GREEN: BVP.bvp_solve.  Run `git log --oneline` to
+see the full history.  Three commits in the 2026-05-13 session:
+`910aab9` BVP ground truth + Octave oracle (preparatory);
+`0ada60f` Phase 10 PathNetwork GREEN;
+`cc7d8ca` Phase 11 BVP GREEN.
 
 Goodluck. Read CLAUDE.md again before you start.
