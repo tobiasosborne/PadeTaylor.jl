@@ -24,7 +24,7 @@ docs/design_section_6_path_network.md scope), are all shipped:
 | 4 | `StepControl.step_jorba_zou` + `step_pade_root` | ✅ shipped, mutation-proven | 7 |
 | 5 | `PadeStepper.pade_step!` | ✅ shipped, mutation-proven | 16 |
 | 6 | `Problems.PadeTaylorProblem`, `solve_pade` | ✅ shipped (Padé-vs-Taylor pole-bridge demo), mutation-proven; see worklog 005 | 11 |
-| 7 | `CommonSolveAdapter` ext | ⏸  P1, deferred | DESIGN.md §4 Phase 7 |
+| 7 | `CommonSolveAdapter` ext (`PadeTaylorAlg`) | ✅ shipped per worklog 009 | 34 |
 | 8 | `PadeTaylorArblibExt` ext | ⏸  P1, optional | DESIGN.md §4 Phase 8 |
 | 9 | Tier C: PI tritronquée pole-field qualitative | ⏸  P1, optional | DESIGN.md §4 Phase 9 |
 | **10** | `PathNetwork.path_network_solve` | ✅ **shipped + FW Table 5.1 GREEN @ 2.13e-14 BF-256 (beats FW's 8.34e-14)**; see worklogs 006 + 008 | 33 |
@@ -33,7 +33,7 @@ docs/design_section_6_path_network.md scope), are all shipped:
 | 13 | `CoordTransforms` (FFW 2017 PIII/PV) | ⏸  P2, bead `padetaylor-bvh` | Tier-4 |
 | 14 | `SheetTracker` (FFW 2017 PVI) | ⏸  P2, bead `padetaylor-grc` | Tier-5 |
 
-**340 / 340 tests passing** as of the PN.2.2-bugfix GREEN commit.
+**374 / 374 tests passing** as of the Phase-7 CommonSolveAdapter GREEN commit.
 
 **Phase 6 shipped 2026-05-09 on the pivoted scope** — the v1
 acceptance is a Padé-vs-Taylor pole-bridge demonstration (one stored
@@ -399,7 +399,6 @@ Open beads at end of PN.2.2-bugfix commit (11 total; `padetaylor-yt1`,
 - `padetaylor-k31` **P1** — Phase 12 v2: 2D lattice dispatcher with automatic edge detection.
 - `padetaylor-kvi` **P1** — Phase 9 Tier C qualitative.
 - `padetaylor-jhq` **P1** — Phase 8 ArblibExt.
-- `padetaylor-2vz` **P1** — Phase 7 CommonSolveAdapter.
 - `padetaylor-bvh` **P2** — Phase 13 CoordTransforms (Tier-4).
 - `padetaylor-grc` **P2** — Phase 14 SheetTracker (Tier-5).
 - `padetaylor-61j` **P2** — Willers 1974 acquisition.

@@ -27,4 +27,5 @@ using PadeTaylor
     include("pathnetwork_test.jl")
     include("bvp_test.jl")
     include("dispatcher_test.jl")
+    include("ext_commonsolve_test.jl")
 end

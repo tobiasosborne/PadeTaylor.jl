@@ -71,11 +71,32 @@ using .PathNetwork: path_network_solve, PathNetworkSolution
 using .BVP:         bvp_solve, BVPSolution
 using .Dispatcher:  dispatch_solve, DispatcherSolution, IVPSegment, BVPSegment
 
+# CommonSolve adapter: the algorithm struct is declared HERE in the main
+# module so users can construct it after `using PadeTaylor, CommonSolve`
+# without a qualified name (the ext file adds init/step!/solve! methods
+# on it).  Per ADR-0003 "Translation only — no algorithmic logic in the
+# extension".  The methods live in `ext/PadeTaylorCommonSolveExt.jl`.
+"""
+    PadeTaylorAlg{H <: Real}(; h_max, max_steps = 100_000)
+
+`CommonSolve.jl`-compatible algorithm marker for `solve(prob, alg)` /
+`init(prob, alg)`.  Loaded only when `using CommonSolve` activates the
+`PadeTaylorCommonSolveExt` extension; constructing without that load
+gives a plain struct with no integrator methods attached.
+"""
+struct PadeTaylorAlg{H <: Real}
+    h_max     :: H
+    max_steps :: Int
+end
+PadeTaylorAlg(; h_max::Real, max_steps::Integer = 100_000) =
+    PadeTaylorAlg{typeof(h_max)}(h_max, Int(max_steps))
+
 export PadeTaylorProblem, solve_pade, PadeTaylorSolution, taylor_eval
 export robust_pade, PadeApproximant
 export taylor_coefficients_1st, taylor_coefficients_2nd
 export path_network_solve, PathNetworkSolution
 export bvp_solve, BVPSolution
 export dispatch_solve, DispatcherSolution, IVPSegment, BVPSegment
+export PadeTaylorAlg
 
 end # module PadeTaylor
