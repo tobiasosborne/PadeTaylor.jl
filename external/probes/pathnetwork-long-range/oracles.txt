@@ -1,0 +1,17 @@
+# oracles.txt — captured BF-256 path-network sweep numbers.
+#
+# Empty in this commit.  The probe at `capture.jl` is offline-runnable;
+# regenerate via:
+#
+#     JULIA_NUM_THREADS=8 julia --project=. \
+#         external/probes/pathnetwork-long-range/capture.jl \
+#         > external/probes/pathnetwork-long-range/oracles.txt 2>&1
+#
+# Expected wall: ~3.3 h with 8 threads (z=10⁴ BF-256 dominates).  The
+# Float64 sweep numbers used to set PN.2.3's `rtol = 5e-5` are pinned
+# in `docs/worklog/019-fw-table-51-z10000.md` §"Float64 sweep" and do
+# not require this probe to reproduce.
+#
+# A killed partial run on 2026-05-13 produced the F64 sweep + z=30
+# BF-256 row (75 nodes, 19 s wall) before the user terminated it; the
+# Float64 numbers are captured in the worklog 019 §"Float64 sweep" table.

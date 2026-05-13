@@ -82,6 +82,8 @@ preserves the FW 2011 algorithm verbatim.
 """
 module PathNetwork
 
+using Base.Threads:  nthreads, @threads
+using Printf:        @sprintf, @printf
 using Random:        shuffle, MersenneTwister
 using ..RobustPade:  PadeApproximant
 using ..PadeStepper: PadeStepperState, pade_step_with_pade!,
@@ -131,7 +133,8 @@ end
                        step_size_policy=:fixed,
                        max_steps_per_target=1000,
                        rng_seed=0,
-                       enforce_real_axis_symmetry=false) -> PathNetworkSolution
+                       enforce_real_axis_symmetry=false,
+                       verbose=false, progress_every=500) -> PathNetworkSolution
 
 Build the FW 2011 §3.1 path-network covering `grid::AbstractVector{<:Complex}`
 from `prob`'s IC, then return the Stage-1 tree + Stage-2 evaluations.
@@ -157,6 +160,27 @@ Kwargs:
     on conjugate-pair cells far from the IC (worklog 014 §"Bug 1",
     bead `padetaylor-dtj`); roughly halves wall time on full-plane
     fills.  Default `false` preserves the FW 2011 algorithm verbatim.
+  - `verbose::Bool` — when `true`, emit eager-flushed progress lines
+    to `stdout`: one line per target start, one line every
+    `progress_every` aggregate inner steps with elapsed wall, current
+    `z_cur`, `|u_cur|`, distance to target, and steps/second.  Default
+    `false` (silent).
+  - `progress_every::Integer` — Stage-1-inner-step granularity for the
+    `verbose` progress lines.  Defaults to 500.
+
+## Threading
+
+`_wedge_evaluations` runs the five wedge-direction candidate steps in
+parallel via `Threads.@threads`.  Speedup is bounded by the wedge
+count (5 candidates → up to ~5× per step) plus the canonical-Padé
+build that follows selection (still single-threaded).  Realistic
+end-to-end speedup with 5+ threads is ~3–4× on `BigFloat`-256 walks
+where SVD dominates per-step cost.
+
+`f` (the user RHS) must therefore be **thread-safe** — pure functions
+are fine; closures over mutable shared state are not.  Set
+`JULIA_NUM_THREADS=N` before launching Julia (or pass `-tN`); the
+serial path is recovered automatically when `Threads.nthreads() == 1`.
 
 Throws if Stage 1 cannot reach a target within `max_steps_per_target`
 steps, if all 5 wedge candidates fail, or if `:adaptive_ffw` is
@@ -171,12 +195,15 @@ function path_network_solve(prob::PadeTaylorProblem,
                             step_size_policy::Symbol = :fixed,
                             max_steps_per_target::Integer = 1000,
                             rng_seed::Integer = 0,
-                            enforce_real_axis_symmetry::Bool = false)
+                            enforce_real_axis_symmetry::Bool = false,
+                            verbose::Bool = false,
+                            progress_every::Integer = 500)
 
     if enforce_real_axis_symmetry
         return _solve_with_schwarz_reflection(
             prob, grid; h, order, wedge_angles, step_selection,
-            step_size_policy, max_steps_per_target, rng_seed)
+            step_size_policy, max_steps_per_target, rng_seed,
+            verbose, progress_every)
     end
 
     step_size_policy === :fixed || throw(ArgumentError(
@@ -213,15 +240,28 @@ function path_network_solve(prob::PadeTaylorProblem,
     rng     = MersenneTwister(rng_seed)
     targets = shuffle(rng, collect(CT, grid))
 
-    for target in targets
+    if verbose
+        println("path_network_solve: Stage 1 begin — ",
+                length(targets), " targets, h=", h_T, ", order=", order,
+                ", threads=", nthreads())
+        flush(stdout)
+    end
+
+    t_start_stage1 = time()
+    total_n_steps  = 0
+    for (target_idx, target) in enumerate(targets)
         any(z -> isapprox(z, target; atol=10*eps(T)), visited_z) && continue
 
         idx_v = _nearest_visited(visited_z, target)
         z_cur, u_cur, up_cur = visited_z[idx_v], visited_u[idx_v], visited_up[idx_v]
 
+        verbose && _verbose_target_start(target_idx, length(targets),
+                                         target, z_cur, t_start_stage1)
+
         n_steps = 0
         while abs(z_cur - target) > h_T
-            n_steps += 1
+            n_steps        += 1
+            total_n_steps  += 1
             n_steps > max_steps_per_target && throw(ErrorException(
                 "path_network_solve: target $target unreachable in " *
                 "$max_steps_per_target steps from $(visited_z[idx_v]); " *
@@ -256,7 +296,20 @@ function path_network_solve(prob::PadeTaylorProblem,
             push!(visited_h, h_T)
 
             z_cur, u_cur, up_cur = z_new, u_new, up_new
+
+            if verbose && total_n_steps % progress_every == 0
+                _verbose_step(total_n_steps, target_idx, length(targets),
+                              z_cur, u_cur, target, t_start_stage1)
+            end
         end
+    end
+
+    if verbose
+        elapsed = time() - t_start_stage1
+        @printf(stdout, "path_network_solve: Stage 1 done — %d visited nodes, %d total inner steps, %.2f s (%.1f steps/s)\n",
+                length(visited_z), total_n_steps, elapsed,
+                total_n_steps / max(elapsed, eps()))
+        flush(stdout)
     end
 
     # Stage 2: fine-grid extrapolation.
@@ -314,7 +367,9 @@ function _solve_with_schwarz_reflection(prob::PadeTaylorProblem,
                                          step_selection::Symbol,
                                          step_size_policy::Symbol,
                                          max_steps_per_target::Integer,
-                                         rng_seed::Integer)
+                                         rng_seed::Integer,
+                                         verbose::Bool = false,
+                                         progress_every::Integer = 500)
     T  = float(typeof(real(first(grid))))
     CT = Complex{T}
     tol = 10 * eps(T)
@@ -350,7 +405,8 @@ function _solve_with_schwarz_reflection(prob::PadeTaylorProblem,
         step_size_policy = step_size_policy,
         max_steps_per_target = max_steps_per_target,
         rng_seed = rng_seed,
-        enforce_real_axis_symmetry = false)
+        enforce_real_axis_symmetry = false,
+        verbose = verbose, progress_every = progress_every)
 
     idx_of = Dict{CT, Int}()
     for (i, z) in enumerate(sol_upper.grid_z)
@@ -404,13 +460,24 @@ end
 
 # Try each of 5 wedge directions; return Vector of (z_new, u_new, up_new, pade).
 # A failed candidate gets (z_cur, Inf+0im, 0+0im, nothing) so it loses min-|u|.
+#
+# Threading: each wedge index `k` does an independent PadeStepperState +
+# pade_step_with_pade! call.  `evals[k]` is written by exactly one thread
+# (its own `k`), and `f`, `z_cur`, `u_cur`, `up_cur`, `h`, `goal_dir`,
+# `wedge_angles` are all read-only.  `pade_step_with_pade!` is pure
+# w.r.t. `f` (the user RHS must itself be thread-safe; closures over
+# mutable shared state break this contract — see `path_network_solve`
+# docstring).  Result ordering is by `k`, not by thread completion
+# order, so `argmin` downstream is deterministic.
 function _wedge_evaluations(f, z_cur::Complex{T}, u_cur::Complex{T},
                             up_cur::Complex{T}, order::Integer, h::T,
                             goal_dir::T,
                             wedge_angles::AbstractVector{<:Real}) where T
     CT = Complex{T}
-    evals = Vector{Tuple{CT, CT, CT, Union{Nothing, PadeApproximant{CT}}}}(undef, 5)
-    for (k, θ) in enumerate(wedge_angles)
+    n_w = length(wedge_angles)
+    evals = Vector{Tuple{CT, CT, CT, Union{Nothing, PadeApproximant{CT}}}}(undef, n_w)
+    @threads for k in 1:n_w
+        θ = wedge_angles[k]
         h_step = CT(h * cos(T(goal_dir) + T(θ)),
                     h * sin(T(goal_dir) + T(θ)))
         s = PadeStepperState{CT}(z_cur, u_cur, up_cur)
@@ -423,6 +490,35 @@ function _wedge_evaluations(f, z_cur::Complex{T}, u_cur::Complex{T},
     end
     return evals
 end
+
+# Verbose-mode progress helpers — Float64-truncate BigFloat coordinates
+# for human-readable single-line output.  Eager-flushed so progress
+# remains visible under stdout buffering.
+function _verbose_target_start(target_idx::Int, n_targets::Int,
+                               target::Complex{T}, z_start::Complex{T},
+                               t_start::Float64) where T
+    elapsed = time() - t_start
+    println(@sprintf("[%7.1fs] target %4d/%-4d  z=%s  start_z=%s",
+                     elapsed, target_idx, n_targets,
+                     _fmt(target), _fmt(z_start)))
+    flush(stdout)
+end
+
+function _verbose_step(total_n_steps::Int, target_idx::Int, n_targets::Int,
+                       z_cur::Complex{T}, u_cur::Complex{T},
+                       target::Complex{T}, t_start::Float64) where T
+    elapsed = time() - t_start
+    sps     = total_n_steps / max(elapsed, eps())
+    println(@sprintf("[%7.1fs]   step %7d  tgt %d/%d  z=%s  |u|=%.3e  |Δ|=%.3e  %.1f steps/s",
+                     elapsed, total_n_steps, target_idx, n_targets,
+                     _fmt(z_cur), Float64(abs(u_cur)),
+                     Float64(abs(z_cur - target)), sps))
+    flush(stdout)
+end
+
+# Truncate Complex{<:AbstractFloat} to a 5-digit fixed-format string —
+# BigFloats would print ~75 digits per coordinate otherwise.
+_fmt(z::Complex) = @sprintf("(%+.4e,%+.4e)", Float64(real(z)), Float64(imag(z)))
 
 # Min-|u| (FW 2011 default) or steepest-descent (FW 2011 §5.4.1) selection.
 function _select_candidate(selection::Symbol, evals,

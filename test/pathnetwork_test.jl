@@ -179,6 +179,42 @@ include(joinpath(@__DIR__, "_oracle_problems.jl"))
         end
     end
 
+    @testset "PN.2.3: FW Table 5.1 z=10⁴ long-range integration" begin
+        # FW 2011 Table 5.1 column (b): long-range integration to
+        # u(10⁴) = 21.02530339471055 of the equianharmonic ℘ trajectory
+        # with FW IC.  FW's Padé method (in BigFloat per Table 5.1's
+        # 7.62e-14 BF-rel-err at z=30) reports 2.34e-10 rel-err at
+        # z=10⁴ — accumulated error over their h=0.5 path-network walk.
+        # See references/markdown/FW2011_*.md:299-301 (the reference
+        # value) and ...md:385-391 (Table 5.1 itself).
+        #
+        # The bead `padetaylor-g9x` asks to "confirm or refute the
+        # claim" that PN.2.2's z=30 BF-256 result generalises to
+        # z=10⁴.  The Float64 routine test below covers algorithmic
+        # stability over the full ~24,000-node walk; the BF-256
+        # confirmation is an offline one-shot probe (see
+        # `external/probes/pathnetwork-long-range/probe.jl` +
+        # `docs/worklog/019-fw-table-51-z10000.md`) — wall time at
+        # BF-256 is ~4.5 h, untenable in the routine suite.
+
+        # Float64 path: rel-err ≤ 5e-5 acceptance.  Measured 6.05e-6
+        # on the canonical (h=0.5, order=30) walk over 24,236 visited
+        # nodes; the bound carries an ~8× cross-platform margin.  At
+        # this regime Float64 roundoff dominates — the gap vs FW's
+        # 2.34e-10 BF reference is a precision artefact, not an
+        # algorithmic defect.
+        prob_f64 = PadeTaylorProblem(fW, (u_0_FW, up_0_FW), (0.0, 10000.0);
+                                     order = 30)
+        sol_f64 = path_network_solve(prob_f64,
+                                     ComplexF64[10000.0 + 0im];
+                                     h = 0.5,
+                                     max_steps_per_target = 200_000)
+        u10k_f64 = sol_f64.grid_u[1]
+        @test isapprox(u10k_f64, u_at_10000_FW_ref; rtol = 5e-5)
+        @test abs(imag(u10k_f64)) < 5e-5     # Real solution on real axis.
+        @test length(sol_f64.visited_z) > 20_000  # Stage-1 walked ~24k nodes.
+    end
+
     @testset "PN.3.1: :steepest_descent path agrees with :min_u (pole-bridge)" begin
         # FW 2011 §5.4.1 (line 362-368) introduces `:steepest_descent`
         # as a perf-tuned alternative to `:min_u`: pick the wedge angle
@@ -355,10 +391,15 @@ end # @testset PathNetwork
 #   Mutation E  --  in PathNetwork.jl Stage-1 loop, restore the pre-bugfix
 #     behaviour of storing the wedge-direction `pade_sel` instead of the
 #     canonical-direction `pade_canonical` per visited node.  This is the
-#     bug worklog 008 diagnosed; restoring it MUST bite PN.2.2.
-#     Verified bite: 4 fails on PN.2.2 — F64 rel-err 0.218 >> 1e-9, F64
-#     imag(u) 7.2e-3 >> 1e-9, BF-256 rel-err 0.218 >> 1e-13, BF-256 imag
-#     7.2e-3 >> 1e-15.  Algorithmic error invariant to arithmetic precision.
+#     bug worklog 008 diagnosed; restoring it MUST bite PN.2.2 + PN.2.3.
+#     Verified bite (2026-05-13): 4 fails on PN.2.2 — F64 rel-err 0.218
+#     >> 1e-9, F64 imag(u) 7.2e-3 >> 1e-9, BF-256 rel-err 0.218 >> 1e-13,
+#     BF-256 imag 7.2e-3 >> 1e-15.  Algorithmic error invariant to
+#     arithmetic precision.  PN.2.3 (z=10⁴ at Float64, added 2026-05-13
+#     bead `padetaylor-g9x`) also fails — the canonical-Padé invariant is
+#     exercised at every one of the ~24,000 visited nodes; perturbing it
+#     blows up the long-range result completely (rel-err >> 5e-5).  See
+#     worklog 019 for the matched z=10⁴ probe under the mutation.
 #
 #   Mutation F  --  in `_select_candidate` :steepest_descent branch,
 #     flip the sign in `θ_sd = angle(-u/u')` to `θ_sd = angle(u/u')`,
