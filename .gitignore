@@ -16,3 +16,8 @@ external/DMSUITE/
 
 # Marker page-image extractions — keep the .md files, skip the bulky .jpeg.
 references/markdown/**/*.jpeg
+
+# Generated example plots — regenerable via `julia --project=examples examples/<name>.jl`.
+examples/*.png
+examples/*.svg
+examples/*.pdf
