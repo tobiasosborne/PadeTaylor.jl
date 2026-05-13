@@ -27,12 +27,18 @@ f_PI(z, u, up) = 6 * u^2 + z
 u_tri  = -0.1875543083404949
 up_tri =  0.3049055602612289
 
-# Grid resolution.  At [-20, 20]² (5× the linear extent of FW Fig 3.1,
-# 25× the area), 501×501 (h_grid = 0.08) gives FW Fig 3.1-style detail
-# (their figure was 161×161 over [-10, 10]²; we're a hair denser per
-# unit area).  Wall ≈ 100 s.  Drop to N = 251 (~25 s) for faster
-# iteration; N = 121 (~11 s) for a quick sanity check.
-N = 501
+# Grid resolution.  EVEN N is intentional: with odd N the grid has a
+# cell exactly at y = 0, and the walker computes that cell on a
+# distinct path from cells at y = ±Δy.  In the pole-bearing region
+# (positive real axis, where |u| varies wildly across adjacent
+# cells), this manifests as a visible horizontal discontinuity at
+# y = 0.  Even N avoids the problem entirely — the closest cells to
+# the real axis sit at y = ±Δy/2, and the conjugate mirror handles
+# them symmetrically with no special-case row.
+# At [-20, 20]² (5× the linear extent of FW Fig 3.1, 25× the area),
+# 500×500 gives FW Fig 3.1-style detail in ~40 s.  Drop to N = 250
+# (~10 s) for faster iteration; N = 120 (~5 s) for a sanity check.
+N = 500
 xs = range(-20.0, 20.0; length = N)
 ys = range(-20.0, 20.0; length = N)
 
@@ -56,17 +62,20 @@ prob  = PadeTaylorProblem(f_PI, (u_tri, up_tri), zspan; order = 30)
 # (For non-real ICs / complex-coefficient ODEs the mirror trick is
 # inapplicable; use `path_network_solve` directly on the full grid.)
 
+# Walk strictly upper-half cells (ys[j] > 0).  With even N this is
+# exactly half the grid; with odd N we'd have an extra y=0 row that
+# would need special handling — see N's docstring.
+@assert iseven(N) "N must be even — see the comment above."
 upper_grid  = ComplexF64[]
 upper_to_ij = Tuple{Int, Int}[]
 for i in 1:N, j in 1:N
-    if ys[j] > 0   # strictly upper half — y=0 row reconstructed from
-                   # Re(u(x, +Δy)) below, NOT walked independently.
+    if ys[j] > 0
         push!(upper_grid, xs[i] + im * ys[j])
         push!(upper_to_ij, (i, j))
     end
 end
 
-println("Solving PI tritronquée on $(N)×$(N) grid over [$(Int(minimum(xs))), $(Int(maximum(xs)))]² (upper-half walk + conjugate mirror + y=0 reconstruction)...")
+println("Solving PI tritronquée on $(N)×$(N) grid over [$(Int(minimum(xs))), $(Int(maximum(xs)))]² (upper-half walk + conjugate mirror)...")
 @time sol = path_network_solve(prob, upper_grid; h = 0.5,
                                 max_steps_per_target = 2000)
 println("  Upper-half targets: $(length(upper_grid))")
@@ -77,20 +86,6 @@ u_grid = Matrix{ComplexF64}(undef, N, N)
 for (idx, (i, j)) in enumerate(upper_to_ij)
     u_grid[i, j] = sol.grid_u[idx]
     u_grid[i, N + 1 - j] = conj(sol.grid_u[idx])   # mirror to lower
-end
-
-# Reconstruct the y=0 row by Schwarz reflection.  Real ICs ⇒ u(x) ∈ ℝ
-# for x ∈ ℝ; Taylor expansion off the real axis: u(x + iΔy) = u(x) +
-# i·Δy·u'(x) + O(Δy²).  So u(x, 0) ≈ Re(u(x, +Δy)).  Walking y=0
-# directly produces a path-dependent discontinuity vs y = ±Δy
-# (different visited-tree branches near the singular pole-free
-# direction); reconstructing from the +Δy row keeps the y=0 line
-# continuous with its neighbours at O(Δy²) cost.
-j_axis  = findfirst(==(0.0), ys)
-if j_axis !== nothing
-    for i in 1:N
-        u_grid[i, j_axis] = complex(real(u_grid[i, j_axis + 1]), 0.0)
-    end
 end
 h_grid = step(xs)
 
