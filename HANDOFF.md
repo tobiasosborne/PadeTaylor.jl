@@ -35,7 +35,7 @@ docs/design_section_6_path_network.md scope), are all shipped:
 | 13 | `CoordTransforms` (FFW 2017 PIII/PV) | ⏸  P2, bead `padetaylor-bvh` | Tier-4 |
 | 14 | `SheetTracker` (FFW 2017 PVI) | ⏸  P2, bead `padetaylor-grc` | Tier-5 |
 
-**1285 / 1285 tests passing** as of the CoordTransforms PIII/PV GREEN commit (session 2026-05-13 late evening, worklog 017).
+**1311 / 1311 tests passing** as of the SheetTracker PVI GREEN commit (session 2026-05-13 late evening, worklog 018).
 
 **Phase 6 shipped 2026-05-09 on the pivoted scope** — the v1
 acceptance is a Padé-vs-Taylor pole-bridge demonstration (one stored
@@ -499,6 +499,80 @@ Quick summary:
     result smells wrong.  See worklog 008 §"Frictions surfaced" F3.
 
 ## Last commit before this handoff
+
+SheetTracker PVI GREEN (bead `padetaylor-grc` closed) — worklog 018.
+
+### Session 2026-05-13 late evening (part 4) — `padetaylor-grc` closed
+
+One GREEN commit lands this session: Phase 14 / Tier-5 SheetTracker
+for the sixth Painlevé equation per FFW 2017 §2.2.
+
+  - `padetaylor-grc` **closed** — new module `src/SheetTracker.jl`
+    (~150 LOC) exports:
+    - `pVI_transformed_rhs(α, β, γ, δ) -> (ζ, w, wp) -> w''`
+      Factory for the ζ-plane PVI RHS (FFW 2017 eq. 3, md:144).
+      Removes the `z = 0` branch point; leaves `z = 1` as a
+      `ζ = 2π·i·k` lattice on the imag axis.
+    - `winding_delta`, `accumulate_winding`, `sheet_index` —
+      path-side primitives for computing Riemann-sheet indices
+      after a regular PathNetwork walk.  Normalisation to `(-π, π]`;
+      sheet index via `round(total / 2π)`.
+    - **PVI coordinate conversion = PV's** (FFW2017...md:146);
+      callers reuse `pV_z_to_ζ` / `pV_ζ_to_z`.  No duplicate helper.
+  - **26 new assertions** across 7 testsets (ST.1.1-ST.1.7):
+    hand-pinned RHS at degenerate + non-degenerate parameters,
+    end-to-end PVI direct-vs-transformed agreement at one Padé step
+    (≤1e-10), winding primitives on closed CCW/CW loops + non-
+    enclosing paths, sheet-index conversion, branch-lattice
+    magnitude check at `ζ = 2π·im`.
+  - Mutation-proven: Mutations O (RHS `/2 → /3`) + P (drop winding
+    normalisation) + Q (`round` → `floor`) all bit as predicted.
+  - `docs/figure_catalogue.md §6` row T5 marked PARTIAL: ζ-plane +
+    winding primitives shipped; η-plane PVI eq. (Fig 2 column 1
+    only) and constrained-wedge PathNetwork routing remain.
+
+Test suite: 1285 → **1311 GREEN** (+25 ST.1.* + 1 umbrella `isdefined`).
+Wall ~2m00s.
+
+### Beads filed this session (part 4)
+
+None.
+
+### Open beads end-of-session (worklog 018)
+
+Two P2 beads remain — both admin/non-code:
+  - `padetaylor-61j` (Willers 1974 paper acquisition),
+  - `padetaylor-8pi` (GLA piracy friction record).
+
+No P0 / P1 / P2-code beads open.  All Tier-1 through Tier-5
+architectural deliverables are at least PARTIAL acceptance.
+
+### Hard-won lessons added this session (worklog 018)
+
+29. **"Branch point in Float64" is a magnitude check, not isfinite**.
+    At `ζ = 2π·im` exactly, `exp(ζ)` returns `1 + O(eps)·im` (the
+    rounded `2π` constant is non-exact), so `(e^ζ - 1) = O(eps)` and
+    the RHS blows up to `~1e30` — huge but still finite.  Test
+    magnitude (`> 1e10`), not `isfinite`.  Downstream Padé-Taylor
+    finite-Taylor-coefficient check is the actual fail-loud point.
+
+30. **`atan2` angle differences need `(-π, π]` normalisation for
+    winding**.  Raw `angle(z_new) - angle(z_old)` has `±2π` jumps
+    at the branch cut.  Normalising per step to `(-π, π]` gives
+    the "shortest signed path" interpretation, valid iff each path
+    step is < π in angular extent.  Callers must walk with `h <<
+    distance-to-branch` (worked out in the module docstring).
+
+31. **Topological direction ≠ algorithm's same-side-wrap convention**.
+    A step from `(-1, +0.01)` to `(-1, -0.01)` is geometrically
+    downward (clockwise around origin) but normalised winding-delta
+    reads `+0.02` (counterclockwise small).  The algorithm interprets
+    every sub-π step as "going the short way around"; only actual
+    circumambulation (loops > π built up over multiple steps)
+    registers sheet changes.  Don't pin direction on individual
+    cross-cut steps in tests.
+
+## Last commit before this handoff (previous session)
 
 CoordTransforms PIII/PV GREEN (bead `padetaylor-bvh` closed) — worklog 017.
 

@@ -23,6 +23,7 @@ Four algorithmically independent layers, per ADR-0001:
  10. `EdgeDetector`  — 5-point Laplacian pole-field classifier (FW §3.2.2).
  11. `LatticeDispatcher` — 2D-lattice composition with per-row BVP fill (FW §4.4).
  12. `CoordTransforms`   — Exponential coordinate maps for PIII / PV (FFW 2017 §2.1, Tier-4).
+ 13. `SheetTracker`      — PVI ζ-plane RHS + winding-number primitives (FFW 2017 §2.2, Tier-5).
 
 ## Determinism
 
@@ -68,6 +69,7 @@ include("Dispatcher.jl")
 include("EdgeDetector.jl")
 include("LatticeDispatcher.jl")
 include("CoordTransforms.jl")
+include("SheetTracker.jl")
 
 # Public API (re-exported from sub-modules).
 using .Problems:    PadeTaylorProblem, solve_pade, PadeTaylorSolution, taylor_eval
@@ -80,6 +82,8 @@ using .EdgeDetector: laplacian_residual, pole_field_mask
 using .LatticeDispatcher: lattice_dispatch_solve, LatticeSolution
 using .CoordTransforms: pIII_transformed_rhs, pV_transformed_rhs,
                         pIII_z_to_ζ, pIII_ζ_to_z, pV_z_to_ζ, pV_ζ_to_z
+using .SheetTracker:    pVI_transformed_rhs,
+                        winding_delta, accumulate_winding, sheet_index
 
 # CommonSolve adapter: the algorithm struct is declared HERE in the main
 # module so users can construct it after `using PadeTaylor, CommonSolve`
@@ -111,6 +115,8 @@ export laplacian_residual, pole_field_mask
 export lattice_dispatch_solve, LatticeSolution
 export pIII_transformed_rhs, pV_transformed_rhs,
        pIII_z_to_ζ, pIII_ζ_to_z, pV_z_to_ζ, pV_ζ_to_z
+export pVI_transformed_rhs,
+       winding_delta, accumulate_winding, sheet_index
 export PadeTaylorAlg
 
 end # module PadeTaylor
