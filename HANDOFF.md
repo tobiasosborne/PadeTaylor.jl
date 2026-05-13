@@ -26,14 +26,16 @@ docs/design_section_6_path_network.md scope), are all shipped:
 | 6 | `Problems.PadeTaylorProblem`, `solve_pade` | ✅ shipped (Padé-vs-Taylor pole-bridge demo), mutation-proven; see worklog 005 | 11 |
 | 7 | `CommonSolveAdapter` ext (`PadeTaylorAlg`) | ✅ shipped per worklog 009 | 34 |
 | 8 | `PadeTaylorArblibExt` ext (SVD-only v1) | ✅ shipped per worklog 010 | 30 |
-| 9 | Tier C: PI tritronquée pole-field qualitative | ⏸  P1, optional | DESIGN.md §4 Phase 9 |
+| **9** | Tier C: PI tritronquée pole-field qualitative | ✅ **shipped** — 4-of-5 pole-free sectors + conjugate symmetry + leading-pole magnitude at 25×25 [-4,4]² (worklog 012) | 12 |
 | **10** | `PathNetwork.path_network_solve` | ✅ **shipped + FW Table 5.1 GREEN @ 2.13e-14 BF-256 (beats FW's 8.34e-14)**; see worklogs 006 + 008 | 33 |
 | **11** | `BVP.bvp_solve` | ✅ **shipped (Tier-3 Chebyshev-Newton BVP)**, mutation-proven; see worklog 006 | 43 |
-| **12** | `Dispatcher.dispatch_solve` (1D chain v1) | ✅ **shipped (Tier-3 IVP↔BVP chain composition)**, mutation-proven; see worklog 007 | 45 |
+| **12 v1** | `Dispatcher.dispatch_solve` (1D chain) | ✅ **shipped (Tier-3 IVP↔BVP chain composition)**, mutation-proven; see worklog 007 | 45 |
+| **12.5** | `EdgeDetector` — 5-point Laplacian pole-field classifier | ✅ **shipped** (worklog 011); FW 2011 §3.2.2 verbatim | 743 |
+| **12 v2** | `LatticeDispatcher.lattice_dispatch_solve` — 2D-grid composition | ✅ **shipped** (worklog 013) — per-row BVP fill on smooth runs flanked by IVP cells (FW2011...md:190); FW Fig 4.1 quantitative pin deferred to follow-up `padetaylor-0c3` | 76 |
 | 13 | `CoordTransforms` (FFW 2017 PIII/PV) | ⏸  P2, bead `padetaylor-bvh` | Tier-4 |
 | 14 | `SheetTracker` (FFW 2017 PVI) | ⏸  P2, bead `padetaylor-grc` | Tier-5 |
 
-**404 / 404 tests passing** as of the Phase-8 ArblibExt GREEN commit.
+**1237 / 1237 tests passing** as of the Phase 12 v2 LatticeDispatcher GREEN commit (session 2026-05-13 evening).
 
 **Phase 6 shipped 2026-05-09 on the pivoted scope** — the v1
 acceptance is a Padé-vs-Taylor pole-bridge demonstration (one stored
@@ -498,12 +500,73 @@ Quick summary:
 
 ## Last commit before this handoff
 
-Phase 12 GREEN (this commit).  Run `git log --oneline` to see the full
-history.  Four GREEN commits land in the 2026-05-13 session:
-`910aab9` BVP ground truth + Octave oracle (preparatory);
-`0ada60f` Phase 10 PathNetwork GREEN;
-`cc7d8ca` Phase 11 BVP GREEN;
-`fad9eaf` Session-close worklog + HANDOFF refresh + Phase 12-14 beads;
-and now Phase 12 v1 Dispatcher GREEN.
+Phase 12 v2 LatticeDispatcher GREEN (this commit).
+
+### Session 2026-05-13 evening — all 4 P1 beads closed
+
+Four GREEN commits land in this session, knocking out every P1 bead:
+
+  - `9d1cc4c` **EdgeDetector** (Phase 12.5, `padetaylor-c2p` closed):
+    FW 2011 §3.2.2 5-point Laplacian pole-field classifier.  60-LOC
+    module, 743 assertions, 2 mutations.  Threshold on `log₁₀|Δu|`
+    per FW Fig 3.3 (not bare `|Δu|`; bead description had a misread,
+    documented in worklog 011).
+  - `1c7056e` **Phase 9 PI tritronquée qualitative** (`padetaylor-kvi`
+    closed): 5 testsets / 12 assertions verifying 4-of-5 pole-free
+    sectors, conjugate symmetry, leading-pole magnitude at 25×25
+    [-4,4]².  Mutation-proven (Mutation C bites 7/12 by flipping the
+    ODE z-sign).  No source changes per DESIGN.md §4 "no new code".
+  - `cc8c804` **Figure-catalogue refresh** (`padetaylor-rgp` closed as
+    living document): `docs/figure_catalogue.md` §6 + §8 brought
+    current; PathNetwork/EdgeDetector/BVP/Dispatcher v1 marked
+    shipped; Fig 3.1 row marked PARTIAL with Phase 9 acceptance.
+  - `4db29b1` **Phase 12 v2 LatticeDispatcher** (`padetaylor-k31`
+    closed): 2D-grid composition machinery (~115 LOC) — PathNetwork +
+    EdgeDetector partition + per-row BVP fill per FW2011...md:190.
+    4 testsets / 76 assertions, mutation-proven (Mutations E + F).
+    Tested against cosh closed form to ≤ 1e-10.
+
+Test suite: 404 → **1237 GREEN** (+833 assertions across the four
+shipped phases).  Wall ~1m45s.
+
+### Beads filed this session
+
+  - `padetaylor-0c3` **P2** Phase 12 v2.1: FW Fig 4.1 quantitative pin
+    (`u(20i)` ≤ 1e-10) for `lattice_dispatch_solve`.  Different
+    compositional pattern (vertical BVP + two outward pole fields)
+    than v1's line-190 horizontal-row algorithm.  See worklog 013
+    §"v1 scope decision".
+
+### Open beads end-of-session
+
+All remaining beads are P2:
+  - `padetaylor-bvh` (Phase 13 CoordTransforms),
+  - `padetaylor-grc` (Phase 14 SheetTracker),
+  - `padetaylor-61j` (Willers 1974 acquisition),
+  - `padetaylor-8pi` (GLA piracy friction),
+  - `padetaylor-0c3` (Fig 4.1 quantitative pin, new this session).
+
+No P0 or P1 beads remain open.
+
+### Hard-won lessons added this session (worklogs 011-013)
+
+14. **Trust the source paper over the bead description**.  `padetaylor-c2p`'s
+    bead said `|∇²u|/h² > 0.001`; FW2011...md:208 verbatim is
+    `log₁₀|Δu| > 0.001` (the `/h²` is inside `Δu` per eq. 3.3).  See
+    worklog 011 §"Threshold interpretation".
+
+15. **Probe orientation before writing test assertions on 2D-grid output**.
+    For PI `u'' = 6u² + z`, the tritronquée's pole-bearing sector is
+    centred on the *positive* real axis (angle 0), not negative.  The
+    ASCII-dump-first heuristic caught this in seconds vs the
+    theory-first approach that would have wasted 30+ min.  See worklog
+    012 §"A correction to my own initial assumption".
+
+16. **v2-bead acceptance criteria often blend "machinery" and "specific
+    case"**.  `padetaylor-k31` fused the 2D-lattice composition layer
+    with the FW Fig 4.1 acceptance pin.  These are different
+    deliverables (different compositional patterns).  v1 ships the
+    machinery; v2.1 ships the specific case.  See worklog 013 §"v1
+    scope decision".
 
 Goodluck. Read CLAUDE.md again before you start.
