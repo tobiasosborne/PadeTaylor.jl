@@ -29,11 +29,11 @@ docs/design_section_6_path_network.md scope), are all shipped:
 | 9 | Tier C: PI tritronquée pole-field qualitative | ⏸  P1, optional | DESIGN.md §4 Phase 9 |
 | **10** | `PathNetwork.path_network_solve` | ✅ **shipped (Tier-2 path-network)**, mutation-proven; see worklog 006 | 21 |
 | **11** | `BVP.bvp_solve` | ✅ **shipped (Tier-3 Chebyshev-Newton BVP)**, mutation-proven; see worklog 006 | 43 |
-| 12 | `Dispatcher` — compose PathNetwork + EdgeDetector + BVP | ⏳ **NEXT (P0)**, bead `padetaylor-8lk` | TBD |
+| **12** | `Dispatcher.dispatch_solve` (1D chain v1) | ✅ **shipped (Tier-3 IVP↔BVP chain composition)**, mutation-proven; see worklog 007 | 45 |
 | 13 | `CoordTransforms` (FFW 2017 PIII/PV) | ⏸  P2, bead `padetaylor-bvh` | Tier-4 |
 | 14 | `SheetTracker` (FFW 2017 PVI) | ⏸  P2, bead `padetaylor-grc` | Tier-5 |
 
-**284 / 284 tests passing** as of the Phase-11 GREEN commit (`cc7d8ca`).
+**329 / 329 tests passing** as of the Phase-12 GREEN commit.
 
 **Phase 6 shipped 2026-05-09 on the pivoted scope** — the v1
 acceptance is a Padé-vs-Taylor pole-bridge demonstration (one stored
@@ -389,16 +389,15 @@ type is a prerequisite for Phase 8 but unrelated to Phase 7.
 bd ready -n 30
 ```
 
-Open beads at end of 2026-05-13 session (10 total):
-- `padetaylor-8lk` **P0 NEXT** — Phase 12 Dispatcher (compose
-  PathNetwork + EdgeDetector + BVP).
+Open beads at end of Phase 12 commit (13 total; `padetaylor-8lk` closed):
 - `padetaylor-1jf` **P0** — Path-network module (Phase 10 shipped;
-  bead stays open until PN.2.2 + PN.3.1 land).
+  bead stays open until PN.2.2 + PN.3.1 land via `padetaylor-yt1`).
 - `padetaylor-8cr` **P0** — v2 umbrella FW Table 5.1 long-range.
 - `padetaylor-yt1` **P1** — PathNetwork tuning: FW Table 5.1
   quantitative + :steepest_descent.
 - `padetaylor-rgp` **P1** — Figure-acceptance catalogue (tracking).
-- `padetaylor-c2p` **P1** — Edge detector (Phase 12 prerequisite).
+- `padetaylor-c2p` **P1** — Edge detector (now consumed by Phase 12 v2 / `padetaylor-k31`).
+- `padetaylor-k31` **P1 NEW** — Phase 12 v2: 2D lattice dispatcher with automatic edge detection.
 - `padetaylor-kvi` **P1** — Phase 9 Tier C qualitative.
 - `padetaylor-jhq` **P1** — Phase 8 ArblibExt.
 - `padetaylor-2vz` **P1** — Phase 7 CommonSolveAdapter.
@@ -406,6 +405,13 @@ Open beads at end of 2026-05-13 session (10 total):
 - `padetaylor-grc` **P2** — Phase 14 SheetTracker (Tier-5).
 - `padetaylor-61j` **P2** — Willers 1974 acquisition.
 - `padetaylor-8pi` **P2** — GenericLinearAlgebra svd! piracy friction.
+
+**Next P0 work item**: `padetaylor-1jf` / `padetaylor-yt1` (PathNetwork
+PN.2.2 quantitative FW Table 5.1 + PN.3.1 :steepest_descent), OR
+`padetaylor-8cr` umbrella (v2 long-range integration).  Phase 12 v2
+(`padetaylor-k31`) is P1 and waits for an authentic Tier-3 figure
+target — its dependencies (PathNetwork + BVP + the inline 5-point
+Laplacian classifier formerly in `padetaylor-c2p`) are all in tree.
 
 ## Hard-won lessons (don't repeat these)
 
@@ -479,10 +485,12 @@ Quick summary:
 
 ## Last commit before this handoff
 
-`cc7d8ca` Phase 11 GREEN: BVP.bvp_solve.  Run `git log --oneline` to
-see the full history.  Three commits in the 2026-05-13 session:
+Phase 12 GREEN (this commit).  Run `git log --oneline` to see the full
+history.  Four GREEN commits land in the 2026-05-13 session:
 `910aab9` BVP ground truth + Octave oracle (preparatory);
 `0ada60f` Phase 10 PathNetwork GREEN;
-`cc7d8ca` Phase 11 BVP GREEN.
+`cc7d8ca` Phase 11 BVP GREEN;
+`fad9eaf` Session-close worklog + HANDOFF refresh + Phase 12-14 beads;
+and now Phase 12 v1 Dispatcher GREEN.
 
 Goodluck. Read CLAUDE.md again before you start.

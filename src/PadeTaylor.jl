@@ -17,6 +17,9 @@ Four algorithmically independent layers, per ADR-0001:
                        Padé-root distance (alternative).
   5. `PadeStepper`   — Orchestrates one step: Taylor → Padé → step.
   6. `Problems`      — `PadeTaylorProblem` / `solve_pade` public API.
+  7. `PathNetwork`   — FW 2011 §3.1 5-direction wedge path-tree (Tier-2).
+  8. `BVP`           — Chebyshev-Newton spectral BVP solver (Tier-3).
+  9. `Dispatcher`    — 1D IVP↔BVP chain composition per FW 2011 §4.4.
 
 ## Determinism
 
@@ -58,6 +61,7 @@ include("PadeStepper.jl")
 include("Problems.jl")
 include("PathNetwork.jl")
 include("BVP.jl")
+include("Dispatcher.jl")
 
 # Public API (re-exported from sub-modules).
 using .Problems:    PadeTaylorProblem, solve_pade, PadeTaylorSolution, taylor_eval
@@ -65,11 +69,13 @@ using .RobustPade:  robust_pade, PadeApproximant
 using .Coefficients: taylor_coefficients_1st, taylor_coefficients_2nd
 using .PathNetwork: path_network_solve, PathNetworkSolution
 using .BVP:         bvp_solve, BVPSolution
+using .Dispatcher:  dispatch_solve, DispatcherSolution, IVPSegment, BVPSegment
 
 export PadeTaylorProblem, solve_pade, PadeTaylorSolution, taylor_eval
 export robust_pade, PadeApproximant
 export taylor_coefficients_1st, taylor_coefficients_2nd
 export path_network_solve, PathNetworkSolution
 export bvp_solve, BVPSolution
+export dispatch_solve, DispatcherSolution, IVPSegment, BVPSegment
 
 end # module PadeTaylor
