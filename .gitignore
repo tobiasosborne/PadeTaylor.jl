@@ -21,6 +21,8 @@ references/markdown/**/*.jpeg
 examples/*.png
 examples/*.svg
 examples/*.pdf
+# Exception: the README hero image is a committed doc asset.
+!examples/tritronquee_heatmap.png
 
 # Documenter build output + per-environment manifest — regenerable via
 # `julia --project=docs docs/make.jl`.
