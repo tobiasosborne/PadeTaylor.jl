@@ -78,9 +78,9 @@ solver pins `u(0) ≤ 3.5e-13` and `u'(0) ≤ 5.3e-11` vs the FW eq. 4.1
 reference values — well under the 1e-10 spec (worklog 016).  Lives
 in `test/fw_fig_41_test.jl`.
 
-### FW 2011 Fig 3.1 + Fig 3.2 — PI pole field and path tree
+### FW 2011 Fig 3.1, Fig 3.2, Fig 3.3 — PI pole field, path tree, edge detector
 
-Reproduced as runnable scripts under `figures/` (worklog 022).
+Reproduced as runnable scripts under `figures/` (worklogs 022, 023).
 `figures/fw2011_fig_3_1.jl` renders the `|u(z)|` pole-field surface on
 a 121×121 lattice over `[-10,10]²`; the calm-near-origin signature is
 confirmed numerically by a 3.1× median-`|u|` ratio between the central
@@ -88,7 +88,12 @@ disc `|z|≤2` and the annulus `6≤|z|≤10`.  `figures/fw2011_fig_3_2.jl`
 renders the FW §3.1 Stage-1 path tree on the exact 40×40 coarse grid
 at `h = 0.3` — a connected, non-crossing tree rooted at the origin,
 drawn from the `PathNetworkSolution.visited_parent` edge set added in
-this worklog.
+worklog 022.  `figures/fw2011_fig_3_3.jl` renders the FW §3.2.2
+pole-field edge detector: the `log₁₀|Δu|` surface from the 5-point
+Laplacian stencil (`EdgeDetector.laplacian_residual`) with the
+level-`0.001` contour overlaid, for the precise tritronquée ICs
+(eq. 4.1) over `x∈[-4,8], y∈[-6,6]` — a deep flat smooth plain, sharp
+pole-field ridges, the contour separating the two.
 
 The quantitative regression-test companion to Fig 3.1 is the Phase 9
 pin: the pole field at 25×25 over `[-4, 4]²` with 4-of-5 pole-free
