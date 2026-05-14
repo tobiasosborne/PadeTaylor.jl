@@ -24,10 +24,17 @@ julia --project=figures -e 'using Pkg; Pkg.develop(path="."); Pkg.instantiate()'
 julia --project=figures figures/fw2011_fig_3_1.jl
 julia --project=figures figures/fw2011_fig_3_2.jl
 julia --project=figures figures/fw2011_fig_3_3.jl
+julia --project=figures figures/fw2011_fig_4_2.jl
+julia --project=figures figures/fw2011_fig_4_3.jl
+julia --project=figures figures/fw2011_fig_4_4.jl
 ```
 
 Each script prints timing + a one-line acceptance note and writes its
 PNG to `figures/output/`.
+
+`figutil.jl` is a shared `include`-d helper (lattice construction +
+the `Axis3` pole-field surface renderer) used by the pole-field
+surface figures; it is not a runnable script.
 
 ## Figures
 
@@ -36,6 +43,9 @@ PNG to `figures/output/`.
 | `fw2011_fig_3_1.jl` | FW 2011 Fig 3.1 (`...md:143-145`) | `\|u(z)\|` pole-field surface for PI, near-tritronquée ICs, over `[-10,10]²` |
 | `fw2011_fig_3_2.jl` | FW 2011 Fig 3.2 (`...md:160-164`) | the Stage-1 path tree: `40×40` coarse grid, `h = 0.3`, rooted at the origin |
 | `fw2011_fig_3_3.jl` | FW 2011 Fig 3.3 (`...md:202-208`) | `log₁₀\|Δu\|` pole-field edge detector (5-point Laplacian stencil) + level-`0.001` contour, tritronquée ICs |
+| `fw2011_fig_4_2.jl` | FW 2011 Fig 4.2 (`...md:231-241`) | real-axis `u(x)` curves: tronquée + near-tronquée cases with `u(0)=0`, two panels, `±√(-x/6)` leading-term branches |
+| `fw2011_fig_4_3.jl` | FW 2011 Fig 4.3 (`...md:243-245`) | `\|u(z)\|` pole-field surface, NIST Handbook example `u(0)=0, u'(0)=1.8518` |
+| `fw2011_fig_4_4.jl` | FW 2011 Fig 4.4 (`...md:253-255`) | `\|u(z)\|` pole-field surface, `u(0)=0, u'(0)=1.8519` — the tronquée-transition companion to Fig 4.3 |
 
 `...md` is `references/markdown/FW2011_painleve_methodology_JCP230/FW2011_painleve_methodology_JCP230.md`.
 
@@ -48,5 +58,10 @@ origin); Fig 3.2 is a visual topology match (a connected tree rooted
 at the origin reaching within `h` of every coarse-grid node, no
 crossing paths); Fig 3.3 is a visual match for the edge-detector
 signature (a deep flat smooth plain, sharp pole-field ridges, the
-level-`0.001` contour cleanly separating the two). None of the three
-figures carries a quantitative criterion in the paper itself.
+level-`0.001` contour cleanly separating the two); Fig 4.2 is a match
+for the plotted real-axis curves (tronquée curves hugging the
+`±√(-x/6)` branches, near-tronquée curves carrying real-axis poles);
+Fig 4.3 / 4.4 are visual pole-field matches whose near-identical pair
+brackets the tronquée transition. The fine quantitative pole-count
+pin for Fig 4.3/4.4 is a test-suite obligation (bead `padetaylor-p3l`),
+not part of the figure scripts.

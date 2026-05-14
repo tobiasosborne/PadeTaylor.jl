@@ -95,6 +95,21 @@ level-`0.001` contour overlaid, for the precise tritronquée ICs
 (eq. 4.1) over `x∈[-4,8], y∈[-6,6]` — a deep flat smooth plain, sharp
 pole-field ridges, the contour separating the two.
 
+### FW 2011 Fig 4.2, Fig 4.3, Fig 4.4 — the `u(0) = 0` tronquée family
+
+Reproduced as runnable scripts under `figures/` (worklog 024).
+`figures/fw2011_fig_4_2.jl` renders the two-panel real-axis `u(x)`
+curves — the tronquée cases hugging the `±√(-x/6)` leading-term
+branches, the near-tronquée `1.8518` / `1.8519` curves carrying
+real-axis poles — computed (as FW does, md:233) via
+`path_network_solve` on a 1-D real-axis target grid.
+`figures/fw2011_fig_4_3.jl` and `figures/fw2011_fig_4_4.jl` render the
+NIST-Handbook `|u(z)|` pole-field surfaces over `[-10,10]²` for
+`u'(0) = 1.8518` and `1.8519`, with FW's thick real-axis line and
+origin cross-line overlaid; the two are near-identical, bracketing
+the tronquée transition. Their quantitative pole-count pin is a
+follow-up test (bead `padetaylor-p3l`).
+
 The quantitative regression-test companion to Fig 3.1 is the Phase 9
 pin: the pole field at 25×25 over `[-4, 4]²` with 4-of-5 pole-free
 sectors recovered, conjugate symmetry verified, and leading-pole

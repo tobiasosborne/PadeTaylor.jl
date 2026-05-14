@@ -39,6 +39,7 @@
 using PadeTaylor
 using CairoMakie
 using Printf
+include(joinpath(@__DIR__, "figutil.jl"))
 
 # ----------------------------------------------------------------------
 # Parameters
@@ -56,11 +57,7 @@ pI(z, u, up) = 6 * u^2 + z
 # ----------------------------------------------------------------------
 # Solve on the fine lattice
 # ----------------------------------------------------------------------
-xs = range(-HALF, HALF; length = N)
-ys = range(-HALF, HALF; length = N)
-# Row-major flatten: index (i, j) <-> x = xs[i], y = ys[j] after a
-# column-major reshape(_, N, N) below.
-grid = ComplexF64[complex(x, y) for y in ys for x in xs]
+xs, ys, grid = pole_field_lattice(HALF, N)
 
 prob = PadeTaylorProblem(pI, (-0.1875, 0.3049), (0.0, 10.0); order = ORDER)
 
@@ -94,20 +91,11 @@ med_annul = sort(vec(Z[in_annul]))[fld(count(in_annul), 2)]
         med_disc, med_annul, med_annul / med_disc)
 
 # ----------------------------------------------------------------------
-# Render
+# Render (shared pole-field surface helper, figutil.jl)
 # ----------------------------------------------------------------------
-fig = Figure(size = (950, 720))
-ax  = Axis3(fig[1, 1];
-            xlabel = "x", ylabel = "y", zlabel = "|u(z)|",
-            title  = "FW 2011 Fig. 3.1 — |u(z)| for PI, u(0) = -0.1875, u'(0) = 0.3049",
-            # MATLAB surf-like view: look down at ~30 deg, z compressed
-            # so the pole spikes do not dominate the xy pole-field
-            # layout (matches the framing of FW's _page_3_Figure_8).
-            azimuth = 1.30π, elevation = 0.16π,
-            aspect = (1.0, 1.0, 0.45),
-            zticks = 0:10:Int(U_CAP))
-surface!(ax, xs, ys, Z; colormap = :viridis, colorrange = (0.0, U_CAP))
-wireframe!(ax, xs, ys, Z; color = (:black, 0.15), linewidth = 0.3)
+fig, _ = pole_field_figure(xs, ys, Z;
+    title = "FW 2011 Fig. 3.1 — |u(z)| for PI, u(0) = -0.1875, u'(0) = 0.3049",
+    ucap = U_CAP)
 
 mkpath(dirname(OUTPNG))
 save(OUTPNG, fig)
