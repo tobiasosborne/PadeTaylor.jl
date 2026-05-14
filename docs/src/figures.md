@@ -51,7 +51,7 @@ Exact criteria per figure are stated in the per-figure tables in
 |------|------------------------|------------------------|----------------------|
 | **T0** | ✅ shipped (Phase 6) | Phase-6 ℘-function pole-bridge demo | — |
 | **T1** | ✅ shipped (Phase 6 stepper) | FW 2011 Fig 2.1, Fig 5.2 (target) | per-figure pinning |
-| **T2** | ✅ shipped (Phase 10 PathNetwork + Phase 12.5 EdgeDetector) | FW 2011 Fig 5.1 (FW Table 5.1 ≤`2.13e-14` `BF`-256, beats FW's `8.34e-14`); Fig 3.1 PARTIAL qualitative reproduction of pole-free sectors | quantitative per-figure pinning across FW 2011 §3, FW 2014 + 2015, RF 2014 |
+| **T2** | ✅ shipped (Phase 10 PathNetwork + Phase 12.5 EdgeDetector) | FW 2011 Fig 5.1 (FW Table 5.1 ≤`2.13e-14` `BF`-256, beats FW's `8.34e-14`); Fig 3.1 + Fig 3.2 rendered in `figures/` (worklog 022) | quantitative per-figure pinning across FW 2011 §3, FW 2014 + 2015, RF 2014 |
 | **T3** | ✅ shipped (Phase 11 BVP + Phase 12 v1 1D Dispatcher + Phase 12 v2 LatticeDispatcher) | FW 2011 Fig 4.1 step-(i) BVP pin (`u(0) ≤ 3.5e-13`, `u'(0) ≤ 5.3e-11`, see `test/fw_fig_41_test.jl`) | Fig 4.1 steps (ii) + (iii); FW 2014 tronquée figures; FFW 2017 hybrid IVP + BVP figures |
 | **T4** | 🟡 PARTIAL — `CoordTransforms` shipped (Phase 13, `src/CoordTransforms.jl` exposes PIII / PV RHS factories + IC round-trips, end-to-end direct-vs-transformed agreement ≤`1e-10` per worklog 017) | — | non-uniform Stage-1 nodes; adaptive Padé `h`; per-figure pinning of FFW 2017 Fig 1, 4, 5, 6 |
 | **T5** | 🟡 PARTIAL — `SheetTracker` shipped (Phase 14, `src/SheetTracker.jl` exposes PVI ζ-plane RHS + winding primitives, end-to-end direct-vs-transformed agreement ≤`1e-10` per worklog 018) | — | η-plane PVI eq.; constrained-wedge `PathNetwork` routing that enforces branch-cut avoidance during the walk; per-figure pinning of FFW 2017 Fig 2, 3, 7 |
@@ -78,13 +78,22 @@ solver pins `u(0) ≤ 3.5e-13` and `u'(0) ≤ 5.3e-11` vs the FW eq. 4.1
 reference values — well under the 1e-10 spec (worklog 016).  Lives
 in `test/fw_fig_41_test.jl`.
 
-### FW 2011 Fig 3.1 PARTIAL — PI tritronquée pole field
+### FW 2011 Fig 3.1 + Fig 3.2 — PI pole field and path tree
 
-Qualitative reproduction of the pole field at 25×25 over `[-4, 4]²`:
-4-of-5 pole-free sectors recovered; conjugate symmetry verified;
-leading-pole magnitude matches Joshi–Kitaev to ≤`1e-3` (worklog 012).
-The full FW 161² fidelity pin is deferred to the
-`LatticeDispatcher` 2D pinning work.  Lives in
+Reproduced as runnable scripts under `figures/` (worklog 022).
+`figures/fw2011_fig_3_1.jl` renders the `|u(z)|` pole-field surface on
+a 121×121 lattice over `[-10,10]²`; the calm-near-origin signature is
+confirmed numerically by a 3.1× median-`|u|` ratio between the central
+disc `|z|≤2` and the annulus `6≤|z|≤10`.  `figures/fw2011_fig_3_2.jl`
+renders the FW §3.1 Stage-1 path tree on the exact 40×40 coarse grid
+at `h = 0.3` — a connected, non-crossing tree rooted at the origin,
+drawn from the `PathNetworkSolution.visited_parent` edge set added in
+this worklog.
+
+The quantitative regression-test companion to Fig 3.1 is the Phase 9
+pin: the pole field at 25×25 over `[-4, 4]²` with 4-of-5 pole-free
+sectors recovered, conjugate symmetry verified, and leading-pole
+magnitude matching Joshi–Kitaev to ≤`1e-3` (worklog 012).  Lives in
 `test/phase9_tritronquee_test.jl`.
 
 ## Provenance notes

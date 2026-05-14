@@ -27,5 +27,10 @@ examples/*.pdf
 docs/build/
 docs/Manifest.toml
 
+# Figure-reproduction project — per-environment manifest is regenerable
+# via `julia --project=figures -e 'using Pkg; Pkg.instantiate()'`.
+# The output PNGs ARE committed: they are the figure deliverables.
+figures/Manifest.toml
+
 # Local scheduling lockfiles.
 .claude/scheduled_tasks.lock

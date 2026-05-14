@@ -107,19 +107,30 @@ fields use `Complex{T}` for the spatial coordinate even when the
 underlying problem is real, since path-network steps are complex-
 valued by construction.
 
+`visited_parent[k]` is the index (into the `visited_*` arrays) of the
+node from which `visited_z[k]` was reached during Stage-1 tree
+construction; the root (IC) node has parent `0`.  The set of edges
+`{(visited_parent[k], k) : k ≥ 2}` is exactly the Stage-1 path tree —
+this is what FW 2011 Fig 3.2 draws.  Because the FW 2011 algorithm
+starts each per-target walk from the *nearest already-visited node*
+(line 164), the parent of the first node landed in a new walk is that
+nearest node, while subsequent nodes of the same walk chain off their
+immediate predecessor.
+
 A `NaN + NaN·im` entry in `grid_u` or `grid_up` signals that the
 corresponding `grid` point was not within `h` of any visited node;
 fail-loud per CLAUDE.md Rule 1.
 """
 struct PathNetworkSolution{T <: AbstractFloat}
-    visited_z    :: Vector{Complex{T}}
-    visited_u    :: Vector{Complex{T}}
-    visited_up   :: Vector{Complex{T}}
-    visited_pade :: Vector{PadeApproximant{Complex{T}}}
-    visited_h    :: Vector{T}                # real (canonical) per node
-    grid_z       :: Vector{Complex{T}}
-    grid_u       :: Vector{Complex{T}}
-    grid_up      :: Vector{Complex{T}}
+    visited_z      :: Vector{Complex{T}}
+    visited_u      :: Vector{Complex{T}}
+    visited_up     :: Vector{Complex{T}}
+    visited_pade   :: Vector{PadeApproximant{Complex{T}}}
+    visited_h      :: Vector{T}                # real (canonical) per node
+    visited_parent :: Vector{Int}              # tree edge: parent index, 0 = root
+    grid_z         :: Vector{Complex{T}}
+    grid_u         :: Vector{Complex{T}}
+    grid_up        :: Vector{Complex{T}}
 end
 
 # -----------------------------------------------------------------------------
@@ -230,11 +241,12 @@ function path_network_solve(prob::PadeTaylorProblem,
     up_0  = CT(prob.y0[2])
     pade_0 = _local_pade(prob.f, z_0, u_0, up_0, order, h_T)
 
-    visited_z    = [z_0]
-    visited_u    = [u_0]
-    visited_up   = [up_0]
-    visited_pade = [pade_0]
-    visited_h    = [h_T]
+    visited_z      = [z_0]
+    visited_u      = [u_0]
+    visited_up     = [up_0]
+    visited_pade   = [pade_0]
+    visited_h      = [h_T]
+    visited_parent = [0]               # root has no parent
 
     # Stage 1: build path tree.  Random target shuffle (FW 2011 line 156).
     rng     = MersenneTwister(rng_seed)
@@ -258,6 +270,10 @@ function path_network_solve(prob::PadeTaylorProblem,
         verbose && _verbose_target_start(target_idx, length(targets),
                                          target, z_cur, t_start_stage1)
 
+        # The first node landed in this walk chains off the nearest
+        # already-visited node (FW 2011 line 164); each later node of
+        # the walk chains off its immediate predecessor.
+        parent_idx = idx_v
         n_steps = 0
         while abs(z_cur - target) > h_T
             n_steps        += 1
@@ -294,6 +310,8 @@ function path_network_solve(prob::PadeTaylorProblem,
             push!(visited_up, up_new)
             push!(visited_pade, pade_canonical)
             push!(visited_h, h_T)
+            push!(visited_parent, parent_idx)
+            parent_idx = length(visited_z)   # next step chains off this node
 
             z_cur, u_cur, up_cur = z_new, u_new, up_new
 
@@ -332,7 +350,7 @@ function path_network_solve(prob::PadeTaylorProblem,
     end
 
     return PathNetworkSolution{T}(visited_z, visited_u, visited_up,
-                                  visited_pade, visited_h,
+                                  visited_pade, visited_h, visited_parent,
                                   grid_z, grid_u, grid_up)
 end
 
@@ -427,9 +445,11 @@ function _solve_with_schwarz_reflection(prob::PadeTaylorProblem,
         end
     end
 
+    # The visited tree (and hence `visited_parent`) is the upper-half
+    # walk's verbatim; only the Stage-2 grid outputs are mirrored.
     return PathNetworkSolution{T}(
         sol_upper.visited_z, sol_upper.visited_u, sol_upper.visited_up,
-        sol_upper.visited_pade, sol_upper.visited_h,
+        sol_upper.visited_pade, sol_upper.visited_h, sol_upper.visited_parent,
         grid_input, grid_u, grid_up)
 end
 

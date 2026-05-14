@@ -229,6 +229,65 @@ include(joinpath(@__DIR__, "_oracle_problems.jl"))
         @test length(sol_f64.visited_z) > 20_000  # Stage-1 walked ~24k nodes.
     end
 
+    @testset "PN.5.1: visited_parent is a well-formed Stage-1 path tree" begin
+        # FW 2011 Fig 3.2 draws the Stage-1 path tree.  The tree edges
+        # are `{(visited_parent[k], k) : k ≥ 2}`; this testset pins the
+        # structural invariants that make `visited_parent` a tree:
+        #
+        #   (a) one parent slot per visited node;
+        #   (b) the root (IC node) has parent 0;
+        #   (c) every non-root parent precedes its child (1 ≤ p ≤ k-1)
+        #       — no cycles, and the tree is built incrementally;
+        #   (d) every tree edge has Euclidean length ≈ h, because each
+        #       visited node is reached by exactly one wedge step
+        #       (length h) from its parent — including the first node
+        #       of a per-target walk, which chains off the nearest
+        #       already-visited node (FW 2011 line 164);
+        #   (e) following parent pointers from any node reaches the root.
+        #
+        # A multi-target grid that forces multi-step walks exercises
+        # both the "first node chains off nearest visited" branch and
+        # the "later node chains off predecessor" branch.
+        prob = PadeTaylorProblem(fW, (u_0_FW, up_0_FW), (0.0, 2.0); order = 30)
+        grid = ComplexF64[1.4 + 0im, 0.8 + 0.6im, -0.5 - 0.4im, 1.1 + 0.2im]
+        h    = 0.5
+        sol  = path_network_solve(prob, grid; h = h)
+
+        n = length(sol.visited_z)
+        # (a)
+        @test length(sol.visited_parent) == n
+        # (b)
+        @test sol.visited_parent[1] == 0
+        # The grid forces enough stepping that the tree is non-trivial.
+        @test n ≥ 6
+        for k in 2:n
+            p = sol.visited_parent[k]
+            # (c)
+            @test 1 ≤ p ≤ k - 1
+            # (d)
+            @test isapprox(abs(sol.visited_z[k] - sol.visited_z[p]), h;
+                           atol = 1e-9)
+        end
+        # (e) — walk every node's ancestry up to the root.
+        for k in 1:n
+            cur  = k
+            hops = 0
+            while cur != 0
+                cur  = cur == 1 ? 0 : sol.visited_parent[cur]
+                hops += 1
+                @test hops ≤ n        # cycle guard
+            end
+        end
+
+        # MUTATION-PROOF (verified 2026-05-14, bead `padetaylor-d26`):
+        # in `src/PathNetwork.jl`, deleting the line
+        #   `parent_idx = length(visited_z)   # next step chains off this node`
+        # makes every node of a multi-step walk point at the walk's
+        # start node `idx_v` instead of its immediate predecessor.
+        # Invariant (d) then goes RED for every node ≥ 2 hops into a
+        # walk — its edge to `idx_v` has length k·h, not h.  Restored.
+    end
+
     @testset "PN.3.1: :steepest_descent path agrees with :min_u (pole-bridge)" begin
         # FW 2011 §5.4.1 (line 362-368) introduces `:steepest_descent`
         # as a perf-tuned alternative to `:min_u`: pick the wedge angle
