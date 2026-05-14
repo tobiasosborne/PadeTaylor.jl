@@ -17,6 +17,7 @@ using PadeTaylor
         @test isdefined(PadeTaylor, :LatticeDispatcher)
         @test isdefined(PadeTaylor, :CoordTransforms)
         @test isdefined(PadeTaylor, :SheetTracker)
+        @test isdefined(PadeTaylor, :Painleve)
     end
 
     # Per-module test files. Each file is a self-contained @testset.
@@ -40,4 +41,5 @@ using PadeTaylor
     include("fw_fig_41_test.jl")
     include("coord_transforms_test.jl")
     include("sheet_tracker_test.jl")
+    include("painleve_test.jl")
 end

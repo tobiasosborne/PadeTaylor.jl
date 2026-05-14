@@ -70,6 +70,7 @@ include("EdgeDetector.jl")
 include("LatticeDispatcher.jl")
 include("CoordTransforms.jl")
 include("SheetTracker.jl")
+include("Painleve.jl")
 
 # Public API (re-exported from sub-modules).
 using .Problems:    PadeTaylorProblem, solve_pade, PadeTaylorSolution, taylor_eval
@@ -84,6 +85,7 @@ using .CoordTransforms: pIII_transformed_rhs, pV_transformed_rhs,
                         pIII_z_to_ζ, pIII_ζ_to_z, pV_z_to_ζ, pV_ζ_to_z
 using .SheetTracker:    pVI_transformed_rhs,
                         winding_delta, accumulate_winding, sheet_index
+using .Painleve:        PainleveProblem
 
 # CommonSolve adapter: the algorithm struct is declared HERE in the main
 # module so users can construct it after `using PadeTaylor, CommonSolve`
@@ -117,6 +119,7 @@ export pIII_transformed_rhs, pV_transformed_rhs,
        pIII_z_to_ζ, pIII_ζ_to_z, pV_z_to_ζ, pV_ζ_to_z
 export pVI_transformed_rhs,
        winding_delta, accumulate_winding, sheet_index
+export PainleveProblem
 export PadeTaylorAlg
 
 end # module PadeTaylor

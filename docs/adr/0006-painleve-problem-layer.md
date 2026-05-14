@@ -1,11 +1,15 @@
 # ADR-0006 — `PainleveProblem` convenience layer
 
-**Status**: Proposed (2026-05-14) | **Bead**: `padetaylor-avl`
+**Status**: Accepted (2026-05-14) | **Bead**: `padetaylor-avl`
 **Context**: Design discussion 2026-05-14 — "is PadeTaylor.jl complete
 enough to provide a general-purpose Painlevé function?"  The honest
 answer (recorded below) is that the *solver* substrate is general, but
 per-equation *problem construction* is missing and lopsided, and a
 uniform `painleve()` value-function is the wrong abstraction.
+
+**Implementation note (2026-05-14)**: shipped as `src/Painleve.jl`
+(worklog 026).  Three points where the implementation refined this
+ADR's original sketch — see "Implementation refinements" below.
 
 ## Context
 
@@ -217,6 +221,41 @@ path-network machinery once written.
      rejected: `CoordTransforms` is specifically the *branch-point
      transform* module; PI/PII/PIV need no transform.  A dedicated
      `Painleve.jl` is the honest home and the discoverable entry point.
+
+## Implementation refinements (2026-05-14)
+
+Three points where `src/Painleve.jl` as shipped differs from this
+ADR's original sketch — each a small honesty/consistency fix found at
+implementation time:
+
+  1. **No separate `z0` kwarg for the transformed equations.**  The
+     sketch listed `PainleveProblem(:III; …, z0, u0, up0, zspan, …)`,
+     but `z0` is redundant — it is exactly `zspan[1]` (the IC point),
+     just as for the `:direct` equations.  All six constructors take
+     `(<params>, u0, up0, zspan, order)`; the IC point is `zspan[1]`.
+
+  2. **`:transformed` forwarding throws in v1; it does not auto-map.**
+     The sketch said the forwarding methods "map the solution
+     solve-frame → z on the way out".  In practice a `ζ`-frame
+     `PathNetworkSolution` cannot be *faithfully* round-tripped: its
+     per-node Padé store and step length `h` are intrinsically
+     `ζ`-frame and have no `z`-frame image.  Rather than return a
+     half-mapped result (silent confusion, against Rule 1), v1's
+     forwarding methods **throw** for `:transformed` problems, with a
+     message pointing the caller at `pp.problem` + `pp.from_frame`.
+     Faithful point-value remapping (`grid_*`, `visited_*` through
+     `from_frame`, Padé store left `ζ`-frame and documented) is bead
+     `padetaylor-soi`.
+
+  3. **No `bvp_solve` forwarding method.**  The sketch listed one, but
+     `bvp_solve(bvp_f, bvp_∂f_∂u, z_a, z_b, u_a, u_b; …)` takes RHS
+     closures + boundary data, not a `PadeTaylorProblem` — there is no
+     well-typed `bvp_solve(pp)` to write.  v1 ships `solve_pade` and
+     `path_network_solve` forwarding only.
+
+(Also minor: `to_frame` / `from_frame` are concrete type parameters on
+the struct, not abstract `::Function` fields — standard Julia
+type-stability hygiene.)
 
 ## Consequences
 
