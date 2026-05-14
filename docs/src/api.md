@@ -125,6 +125,12 @@ around whichever raw type the solver produced, with a uniform
 `grid_values(sol)`, and the accessors `equation` / `parameters` /
 `solutionname`.
 
+The named-transcendent constructors `tritronquee` and
+`hastings_mcleod` (ADR-0008) build the `PainleveProblem` for a
+specific, literature-pinned solution — the PI tritronquée and the
+PII (`α = 0`) Hastings–McLeod solution — with the cited initial
+condition and a `name` tag baked in.
+
 ```@autodocs
 Modules = [PadeTaylor.Painleve]
 Order   = [:module, :type, :function]

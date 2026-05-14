@@ -46,4 +46,5 @@ using PadeTaylor
     include("sheet_tracker_test.jl")
     include("painleve_test.jl")
     include("painleve_solution_test.jl")
+    include("painleve_named_test.jl")
 end

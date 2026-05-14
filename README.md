@@ -15,7 +15,7 @@ where naïve truncation diverges.
 **v0.1.0 — research-grade, all architectural tiers shipped.**  All
 four algorithmic layers and five composition tiers complete; the
 package is not yet registered in the Julia general registry.
-1590 / 1590 tests passing.
+1630 / 1630 tests passing.
 
 | Phase | Module / Feature | Status |
 |---|---|---|
@@ -38,6 +38,7 @@ package is not yet registered in the Julia general registry.
 | 14 | `SheetTracker` (PVI ζ-plane + winding, Tier 5) | ✅ shipped |
 | 15 | `Painleve.PainleveProblem` — per-equation problem builder (ADR-0006) | ✅ shipped |
 | 15+ | `Painleve.PainleveSolution` — self-describing solve-output wrapper (ADR-0007) | ✅ shipped |
+| 15++ | `tritronquee` / `hastings_mcleod` — named transcendent constructors (ADR-0008) | ✅ shipped |
 | 8+ | `PadeTaylorMakieExt` extension — Makie plot recipe for `PainleveSolution` | ✅ shipped |
 
 The headline empirical result for the FW 2011 Table 5.1 long-range

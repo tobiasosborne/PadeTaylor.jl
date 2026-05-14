@@ -88,6 +88,7 @@ import ..PathNetwork: path_network_solve
 
 export PainleveProblem, PainleveSolution
 export poles, grid_values, equation, parameters, solutionname
+export tritronquee, hastings_mcleod
 
 # -----------------------------------------------------------------------------
 # Canonical RHS factories for the no-transform equations (PI, PII, PIV).
@@ -127,9 +128,15 @@ Self-describing wrapper around a `PadeTaylorProblem` for one of the six
 Painlevé equations.  Fields: `equation::Symbol` (`:I`…`:VI`),
 `params::NamedTuple`, `problem` (the underlying `PadeTaylorProblem`,
 built in the solve-frame), `frame::Symbol` (`:direct` | `:transformed`),
-and the `to_frame` / `from_frame` coordinate maps `(z,u,up) ↔ (ζ,w,wp)`.
+the `to_frame` / `from_frame` coordinate maps `(z,u,up) ↔ (ζ,w,wp)`,
+and `name::Union{Symbol,Nothing}` — a named-solution tag
+(`:tritronquee`, `:hastings_mcleod`, …) set by the named-transcendent
+constructors (ADR-0008), or `nothing` for a problem built from explicit
+initial conditions.  `name` rides through the forwarding methods into
+`PainleveSolution.name`.
 
-Construct via `PainleveProblem(equation; kwargs...)` — see that method.
+Construct via `PainleveProblem(equation; kwargs...)` — see that method
+— or via a named constructor such as `tritronquee` / `hastings_mcleod`.
 """
 struct PainleveProblem{P, TF, FF}
     equation   :: Symbol
@@ -138,6 +145,7 @@ struct PainleveProblem{P, TF, FF}
     frame      :: Symbol
     to_frame   :: TF
     from_frame :: FF
+    name       :: Union{Symbol, Nothing}
 end
 
 # Identity (z,u,up) ↔ (z,u,up) map for the no-transform equations.
@@ -206,14 +214,15 @@ function _build_I(kw)
     _validate_kw(kw, :I, (:u0, :up0, :zspan), (:order,))
     prob = PadeTaylorProblem(_pI_rhs(), (kw.u0, kw.up0), kw.zspan;
                              order = get(kw, :order, 30))
-    return PainleveProblem(:I, (;), prob, :direct, _ident3, _ident3)
+    return PainleveProblem(:I, (;), prob, :direct, _ident3, _ident3, nothing)
 end
 
 function _build_II(kw)
     _validate_kw(kw, :II, (:α, :u0, :up0, :zspan), (:order,))
     prob = PadeTaylorProblem(_pII_rhs(kw.α), (kw.u0, kw.up0), kw.zspan;
                              order = get(kw, :order, 30))
-    return PainleveProblem(:II, (; α = kw.α), prob, :direct, _ident3, _ident3)
+    return PainleveProblem(:II, (; α = kw.α), prob, :direct,
+                           _ident3, _ident3, nothing)
 end
 
 function _build_IV(kw)
@@ -221,7 +230,7 @@ function _build_IV(kw)
     prob = PadeTaylorProblem(_pIV_rhs(kw.α, kw.β), (kw.u0, kw.up0), kw.zspan;
                              order = get(kw, :order, 30))
     return PainleveProblem(:IV, (; α = kw.α, β = kw.β),
-                           prob, :direct, _ident3, _ident3)
+                           prob, :direct, _ident3, _ident3, nothing)
 end
 
 # --- transformed-frame equations (PIII, PV, PVI) -----------------------------
@@ -240,7 +249,7 @@ function _build_transformed(kw, eq::Symbol, rhs, z_to_ζ, ζ_to_z,
     prob = PadeTaylorProblem(rhs, (w0, wp0), (ζ0, ζ_end);
                              order = get(kw, :order, 30))
     return PainleveProblem(eq, (; α = kw.α, β = kw.β, γ = kw.γ, δ = kw.δ),
-                           prob, :transformed, z_to_ζ, ζ_to_z)
+                           prob, :transformed, z_to_ζ, ζ_to_z, nothing)
 end
 
 _build_III(kw) = _build_transformed(
@@ -264,6 +273,13 @@ _build_VI(kw) = _build_transformed(
 # -----------------------------------------------------------------------------
 
 include("PainleveSolution.jl")
+
+# -----------------------------------------------------------------------------
+# Named-transcendent constructors (`tritronquee`, `hastings_mcleod`) —
+# specific literature-pinned solutions, the third file of this module.
+# -----------------------------------------------------------------------------
+
+include("PainleveNamed.jl")
 
 # -----------------------------------------------------------------------------
 # Forwarding methods — solver entry points that accept a `PainleveProblem`

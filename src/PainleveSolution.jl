@@ -88,8 +88,11 @@ struct PainleveSolution{S, TF, FF}
 end
 
 # Build from a `PainleveProblem` + the raw solve output it produced.
-# `name` stays `nothing` until the named-transcendent constructors land.
-_painleve_solution(pp::PainleveProblem, raw, name::Union{Symbol,Nothing} = nothing) =
+# `name` defaults to the problem's own tag — `nothing` for a problem
+# built from explicit ICs, `:tritronquee` / `:hastings_mcleod` / … for
+# one built by a named-transcendent constructor (ADR-0008).
+_painleve_solution(pp::PainleveProblem, raw,
+                   name::Union{Symbol,Nothing} = pp.name) =
     PainleveSolution(pp.equation, pp.params, name, pp.frame,
                      pp.to_frame, pp.from_frame, raw)
 
