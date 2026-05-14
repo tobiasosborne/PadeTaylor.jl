@@ -68,7 +68,18 @@ The headline long-range test.  Path-network walk from `z = 0` to
 `8.34e-14` relative absolute error at `z = 30` with `BF`-256 and
 order-30 Padé.  PadeTaylor.jl converges to **`2.13e-14`** on the same
 problem (worklog 008).  Lives in `test/pathnetwork_test.jl` under
-PN.2.2.
+PN.2.2.  `figures/fw2011_fig_5_1.jl` renders it: the analytic ℘ pole
+lattice (large dots) and the integrator path threading the low-`|u|`
+channel between the pole rows (worklog 025).
+
+### FW 2011 Fig 5.2 — the `(order, h)` accuracy/cost trade-off
+
+`figures/fw2011_fig_5_2.jl` sweeps `order ∈ 4:2:50` against
+`h ∈ 0.05:0.05:1.0` — 480 ℘ walks to `z = 30` — and draws the
+`log₁₀`(rel-err) surface plus smoothed accuracy/compute-time contours.
+The sweep minimum lands at `(order, h) = (30, 0.40)` with min rel-err
+`9.1e-15`, reproducing FW's central claim that `order = 30, h = 0.5`
+is the favourable choice (worklog 025).
 
 ### FW 2011 Fig 4.1 step (i) — tritronquée BVP pin
 

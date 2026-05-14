@@ -27,6 +27,8 @@ julia --project=figures figures/fw2011_fig_3_3.jl
 julia --project=figures figures/fw2011_fig_4_2.jl
 julia --project=figures figures/fw2011_fig_4_3.jl
 julia --project=figures figures/fw2011_fig_4_4.jl
+julia --project=figures figures/fw2011_fig_5_1.jl
+julia --project=figures figures/fw2011_fig_5_2.jl
 ```
 
 Each script prints timing + a one-line acceptance note and writes its
@@ -46,6 +48,8 @@ surface figures; it is not a runnable script.
 | `fw2011_fig_4_2.jl` | FW 2011 Fig 4.2 (`...md:231-241`) | real-axis `u(x)` curves: tronquée + near-tronquée cases with `u(0)=0`, two panels, `±√(-x/6)` leading-term branches |
 | `fw2011_fig_4_3.jl` | FW 2011 Fig 4.3 (`...md:243-245`) | `\|u(z)\|` pole-field surface, NIST Handbook example `u(0)=0, u'(0)=1.8518` |
 | `fw2011_fig_4_4.jl` | FW 2011 Fig 4.4 (`...md:253-255`) | `\|u(z)\|` pole-field surface, `u(0)=0, u'(0)=1.8519` — the tronquée-transition companion to Fig 4.3 |
+| `fw2011_fig_5_1.jl` | FW 2011 Fig 5.1 (`...md:281-318`) | Weierstrass-℘ test problem: analytic ℘ pole lattice + the Padé-integrator path to `z=30` |
+| `fw2011_fig_5_2.jl` | FW 2011 Fig 5.2 (`...md:320-326`) | `log₁₀`(rel-err) surface + accuracy/time contours over the `(order,h)` plane — the `order=30, h=0.5` justification |
 
 `...md` is `references/markdown/FW2011_painleve_methodology_JCP230/FW2011_painleve_methodology_JCP230.md`.
 
@@ -64,4 +68,7 @@ for the plotted real-axis curves (tronquée curves hugging the
 Fig 4.3 / 4.4 are visual pole-field matches whose near-identical pair
 brackets the tronquée transition. The fine quantitative pole-count
 pin for Fig 4.3/4.4 is a test-suite obligation (bead `padetaylor-p3l`),
-not part of the figure scripts.
+not part of the figure scripts. Fig 5.1 is a match for the ℘ pole
+lattice + integrator path; Fig 5.2 meets the catalogue's quantitative
+criterion — the `(order,h)` sweep minimum lands at `(30, 0.40)`
+(FW's `(30, 0.5)` within `±5/±0.1`) with min rel-err `9.1e-15`.
