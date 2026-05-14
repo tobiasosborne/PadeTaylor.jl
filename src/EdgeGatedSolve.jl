@@ -121,6 +121,10 @@ Output of `edge_gated_pole_field_solve`. Fields:
   - `pn_solution::PathNetworkSolution{T}` — the final IVP solve,
     confined to `field_mask` dilated by one ring. Pass *this* to
     `PoleField.extract_poles` for the sector-confined pole scatter.
+  - `u_grid::Matrix{Complex{T}}` — the final solve's `u` values
+    scattered onto the `(nx, ny)` lattice (`u_grid[i,j]` at
+    `xs[i] + im·ys[j]`); cells outside `field_mask` dilated by one
+    ring are `NaN + NaN·im`. The convenient 2D view of `pn_solution`.
   - `iterations::Int` — region-growing passes run before the fixpoint.
 """
 struct EdgeGatedSolution{T <: AbstractFloat}
@@ -128,6 +132,7 @@ struct EdgeGatedSolution{T <: AbstractFloat}
     ys          :: AbstractVector{T}
     field_mask  :: BitMatrix
     pn_solution :: PathNetworkSolution{T}
+    u_grid      :: Matrix{Complex{T}}
     iterations  :: Int
 end
 
@@ -338,9 +343,9 @@ function edge_gated_pole_field_solve(prob::PadeTaylorProblem,
 
     # --- Final solve over field + one thin frontier ring ------------------
     final_targets = _dilate(field, 1)
-    pn, _ = _solve_targets(prob, xs, ys, final_targets, h, order)
+    pn, u_grid = _solve_targets(prob, xs, ys, final_targets, h, order)
 
-    return EdgeGatedSolution{T}(xs, ys, field, pn, iters)
+    return EdgeGatedSolution{T}(xs, ys, field, pn, u_grid, iters)
 end
 
 end # module EdgeGatedSolve

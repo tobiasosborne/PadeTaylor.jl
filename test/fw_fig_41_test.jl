@@ -140,3 +140,128 @@ using PadeTaylor
     end
 
 end # @testset FW 2011 Fig 4.1
+
+# ======================================================================
+# Steps (ii) + (iii) — bead `padetaylor-gky`, worklog 029.
+#
+# Step (i) above pins the imaginary-axis BVP.  Steps (ii) and (iii)
+# compose it into the full Fig 4.1 (`figures/fw2011_fig_4_1.jl`):
+#   (ii)  run out the pole field with `edge_gated_pole_field_solve`
+#         from the BVP-derived IC at z = 0;
+#   (iii) fill the smooth band per grid line with `bvp_solve`.
+#
+# There is no in-tree quantitative oracle for PI tritronquée pole
+# *locations* (FW Table 5.1 is for the equianharmonic ℘, not PI — see
+# worklog 016 §"What is NOT shipped").  But the composition admits two
+# oracle-free cross-validations and one self-consistency check, all
+# pinned here:
+#   FF.2.1 — the step-(ii) IVP run-out and the step-(i) BVP spine must
+#            agree where they overlap (independent methods — spectral
+#            BVP vs. Taylor–Padé IVP — on the same solution).
+#   FF.2.2 — the step-(ii) run-out from a real IC is conjugate-
+#            symmetric near z = 0 (real ODE coefficients + real IC).
+#   FF.2.3 — the step-(iii) fill primitive: `bvp_solve` on a sub-
+#            segment of the imaginary axis, given exact spine values
+#            as BCs, reproduces the spine in the interior.
+# ======================================================================
+@testset "FW 2011 Fig 4.1 steps (ii)+(iii): BVP+IVP composition" begin
+
+    pI_ivp(z, u, up) = 6 * u^2 + z
+    bvp_f(z, u)      = 6 * u^2 + z
+    bvp_∂f_∂u(z, u)  = 12 * u
+    leading(z)       = -sqrt(-z / 6)
+
+    # Step (i): the imaginary-axis BVP spine (the recipe pinned above).
+    z_a, z_b = -20.0im, 20.0im
+    spine = bvp_solve(bvp_f, bvp_∂f_∂u, z_a, z_b, leading(z_a), leading(z_b);
+                      N = 240, initial_guess = leading, tol = 1e-13, maxiter = 20)
+    u0, up0 = spine(0.0 + 0.0im)
+
+    # Step (ii): edge-gated pole-field run-out from the BVP-derived IC.
+    # A small lattice over [-3,3] × [-3,9] — the seed disc around z = 0
+    # covers the imaginary axis near the origin (overlap with the
+    # spine) and reaches the first tritronquée pole at z ≈ 2.07.
+    xs = range(-3.0, 3.0; step = 0.5)
+    ys = range(-3.0, 9.0; step = 0.5)
+    i_axis = findfirst(x -> abs(x) < 0.25, xs)
+    prob0 = PadeTaylorProblem(pI_ivp, (real(u0), real(up0)),
+                              (0.0 + 0.0im, 3.0 + 0.0im); order = 30)
+    egs0 = edge_gated_pole_field_solve(prob0, xs, ys; h = 0.5, grow_rings = 3)
+
+    @testset "FF.2.1: step-(ii) IVP run-out ≡ step-(i) BVP spine" begin
+        # On the imaginary axis near z = 0 both methods describe the
+        # same near-tritronquée solution: the IVP propagates (u0,u'0)
+        # via Taylor–Padé, the BVP solves the 2-point problem
+        # spectrally.  Where the IVP run-out has a value on the x ≈ 0
+        # column, it must match `spine`.
+        worst = 0.0
+        ncheck = 0
+        for j in eachindex(ys)
+            u_ivp = egs0.u_grid[i_axis, j]
+            isfinite(u_ivp) || continue
+            u_bvp = spine(im * ys[j])[1]
+            worst = max(worst, abs(u_ivp - u_bvp))
+            ncheck += 1
+        end
+        @test ncheck ≥ 5                       # genuine overlap exists
+        @test worst ≤ 1e-6                     # independent methods agree
+    end
+
+    @testset "FF.2.2: step-(ii) run-out is conjugate-symmetric near z=0" begin
+        # Real ODE coefficients + real IC ⇒ u(z̄) = conj(u(z)).  The
+        # path-network's RNG-shuffled target order makes the visited
+        # tree asymmetric, so this holds tightly only near the IC
+        # (worklog 014); we check the seed neighbourhood |y| ≤ 2.
+        worst = 0.0
+        ncheck = 0
+        for j in eachindex(ys), i in eachindex(xs)
+            y = ys[j]
+            (0 < y ≤ 2.0) || continue
+            jm = findfirst(yy -> abs(yy + y) < 0.25, ys)   # row at -y
+            jm === nothing && continue
+            u_up = egs0.u_grid[i, j]
+            u_dn = egs0.u_grid[i, jm]
+            (isfinite(u_up) && isfinite(u_dn)) || continue
+            worst = max(worst, abs(u_up - conj(u_dn)))
+            ncheck += 1
+        end
+        @test ncheck ≥ 5
+        @test worst ≤ 1e-6
+    end
+
+    @testset "FF.2.3: step-(iii) BVP fill reproduces the spine from exact anchors" begin
+        # The step-(iii) primitive is a `bvp_solve` over a smooth run
+        # bridged between known anchors.  Given EXACT anchors — the
+        # spine values at the ends of an imaginary-axis sub-segment —
+        # the fill must reproduce the spine in the interior.
+        za, zb = 2.0im, 8.0im
+        fill_sol = bvp_solve(bvp_f, bvp_∂f_∂u, za, zb,
+                             spine(za)[1], spine(zb)[1];
+                             N = 60, initial_guess = leading, maxiter = 25)
+        worst = 0.0
+        for y in (3.0, 4.0, 5.0, 6.0, 7.0)
+            worst = max(worst, abs(fill_sol(im * y)[1] - spine(im * y)[1]))
+        end
+        @test worst ≤ 1e-8
+    end
+
+end # @testset FW 2011 Fig 4.1 steps (ii)+(iii)
+
+# ----------------------------------------------------------------------
+# Mutation-proof procedure (steps (ii)+(iii) testsets).
+#
+#   M1 — break the step-(ii)/step-(i) link.  In FF.2.1, compare
+#        `egs0.u_grid` against `spine(im*ys[j] + 1.0)` (shift the spine
+#        evaluation point by 1).  `worst` jumps far above 1e-6 — the
+#        test genuinely pins that the two methods describe the *same*
+#        solution at the *same* points.
+#   M2 — break conjugacy.  In FF.2.2, compare against `egs0.u_grid[i,j]`
+#        (the same cell) instead of the reflected `[i,jm]`; `worst`
+#        becomes a non-trivial cell-to-cell difference and the ≤1e-6
+#        bound fails on the off-axis cells.
+#   M3 — wrong anchors.  In FF.2.3, pass `leading(za), leading(zb)`
+#        (the crude asymptote) instead of the exact `spine` values;
+#        the short segment does not smooth the BC error out and `worst`
+#        rises well above 1e-8.
+# Each verified RED then reverted.
+# ----------------------------------------------------------------------

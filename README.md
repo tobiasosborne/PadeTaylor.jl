@@ -15,7 +15,7 @@ where naïve truncation diverges.
 **v0.1.0 — research-grade, all architectural tiers shipped.**  All
 four algorithmic layers and five composition tiers complete; the
 package is not yet registered in the Julia general registry.
-1521 / 1521 tests passing.
+1526 / 1526 tests passing.
 
 | Phase | Module / Feature | Status |
 |---|---|---|

@@ -51,14 +51,17 @@ function pole_field_figure(xs, ys, Z;
                            title::AbstractString,
                            ucap::Real = 50.0,
                            zlabel::AbstractString = "|u(z)|",
+                           aspect = (1.0, 1.0, 0.45),
                            size = (950, 720))
     fig = Figure(; size = size)
     ax  = Axis3(fig[1, 1];
                 xlabel = "x", ylabel = "y", zlabel = zlabel, title = title,
                 # Look down at ~30°, z compressed: the unbounded pole
                 # spikes stay readable without flattening the xy field.
+                # `aspect` defaults to a square xy footprint; pass a
+                # custom tuple for a non-square domain (e.g. Fig 4.1).
                 azimuth = 1.30π, elevation = 0.16π,
-                aspect = (1.0, 1.0, 0.45),
+                aspect = aspect,
                 zticks = 0:10:Int(ucap))
     surface!(ax, xs, ys, Z; colormap = :viridis, colorrange = (0.0, Float64(ucap)))
     wireframe!(ax, xs, ys, Z; color = (:black, 0.15), linewidth = 0.3)
