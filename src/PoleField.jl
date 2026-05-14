@@ -10,6 +10,14 @@ of where the Painlevé-I solution's poles sit in the complex plane.
 The `PathNetwork` driver already carries everything needed to draw
 them; it just never reads it back out.
 
+`extract_poles` accepts two solution sources, because two solvers
+carry a per-node Padé store: a `PathNetworkSolution` (the FW Fig
+4.7/4.8 case — a fan of overlapping nodes) and a `PadeTaylorSolution`
+(a single `solve_pade` trajectory — a chain of segments).  The
+extraction procedure is identical for both; only the per-node arrays
+they expose differ, and the shared `_extract_poles_core` below is
+where the logic actually lives.
+
 At every visited node `z_v` the path-network stores one local Padé
 approximant `P(t) = N(t) / D(t)` in the rescaled variable
 `t = (z - z_v) / h` (see `PathNetwork`'s module docstring and the
@@ -89,8 +97,76 @@ module PoleField
 using Polynomials: Polynomial, roots, derivative
 using ..RobustPade:  PadeApproximant
 using ..PathNetwork: PathNetworkSolution
+using ..Problems:    PadeTaylorSolution
 
 export extract_poles
+
+# -----------------------------------------------------------------------------
+# Shared core
+# -----------------------------------------------------------------------------
+# Both the path-network and the single-trajectory `extract_poles` methods do
+# the same thing: walk a sequence of node-local Padé approximants, each with
+# its own centre `z_ctr` and canonical step `h`, take the denominator roots
+# `t*` mapped to the `z`-plane (`z = z_ctr + h·t*`), filter the untrustworthy
+# ones, and cluster what survives. The only difference between the two callers
+# is *where the per-node arrays live* — `visited_*` on a `PathNetworkSolution`,
+# `z` / `pade` / `h` on a `PadeTaylorSolution` (a single `solve_pade`
+# trajectory carries exactly the same per-segment Padé store). So the logic
+# lives once, here, and the two public methods are thin adapters that hand it
+# the right three arrays. `centers` may be longer than `pades` / `hs` (a
+# `PadeTaylorSolution` stores `n+1` breakpoints but `n` segments); iteration is
+# over `eachindex(hs)`, so the trailing breakpoint is harmlessly ignored.
+function _extract_poles_core(centers, pades, hs;
+                             radius_t::Real, min_residue::Real,
+                             cluster_atol::Real, min_support::Integer)
+    RT     = real(float(eltype(centers)))
+    CT     = Complex{RT}
+    radius = RT(radius_t)
+    minres = RT(min_residue)
+    catol  = RT(cluster_atol)
+
+    # (pole_z, |t*|, node-index) candidates gathered from every node.
+    candidates = Tuple{CT, RT, Int}[]
+    for k in eachindex(hs)
+        P     = pades[k]
+        z_ctr = centers[k]
+        h     = hs[k]
+
+        # A constant denominator (b == [1]) has no roots — the local
+        # Padé is a polynomial, no poles to report from this node.
+        length(P.b) ≥ 2 || continue
+
+        D  = Polynomial(P.b)
+        N  = Polynomial(P.a)
+        Dp = derivative(D)
+
+        for t in roots(D)
+            abs(t) ≤ radius || continue           # far-root artefact
+            res = N(t) / Dp(t)                    # Padé residue at t*
+            (isfinite(res) && abs(res) ≥ minres) || continue   # Froissart
+            push!(candidates, (CT(z_ctr + h * t), RT(abs(t)), k))
+        end
+    end
+
+    # Greedy clustering in increasing |t*|: the first (best-placed)
+    # candidate to land in a cluster becomes its representative; later
+    # candidates only contribute cross-node support. A cluster is a
+    # physical pole only when ≥ min_support distinct nodes land a root
+    # in it — node-local artefacts never accrue cross-node support.
+    sort!(candidates; by = c -> c[2])
+    reps    = CT[]                    # cluster representatives
+    support = Vector{Set{Int}}()      # distinct source nodes per cluster
+    for (p, _, k) in candidates
+        j = findfirst(r -> abs(p - r) ≤ catol, reps)
+        if j === nothing
+            push!(reps, p)
+            push!(support, Set{Int}((k,)))
+        else
+            push!(support[j], k)
+        end
+    end
+    return [reps[j] for j in eachindex(reps) if length(support[j]) ≥ min_support]
+end
 
 """
     extract_poles(sol::PathNetworkSolution{T};
@@ -125,56 +201,51 @@ Each reported pole is the cluster representative — the candidate seen
 at the smallest `|t*|`, i.e. by the closest node. Returns one
 `Complex{T}` per physical pole, in order of discovery.
 """
-function extract_poles(sol::PathNetworkSolution{T};
-                       radius_t::Real      = 5.0,
-                       min_residue::Real   = 1.0e-8,
-                       cluster_atol::Real  = 1.0e-1,
-                       min_support::Integer = 3) where {T}
-    radius = T(radius_t)
-    minres = T(min_residue)
-    catol  = T(cluster_atol)
+extract_poles(sol::PathNetworkSolution{T};
+              radius_t::Real       = 5.0,
+              min_residue::Real    = 1.0e-8,
+              cluster_atol::Real   = 1.0e-1,
+              min_support::Integer = 3) where {T} =
+    _extract_poles_core(sol.visited_z, sol.visited_pade, sol.visited_h;
+                        radius_t, min_residue, cluster_atol, min_support)
 
-    # (pole_z, |t*|, node) candidates gathered from every visited node.
-    candidates = Tuple{Complex{T}, T, Int}[]
-    for k in eachindex(sol.visited_z)
-        P   = sol.visited_pade[k]
-        z_v = sol.visited_z[k]
-        h   = sol.visited_h[k]
+"""
+    extract_poles(sol::PadeTaylorSolution;
+                  radius_t     = 5.0,
+                  min_residue  = 1.0e-8,
+                  cluster_atol = 1.0e-1,
+                  min_support  = 1) -> Vector{<:Complex}
 
-        # A constant denominator (b == [1]) has no roots — the local
-        # Padé is a polynomial, no poles to report from this node.
-        length(P.b) ≥ 2 || continue
+Pole locations of a single-trajectory `solve_pade` result, in the
+`z`-plane.
 
-        D  = Polynomial(P.b)
-        N  = Polynomial(P.a)
-        Dp = derivative(D)
+A `PadeTaylorSolution` carries the same per-segment Padé store a
+`PathNetworkSolution` does — `sol.pade[k]` is the local approximant
+covering segment `k`, centred at `sol.z[k]` with canonical step
+`sol.h[k]` — so its poles are extracted by exactly the same
+denominator-root / residue-filter / clustering procedure (see the
+module docstring); only the array names differ.
 
-        for t in roots(D)
-            abs(t) ≤ radius || continue           # far-root artefact
-            res = N(t) / Dp(t)                    # Padé residue at t*
-            (isfinite(res) && abs(res) ≥ minres) || continue   # Froissart
-            push!(candidates, (z_v + h * t, abs(t), k))
-        end
-    end
+The one changed default is `min_support = 1`.  The path-network method
+defaults to `3` because its raison d'être is *cross-node* agreement —
+a physical pole is seen by many overlapping nodes.  A single
+`solve_pade` trajectory is a chain, not a fan: a given pole is
+typically bracketed by only one or two consecutive segments, so
+demanding three independent sightings would discard every real pole.
+A single-trajectory solve is the "single-node network" case the
+path-network docstring already flags for `min_support = 1`.  Raise it
+only if the trajectory genuinely revisits a region from independent
+segments.
 
-    # Greedy clustering in increasing |t*|: the first (best-placed)
-    # candidate to land in a cluster becomes its representative; later
-    # candidates only contribute cross-node support. A cluster is a
-    # physical pole only when ≥ min_support distinct nodes land a root
-    # in it — node-local artefacts never accrue cross-node support.
-    sort!(candidates; by = c -> c[2])
-    reps    = Complex{T}[]            # cluster representatives
-    support = Vector{Set{Int}}()     # distinct source nodes per cluster
-    for (p, _, k) in candidates
-        j = findfirst(r -> abs(p - r) ≤ catol, reps)
-        if j === nothing
-            push!(reps, p)
-            push!(support, Set{Int}((k,)))
-        else
-            push!(support[j], k)
-        end
-    end
-    return [reps[j] for j in eachindex(reps) if length(support[j]) ≥ min_support]
-end
+`radius_t`, `min_residue`, `cluster_atol` carry the same meaning as in
+the `PathNetworkSolution` method.
+"""
+extract_poles(sol::PadeTaylorSolution;
+              radius_t::Real       = 5.0,
+              min_residue::Real    = 1.0e-8,
+              cluster_atol::Real   = 1.0e-1,
+              min_support::Integer = 1) =
+    _extract_poles_core(sol.z, sol.pade, sol.h;
+                        radius_t, min_residue, cluster_atol, min_support)
 
 end # module PoleField

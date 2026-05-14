@@ -114,3 +114,33 @@ Order   = [:module, :type, :function]
 Modules = [PadeTaylor.SheetTracker]
 Order   = [:module, :type, :function]
 ```
+
+## Painlevé layer — `Painleve`
+
+The per-equation problem builder `PainleveProblem` (ADR-0006) and the
+self-describing solve-output wrapper `PainleveSolution` (ADR-0007).
+`PainleveSolution` carries the Painlevé identity + coordinate frame
+around whichever raw type the solver produced, with a uniform
+`z`-frame access surface: the callable `sol(z)`, `poles(sol)`,
+`grid_values(sol)`, and the accessors `equation` / `parameters` /
+`solutionname`.
+
+```@autodocs
+Modules = [PadeTaylor.Painleve]
+Order   = [:module, :type, :function]
+```
+
+## Package extensions
+
+Three extensions load automatically when their trigger package is
+present alongside `PadeTaylor`:
+
+  - **`PadeTaylorMakieExt`** (`Makie`) — provides the `painleveplot`
+    method, a complex-`z`-plane plot recipe for `PainleveSolution`.
+  - **`PadeTaylorArblibExt`** (`Arblib`) — routes `Arb` / `Acb`
+    element types through `pade_svd`.
+  - **`PadeTaylorCommonSolveExt`** (`CommonSolve`) — wires
+    `PadeTaylorProblem` + `PadeTaylorAlg` into the
+    `init` / `step!` / `solve!` interface.
+
+(`painleveplot`'s docstring is listed under the umbrella module above.)

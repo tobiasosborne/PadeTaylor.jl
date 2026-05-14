@@ -127,47 +127,57 @@ using PadeTaylor
             zspan = (1.0 + 0im, 3.0 + 0im))                # z = 1 branch pt
     end
 
-    @testset "PV.3.1: forwarding -- :direct transparent, :transformed throws" begin
+    @testset "PV.3.1: forwarding returns PainleveSolution (ADR-0007)" begin
         # PII α=0, u(0)=0, u'(0)=1 -- smooth near the origin.
         pp = PainleveProblem(:II; α = 0.0, u0 = 0.0, up0 = 1.0,
                              zspan = (0.0, 0.5))
 
-        # path_network_solve(pp, grid) ≡ path_network_solve(pp.problem, grid).
+        # :direct forwarding wraps the raw solve output in a
+        # PainleveSolution whose `.raw` is identical to the direct call.
         grid = ComplexF64[0.2 + 0.0im, 0.1 + 0.2im, -0.2 + 0.1im]
         sol_pp  = path_network_solve(pp, grid; h = 0.5)
         sol_raw = path_network_solve(pp.problem, grid; h = 0.5)
-        @test sol_pp.grid_u == sol_raw.grid_u
-        @test sol_pp.grid_up == sol_raw.grid_up
+        @test sol_pp isa PainleveSolution
+        @test sol_pp.equation == :II && sol_pp.frame == :direct
+        @test sol_pp.raw.grid_u == sol_raw.grid_u
+        @test sol_pp.raw.grid_up == sol_raw.grid_up
 
-        # solve_pade(pp; …) ≡ solve_pade(pp.problem; …).
         sp_pp  = solve_pade(pp; h_max = 0.5)
         sp_raw = solve_pade(pp.problem; h_max = 0.5)
-        @test sp_pp.y == sp_raw.y
+        @test sp_pp isa PainleveSolution
+        @test sp_pp.raw.y == sp_raw.y
 
-        # :transformed problems throw -- the ζ-frame solution cannot be
-        # faithfully round-tripped (module docstring / ADR-0006).
+        # :transformed problems (ADR-0007 supersedes ADR-0006 ref. #2):
+        # path_network_solve now works -- it maps the z-frame grid into
+        # the ζ-frame, solves, and returns a PainleveSolution.  solve_pade
+        # still throws for a complex ζ-domain (real-axis stepping is
+        # undefined there) -- now pointing the caller at path_network_solve.
         ppIII = PainleveProblem(:III; α = 1.0, β = 0.5, γ = 0.25, δ = 0.1,
                                 u0 = 0.3 + 0im, up0 = 0.4 + 0im,
                                 zspan = (2.0 + 0im, 4.0 + 0im))
-        @test_throws ArgumentError path_network_solve(ppIII,
-            ComplexF64[0.0 + 0im]; h = 0.5)
+        solIII = path_network_solve(ppIII, ComplexF64[2.5 + 0im]; h = 0.5)
+        @test solIII isa PainleveSolution
+        @test solIII.frame == :transformed
         @test_throws ArgumentError solve_pade(ppIII; h_max = 0.5)
     end
 
     @testset "PV.4.1: end-to-end -- PII pole field is finite" begin
         # PII with α = 0, u(0) = 0, u'(0) = 1: a real solution, smooth
         # near the origin.  The path network over a small grid must
-        # return finite values at every cell.
+        # return finite values at every cell.  The forwarding method
+        # returns a PainleveSolution; the grid is read via grid_values.
         pp = PainleveProblem(:II; α = 0.0, u0 = 0.0, up0 = 1.0,
                              zspan = (0.0, 2.0))
         grid = ComplexF64[x + im * y for x in -0.6:0.3:0.6
                                      for y in -0.6:0.3:0.6]
         sol = path_network_solve(pp, grid; h = 0.5)
-        @test all(isfinite, real.(sol.grid_u))
-        @test all(isfinite, imag.(sol.grid_u))
-        @test all(isfinite, real.(sol.grid_up))
-        @test length(sol.visited_z) ≥ 1
-        @test sol.grid_z == grid                           # input order preserved
+        @test sol isa PainleveSolution
+        gz, gu, gup = grid_values(sol)
+        @test all(isfinite, real.(gu))
+        @test all(isfinite, imag.(gu))
+        @test all(isfinite, real.(gup))
+        @test length(sol.raw.visited_z) ≥ 1
+        @test gz == grid                                   # input order preserved
     end
 
 end # @testset Painleve
@@ -183,8 +193,15 @@ end # @testset Painleve
 #     `5 * z * u^2`.
 #   Bite: PV.1.3's `f(z,u,up) ≈ expected` goes RED.  Restored.
 #
-#   Mutation C -- drop the `_forward_guard` call from
-#     `path_network_solve(pp::PainleveProblem, …)`.
-#   Bite: PV.3.1's `@test_throws ArgumentError path_network_solve(ppIII, …)`
-#   goes RED (the transformed problem no longer throws; it runs the
-#   path network in the ζ-frame and returns a solution).  Restored.
+#   Mutation C -- in `src/Painleve.jl`'s `solve_pade(pp::PainleveProblem)`,
+#     invert the transformed-frame guard condition: change
+#     `pp.frame === :transformed && eltype(pp.problem.zspan) <: Complex`
+#     to `pp.frame === :direct && …`.
+#   Bite: PV.3.1's `@test_throws ArgumentError solve_pade(ppIII, …)` goes
+#   RED -- the complex-ζ transformed problem no longer hits the guard, so
+#   solve_pade runs and errors on `<(::Complex, ::Complex)` instead of
+#   the expected ArgumentError.  Restored.
+#
+#   (Forwarding behaviour beyond the guard -- the PainleveSolution wrap,
+#   the :transformed grid mapping, the z-frame access surface -- is
+#   mutation-proven in `test/painleve_solution_test.jl`.)

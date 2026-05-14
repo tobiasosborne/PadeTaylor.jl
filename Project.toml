@@ -14,16 +14,19 @@ TaylorSeries         = "6aa5eb33-94cf-58f4-a9d0-e4b2c4fc25ea"
 [weakdeps]
 Arblib      = "fb37089c-8514-4489-9461-98f9c8763369"
 CommonSolve = "38540f10-b2f7-11e9-35d8-d573e4eb0ff2"
+Makie       = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 
 [extensions]
 PadeTaylorArblibExt = "Arblib"
 PadeTaylorCommonSolveExt = "CommonSolve"
+PadeTaylorMakieExt = "Makie"
 
 [compat]
 Arblib = "1"
 CommonSolve = "0.2"
 GenericLinearAlgebra = "0.3"
 LinearAlgebra = "1"
+Makie = "0.24"
 Polynomials = "4"
 TaylorSeries = "0.21"
 julia = "1.10"
@@ -31,7 +34,8 @@ julia = "1.10"
 [extras]
 Arblib = "fb37089c-8514-4489-9461-98f9c8763369"
 CommonSolve = "38540f10-b2f7-11e9-35d8-d573e4eb0ff2"
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Arblib", "CommonSolve", "Test"]
+test = ["Arblib", "CommonSolve", "Makie", "Test"]

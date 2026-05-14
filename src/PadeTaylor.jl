@@ -93,7 +93,8 @@ using .CoordTransforms: pIII_transformed_rhs, pV_transformed_rhs,
                         pIII_z_to_ζ, pIII_ζ_to_z, pV_z_to_ζ, pV_ζ_to_z
 using .SheetTracker:    pVI_transformed_rhs,
                         winding_delta, accumulate_winding, sheet_index
-using .Painleve:        PainleveProblem
+using .Painleve:        PainleveProblem, PainleveSolution,
+                        poles, grid_values, equation, parameters, solutionname
 
 # CommonSolve adapter: the algorithm struct is declared HERE in the main
 # module so users can construct it after `using PadeTaylor, CommonSolve`
@@ -115,6 +116,22 @@ end
 PadeTaylorAlg(; h_max::Real, max_steps::Integer = 100_000) =
     PadeTaylorAlg{typeof(h_max)}(h_max, Int(max_steps))
 
+"""
+    painleveplot(sol::PainleveSolution; kwargs...) -> Makie.Figure
+
+Plot a `PainleveSolution` in the complex `z`-plane: the solution's
+trajectory (for a `solve_pade` result) or evaluation grid (for a
+`path_network_solve` result), with its extracted poles overlaid.
+
+The method is provided by the `PadeTaylorMakieExt` package extension —
+it exists only when `Makie` (e.g. via `CairoMakie` / `GLMakie`) is
+loaded alongside `PadeTaylor`.  Calling it without a Makie load gives a
+`MethodError`.  Per ADR-0003 the extension is presentation-only: it
+reads `PainleveSolution` fields and calls `poles` / `grid_values`,
+nothing more.
+"""
+function painleveplot end
+
 export PadeTaylorProblem, solve_pade, PadeTaylorSolution, taylor_eval
 export robust_pade, PadeApproximant
 export taylor_coefficients_1st, taylor_coefficients_2nd
@@ -129,7 +146,9 @@ export pIII_transformed_rhs, pV_transformed_rhs,
        pIII_z_to_ζ, pIII_ζ_to_z, pV_z_to_ζ, pV_ζ_to_z
 export pVI_transformed_rhs,
        winding_delta, accumulate_winding, sheet_index
-export PainleveProblem
+export PainleveProblem, PainleveSolution
+export poles, grid_values, equation, parameters, solutionname
 export PadeTaylorAlg
+export painleveplot
 
 end # module PadeTaylor

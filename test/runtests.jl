@@ -40,8 +40,10 @@ using PadeTaylor
     include("edge_gated_solve_test.jl")
     include("ext_commonsolve_test.jl")
     include("ext_arblib_test.jl")
+    include("ext_makie_test.jl")
     include("fw_fig_41_test.jl")
     include("coord_transforms_test.jl")
     include("sheet_tracker_test.jl")
     include("painleve_test.jl")
+    include("painleve_solution_test.jl")
 end

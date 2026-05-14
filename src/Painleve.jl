@@ -49,18 +49,23 @@ the natural `z`-frame; the constructor maps the IC into the `ζ`-frame
 and builds the `PadeTaylorProblem` there.  `to_frame` /  `from_frame`
 are the `(z,u,up) ↔ (ζ,w,wp)` maps.
 
-## Forwarding methods — v1 scope
+## Forwarding methods + `PainleveSolution`
 
 `solve_pade(pp; …)` and `path_network_solve(pp, grid; …)` accept a
-`PainleveProblem` directly.  For `:direct` problems they forward
-transparently to `pp.problem` (clean now that the solvers honour
-`prob.order`, bead `padetaylor-9xf`).  For `:transformed` problems
-they **throw**: a `ζ`-frame `PathNetworkSolution` cannot be faithfully
-round-tripped — its per-node Padé store and step length `h` are
-intrinsically `ζ`-frame and have no `z`-frame image.  Callers of a
-`:transformed` problem pass `pp.problem` to the solver themselves and
-map point values back with `pp.from_frame`.  Automatic remapping for
-the transformed frame is a documented follow-up (`padetaylor-soi`).
+`PainleveProblem` directly and return a `PainleveSolution` — the
+self-describing solve-output wrapper defined in
+`src/PainleveSolution.jl` (`include`d into this module; ADR-0007).
+For `:direct` problems they forward transparently to `pp.problem`
+(clean now that the solvers honour `prob.order`, bead
+`padetaylor-9xf`).  For `:transformed` problems the two methods
+differ: `path_network_solve` handles the complex `ζ`-domain, so it
+maps the caller's `z`-frame grid into the `ζ`-frame, solves, and the
+returned `PainleveSolution` presents `z`-frame poles / grid values;
+`solve_pade` does real-axis stepping and therefore serves a
+`:transformed` problem only when its `ζ`-domain is real-typed,
+throwing a `path_network_solve`-pointing message otherwise.  ADR-0007
+records the reasoning and supersedes ADR-0006 refinement #2 (the
+earlier "`:transformed` forwarding throws" decision).
 
 ## References
 
@@ -71,7 +76,9 @@ the transformed frame is a documented follow-up (`padetaylor-soi`).
 """
 module Painleve
 
-using ..Problems:        PadeTaylorProblem
+using ..Problems:        PadeTaylorProblem, PadeTaylorSolution
+using ..PathNetwork:     PathNetworkSolution
+using ..PoleField:       extract_poles
 using ..CoordTransforms: pIII_transformed_rhs, pV_transformed_rhs,
                          pIII_z_to_ζ, pIII_ζ_to_z, pV_z_to_ζ, pV_ζ_to_z
 using ..SheetTracker:    pVI_transformed_rhs
@@ -79,7 +86,8 @@ using ..SheetTracker:    pVI_transformed_rhs
 import ..Problems:    solve_pade
 import ..PathNetwork: path_network_solve
 
-export PainleveProblem
+export PainleveProblem, PainleveSolution
+export poles, grid_values, equation, parameters, solutionname
 
 # -----------------------------------------------------------------------------
 # Canonical RHS factories for the no-transform equations (PI, PII, PIV).
@@ -250,41 +258,66 @@ _build_VI(kw) = _build_transformed(
     pV_z_to_ζ, pV_ζ_to_z, (0, 1))
 
 # -----------------------------------------------------------------------------
-# Forwarding methods (v1: :direct transparent, :transformed throws)
+# The PainleveSolution wrapper (struct + z-frame access surface).
+# Included here so the forwarding methods below can construct it; it is
+# part of `module Painleve`, one conceptual namespace with the builder.
 # -----------------------------------------------------------------------------
 
-function _forward_guard(pp::PainleveProblem, fn::AbstractString)
-    pp.frame === :direct || throw(ArgumentError(
-        "PainleveProblem: `$fn(::PainleveProblem, …)` forwarding is v1-" *
-        "implemented for the no-transform equations (PI, PII, PIV) only.  " *
-        "`:$(pp.equation)` is solved in a transformed ζ-frame whose Padé " *
-        "store has no z-frame image; pass `pp.problem` to `$fn` directly " *
-        "and map point values back with `pp.from_frame`.  Automatic " *
-        "round-tripping is a documented follow-up (ADR-0006)."))
-end
+include("PainleveSolution.jl")
+
+# -----------------------------------------------------------------------------
+# Forwarding methods — solver entry points that accept a `PainleveProblem`
+# and return a self-describing `PainleveSolution` (ADR-0007).
+# -----------------------------------------------------------------------------
+# Both unwrap to the underlying `PadeTaylorProblem`, call the equation-
+# agnostic solver, and re-wrap with the Painlevé identity + frame maps.
+# `:direct` problems forward transparently.  `:transformed` problems
+# differ by solver — see the module docstring's "Forwarding methods"
+# section for the reasoning.
 
 """
-    solve_pade(pp::PainleveProblem; kwargs...)
+    solve_pade(pp::PainleveProblem; kwargs...) -> PainleveSolution
 
-Forward to `solve_pade(pp.problem; kwargs...)` for `:direct` problems
-(PI / PII / PIV).  Throws for `:transformed` problems — see the module
-docstring.
+Solve the Painlevé problem with the fixed-step Padé-Taylor integrator
+and wrap the result in a `PainleveSolution`.  `:direct` problems (PI /
+PII / PIV) forward transparently.  A `:transformed` problem (PIII / PV /
+PVI) is served only when its `ζ`-domain is real-typed; a complex
+`ζ`-domain throws — `solve_pade` does real-axis stepping — with a
+suggestion to use `path_network_solve`.
 """
 function solve_pade(pp::PainleveProblem; kwargs...)
-    _forward_guard(pp, "solve_pade")
-    return solve_pade(pp.problem; kwargs...)
+    if pp.frame === :transformed && eltype(pp.problem.zspan) <: Complex
+        throw(ArgumentError(
+            "solve_pade(::PainleveProblem): the :$(pp.equation) problem is " *
+            "solved in a transformed ζ-frame with a *complex* ζ-domain, but " *
+            "solve_pade does fixed-step real-axis stepping (`state.z < " *
+            "z_end` is undefined for complex z).  Suggestion: use " *
+            "`path_network_solve(pp, grid)` for transformed-frame problems " *
+            "— it handles the complex ζ-domain and returns a z-frame " *
+            "PainleveSolution.  (solve_pade does serve a :transformed " *
+            "problem whose ζ-domain is genuinely real, i.e. built from " *
+            "real-valued ICs and span.)"))
+    end
+    return _painleve_solution(pp, solve_pade(pp.problem; kwargs...))
 end
 
 """
-    path_network_solve(pp::PainleveProblem, grid; kwargs...)
+    path_network_solve(pp::PainleveProblem, grid; kwargs...) -> PainleveSolution
 
-Forward to `path_network_solve(pp.problem, grid; kwargs...)` for
-`:direct` problems (PI / PII / PIV).  Throws for `:transformed`
-problems — see the module docstring.
+Solve the Painlevé problem with the FW 2011 §3.1 path-network over
+`grid` and wrap the result in a `PainleveSolution`.  `grid` is given in
+the natural `z`-frame: for a `:transformed` problem (PIII / PV / PVI) it
+is mapped into the `ζ`-frame before solving, and the returned
+solution's `poles` / `grid_values` map back to the `z`-frame.
 """
 function path_network_solve(pp::PainleveProblem, grid; kwargs...)
-    _forward_guard(pp, "path_network_solve")
-    return path_network_solve(pp.problem, grid; kwargs...)
+    if pp.frame === :direct
+        raw = path_network_solve(pp.problem, grid; kwargs...)
+    else
+        ζgrid = [_coord(pp.to_frame, z) for z in grid]
+        raw   = path_network_solve(pp.problem, ζgrid; kwargs...)
+    end
+    return _painleve_solution(pp, raw)
 end
 
 end # module Painleve

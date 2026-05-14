@@ -15,7 +15,7 @@ where naïve truncation diverges.
 **v0.1.0 — research-grade, all architectural tiers shipped.**  All
 four algorithmic layers and five composition tiers complete; the
 package is not yet registered in the Julia general registry.
-1526 / 1526 tests passing.
+1590 / 1590 tests passing.
 
 | Phase | Module / Feature | Status |
 |---|---|---|
@@ -36,6 +36,9 @@ package is not yet registered in the Julia general registry.
 | 12+ | `EdgeGatedSolve.edge_gated_pole_field_solve` — IVP confined to pole fields (FW md:401) | ✅ shipped |
 | 13 | `CoordTransforms` (PIII / PV, Tier 4) | ✅ shipped |
 | 14 | `SheetTracker` (PVI ζ-plane + winding, Tier 5) | ✅ shipped |
+| 15 | `Painleve.PainleveProblem` — per-equation problem builder (ADR-0006) | ✅ shipped |
+| 15+ | `Painleve.PainleveSolution` — self-describing solve-output wrapper (ADR-0007) | ✅ shipped |
+| 8+ | `PadeTaylorMakieExt` extension — Makie plot recipe for `PainleveSolution` | ✅ shipped |
 
 The headline empirical result for the FW 2011 Table 5.1 long-range
 integration of the equianharmonic Weierstrass-℘ function to `z = 30`

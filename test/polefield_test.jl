@@ -25,7 +25,9 @@
 # PF.1.2 (full pole field over a 2D grid — no spurious poles, all
 # in-region lattice poles recovered, conjugate symmetry), PF.2.1
 # (degenerate-network edge case), PF.2.2 (the cross-node-support filter
-# is load-bearing).  Mutation-proof procedure is in the file footer.
+# is load-bearing), PF.3.* (bead `padetaylor-26r` — extraction from a
+# single-trajectory `solve_pade` result, `PadeTaylorSolution`).
+# Mutation-proof procedure is in the file footer.
 
 using Test
 using PadeTaylor
@@ -181,6 +183,40 @@ in_box(z, xlo, xhi, ylo, yhi) =
         @test maximum(nearest_lattice_dist(p, lattice) for p in clean_in) ≤ 1.0e-6
         @test maximum(nearest_lattice_dist(p, lattice) for p in unfilt)   > 1.0e-6
     end
+
+    @testset "PF.3.1: extraction from a single solve_pade trajectory" begin
+        # The Phase-6 pole-bridge problem (Problems.jl module docstring):
+        # u'' = 6u² with the FW ICs has a lattice pole at z = 1.  A single
+        # solve_pade segment with h_max = 1.5 brackets it (rescaled
+        # t = 1/1.5 ≈ 0.667, well inside the unit interval), so the
+        # segment's stored Padé denominator places the pole — and
+        # extract_poles must read it back off a `PadeTaylorSolution`
+        # exactly as it does off a path-network's per-node store.
+        prob = PadeTaylorProblem(fW, (u_0_FW, up_0_FW), (0.0, 1.5); order = 30)
+        sol  = solve_pade(prob; h_max = 1.5)
+        @test sol isa PadeTaylorSolution
+        @test length(sol.h) == 1                  # single segment
+
+        poles = extract_poles(sol)                # default min_support = 1
+        @test !isempty(poles)
+        @test eltype(poles) <: Complex
+        err_z1 = minimum(abs(p - (1.0 + 0im)) for p in poles)
+        @test err_z1 ≤ 1.0e-6
+    end
+
+    @testset "PF.3.2: PadeTaylorSolution default min_support = 1 is load-bearing" begin
+        # A single solve_pade trajectory is a chain, not a fan: the pole
+        # at z = 1 is seen by exactly one segment here.  The default
+        # `min_support = 1` for the `PadeTaylorSolution` method keeps it;
+        # the path-network default of 3 would (correctly, for that
+        # method) demand three independent sightings and discard it.
+        # This pins the changed default as doing real work.
+        prob = PadeTaylorProblem(fW, (u_0_FW, up_0_FW), (0.0, 1.5); order = 30)
+        sol  = solve_pade(prob; h_max = 1.5)
+
+        @test !isempty(extract_poles(sol))                    # default = 1
+        @test isempty(extract_poles(sol; min_support = 3))    # one segment < 3
+    end
 end
 
 # ----------------------------------------------------------------------
@@ -204,4 +240,19 @@ end
 #        (a) goes RED (node-local artefacts reported as in-box poles)
 #        and PF.2.2 goes RED (`length(unfilt) == length(clean)`, and the
 #        default result is no longer on-lattice).  (Observed: 49 failed.)
+#
+#   M4 — PadeTaylorSolution method default (bead `padetaylor-26r`).
+#        Change the `extract_poles(sol::PadeTaylorSolution; …)` default
+#        `min_support = 1` to `min_support = 3`.  PF.3.1 goes RED
+#        (`!isempty(poles)` fails / the `minimum` over an empty result
+#        errors — the single segment cannot reach support 3) and PF.3.2's
+#        first assertion goes RED.  Restored.
+#
+#   Shared-core re-verification.  M1–M3 act on `_extract_poles_core`,
+#        which both `extract_poles` methods now call.  M1 was directly
+#        re-applied: changing `z_ctr + h * t` → `z_ctr + t` takes down
+#        PF.1.1 (path-network) *and* PF.3.1 (single trajectory),
+#        confirming the shared core is exercised by both paths.  M2 / M3
+#        live in the same shared core and were already proven against the
+#        path-network path (PF.1.2 / PF.2.2).
 # ----------------------------------------------------------------------
