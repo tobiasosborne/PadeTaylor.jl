@@ -4,7 +4,7 @@
 
 ![The Painlevé-I tritronquée solution in the complex plane](examples/tritronquee_heatmap.png)
 
-*Above: a solution of the first Painlevé equation, computed by this package. The bright dots are **poles** — points where the solution races off to infinity. They tile most of the plane in an intricate lattice, yet four wedge-shaped sectors stay perfectly empty. Ordinary numerical solvers cannot produce this picture at all. Read on for why, and how this one does.*
+*Above: the **tritronquée** solution of the first Painlevé equation, computed by this package. The bright dots are **poles** — points where the solution races off to infinity. They are packed into a single wedge around the positive real axis; the entire rest of the plane is **provably pole-free**. That emptiness is the whole point — it is what makes this solution famous — and it is exactly what a naïve solver gets wrong, flooding the empty sectors with spurious garbage. Ordinary numerical software cannot produce this picture at all. Read on for why, and how this one does.*
 
 ---
 
