@@ -130,8 +130,9 @@ mutation-proof procedures for both modules.
    - lists tests added + which oracle was used
    - records the mutation procedure that bit
    - cites the references by line number
-6. **Do not push to remote** — the user is doing local-first, no
-   remote yet. Keep `git push` out of your Bash invocations.
+6. **Pushing to remote is allowed any time** (updated 2026-05-14).
+   Push freely once work is committed and the suite is GREEN; no need
+   to wait for an explicit instruction. See CLAUDE.md "Session close".
 7. **No parallel Julia agents.** One `julia` process at a time. The
    precompile cache is brittle to concurrent invocations.
 8. **No author outreach.** Per project decision (CLAUDE.md Rule 12).

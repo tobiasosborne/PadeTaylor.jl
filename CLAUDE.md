@@ -185,7 +185,10 @@ When the session is winding down:
    `references/markdown/<file>.md:<lines>` or ADR.
 3. If a non-obvious lesson surfaced, note it in a new bead or a
    docstring (don't just hold it in memory).
-4. **Do NOT auto-push.** Pushing is a deliberate user action.
+4. **Pushing to remote is allowed any time.** Push freely once work
+   is committed and the suite is GREEN — no need to wait for an
+   explicit instruction. (Superseded 2026-05-14; the earlier
+   "do not auto-push" rule is retired.)
 
 ## Tool-of-last-resort
 
