@@ -7,6 +7,50 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+Post-v0.1.0 work, all on `main` and pushed.  Test suite **1630 / 1630
+GREEN** (up from 1311 at the v0.1.0 tag).  19 source modules (up from
+14); 8 ADRs (up from 4); 31 worklog shards (up from 18).
+
+### Added
+
+  - `RobustPade.classical_pade_diagonal` — the classical FW 2011
+    §5.1.4 Toeplitz-backslash diagonal Padé.  Now the default at
+    `Float32` / `Float64` / their `Complex` variants (faster and more
+    accurate on smooth inputs than the SVD path); the GGT 2013 SVD
+    route remains the default for `BigFloat` / `Arb`.  See ADR-0005.
+  - `PoleField.extract_poles` — reads pole locations back out of a
+    solved `PathNetworkSolution` / `PadeTaylorSolution` by rooting the
+    stored Padé denominators and clustering across nodes.
+  - `EdgeGatedSolve.edge_gated_pole_field_solve` + `EdgeGatedSolution`
+    — region-growing pole-field solver that confines the IVP walk to
+    the pole field (morphological open + flood-fill), curing the
+    spurious-pole bloom of plain `path_network_solve` on solutions
+    with large smooth sectors (FW 2011 line 401).
+  - `Painleve.PainleveProblem` (`src/Painleve.jl`) — per-equation
+    problem builder for all six Painlevé equations (PI/PII/PIV built
+    directly; PIII/PV/PVI via the existing coordinate transforms).
+    See ADR-0006.
+  - `Painleve.PainleveSolution` (`src/PainleveSolution.jl`) —
+    self-describing solve-output wrapper carrying the Painlevé
+    identity + coordinate frame, with a uniform `z`-frame access
+    surface (`sol(z)`, `poles`, `grid_values`, `equation`,
+    `parameters`, `solutionname`).  Makes the `:transformed`
+    equations (PIII/PV/PVI) work end-to-end through
+    `path_network_solve`.  See ADR-0007.
+  - `tritronquee` / `hastings_mcleod` (`src/PainleveNamed.jl`) —
+    named-transcendent constructors with literature-pinned 16-digit
+    initial conditions baked in (PI tritronquée from FW 2011 §4.1;
+    PII Hastings–McLeod from FW 2014).  See ADR-0008.
+  - `PadeTaylorMakieExt` — Makie plot recipe (`painleveplot`) for
+    `PainleveSolution`.
+  - `figures/` — standalone Julia project reproducing **thirteen**
+    FW 2011 figures as runnable scripts (Fig 3.1–3.3, 4.1, 4.2–4.4,
+    4.7, 4.8, 5.1, 5.2), each writing a PNG to `figures/output/`.
+  - Documenter.jl docs site at `docs/build/`.
+  - ADRs 0005–0008: classical-Padé default at `Float64` (0005),
+    `PainleveProblem` layer (0006), `PainleveSolution` wrapper (0007),
+    named-transcendent constructors (0008).
+
 ## [0.1.0] — 2026-05-13
 
 First numbered release.  All four architectural layers and five

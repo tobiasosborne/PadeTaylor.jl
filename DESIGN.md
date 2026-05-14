@@ -1,10 +1,22 @@
 # DESIGN.md — PadeTaylor.jl Stage 1 design (Julia v1)
 
-> **Status: Stage 1 deliverable.** Mandates the Julia-side architecture
-> for v1; the TS-mirror design (`@workbench/pade-taylor`) is deliberately
-> deferred to Stage 3 ("get Julia working 100%, *then* spec the
-> workbench version"). Every claim cites either `RESEARCH.md §X.Y` or
-> a primary-literature line in `references/markdown/<file>.md`.
+> **Status: Stage 1 deliverable — historical planning snapshot.**
+> Mandates the Julia-side architecture for v1; the TS-mirror design
+> (`@workbench/pade-taylor`) is deliberately deferred to Stage 3 ("get
+> Julia working 100%, *then* spec the workbench version"). Every claim
+> cites either `RESEARCH.md §X.Y` or a primary-literature line in
+> `references/markdown/<file>.md`.
+>
+> **This document is frozen at its Stage-1 shape and has drifted from
+> the shipped code.** Its §1 module decomposition (6 modules), §4
+> execution plan (Phases Z–9), and §5 "what we won't do in v1" (which
+> lists path-network integration, BVP coupling, edge detection, and
+> Riemann-surface tracking as v2 non-goals) were all overtaken: v1
+> expanded to 19 source modules across tiers 0–5 plus the Painlevé
+> layer, and every §5 "non-goal" shipped. For the current state read
+> the status table in `README.md` and the session log in `HANDOFF.md`;
+> for the per-phase narrative read `docs/worklog/` (31 shards). This
+> file is kept as the record of the original plan, not as a live spec.
 
 ## 0. Discipline (read every session)
 

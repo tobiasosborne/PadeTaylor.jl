@@ -32,10 +32,16 @@ docs/design_section_6_path_network.md scope), are all shipped:
 | **12 v1** | `Dispatcher.dispatch_solve` (1D chain) | ✅ **shipped (Tier-3 IVP↔BVP chain composition)**, mutation-proven; see worklog 007 | 45 |
 | **12.5** | `EdgeDetector` — 5-point Laplacian pole-field classifier | ✅ **shipped** (worklog 011); FW 2011 §3.2.2 verbatim | 743 |
 | **12 v2** | `LatticeDispatcher.lattice_dispatch_solve` — 2D-grid composition | ✅ **shipped** (worklog 013) — per-row BVP fill on smooth runs flanked by IVP cells (FW2011...md:190); FW Fig 4.1 quantitative pin deferred to follow-up `padetaylor-0c3` | 76 |
-| 13 | `CoordTransforms` (FFW 2017 PIII/PV) | ⏸  P2, bead `padetaylor-bvh` | Tier-4 |
-| 14 | `SheetTracker` (FFW 2017 PVI) | ⏸  P2, bead `padetaylor-grc` | Tier-5 |
+| 13 | `CoordTransforms` (FFW 2017 PIII/PV) | ✅ **shipped** (worklog 017) | Tier-4 |
+| 14 | `SheetTracker` (FFW 2017 PVI) | ✅ **shipped** (worklog 018) | Tier-5 |
+| 15 | `Painleve.PainleveProblem` — per-equation builder (ADR-0006) | ✅ **shipped** (worklog 026) | — |
+| 15+ | `PoleField.extract_poles` — poles from a solved path-network | ✅ **shipped** (worklog 027) | — |
+| 15++ | `EdgeGatedSolve` — IVP confined to the pole field (FW md:401) | ✅ **shipped** (worklog 028) | — |
+| 15+3 | FW Fig 4.1 full BVP+IVP+BVP composition | ✅ **shipped** (worklog 029) | — |
+| 15+4 | `PainleveSolution` wrapper + Makie ext (ADR-0007) | ✅ **shipped** (worklog 030) | — |
+| 15+5 | `tritronquee` / `hastings_mcleod` named constructors (ADR-0008) | ✅ **shipped** (worklog 031) | — |
 
-**1487 / 1487 tests passing** as of the `PainleveProblem` layer commit (`6ce0a97`, worklog 026).  **v0.1.0 tagged** (`38a49ae`, `CHANGELOG.md` ships); **Documenter site** generated (`30b3298`).  Since v0.1.0: classical-Padé F64 default (worklogs 020+021); **eight FW 2011 figures reproduced** in a new `figures/` project (Fig 3.1–3.3, 4.2–4.4, 5.1–5.2; worklogs 022–025); **ADR-0006 + `src/Painleve.jl`** — the `PainleveProblem` per-equation builder layer (worklog 026); the `padetaylor-9xf` `prob.order` footgun fixed across the three path-network drivers.  See the "Session 2026-05-14" entry below for the full rundown.
+**1630 / 1630 tests passing** as of worklog 031 (`HEAD = 59dd4e4`, all pushed).  **v0.1.0 tagged** (`38a49ae`, `CHANGELOG.md` ships); **Documenter site** generated (`30b3298`).  Since v0.1.0: classical-Padé F64 default (worklogs 020+021); **thirteen FW 2011 figures reproduced** in a new `figures/` project (Fig 3.1–3.3, 4.1, 4.2–4.4, 4.7, 4.8, 5.1, 5.2; worklogs 022–029); **ADR-0006 + `src/Painleve.jl`** — the `PainleveProblem` per-equation builder layer (worklog 026); `PoleField` (027), `EdgeGatedSolve` (028), the FW Fig 4.1 full composition (029), the `PainleveSolution` wrapper + Makie extension (ADR-0007, worklog 030), and the `tritronquee` / `hastings_mcleod` named constructors (ADR-0008, worklog 031).  See the "Session 2026-05-14 (continuation)" entry below for the worklog-027–031 rundown.
 
 **Phase 6 shipped 2026-05-09 on the pivoted scope** — the v1
 acceptance is a Padé-vs-Taylor pole-bridge demonstration (one stored
@@ -94,9 +100,11 @@ mutation-proof procedures for both modules.
     record. **Phase 3 builds on this empirical confirmation.**
   - `padeapprox-oracle/` — `capture.m` runs `padeapprox.m` under
     Octave, writes `oracles.txt` (copied to `test/_oracles.jl`).
-- `docs/adr/` — three accepted ADRs; read all three before code.
-- `docs/worklog/` — frictions / lessons learnt; one shard so far.
-- `src/` — six tier modules + the umbrella `PadeTaylor.jl`.
+- `docs/adr/` — eight accepted ADRs (0001–0008); read 0001–0004 before
+  touching the core/path-network code.
+- `docs/worklog/` — frictions / lessons learnt; 31 shards (001–031).
+- `src/` — 19 modules (18 substantive across tiers 0–5 + the Painlevé
+  layer, plus the umbrella `PadeTaylor.jl`).
 - `test/` — `runtests.jl` orchestrates per-module test files.
 - `RESEARCH.md` — Stage 0 deliverable (1165 lines). Read §1.1 (FW 2011
   algorithm), §2 (GGT 2013 + reweighting), §3.3 (TaylorSeries+Arb
@@ -392,28 +400,29 @@ type is a prerequisite for Phase 8 but unrelated to Phase 7.
 bd ready -n 30
 ```
 
-Open beads at end of PN.2.2-bugfix commit (11 total; `padetaylor-yt1`,
-`padetaylor-1jf` closed):
-- `padetaylor-8cr` **P0** — v2 umbrella FW Table 5.1 long-range
-  (largely **subsumed** by PN.2.2 — u(z=30) now achieves 2.13e-14
-  BF-256; bead may close after a confirmation pass at z=10⁴).
-- `padetaylor-rgp` **P1** — Figure-acceptance catalogue (tracking).
-- `padetaylor-c2p` **P1** — Edge detector (now consumed by Phase 12 v2 / `padetaylor-k31`).
-- `padetaylor-k31` **P1** — Phase 12 v2: 2D lattice dispatcher with automatic edge detection.
-- `padetaylor-kvi` **P1** — Phase 9 Tier C qualitative.
-- `padetaylor-bvh` **P2** — Phase 13 CoordTransforms (Tier-4).
-- `padetaylor-grc` **P2** — Phase 14 SheetTracker (Tier-5).
+Run `bd ready -n 30` for the live list.  As of worklog 031 there are
+no open P0/P1 beads; the ready queue is all P2/P3.  Notable open beads
+worth knowing about:
+- `padetaylor-7zw` **P2** — BF-256 tritronquée pin: rerun FW Fig 4.1
+  step-(i) BVP at `BigFloat`-256.
+- `padetaylor-bhw` **P2** — expand quantitative figure-pinning test
+  coverage.
+- `padetaylor-bho` **P2** — `SheetTracker` constrained-wedge
+  `PathNetwork` routing (the deferred half of Phase 14).
+- `padetaylor-8ui` / `padetaylor-1a3` **P2** — `PathNetwork` adaptive
+  Padé step size / non-uniform Stage-1 node placement.
 - `padetaylor-61j` **P2** — Willers 1974 acquisition.
-- `padetaylor-8pi` **P2** — GenericLinearAlgebra svd! piracy friction.
+- `padetaylor-8pi` **P2** — GenericLinearAlgebra `svd!` piracy friction.
+- `padetaylor-icf` **P3** — closed-form named Painlevé families
+  (PII rational/Airy, PIV entire) with exact oracles — the
+  continuation of the Thread-2 named-transcendent arc.
+- `padetaylor-p3l` **P3** — quantitative pole-count pin for FW Fig 4.3/4.4.
+- `padetaylor-zzw` **P3** — performance profiling pass.
 
-**Next work item** (this section predates worklogs 022–026 — see the
-"Session 2026-05-14" entry under "## Last commit before this handoff"
-for the current state): continue FW figure reproduction.  FW 2011
-Fig 4.7/4.8 need a *pole-extraction* helper (roots of each visited
-node's Padé denominator) — a real capability gap worth its own bead.
-Fig 4.1 steps (ii)+(iii) and Fig 4.6 are T3 BVP-hybrid reproduction.
-Alternatively, `padetaylor-soi` makes the `:transformed` PainleveProblem
-forwarding fully usable.
+**Next work item**: the project is at a clean stopping point — no
+forcing item.  Candidate directions: `padetaylor-7zw` / `padetaylor-bhw`
+(concrete P2 figure/quantitative work), or `padetaylor-icf` (continues
+the named-transcendent arc shipped in worklog 031).
 
 ## Hard-won lessons (don't repeat these)
 
@@ -504,7 +513,19 @@ Quick summary:
 
 ## Last commit before this handoff
 
-`PainleveProblem` builder layer shipped (`6ce0a97`, worklog 026, bead `padetaylor-avl` closed) — `src/Painleve.jl` is the per-equation problem builder for all six Painlevé equations.  Preceded in the same arc by the `padetaylor-9xf` fix (`a2f319c`).  Test suite **1487 / 1487 GREEN**.  **Not pushed yet at worklog-026 commit time, but the user asked for a push — see "Session 2026-05-14" below; if `git log origin/main..HEAD` is empty, the push happened.**
+`HEAD = 59dd4e4` ("Allow pushing to remote any time — retire the no-auto-push rule").  The substantive arc before it: `PoleField` (`ace8db4`, worklog 027) → edge-gated solve + FW Fig 4.7/4.8 (`225b7f2`, worklog 028) → FW Fig 4.1 full composition (`2356b80`, worklog 029) → `PainleveSolution` wrapper + Makie ext (`adb4425`, worklog 030) → named transcendent constructors (`705674a`, worklog 031).  Test suite **1630 / 1630 GREEN**.  Everything is committed and pushed (`git log origin/main..HEAD` is empty).
+
+### Session 2026-05-14 (continuation) — `PoleField`, `EdgeGatedSolve`, FW Fig 4.1/4.7/4.8, `PainleveSolution`, named constructors (worklogs 027–031)
+
+Continues the figure-reproduction + Painlevé-infrastructure arc.  Five worklogs, six beads' worth of code, two ADRs (0007, 0008).  Test suite **1526 → 1630 GREEN**.
+
+  - **`PoleField.extract_poles`** (`ace8db4`, worklog 027, bead `padetaylor-xvf`) — `src/PoleField.jl`: reads pole locations back out of a solved `PathNetworkSolution` / `PadeTaylorSolution` by rooting the stored Padé denominators, mapping roots to the `z`-plane, and clustering with a cross-node-support filter.  Verified vs the equianharmonic ℘ lattice to ~1e-8.
+  - **`EdgeGatedSolve` + FW Fig 4.7/4.8** (`225b7f2`, worklog 028, beads `padetaylor-dmb` + `padetaylor-7na`) — `src/EdgeGatedSolve.jl`: region-growing pole-field solver (dilate → solve → classify → morphological-open → flood-fill → fixpoint).  Fixes the spurious-pole bloom of plain `path_network_solve` on solutions with large smooth sectors (the PI tritronquée's four empty sectors).  FW Fig 4.7 (6 panels) and 4.8 reproduced.
+  - **FW Fig 4.1 full composition** (`2356b80`, worklog 029, bead `padetaylor-gky`) — `figures/fw2011_fig_4_1.jl`: FW's 3-step recipe end-to-end — (i) imaginary-axis `bvp_solve`, (ii) two `edge_gated_pole_field_solve` run-outs, (iii) per-row `bvp_solve` smooth-band fill.  All 119 step-(iii) BVPs converged, zero fallbacks.
+  - **`PainleveSolution` wrapper + `:transformed` flip + Makie recipe** (`adb4425`, worklog 030, beads `padetaylor-p1b` + `padetaylor-26r` + `padetaylor-ylr`; `padetaylor-soi` closed as subsumed) — `src/PainleveSolution.jl` + ADR-0007: a self-describing solve-output wrapper with a uniform `z`-frame access surface; makes the `:transformed` equations (PIII/PV/PVI) work end-to-end through `path_network_solve`.  `PadeTaylorMakieExt` ships the `painleveplot` recipe.
+  - **Named transcendent constructors** (`705674a`, worklog 031, bead `padetaylor-c86`; `padetaylor-icf` filed P3) — `src/PainleveNamed.jl` + ADR-0008: `tritronquee(:I)` and `hastings_mcleod()` with literature-pinned 16-digit ICs baked in.  Worklog 031's hard-won lesson: a literature subagent's job is to *sort*, not just *find* — the three-kinds taxonomy is what made the v1 scope defensible.
+
+  **Doc round (this session)**: README.md rewritten as an engaging, progressively-explained, beginner-targeted document with embedded figures; `CHANGELOG.md` `[Unreleased]` section filled in; this HANDOFF refreshed for worklogs 027–031.
 
 ### Session 2026-05-14 — FW figures 3.1–5.2, ADR-0006, `PainleveProblem` layer, `9xf` fix (worklogs 022–026)
 
