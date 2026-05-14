@@ -15,7 +15,7 @@ where naïve truncation diverges.
 **v0.1.0 — research-grade, all architectural tiers shipped.**  All
 four algorithmic layers and five composition tiers complete; the
 package is not yet registered in the Julia general registry.
-1311 / 1311 tests passing.
+1509 / 1509 tests passing.
 
 | Phase | Module / Feature | Status |
 |---|---|---|
@@ -30,6 +30,7 @@ package is not yet registered in the Julia general registry.
 | 8 | `PadeTaylorArblibExt` extension (Arb arbitrary precision) | ✅ shipped |
 | 9 | PI tritronquée pole-field qualitative reproduction | ✅ shipped |
 | 10 | `PathNetwork.path_network_solve` (Tier 2) | ✅ shipped |
+| 10+ | `PoleField.extract_poles` — pole locations from a solved path-network | ✅ shipped |
 | 11 | `BVP.bvp_solve` (Chebyshev–Newton, Tier 3) | ✅ shipped |
 | 12 | `Dispatcher.dispatch_solve` + `LatticeDispatcher` (Tier 3) | ✅ shipped |
 | 13 | `CoordTransforms` (PIII / PV, Tier 4) | ✅ shipped |
