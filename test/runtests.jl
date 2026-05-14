@@ -37,6 +37,7 @@ using PadeTaylor
     include("edge_detector_test.jl")
     include("phase9_tritronquee_test.jl")
     include("lattice_dispatcher_test.jl")
+    include("edge_gated_solve_test.jl")
     include("ext_commonsolve_test.jl")
     include("ext_arblib_test.jl")
     include("fw_fig_41_test.jl")

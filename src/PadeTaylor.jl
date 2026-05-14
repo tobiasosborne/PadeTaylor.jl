@@ -24,8 +24,10 @@ Four algorithmically independent layers, per ADR-0001:
  10. `Dispatcher`    — 1D IVP↔BVP chain composition per FW 2011 §4.4.
  11. `EdgeDetector`  — 5-point Laplacian pole-field classifier (FW §3.2.2).
  12. `LatticeDispatcher` — 2D-lattice composition with per-row BVP fill (FW §4.4).
- 13. `CoordTransforms`   — Exponential coordinate maps for PIII / PV (FFW 2017 §2.1, Tier-4).
- 14. `SheetTracker`      — PVI ζ-plane RHS + winding-number primitives (FFW 2017 §2.2, Tier-5).
+ 13. `EdgeGatedSolve`    — region-growing edge-gated path-network: confines
+                          the IVP to the pole field (FW §3.2.2 + md:401).
+ 14. `CoordTransforms`   — Exponential coordinate maps for PIII / PV (FFW 2017 §2.1, Tier-4).
+ 15. `SheetTracker`      — PVI ζ-plane RHS + winding-number primitives (FFW 2017 §2.2, Tier-5).
 
 ## Determinism
 
@@ -71,6 +73,7 @@ include("BVP.jl")
 include("Dispatcher.jl")
 include("EdgeDetector.jl")
 include("LatticeDispatcher.jl")
+include("EdgeGatedSolve.jl")
 include("CoordTransforms.jl")
 include("SheetTracker.jl")
 include("Painleve.jl")
@@ -85,6 +88,7 @@ using .BVP:         bvp_solve, BVPSolution
 using .Dispatcher:  dispatch_solve, DispatcherSolution, IVPSegment, BVPSegment
 using .EdgeDetector: laplacian_residual, pole_field_mask
 using .LatticeDispatcher: lattice_dispatch_solve, LatticeSolution
+using .EdgeGatedSolve: edge_gated_pole_field_solve, EdgeGatedSolution
 using .CoordTransforms: pIII_transformed_rhs, pV_transformed_rhs,
                         pIII_z_to_ζ, pIII_ζ_to_z, pV_z_to_ζ, pV_ζ_to_z
 using .SheetTracker:    pVI_transformed_rhs,
@@ -120,6 +124,7 @@ export bvp_solve, BVPSolution
 export dispatch_solve, DispatcherSolution, IVPSegment, BVPSegment
 export laplacian_residual, pole_field_mask
 export lattice_dispatch_solve, LatticeSolution
+export edge_gated_pole_field_solve, EdgeGatedSolution
 export pIII_transformed_rhs, pV_transformed_rhs,
        pIII_z_to_ζ, pIII_ζ_to_z, pV_z_to_ζ, pV_ζ_to_z
 export pVI_transformed_rhs,

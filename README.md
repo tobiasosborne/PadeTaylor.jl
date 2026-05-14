@@ -15,7 +15,7 @@ where naïve truncation diverges.
 **v0.1.0 — research-grade, all architectural tiers shipped.**  All
 four algorithmic layers and five composition tiers complete; the
 package is not yet registered in the Julia general registry.
-1509 / 1509 tests passing.
+1521 / 1521 tests passing.
 
 | Phase | Module / Feature | Status |
 |---|---|---|
@@ -33,6 +33,7 @@ package is not yet registered in the Julia general registry.
 | 10+ | `PoleField.extract_poles` — pole locations from a solved path-network | ✅ shipped |
 | 11 | `BVP.bvp_solve` (Chebyshev–Newton, Tier 3) | ✅ shipped |
 | 12 | `Dispatcher.dispatch_solve` + `LatticeDispatcher` (Tier 3) | ✅ shipped |
+| 12+ | `EdgeGatedSolve.edge_gated_pole_field_solve` — IVP confined to pole fields (FW md:401) | ✅ shipped |
 | 13 | `CoordTransforms` (PIII / PV, Tier 4) | ✅ shipped |
 | 14 | `SheetTracker` (PVI ζ-plane + winding, Tier 5) | ✅ shipped |
 

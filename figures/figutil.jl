@@ -64,3 +64,33 @@ function pole_field_figure(xs, ys, Z;
     wireframe!(ax, xs, ys, Z; color = (:black, 0.15), linewidth = 0.3)
     return fig, ax
 end
+
+"""
+    pole_scatter_axis(gp, poles; title, xlim, ylim,
+                      markersize = 1.8, dotcolor = :black) -> Axis
+
+Scatter `poles::AbstractVector{<:Complex}` as a tight dot field in an
+`Axis` placed at grid position `gp` (e.g. `fig[1, 1]`), square data
+aspect, FW pole-location-plot framing (FW 2011 Fig. 4.7 / 4.8): black
+dots over the window, a faint cross at the origin.  Poles outside the
+`[xlim] × [ylim]` window are clipped.  Returns the `Axis` so the caller
+can add panel-specific overlays.
+"""
+function pole_scatter_axis(gp, poles;
+                           title::AbstractString = "",
+                           xlim::Tuple = (-50.0, 50.0),
+                           ylim::Tuple = (-50.0, 50.0),
+                           markersize::Real = 1.8,
+                           dotcolor = :black)
+    ax = Axis(gp; title = title, xlabel = "x", ylabel = "y",
+              titlesize = 13, aspect = DataAspect(),
+              limits = (xlim[1], xlim[2], ylim[1], ylim[2]))
+    inwin = filter(p -> xlim[1] ≤ real(p) ≤ xlim[2] &&
+                        ylim[1] ≤ imag(p) ≤ ylim[2], poles)
+    # faint origin cross, drawn under the dots
+    lines!(ax, [xlim[1], xlim[2]], [0.0, 0.0]; color = (:gray, 0.35), linewidth = 0.4)
+    lines!(ax, [0.0, 0.0], [ylim[1], ylim[2]]; color = (:gray, 0.35), linewidth = 0.4)
+    scatter!(ax, Float64.(real.(inwin)), Float64.(imag.(inwin));
+             color = dotcolor, markersize = markersize)
+    return ax
+end
