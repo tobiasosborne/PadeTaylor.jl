@@ -35,7 +35,7 @@ docs/design_section_6_path_network.md scope), are all shipped:
 | 13 | `CoordTransforms` (FFW 2017 PIII/PV) | ⏸  P2, bead `padetaylor-bvh` | Tier-4 |
 | 14 | `SheetTracker` (FFW 2017 PVI) | ⏸  P2, bead `padetaylor-grc` | Tier-5 |
 
-**1377 / 1377 tests passing** as of the classical-Padé F64 default commit (worklog 021, bead `padetaylor-txg` closed).  **v0.1.0 tagged** (`38a49ae`, `CHANGELOG.md` ships); **Documenter site** generated (`30b3298`); **classical-Padé probe + ship** complete (worklogs 020 + 021) — F64 path now beats FW Table 5.1's z=10⁴ rel-err by 1.7× at full PathNetwork (1.4e-10 vs 2.34e-10); test acceptance tightened PN.2.2 z=30 F64 `1e-9 → 1e-12` and PN.2.3 z=10⁴ F64 `5e-5 → 5e-10`.
+**1487 / 1487 tests passing** as of the `PainleveProblem` layer commit (`6ce0a97`, worklog 026).  **v0.1.0 tagged** (`38a49ae`, `CHANGELOG.md` ships); **Documenter site** generated (`30b3298`).  Since v0.1.0: classical-Padé F64 default (worklogs 020+021); **eight FW 2011 figures reproduced** in a new `figures/` project (Fig 3.1–3.3, 4.2–4.4, 5.1–5.2; worklogs 022–025); **ADR-0006 + `src/Painleve.jl`** — the `PainleveProblem` per-equation builder layer (worklog 026); the `padetaylor-9xf` `prob.order` footgun fixed across the three path-network drivers.  See the "Session 2026-05-14" entry below for the full rundown.
 
 **Phase 6 shipped 2026-05-09 on the pivoted scope** — the v1
 acceptance is a Padé-vs-Taylor pole-bridge demonstration (one stored
@@ -405,11 +405,14 @@ Open beads at end of PN.2.2-bugfix commit (11 total; `padetaylor-yt1`,
 - `padetaylor-61j` **P2** — Willers 1974 acquisition.
 - `padetaylor-8pi` **P2** — GenericLinearAlgebra svd! piracy friction.
 
-**Next work item**: `padetaylor-8cr` (verify u(z=10⁴) = 21.0253033947…
-matches FW Table 5.1 row 2 — should be straightforward now), then move
-to Tier-3 figure reproduction via the Dispatcher.  Or attack figure
-reproduction directly via `padetaylor-rgp` (e.g. FW Fig 4.6 BVP demo,
-already in-tree as a BVP test).
+**Next work item** (this section predates worklogs 022–026 — see the
+"Session 2026-05-14" entry under "## Last commit before this handoff"
+for the current state): continue FW figure reproduction.  FW 2011
+Fig 4.7/4.8 need a *pole-extraction* helper (roots of each visited
+node's Padé denominator) — a real capability gap worth its own bead.
+Fig 4.1 steps (ii)+(iii) and Fig 4.6 are T3 BVP-hybrid reproduction.
+Alternatively, `padetaylor-soi` makes the `:transformed` PainleveProblem
+forwarding fully usable.
 
 ## Hard-won lessons (don't repeat these)
 
@@ -500,7 +503,21 @@ Quick summary:
 
 ## Last commit before this handoff
 
-Classical-Padé F64 default shipped (worklog 021, bead `padetaylor-txg` closed) — `src/RobustPade.jl` gains `classical_pade_diagonal` (~100 LOC) + element-type `method` dispatch.  F64 / Complex{F64} default `:classical`; BigFloat / Arb default `:svd`.  Singular Toeplitz auto-falls-back to `:svd`.  ADR-0005 documents.  Empirical: PN.2.3 z=10⁴ F64 rel-err `1.4e-10` (vs FW `2.34e-10` — beat by 1.7×) at full PathNetwork; worklog 020's `6.15e-11` was a wedge-walker-only number, Stage 2 interpolation adds ~2×.
+`PainleveProblem` builder layer shipped (`6ce0a97`, worklog 026, bead `padetaylor-avl` closed) — `src/Painleve.jl` is the per-equation problem builder for all six Painlevé equations.  Preceded in the same arc by the `padetaylor-9xf` fix (`a2f319c`).  Test suite **1487 / 1487 GREEN**.  **Not pushed yet at worklog-026 commit time, but the user asked for a push — see "Session 2026-05-14" below; if `git log origin/main..HEAD` is empty, the push happened.**
+
+### Session 2026-05-14 — FW figures 3.1–5.2, ADR-0006, `PainleveProblem` layer, `9xf` fix (worklogs 022–026)
+
+A long session.  Eight FW 2011 figures reproduced, one ADR written + accepted, two beads' worth of code shipped.
+
+  - **FW 2011 figure reproduction** — new `figures/` project (own `Project.toml`, CairoMakie + dev-ed PadeTaylor; `figutil.jl` shared helper).  Shipped: Fig 3.1 + 3.2 (worklog 022), Fig 3.3 (worklog 023), Fig 4.2 + 4.3 + 4.4 (worklog 024), Fig 5.1 + 5.2 (worklog 025).  Output PNGs committed.  Fig 5.2 *meets* its quantitative catalogue acceptance (sweep min at `(order,h)=(30,0.40)`, min rel-err `9.1e-15`).
+  - **`PathNetworkSolution.visited_parent`** added (worklog 022) — Stage-1 tree edges, needed for Fig 3.2; test `PN.5.1`, mutation-proven.
+  - **ADR-0006** (`docs/adr/0006-painleve-problem-layer.md`, **Accepted**) — the `PainleveProblem` builder decision: a per-equation problem *builder*, explicitly **not** a `painleve()` value-function (infinitely many solutions ⇒ "which solution" stays an explicit caller choice, Rule 1).
+  - **`padetaylor-9xf` fixed** (`a2f319c`, worklog 026) — `path_network_solve` / `dispatch_solve` / `lattice_dispatch_solve` carried their own `order::Integer = 30` kwarg and silently ignored `prob.order`.  Now default to `prob.order`.  Tests `PN.7.1` / `DP.1.3` / `LD.2.2`, all mutation-proven.  Caught while writing `figures/fw2011_fig_5_2.jl` (an `(order,h)` sweep that was accidentally all-order-30).
+  - **`padetaylor-avl` shipped** (`6ce0a97`, worklog 026) — `src/Painleve.jl`: wrapper struct + 6 constructors + 3 new direct-frame RHS factories (PI/PII/PIV; PIII/PV/PVI wrap the existing `CoordTransforms`/`SheetTracker` factories) + `solve_pade`/`path_network_solve` forwarding methods.  `test/painleve_test.jl`, 47 assertions, 3 mutations all bite.
+
+  **Beads filed this session**: `padetaylor-d26` (Fig 3.1/3.2 — closed), `padetaylor-ote` (Fig 3.3 — closed), `padetaylor-cvo` (Fig 4.2/4.3/4.4 — closed), `padetaylor-664` (Fig 5.1/5.2 — closed), `padetaylor-9xf` (closed), `padetaylor-avl` (closed), `padetaylor-p3l` **P3 open** (quantitative pole-count pin for Fig 4.3/4.4), `padetaylor-soi` **P3 open** (`:transformed` forwarding with point-value remapping).
+
+  **Suggested next work**: continue FW figure reproduction — Fig 4.7/4.8 need a *pole-extraction* helper (roots of each visited node's Padé denominator) which is a real capability gap worth a bead; Fig 4.1 steps (ii)+(iii) and Fig 4.6 are T3 BVP-hybrid reproduction.  Or attack `padetaylor-soi` to make the `:transformed` PainleveProblem forwarding fully usable.
 
 ### Session 2026-05-13 (post worklog 020) — `padetaylor-txg` closed (worklog 021)
 
