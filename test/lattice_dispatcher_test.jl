@@ -162,6 +162,45 @@ using PadeTaylor
             prob, f_lin_1, ∂f_lin_1, xs_aniso, ys_aniso)
     end
 
+    # ---- LD.2.2: order kwarg defaults to prob.order (bead `padetaylor-9xf`) ----
+    @testset "LD.2.2: order kwarg defaults to prob.order" begin
+        # Regression for `padetaylor-9xf`: `lattice_dispatch_solve`
+        # carried its own `order::Integer = 30` kwarg and threaded *that*
+        # into `path_network_solve`, ignoring `prob.order`.  It now
+        # defaults to `prob.order`.  Probe on the pole-free linear ODE
+        # u'' = u (path_network just walks straight): a problem built at
+        # order 4 must — with no explicit `order` — solve at order 4
+        # (bit-exact match to an explicit `order = 4` call) and NOT at
+        # the old hard-coded 30.  `mask = all-false` ⇒ pure IVP fill, so
+        # every cell's value is the order-dependent `path_network_solve`
+        # output.
+        f_lin_2(z, u, up) = u
+        f_lin_1(z, u)     = u
+        ∂f_lin_1(z, u)    = one(u)
+        N  = 5
+        xs = range(-0.5, 0.5; length = N)
+        ys = range(-0.5, 0.5; length = N)
+        zspan = (0.0 + 0.0im, ComplexF64(sqrt(2)))
+        prob4 = PadeTaylorProblem(f_lin_2, (1.0, 0.0), zspan; order = 4)
+        mask0 = falses(N, N)
+
+        sol_default = lattice_dispatch_solve(prob4, f_lin_1, ∂f_lin_1, xs, ys;
+                                             h_path = 0.5, mask = mask0)
+        sol_ord4    = lattice_dispatch_solve(prob4, f_lin_1, ∂f_lin_1, xs, ys;
+                                             h_path = 0.5, order = 4, mask = mask0)
+        sol_ord30   = lattice_dispatch_solve(prob4, f_lin_1, ∂f_lin_1, xs, ys;
+                                             h_path = 0.5, order = 30, mask = mask0)
+
+        @test sol_default.grid_u == sol_ord4.grid_u     # honours prob.order
+        @test sol_default.grid_u != sol_ord30.grid_u    # not the old hard-coded 30
+
+        # MUTATION-PROOF (verified 2026-05-14, bead `padetaylor-9xf`):
+        # reverting `src/LatticeDispatcher.jl`'s `order::Integer =
+        # prob.order` to `order::Integer = 30` makes the default solve
+        # identical to the `order = 30` solve — both assertions go RED.
+        # Restored.
+    end
+
 end
 
 # Mutation-proof procedure (verified 2026-05-13).

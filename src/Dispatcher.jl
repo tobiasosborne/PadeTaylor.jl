@@ -186,7 +186,7 @@ end
     dispatch_solve(prob_ivp, f_bvp, ∂f_∂u_bvp, segments;
                    derivative_match_tol = 1e-7,
                    derivative_match_strict = false,
-                   h = 0.5, order = 30,
+                   h = 0.5, order = prob_ivp.order,
                    N_bvp = 20, bvp_tol = nothing, bvp_maxiter = 10,
                    wedge_angles = nothing) -> DispatcherSolution
 
@@ -216,7 +216,7 @@ function dispatch_solve(prob_ivp::PadeTaylorProblem,
                         derivative_match_tol::Real = 1e-7,
                         derivative_match_strict::Bool = false,
                         h::Real = 0.5,
-                        order::Integer = 30,
+                        order::Integer = prob_ivp.order,
                         N_bvp::Integer = 20,
                         bvp_tol = nothing,
                         bvp_maxiter::Integer = 10,

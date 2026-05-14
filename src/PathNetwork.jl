@@ -138,7 +138,7 @@ end
 # -----------------------------------------------------------------------------
 
 """
-    path_network_solve(prob, grid; h=0.5, order=30,
+    path_network_solve(prob, grid; h=0.5, order=prob.order,
                        wedge_angles=DEFAULT_WEDGE,
                        step_selection=:min_u,
                        step_size_policy=:fixed,
@@ -155,7 +155,9 @@ The IC point `prob.zspan[1]` becomes `visited_z[1]`.
 
 Kwargs:
   - `h::Real`            — canonical step length (FW default 0.5).
-  - `order::Integer`     — Taylor truncation degree (FW default 30).
+  - `order::Integer`     — Taylor truncation degree.  Defaults to
+    `prob.order` (the order the `PadeTaylorProblem` was built with);
+    pass explicitly only to override it.  FW 2011's standard is 30.
   - `wedge_angles`       — five angle offsets relative to goal direction.
   - `step_selection`     — `:min_u` (default; FW 2011) or `:steepest_descent`.
   - `step_size_policy`   — `:fixed` (Tier-2 only); `:adaptive_ffw` throws.
@@ -200,7 +202,7 @@ requested (Tier-4 deferral per ADR-0004).
 function path_network_solve(prob::PadeTaylorProblem,
                             grid::AbstractVector{<:Complex};
                             h::Real      = 0.5,
-                            order::Integer = 30,
+                            order::Integer = prob.order,
                             wedge_angles::AbstractVector{<:Real} = DEFAULT_WEDGE,
                             step_selection::Symbol  = :min_u,
                             step_size_policy::Symbol = :fixed,

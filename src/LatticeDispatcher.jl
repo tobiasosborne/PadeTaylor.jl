@@ -146,18 +146,21 @@ end
 
 """
     lattice_dispatch_solve(prob, bvp_f, bvp_∂f_∂u, xs, ys;
-                           h_path = 0.5, order = 30, edge_level = 0.001,
+                           h_path = 0.5, order = prob.order,
+                           edge_level = 0.001,
                            N_bvp = 20, bvp_tol = nothing,
                            mask = nothing) -> LatticeSolution
 
-See module docstring for the algorithm.
+See module docstring for the algorithm.  `order` defaults to
+`prob.order` and is threaded into `path_network_solve` for the IVP
+fill; pass it explicitly only to override the problem's own order.
 """
 function lattice_dispatch_solve(prob::PadeTaylorProblem,
                                 bvp_f, bvp_∂f_∂u,
                                 xs::AbstractVector{<:Real},
                                 ys::AbstractVector{<:Real};
                                 h_path::Real      = 0.5,
-                                order::Integer    = 30,
+                                order::Integer    = prob.order,
                                 edge_level::Real  = 0.001,
                                 N_bvp::Integer    = 20,
                                 bvp_tol           = nothing,

@@ -63,6 +63,40 @@ include(joinpath(@__DIR__, "_oracle_problems.jl"))
         @test sol.segment_kinds == [:ivp]
     end
 
+    @testset "DP.1.3: order kwarg defaults to prob_ivp.order (bead `padetaylor-9xf`)" begin
+        # Regression for `padetaylor-9xf`: `dispatch_solve` carried its
+        # own `order::Integer = 30` kwarg and built every per-segment
+        # IVP problem with *that*, ignoring `prob_ivp.order`.  It now
+        # defaults to `prob_ivp.order`.  Build the ℘ problem at order 4
+        # and check the default-order dispatch equals an explicit
+        # `order = 4` dispatch bit-for-bit, and differs from an explicit
+        # `order = 30` dispatch.
+        prob4 = PadeTaylorProblem(fW_2, (u_0_FW, up_0_FW), (0.0, 1.0); order = 4)
+        dense_grid = ComplexF64[0.1, 0.2, 0.3, 0.4]
+        seg = IVPSegment(ComplexF64(0.5), dense_grid)
+
+        sol_default = dispatch_solve(prob4, fW_2, (z, u) -> 12 * u, [seg]; h = 0.5)
+        sol_ord4    = dispatch_solve(prob4, fW_2, (z, u) -> 12 * u, [seg];
+                                     h = 0.5, order = 4)
+        sol_ord30   = dispatch_solve(prob4, fW_2, (z, u) -> 12 * u, [seg];
+                                     h = 0.5, order = 30)
+
+        @test sol_default.grid_u == sol_ord4.grid_u     # honours prob_ivp.order
+        @test sol_default.grid_u != sol_ord30.grid_u    # not the old hard-coded 30
+
+        # MUTATION-PROOF (verified 2026-05-14, bead `padetaylor-9xf`):
+        # reverting `src/Dispatcher.jl`'s `order::Integer =
+        # prob_ivp.order` to `order::Integer = 30` makes the default
+        # dispatch run at order 30 — the `!= sol_ord30` assertion goes
+        # RED (default now equals the order-30 dispatch).  The `==
+        # sol_ord4` assertion still passes under that mutation alone,
+        # because `dispatch_solve` calls `path_network_solve` without an
+        # explicit `order`, so the mutated `path_network_solve` default
+        # also drags `sol_ord4`'s walk to order 30 — both degrade
+        # together.  The testset still goes RED on the one assertion,
+        # which is what the mutation-proof requires.  Restored.
+    end
+
     @testset "DP.1.2: Single BVPSegment passthrough ≡ bvp_solve" begin
         # Dispatcher with a lone :bvp segment must equal a direct
         # bvp_solve call.  Linear ODE u''=u on [-1, 1] with u(±1) = 1

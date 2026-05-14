@@ -430,6 +430,41 @@ include(joinpath(@__DIR__, "_oracle_problems.jl"))
             h = 0.5, enforce_real_axis_symmetry = true)
     end
 
+    @testset "PN.7.1: order kwarg defaults to prob.order (bead `padetaylor-9xf`)" begin
+        # Regression for `padetaylor-9xf`: `path_network_solve` carried
+        # its own `order::Integer = 30` kwarg and silently ignored
+        # `prob.order`, so a problem built at any order ≠ 30 was solved
+        # at 30 regardless (caught while writing `figures/fw2011_fig_5_2.jl`,
+        # worklog 025).  The kwarg now defaults to `prob.order`.
+        #
+        # Probe: build the ℘ test problem at a deliberately low order
+        # (6 → a (3,3) Padé) and walk to z = 3.0.  The default-order
+        # solve must (a) match an explicit `order = 6` solve bit-for-bit
+        # — proving it reads `prob.order` — and (b) DIFFER from an
+        # explicit `order = 30` solve — proving it is no longer the old
+        # hard-coded 30.  The walk is deterministic (`rng_seed = 0`), so
+        # the (a) comparison is exact equality.
+        prob6 = PadeTaylorProblem(fW, (u_0_FW, up_0_FW), (0.0, 3.0); order = 6)
+        grid  = ComplexF64[3.0 + 0im]
+
+        sol_default = path_network_solve(prob6, grid; h = 0.5)
+        sol_ord6    = path_network_solve(prob6, grid; h = 0.5, order = 6)
+        sol_ord30   = path_network_solve(prob6, grid; h = 0.5, order = 30)
+
+        # (a) default honours prob.order — bit-exact identical solve.
+        @test sol_default.grid_u[1] == sol_ord6.grid_u[1]
+        @test length(sol_default.visited_z) == length(sol_ord6.visited_z)
+        # (b) and is NOT the old hard-coded 30.
+        @test sol_default.grid_u[1] != sol_ord30.grid_u[1]
+
+        # MUTATION-PROOF (verified 2026-05-14, bead `padetaylor-9xf`):
+        # reverting `src/PathNetwork.jl`'s `order::Integer = prob.order`
+        # back to `order::Integer = 30` makes the default solve identical
+        # to the `order = 30` solve — test (a) goes RED (default no longer
+        # matches the order-6 solve) and test (b) goes RED (default now
+        # equals the order-30 solve).  Restored.
+    end
+
 end # @testset PathNetwork
 
 # PN.5.1  Mutation-proof procedure (verified manually before commit; see
