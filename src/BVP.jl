@@ -95,6 +95,33 @@ The Tier-3 Dispatcher (Phase 12, `padetaylor-???`) will:
 This module does NOT yet know about path-networks; it is a
 self-contained BVP solver that the Dispatcher will compose.
 
+## Three-argument RHS overload `f(z, u, u')` (bead `padetaylor-i76`)
+
+The original `bvp_solve(f, ∂f_∂u, …)` assumes `f(z, u)` with no
+explicit `u'` dependence — adequate for `u'' = 6u² + z` (PI) but **not**
+for `P̃_III`, whose RHS is `w'' = (w')²/w + …` (FFW 2017 md:43).  The
+hybrid driver `IVPBVPHybrid` needs the three-arg form on the pole-free
+sector.  A *positional* overload `bvp_solve(f, ∂f_∂u, ∂f_∂up, …)` (note
+the extra Jacobian-with-respect-to-`u'` callable) selects the 3-arg
+path; the original 2-arg API is preserved byte-exactly.
+
+At each interior collocation node `i` the 3-arg path computes
+`u'_int[i] = (D₁ · u_nodes)[i] / half_diff` (chain rule on the affine
+map `t ↔ z`).  The residual is
+`R = D₂_ii · u_int + bc_col − scale · f(z_int, u_int, u'_int)`.
+The Newton Jacobian gains a non-diagonal contribution from `u'`'s
+linear dependence on `u_int` via `D₁`:
+
+    J = D₂_ii
+        − scale · diag(∂f/∂u(z_int, u_int, u'_int))
+        − (scale / half_diff) · diag(∂f/∂u'(z_int, u_int, u'_int))
+                              · D₁[int, int]
+
+The 2-arg path is recovered by taking `∂f/∂u' = 0` and dropping the
+`u'` argument from `f`'s call — algorithmically a strict generalisation.
+Keeping the API split avoids a per-call `hasmethod` probe and keeps the
+2-arg fast-path's diagonal-only Jacobian unchanged.
+
 ## Fail-fast contract (CLAUDE.md Rule 1)
 
 Throws with a `Suggestion` line on:
@@ -309,6 +336,128 @@ function bvp_solve(f, ∂f_∂u, z_a, z_b, u_a, u_b;
             "error); (b) provide a closer `initial_guess` (Newton can stall " *
             "far from the basin of attraction); (c) raise `maxiter`; " *
             "(d) verify the BVP has a unique solution on this segment."))
+    end
+
+    u_nodes[int] = u_int
+    return BVPSolution{T, CT}(z_a_CT, z_b_CT, u_a_CT, u_b_CT, N,
+                              nodes_t, nodes_z, u_nodes,
+                              residual_inf, iter)
+end
+
+"""
+    bvp_solve(f, ∂f_∂u, ∂f_∂up, z_a, z_b, u_a, u_b;
+              N::Integer = 20, tol = nothing, maxiter::Integer = 10,
+              initial_guess = nothing, initial_guess_up = nothing) -> BVPSolution
+
+Three-argument-RHS overload: solve `u'' = f(z, u, u')` on the complex
+segment `[z_a, z_b]` with Dirichlet BCs `u(z_a) = u_a`, `u(z_b) = u_b`.
+The extra `∂f_∂up(z, u, u') -> Number` callable is the analytic partial
+of `f` with respect to `u'` (caller supplies — no autodiff).  Returns a
+`BVPSolution` with the same fields as the 2-arg version.
+
+This overload exists for hybrid-driver use on `P̃_III` (FFW 2017 md:43
+`w'' = (w')²/w + …`), whose RHS depends on `w'`.  The 2-arg path
+remains the recommended choice when `∂f/∂u' ≡ 0`.  See the module
+docstring section "Three-argument RHS overload" for the algorithm
+derivation.
+
+Note: `initial_guess_up` is accepted for completeness but is currently
+unused — the initial Newton iterate's `u'` is recovered from the
+initial `u`-guess via `D₁`; specifying it independently would be
+inconsistent with the polynomial collocation invariant.  Reserved for
+future quasi-linearisation extensions.
+"""
+function bvp_solve(f, ∂f_∂u, ∂f_∂up, z_a, z_b, u_a, u_b;
+                   N::Integer = 20,
+                   tol = nothing,
+                   maxiter::Integer = 10,
+                   initial_guess = nothing,
+                   initial_guess_up = nothing)
+
+    initial_guess_up  # currently unused; reserved.
+
+    N ≥ 4 || throw(ArgumentError(
+        "bvp_solve: N must be ≥ 4 (got $N).  Suggestion: increase to ≥ 10."))
+    maxiter ≥ 1 || throw(ArgumentError(
+        "bvp_solve: maxiter must be ≥ 1 (got $maxiter)."))
+
+    CT  = promote_type(typeof(z_a), typeof(z_b), typeof(u_a), typeof(u_b))
+    T   = float(real(CT))
+    tol_T = tol === nothing ? eps(T)^(T(3)/T(4)) : T(tol)
+    tol_T ≥ 0 || throw(ArgumentError(
+        "bvp_solve: tol must be non-negative (got $tol_T)."))
+
+    z_a_CT, z_b_CT = CT(z_a), CT(z_b)
+    u_a_CT, u_b_CT = CT(u_a), CT(u_b)
+
+    pi_T    = T(π)
+    nodes_t = T[cos(T(j) * pi_T / T(N)) for j in 0:N]
+
+    half_sum  = (z_a_CT + z_b_CT) / 2
+    half_diff = (z_b_CT - z_a_CT) / 2
+    nodes_z   = CT[half_sum + half_diff * t for t in nodes_t]
+
+    D1 = _chebyshev_D1(nodes_t, T, N)
+    D2 = D1 * D1
+
+    u_nodes = if initial_guess === nothing
+        CT[u_b_CT + (u_a_CT - u_b_CT) * ((1 - t) / 2) for t in nodes_t]
+    else
+        CT[CT(initial_guess(z)) for z in nodes_z]
+    end
+    u_nodes[1]   = u_b_CT
+    u_nodes[N+1] = u_a_CT
+
+    scale     = (z_b_CT - z_a_CT)^2 / 4
+    int       = 2:N
+    D2_ii     = D2[int, int]
+    D1_ii     = D1[int, int]            # for ∂u'/∂u_int via chain rule
+    D1_ib     = D1[int, [1, N+1]]       # boundary contribution to u'_int
+    bc_col_D2 = D2[int, 1] .* u_b_CT .+ D2[int, N+1] .* u_a_CT
+    z_int     = nodes_z[int]
+    u_int     = u_nodes[int]
+
+    iter         = 0
+    residual_inf = T(Inf)
+    step_inf     = T(Inf)
+    converged    = false
+
+    # The chain-rule factor: u'(z_i) = (D₁·u_nodes)_i / half_diff.
+    inv_hd    = one(CT) / half_diff
+    # boundary contribution to up_int (constant across Newton iterates).
+    bc_col_D1 = D1_ib * CT[u_b_CT, u_a_CT]    # length N-1
+
+    for k in 1:maxiter
+        iter = k
+        up_int = (D1_ii * u_int .+ bc_col_D1) .* inv_hd
+        F_vals = CT[f(z_int[j], u_int[j], up_int[j]) for j in eachindex(u_int)]
+        R      = D2_ii * u_int .+ bc_col_D2 .- scale .* F_vals
+        residual_inf = T(maximum(abs, R))
+
+        diag_∂fu  = CT[∂f_∂u(z_int[j], u_int[j], up_int[j]) for j in eachindex(u_int)]
+        diag_∂fup = CT[∂f_∂up(z_int[j], u_int[j], up_int[j]) for j in eachindex(u_int)]
+        J = D2_ii .- scale .* Diagonal(diag_∂fu) .-
+            (scale * inv_hd) .* (Diagonal(diag_∂fup) * D1_ii)
+        Δu       = J \ R
+        step_inf = T(maximum(abs, Δu))
+        u_int  .-= Δu
+
+        if step_inf ≤ tol_T
+            converged = true
+            up_final = (D1_ii * u_int .+ bc_col_D1) .* inv_hd
+            F_fin    = CT[f(z_int[j], u_int[j], up_final[j]) for j in eachindex(u_int)]
+            R_final  = D2_ii * u_int .+ bc_col_D2 .- scale .* F_fin
+            residual_inf = T(maximum(abs, R_final))
+            break
+        end
+    end
+
+    if !converged
+        throw(ErrorException(
+            "bvp_solve(3-arg): Newton did not converge in $maxiter iterations.  " *
+            "Final ‖Δu‖_∞ = $step_inf > tol = $tol_T (‖R‖_∞ = $residual_inf).  " *
+            "Suggestion: (a) increase N; (b) provide a closer `initial_guess`; " *
+            "(c) raise `maxiter`; (d) verify ∂f/∂u and ∂f/∂u' are correct."))
     end
 
     u_nodes[int] = u_int

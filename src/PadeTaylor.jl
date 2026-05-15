@@ -77,6 +77,7 @@ include("EdgeGatedSolve.jl")
 include("CoordTransforms.jl")
 include("SheetTracker.jl")
 include("Painleve.jl")
+include("IVPBVPHybrid.jl")
 
 # Public API (re-exported from sub-modules).
 using .Problems:    PadeTaylorProblem, solve_pade, PadeTaylorSolution, taylor_eval
@@ -96,6 +97,7 @@ using .SheetTracker:    pVI_transformed_rhs,
 using .Painleve:        PainleveProblem, PainleveSolution,
                         poles, grid_values, equation, parameters, solutionname,
                         tritronquee, hastings_mcleod
+using .IVPBVPHybrid:    solve_pole_free_hybrid, IVPBVPSolution, pIII_asymptotic_ic
 
 # CommonSolve adapter: the algorithm struct is declared HERE in the main
 # module so users can construct it after `using PadeTaylor, CommonSolve`
@@ -150,6 +152,7 @@ export pVI_transformed_rhs,
 export PainleveProblem, PainleveSolution
 export poles, grid_values, equation, parameters, solutionname
 export tritronquee, hastings_mcleod
+export solve_pole_free_hybrid, IVPBVPSolution, pIII_asymptotic_ic
 export PadeTaylorAlg
 export painleveplot
 

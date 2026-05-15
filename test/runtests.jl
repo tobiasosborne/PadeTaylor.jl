@@ -18,6 +18,7 @@ using PadeTaylor
         @test isdefined(PadeTaylor, :CoordTransforms)
         @test isdefined(PadeTaylor, :SheetTracker)
         @test isdefined(PadeTaylor, :Painleve)
+        @test isdefined(PadeTaylor, :IVPBVPHybrid)
     end
 
     # Per-module test files. Each file is a self-contained @testset.
@@ -53,4 +54,5 @@ using PadeTaylor
     include("ffw_fig_6_test.jl")
     include("ffw_fig_1_test.jl")
     include("ffw_fig_4_test.jl")
+    include("ivp_bvp_hybrid_test.jl")
 end
