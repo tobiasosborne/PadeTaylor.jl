@@ -42,8 +42,15 @@ docs/design_section_6_path_network.md scope), are all shipped:
 | 15+5 | `tritronquee` / `hastings_mcleod` named constructors (ADR-0008) | ✅ **shipped** (worklog 031) | — |
 | **12.5 fix** | `EdgeDetector` h-aware default level (ADR-0009) | ✅ **shipped** (worklog 032); fixes `edge_gated_pole_field_solve` stall on any lattice finer than `h_grid ≈ 0.25` | +22 ED.5.* |
 | 15+6 | `pii_rational`, `pii_airy`, `piv_entire` closed-form families (ADR-0010) | ✅ **shipped** (worklog 033); the second of the three ADR-0008 named-solution kinds — parametrised families with exact closed-form oracles | +56 CF.* |
+| **A1** | Adaptive Padé step `:adaptive_ffw` (ADR-0011) — FFW 2017 §2.1.2 controller `q = (k·Tol/T(h))^(1/(n+1))` | ✅ **shipped** (worklog 034, bead `padetaylor-8ui`); foundation for all FFW 2017 figure reproduction | +43 AS.* |
+| **A2** | Non-uniform Stage-1 nodes — `node_separation::Function` kwarg (ADR-0012) | ✅ **shipped** (worklog 035, bead `padetaylor-1a3`); composes with `:adaptive_ffw` (R seeds, controller may only shrink) | +295 NU.* |
+| **A6** | `IVPBVPHybrid.solve_pole_free_hybrid` (ADR-0014) — FFW 2017 §3 PFS↔BVP coupling for pole-free sectors | ✅ **shipped** (worklog 039, bead `padetaylor-0co`); v1 corner: asymptotic-series helper hard-codes `a_3+ = 0` (bead `padetaylor-ykg` opens the lift) | +66 IB.* |
+| **FFW Fig 6** | PV generic three-sheet — first FFW 2017 figure reproduced | ✅ **shipped** (worklog 036, bead `padetaylor-mbu`); per-sheet errors 3.3e-12 / 7.0e-8 / 9.8e-8 vs FFW 3e-9 / 7e-6 / 2e-5 — **beats FFW by 2-3 orders** | +24 FF6.* |
+| **FFW Fig 1** | PIII three-sheet spiral pole field — FFW headline figure | ✅ **shipped** (worklog 037, bead `padetaylor-2pg`); 2664 visited nodes vs FFW's 2701 (-1.4%); sheet-0 conjugate-symmetry median `4.05e-15` vs FFW Exp-2 `1e-6` (9 orders better); Cartesian-resample rendering | +18 FF1.* |
+| **FFW Fig 4** | PV tronquée three-sheet | ✅ **shipped** (worklog 038, bead `padetaylor-pt2`); pole-free sector visible on sheet 0; pole-density gradient 8× across sheets 1+2 | +43 FF4.* |
+| **FFW Fig 5** | PIII tronquée + cond-number heatmap — uses A6 hybrid | ✅ **shipped** (worklog 040, bead `padetaylor-3ug`); cond-number pin `κ_r(z=30) = 157.30` matches FFW md:264 to ±1; v1 corner: sector error `~10⁻²` (4 orders looser than FFW Table 2), gated on `padetaylor-ykg` lift | +23 FF5.* |
 
-**1708 / 1708 tests passing** as of worklog 033 (`HEAD = 2b3c3cf`, all pushed).  **v0.1.0 tagged** (`38a49ae`, `CHANGELOG.md` ships); **Documenter site** generated (`30b3298`).  Since v0.1.0: classical-Padé F64 default (worklogs 020+021); **thirteen FW 2011 figures reproduced** in a new `figures/` project (Fig 3.1–3.3, 4.1, 4.2–4.4, 4.7, 4.8, 5.1, 5.2; worklogs 022–029); **ADR-0006 + `src/Painleve.jl`** — the `PainleveProblem` per-equation builder layer (worklog 026); `PoleField` (027), `EdgeGatedSolve` (028), the FW Fig 4.1 full composition (029), the `PainleveSolution` wrapper + Makie extension (ADR-0007, worklog 030), the `tritronquee` / `hastings_mcleod` named constructors (ADR-0008, worklog 031), the `EdgeDetector` h-aware level fix that unblocked the N=641 hero render (ADR-0009, worklog 032), and the closed-form Painlevé families `pii_rational` / `pii_airy` / `piv_entire` (ADR-0010, worklog 033).  See the "Session 2026-05-15" entry below for the worklog-032–033 rundown; older sessions live in `HANDOFF_ARCHIVE.md`.
+**2220 / 2220 tests passing** as of worklog 040 (`HEAD = f05f13e`, all pushed).  **v0.1.0 tagged** (`38a49ae`, `CHANGELOG.md` ships); **Documenter site** generated (`30b3298`).  Since v0.1.0: classical-Padé F64 default (worklogs 020+021); **thirteen FW 2011 figures reproduced** in a new `figures/` project (Fig 3.1–3.3, 4.1, 4.2–4.4, 4.7, 4.8, 5.1, 5.2; worklogs 022–029); **ADR-0006 + `src/Painleve.jl`** — the `PainleveProblem` per-equation builder layer (worklog 026); `PoleField` (027), `EdgeGatedSolve` (028), the FW Fig 4.1 full composition (029), the `PainleveSolution` wrapper + Makie extension (ADR-0007, worklog 030), the `tritronquee` / `hastings_mcleod` named constructors (ADR-0008, worklog 031), the `EdgeDetector` h-aware level fix that unblocked the N=641 hero render (ADR-0009, worklog 032), and the closed-form Painlevé families `pii_rational` / `pii_airy` / `piv_entire` (ADR-0010, worklog 033).  See the "Session 2026-05-15" entry below for the worklog-032–033 rundown; older sessions live in `HANDOFF_ARCHIVE.md`.
 
 **Phase 6 shipped 2026-05-09 on the pivoted scope** — the v1
 acceptance is a Padé-vs-Taylor pole-bridge demonstration (one stored
@@ -403,41 +410,34 @@ type is a prerequisite for Phase 8 but unrelated to Phase 7.
 bd ready -n 30
 ```
 
-Run `bd ready -n 30` for the live list.  As of worklog 033 there are
+Run `bd ready -n 30` for the live list.  As of worklog 040 there are
 no open P0/P1 beads; the ready queue is all P2/P3.  Notable open beads
 worth knowing about:
-- `padetaylor-0tj` **P2 [bug]** — `lattice_dispatch_solve` throws on
-  plain-IVP-corrupted BCs in smooth sectors.  Filed worklog 032 from
-  the BVP-fill smoke session.  Fix: swap the plain-IVP source for
-  the edge-gated one + fail-soft on BVP non-convergence.
-- `padetaylor-7zw` **P2** — BF-256 tritronquée pin: rerun FW Fig 4.1
-  step-(i) BVP at `BigFloat`-256.
-- `padetaylor-bhw` **P2** — expand quantitative figure-pinning test
-  coverage.
-- `padetaylor-bho` **P2** — `SheetTracker` constrained-wedge
-  `PathNetwork` routing (the deferred half of Phase 14).
-- `padetaylor-8ui` / `padetaylor-1a3` **P2** — `PathNetwork` adaptive
-  Padé step size / non-uniform Stage-1 node placement.
+
+**FFW 2017 figure arc (next session priorities)**:
+- `padetaylor-riu` **P3 [feature]** — η-plane PVI RHS (FFW eq. 5).  **WIP stashed** (`git stash list` to see it); next session: `git stash pop` and revert the M2 marker at `src/SheetTracker.jl:248` (`vp = -z*ζ*up` → `+z*ζ*up`), finish mutation-proof, commit.
+- `padetaylor-bho` **P2** — `SheetTracker` constrained-wedge `PathNetwork` routing.  Needed for FFW Figs 2/3/7.
+- `padetaylor-ykg` **P3 [task]** — `pIII_asymptotic_ic` higher-order coefficients.  Closes the FFW Fig 5 `~10⁻²` v1 gap.
+- `padetaylor-i76` **P2 [feature]** — `BVP.jl` 3-arg-RHS standing artefact from A6.
+- `padetaylor-5k9` **P3 [feature]** — sheet-aware `solve_pole_free_hybrid` API.
+- `padetaylor-zwh` **P3 [feature]** — FFW Fig 1 widened to full `Re ζ ∈ [-2, 8]` via Poisson-disk Stage-1 nodes.
+- `padetaylor-1r0` **P3 [chore]** — FFW Fig 6 Cartesian-resample backport (visual polish).
+- `padetaylor-qum` **P3 [chore]** — `PathNetwork.jl` LOC-cap split.
+
+**Other open P2s (pre-session, still open)**:
+- `padetaylor-0tj` **P2 [bug]** — `lattice_dispatch_solve` throws on plain-IVP-corrupted BCs in smooth sectors.
+- `padetaylor-7zw` **P2** — BF-256 tritronquée pin: rerun FW Fig 4.1 step-(i) BVP at `BigFloat`-256.
+- `padetaylor-bhw` **P2** — expand quantitative figure-pinning test coverage.
 - `padetaylor-61j` **P2** — Willers 1974 acquisition.
 - `padetaylor-8pi` **P2** — GenericLinearAlgebra `svd!` piracy friction.
-- `padetaylor-8dg` **P3** — `bvp_fill_with_asymptotic`: 1D per-row BVP
-  using the algebraic asymptotic `u → -√(-z/6)` (and analogs) as the
-  outer BC for half-bounded smooth sectors.  Lighter alternative to
-  `padetaylor-fe9`.
-- `padetaylor-fe9` **P3** — `smooth_fill_2d`: 2D elliptic Laplace BVP
-  for analytic smooth-region fill (since `∇²u = 0` for analytic `u`,
-  it's a single sparse LU per smooth component).  The principled
-  long-term fix for the harsh wedge-boundary visual in headline
-  renders.
+
+**Other open P3s**:
+- `padetaylor-8dg` **P3** — `bvp_fill_with_asymptotic`: 1D per-row BVP using the algebraic asymptotic `u → -√(-z/6)` as the outer BC for half-bounded smooth sectors.
+- `padetaylor-fe9` **P3** — `smooth_fill_2d`: 2D elliptic Laplace BVP for analytic smooth-region fill.
 - `padetaylor-p3l` **P3** — quantitative pole-count pin for FW Fig 4.3/4.4.
 - `padetaylor-zzw` **P3** — performance profiling pass.
 
-**Next work item**: the project is at a clean stopping point — no
-forcing item.  Candidate directions: `padetaylor-0tj` (P2 bug, on-arc
-with the BVP-fill machinery sketched in worklog 032), `padetaylor-fe9`
-(the principled visual-quality fix; produces a follow-on demonstration
-PNG), or `padetaylor-7zw` / `padetaylor-bhw` (concrete P2
-figure/quantitative work).
+**Next work item**: complete the FFW 2017 figure arc.  Sequence: pop the A3 stash → finish `padetaylor-riu` (η-PVI, ~20 min of polishing) → ship A4 `padetaylor-bho` (constrained-wedge routing, the largest remaining infra piece) → ship A5 (sheet-aware Stage-2, no bead yet — file when starting) → ship B5 (FFW Figs 2/3/7).  Steps A4+A5+B5 are the remaining ~half of the 11-step plan.
 
 ## Hard-won lessons (don't repeat these)
 
@@ -528,7 +528,36 @@ Quick summary:
 
 ## Last commit before this handoff
 
-`HEAD = 2b3c3cf` ("Painlevé closed-form families: pii_rational, pii_airy, piv_entire (bead padetaylor-icf)").  The substantive arc before it: `EdgeDetector` h-aware level fix (`905762c`, worklog 032, bead `padetaylor-f8l`) → N=641 tritronquée hero re-rendered at 4× resolution (`17c284c`, also worklog 032) → closed-form Painlevé families (`2b3c3cf`, worklog 033, bead `padetaylor-icf`).  Test suite **1708 / 1708 GREEN**.  Everything is committed and pushed (`git log origin/main..HEAD` is empty).  Older sessions (worklogs 011 through 020 / pre-v0.1.0) live in `HANDOFF_ARCHIVE.md`.
+`HEAD = f05f13e` ("FFW 2017 Fig 5 SHIPPED — PIII tronquée + κ heatmap (bead padetaylor-3ug)").  The substantive arc this session: A1 adaptive Padé step (`7c7cac7`, worklog 034) → A2 non-uniform Stage-1 nodes (`eb2a64b`, worklog 035) → B1 FFW Fig 6 PV generic (`803876e`, worklog 036) → B2 FFW Fig 1 PIII spiral (`3afae14`, worklog 037) → B3 FFW Fig 4 PV tronquée (`2a37c40`, worklog 038) → A6 IVP+BVP hybrid driver (`c41eaa2`, worklog 039) → B4 FFW Fig 5 PIII tronquée + κ heatmap (`f05f13e`, worklog 040).  Test suite **2220 / 2220 GREEN** (was 1708 at session start; +512 assertions).  Everything committed and pushed (`git log origin/main..HEAD` is empty).  Older sessions (worklogs 011 through 020 / pre-v0.1.0) live in `HANDOFF_ARCHIVE.md`.
+
+### Session 2026-05-15 (continuation) — FFW 2017 figure arc (worklogs 034–040)
+
+A long orchestrated session: 11-step plan to reproduce all seven FFW 2017 figures.  **Phase A** (core infrastructure) shipped 3 of 6 planned steps; **Phase B** (figure reproduction) shipped 4 of 7 figures.  Seven commits, four ADRs (0011, 0012, 0014), seven worklogs (034–040), +512 GREEN assertions.
+
+**Phase A shipped this session** (3 of 6):
+  - **A1 adaptive Padé step** (`7c7cac7`, worklog 034, ADR-0011, bead `padetaylor-8ui` **closed**) — `:adaptive_ffw` step_policy on `path_network_solve` implementing FFW 2017 §2.1.2 (md:74-97) truncation-error controller `T(h) = |ε_{n+1}·h^{n+1}/a(h)|` + Newton rescale `q = (k·Tol/T(h))^(1/(n+1))`.  Three helpers in `src/PadeStepper.jl`; inline rescale loop in `path_network_solve` honouring FFW md:93's "scaled step length stored at the current point" + "re-run wedge, re-select min-|u|" semantics.  `:fixed` default byte-unchanged.  Mutation-proven M1-M4; +43 AS.* assertions.
+  - **A2 non-uniform Stage-1 nodes** (`eb2a64b`, worklog 035, ADR-0012, bead `padetaylor-1a3` **closed**) — opt-in `node_separation::Function` kwarg on `path_network_solve`.  When supplied, each Stage-1 wedge step uses magnitude `R(ζ_current)` instead of fixed `h`; composes orthogonally with `:adaptive_ffw` (R seeds; controller may only shrink, not grow).  Backward-compat: `nothing` default reproduces the existing uniform tree byte-equally.  Mutation-proven M1-M4 (M3 off-by-one + M4 ignore-R both bite NU.1.7); +295 NU.* assertions.  Friction `padetaylor-qum` filed for `PathNetwork.jl` LOC-cap split (P3 chore, effective LOC 331 vs Rule 6's 200).
+  - **A6 IVP+BVP hybrid driver** (`c41eaa2`, worklog 039, ADR-0014, bead `padetaylor-0co` **closed**) — new module `src/IVPBVPHybrid.jl` (~480 LOC) implementing FFW 2017 §3 (md:203-247) algorithm: run PFS along curved sector boundaries from asymptotic-IC anchors → harvest `u, u'` at discrete boundary points → call `bvp_solve` on the sector → glue.  New positional overload `bvp_solve(f, ∂f_∂u, ∂f_∂up, ...)` for 3-arg RHS required by P̃_III's `(w')²/w` term (BVP API extension additive only; 2-arg byte-unchanged; friction bead `padetaylor-i76` opens to clean up).  Asymptotic-series first coefficient `a_1 = -β/3` derived inline.  v1 corner documented in ADR §"Out of scope": at Float64 + n_terms=2 + N=10 the joint regime sits at FFW md:226's `~10⁻¹` (BVP self-consistency is `O(10⁻¹²)`; the asymptotic-IC error dominates).  Mutation-proven M1-M4; +66 IB.* assertions.
+
+**Phase B shipped this session** (4 of 7 figures):
+  - **B1 FFW Fig 6 PV generic three-sheet** (`803876e`, worklog 036, bead `padetaylor-mbu` **closed**) — first FFW 2017 figure reproduced.  Three panels × three sheets = nine.  Per-sheet errors 3.3e-12 / 7.0e-8 / 9.8e-8 vs FFW md:297's 3e-9 / 7e-6 / 2e-5 — **beats FFW by 2-3 orders of magnitude** at Tol=1e-10.  PoC validation that A1+A2 compose end-to-end.  Friction: scatter-on-polar-grid rendering produces visible spoke artifacts in the z-plane panels; backport bead `padetaylor-1r0` filed (P3 chore, lift Fig 1's Cartesian-resample helper).
+  - **B2 FFW Fig 1 PIII three-sheet spiral** (`3afae14`, worklog 037, bead `padetaylor-2pg` **closed**) — FFW's headline figure.  Four panels (Stage-1 nodes, Stage-1 tree edges via `visited_parent`, ζ-plane `|w(ζ)|`, z-plane Riemann sheets with spiral pole pattern).  **Cartesian-resample bilinear-interpolation rendering** for the z-plane (deprecates B1's polar scatter — Panel C shows the FFW md:283 "oblique pole lines" beautifully).  2664 visited nodes vs FFW's 2701 (-1.4%); sheet-0 conjugate-symmetry median `4.05e-15` vs FFW Exp-2 `1e-6` (9 orders better).  Ran on reduced `Re ζ ∈ [-2, 5]` window; widening to FFW's `[-2, 8]` needs Poisson-disk node placement (Fornberg 2015 ref [8]) — friction bead `padetaylor-zwh` filed (P3 feature).
+  - **B3 FFW Fig 4 PV tronquée three-sheet** (`2a37c40`, worklog 038, bead `padetaylor-pt2` **closed**) — three columns × three sheets.  Pole-free sector clearly visible on sheet 0 (smooth dark-blue plain in `|u|` panel, consistent with FFW md:209 asymptote `u → -1` for `-π < arg z < π`).  Pole-density gradient 8× across sheets 1+2.  Same four-class assertion template as B1/B2 (IC pin + sheet pins + sector qualitative + density gradient).
+  - **B4 FFW Fig 5 PIII tronquée + cond-number heatmap** (`f05f13e`, worklog 040, bead `padetaylor-3ug` **closed**) — uses A6's hybrid driver.  Two panels: Panel A `|w(ζ)|` over principal-sheet sub-strip via `solve_pole_free_hybrid`, Panel B closed-form `log₁₀ κ_r` over full FFW sector.  Cond-number pin `κ_r(z=30) = 157.30` matches FFW md:264 to ±1.  v1 corner: per-strip error `~10⁻²` is 4 orders looser than FFW Table 2's `4e-6 / 3e-7 / 2e-8 / 3e-9 / 4e-8`; closing the gap is gated on bead `padetaylor-ykg` (asymptotic-series helper `a_3+` coefficients; the v1 helper hard-codes them to zero so n_terms ≥ 3 is currently a no-op).  M1/M3/M4 all bite; M2 (n_terms cap) is a v1 no-op as expected.
+
+**Open beads filed this session**:
+  - `padetaylor-qum` **P3 [chore]** — `PathNetwork.jl` split into helpers (Rule 6 LOC cap at 331 vs 200).
+  - `padetaylor-zwh` **P3 [feature]** — FFW Fig 1 widened to full `Re ζ ∈ [-2, 8]` via Poisson-disk Stage-1 node placement.
+  - `padetaylor-1r0` **P3 [chore]** — FFW Fig 6 Cartesian-resample backport (visual polish, deprecate spoke artifacts).
+  - `padetaylor-i76` **P2 [feature]** — `BVP.jl` 3-arg-RHS standing artefact from A6.
+  - `padetaylor-ykg` **P3 [task]** — `pIII_asymptotic_ic` higher-order coefficients via TaylorSeries.jl substitution; gates closing the FFW Fig 5 `~10⁻²` v1 gap.
+  - `padetaylor-5k9` **P3 [feature]** — sheet-aware `solve_pole_free_hybrid` API taking `asymptotic_ic_fn(ζ)` instead of `(z)`, for full-FFW-sector multi-sheet rendering.
+
+**What is NOT shipped from the 11-step plan** (4 of 11 steps remaining):
+  - **A3 η-plane PVI RHS** (bead `padetaylor-riu` open) — needed for FFW Fig 2 column 1 and Fig 7 column 1.  **A3 was dispatched mid-session and stopped before completion**; the agent wrote `pVI_eta_transformed_rhs`, `pVI_z_to_η`, `pVI_η_to_z` (~150 LOC into `src/SheetTracker.jl`), wired `:transformed_eta` frame into `Painleve._build_VI`, drafted `test/eta_pvi_test.jl`, and was applying mutation M2 when stopped — leaving a deliberate `# M2 mutation: sign flip` comment at `src/SheetTracker.jl:248` (`vp = -z * ζ * up`).  **WIP is stashed** via `git stash push -u -m "A3 η-plane PVI WIP (stopped mid-mutation-test; has M2 marker)"`.  Next session: `git stash pop`, revert that M2 line back to `vp = +z * ζ * up`, finish mutation-proof, commit.
+  - **A4 constrained-wedge routing** (bead `padetaylor-bho` open) — branch-cut-respecting wedge selector + sheet-counter increment on circumambulation.  Needed for FFW Figs 2/3/7.  Significant change to `PathNetwork.jl`; new ADR-0013 expected.
+  - **A5 sheet-aware Stage-2 evaluation** (no bead yet) — `PathNetworkSolution(ζ; sheet=k)` accessor restricting barycentric pool to matching `visited_sheet`; cross-sheet queries fail-loud.
+  - **B5 FFW Figs 2, 3, 7 (PVI multi-sheet)** (no beads yet) — render the three remaining PVI figures.  Requires A3 + A4 + A5.
 
 ### Session 2026-05-15 — EdgeDetector h-aware level fix + closed-form Painlevé families (worklogs 032–033)
 
