@@ -121,9 +121,12 @@ include(joinpath(@__DIR__, "_oracle_problems.jl"))
         prob = PadeTaylorProblem(fW, (u_0_FW, up_0_FW), (0.0, 1.0); order = 30)
         grid = ComplexF64[0.1 + 0.0im]
 
-        # :adaptive_ffw is a Tier-4 deferral.
+        # Unknown step_size_policy still throws (only :fixed and
+        # :adaptive_ffw are recognised; bead `padetaylor-8ui` retired
+        # the :adaptive_ffw deferral in favour of the FFW 2017 §2.1.2
+        # controller — see ADR-0011).
         @test_throws ArgumentError path_network_solve(
-            prob, grid; h = 0.5, step_size_policy = :adaptive_ffw)
+            prob, grid; h = 0.5, step_size_policy = :bogus_policy)
 
         # Unknown step selection.
         @test_throws ArgumentError path_network_solve(

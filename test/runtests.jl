@@ -31,6 +31,7 @@ using PadeTaylor
     include("padestepper_test.jl")
     include("problems_test.jl")
     include("pathnetwork_test.jl")
+    include("adaptive_step_test.jl")
     include("polefield_test.jl")
     include("bvp_test.jl")
     include("dispatcher_test.jl")

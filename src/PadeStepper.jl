@@ -131,17 +131,73 @@ denominator-degree; this is acceptable because the FW recipe is
 empirically insensitive to ±1 in `(m, n)` provided diagonality is
 preserved (RESEARCH.md §7.1).
 
+## Adaptive Padé step size — FFW 2017 §2.1.2
+
+FFW 2017 §2.1.2 (`references/markdown/FFW2017_painleve_riemann_surfaces_preprint/
+FFW2017_painleve_riemann_surfaces_preprint.md:74-97`) introduces an
+adaptive step-size controller specialised to Padé-Taylor stepping.
+The estimator is the one-extra-Taylor-coefficient truncation-error
+formula `T(h) = |ε_{n+1} h^{n+1} / a(h)|`, where `a(h)` is the
+**numerator** polynomial of the local Padé evaluated at the step,
+`b_r` are the denominator coefficients (with `b_0 = 1`), and
+`ε_k = c_k + Σ_{r=1..ν} b_r c_{k-r}` are the Padé error coefficients
+of the partial-sum residual `q(h) w(ζ+h) - p(h) = Σ ε_k h^k` (md:76).
+
+The controller's rescale law (md:88-91 eq. 2) is
+
+    q = (k · Tol / T(h))^(1/(n+1)),    h := q · h,
+
+with the FFW-recommended conservative factor `k = 1e-3`.  Acceptance
+is `T(h) ≤ Tol`; on accept, the *next* step's initial `h` is seeded
+from the accepted `|q·h|` (md:93) — the controller has memory.
+
+Three helpers ship here:
+
+  - `ffw_truncation_error(f, z, u, up, n, h)` — compute `T(h)` from
+    one extra Taylor coefficient.  Internally builds the order-`(n+1)`
+    Taylor jet (one pass beyond the `n` used by the step) so that
+    `c_{n+1}` is available; the Padé denominator `b` and numerator
+    `a` are reused from the rescaled order-`n` jet.  All algebra is
+    in the *rescaled* variable `t = h'/h`: `c̃_k = h^k c_k`,
+    `ε̃_{n+1} = c̃_{n+1} + Σ b_r c̃_{n+1-r}`, `a(h) ≡ a_rescaled(t=1)`.
+    Returns the real-typed magnitude `|ε̃_{n+1} / a_rescaled(1)|`,
+    which equals FFW's `|ε_{n+1} h^{n+1} / a(h)|` by construction.
+
+  - `ffw_rescale_q(Tol, T_h, n; k = 1e-3)` — the rescale factor.
+    Pure: takes the controller magnitudes and returns `q`.  Safe at
+    `T_h = 0` (returns `Inf`, callers must check `T_h > Tol` before
+    rescaling).
+
+  - `adaptive_pade_step!(state, f, n, h_init; adaptive_tol, ...)` —
+    the full controller: takes the wedge-direction `h_init` (complex
+    or real), iterates `T(h) > Tol ⇒ h := q·h` up to `max_rescales`
+    times, then runs the accepted step via `pade_step_with_pade!`.
+    Returns `(state, P_u, meta)` where `meta` is a NamedTuple of
+    `(:h_used, :h_step, :T_h, :n_rescales)`.  Throws
+    `ErrorException` if `max_rescales` is exceeded (Rule 1).
+
+The controller is *complex-h aware*: `h_init` carries the wedge-step
+direction (e.g. `h_step = h·exp(i·θ)` from PathNetwork's wedge), and
+rescaling shrinks the magnitude only — multiplying a complex `h` by
+a real `q ∈ (0, 1]` preserves direction.  `meta.h_used` reports the
+real magnitude of the accepted step (used by `PathNetwork` to seed
+the next step's initial `h`).
+
 ## References
 
   - FW 2011 §3.1 (pole handling rationale), §3.2 (step rescaling),
     §5.1 line 277 (`(15, 15)` default) —
     `references/markdown/FW2011_painleve_methodology_JCP230/
     FW2011_painleve_methodology_JCP230.md:271-281`.
+  - FFW 2017 §2.1.2 (adaptive Padé step) —
+    `references/markdown/FFW2017_painleve_riemann_surfaces_preprint/
+    FFW2017_painleve_riemann_surfaces_preprint.md:74-97`.
   - `src/Coefficients.jl` — Phase-3 Taylor jet generator.
   - `src/RobustPade.jl` — Phase-2 `PadeApproximant{T}` + `robust_pade`.
   - `external/probes/padestepper-oracle/` — three-source oracle
     (Mathematica `WeierstrassP` + `NDSolve`, `mpmath.odefun`).
   - ADR-0001 — four-layer architecture rationale.
+  - ADR-0011 — adaptive Padé step.
 """
 module PadeStepper
 
@@ -149,6 +205,7 @@ using ..Coefficients: taylor_coefficients_2nd
 using ..RobustPade:   PadeApproximant, robust_pade
 
 export PadeStepperState, pade_step!, pade_step_with_pade!
+export ffw_truncation_error, ffw_rescale_q, adaptive_pade_step!
 
 # -----------------------------------------------------------------------------
 # State
@@ -349,6 +406,196 @@ function _evaluate_pade_deriv(P::PadeApproximant{T}, z::T) where {T}
         "the step landed exactly on a pole of the local Padé approximant. " *
         "Suggestion: shorten the step length."))
     return (Nt * D - N * Dt) / (D * D)
+end
+
+# -----------------------------------------------------------------------------
+# Adaptive Padé step — FFW 2017 §2.1.2
+# -----------------------------------------------------------------------------
+
+"""
+    ffw_truncation_error(f, z::T, u::T, up::T, order::Int, h::Number)
+        -> Real
+
+Compute the FFW 2017 §2.1.2 truncation-error estimate
+`T(h) = |ε_{n+1} · h^{n+1} / a(h)|` for a single tentative Padé step
+of size `h` from the current state `(z, u, up)` of the second-order
+ODE `u'' = f(z, u, up)`.  `order = n` is the Taylor truncation order
+(typically 30); the local Padé is `(ν, ν)` with `ν = n ÷ 2`.
+
+Internally we build the order-`(n+1)` Taylor jet so that the extra
+coefficient `c_{n+1}` is available (FFW md:74).  The Padé is built
+from the rescaled order-`n` slice `c̃_k = h^k · c_k` per the FW 2011
+rescaling discipline (see module docstring "Why we rescale by h^k").
+The Padé error coefficient is then evaluated in the *rescaled*
+variable:
+
+    ε̃_{n+1} = c̃_{n+1} + Σ_{r=1..ν} b_r · c̃_{n+1-r},
+
+and the controller magnitude is `|ε̃_{n+1} / a_rescaled(1)|`, which
+is algebraically identical to FFW's `|ε_{n+1} h^{n+1} / a(h)|` after
+substituting `c̃_k = h^k c_k` and `a_rescaled(1) = a(h)`.
+
+`h` may be complex (wedge-direction step); we return a *real-typed*
+magnitude.  The denominator `a_rescaled(1) = 0` case throws
+`DomainError` per Rule 1: a Padé numerator that vanishes at the step
+endpoint is a pathological singularity, not a small `T(h)` value.
+
+Throws `ArgumentError` if `order < 2` (the 2nd-order recursion needs
+at least two passes, and the `n+1` Taylor expansion needs `order+1 ≥
+3` so the `ε_{n+1}` formula has a valid lookup target).
+"""
+function ffw_truncation_error(f, z::T, u::T, up::T,
+                              order::Int, h::Number) where {T}
+    order ≥ 2 || throw(ArgumentError(
+        "ffw_truncation_error: order must be ≥ 2 (got $order)."))
+
+    h_T = T(h)
+
+    # Build order-(n+1) Taylor so c_{n+1} is in coefs_u[end].
+    coefs_u = taylor_coefficients_2nd(f, z, u, up, order + 1)
+
+    # Rescale c̃_k = h^k · c_k for k = 0..n+1 (length n+2).
+    coefs_u_scaled = _rescale_by_powers(coefs_u, h_T)
+
+    # Build the diagonal (ν, ν) Padé from the rescaled order-n slice
+    # (first n+1 entries, matching pade_step_with_pade!'s convention).
+    n_int = order
+    m = n_int ÷ 2
+    coefs_n  = @view coefs_u_scaled[1:(n_int + 1)]
+    P_u = robust_pade(Vector{T}(coefs_n), m, m)
+
+    # ε̃_{n+1} = c̃_{n+1} + Σ_{r=1..ν} b_r · c̃_{n+1-r}.  P_u.b is
+    # `[b_0, b_1, …, b_ν_eff]` with `b_0 = 1`; `ν_eff` may be < ν if
+    # `_trim_and_normalise` dropped trailing near-zero denominator
+    # entries.  The Σ runs up to `r = ν_eff` only — terms with
+    # `r > ν_eff` correspond to `b_r = 0` and contribute nothing.
+    cn_plus_1 = coefs_u_scaled[n_int + 2]    # c̃_{n+1} (1-based: index n+2).
+    eps_nplus1 = cn_plus_1
+    νeff = length(P_u.b) - 1
+    @inbounds for r in 1:νeff
+        eps_nplus1 += P_u.b[r + 1] * coefs_u_scaled[n_int + 2 - r]
+    end
+
+    # Numerator a(h) evaluated at t = 1 in the rescaled variable.
+    a_at_one = _eval_poly_at_one(P_u.a)
+    iszero(a_at_one) && throw(DomainError(h,
+        "ffw_truncation_error: rescaled Padé numerator a_rescaled(1) = 0 " *
+        "(equivalently a(h) = 0) at h=$h; the step landed on a zero of " *
+        "the local Padé.  Suggestion: shorten h or shift step direction."))
+
+    return abs(eps_nplus1 / a_at_one)
+end
+
+"""
+    ffw_rescale_q(Tol::Real, T_h::Real, order::Int; k::Real = 1.0e-3)
+        -> Real
+
+Compute the FFW 2017 §2.1.2 rescale factor
+
+    q = (k · Tol / T_h)^(1/(n+1))
+
+per eq. (2) at md:88-91.  `k = 1e-3` is FFW's recommended conservative
+factor.  Returns `Inf` when `T_h = 0` (the step is already exact at
+working precision; the caller's `T_h ≤ Tol` accept-test fires before
+`q` is computed in normal use, so this branch is only reached if the
+caller asks for `q` at `T_h = 0` directly — defensive, no throw).
+
+Pure; no state, no allocations beyond the return scalar.
+"""
+function ffw_rescale_q(Tol::Real, T_h::Real, order::Int; k::Real = 1.0e-3)
+    Tol > 0 || throw(ArgumentError(
+        "ffw_rescale_q: Tol must be positive (got $Tol)."))
+    T_h ≥ 0 || throw(ArgumentError(
+        "ffw_rescale_q: T_h must be non-negative (got $T_h)."))
+    k > 0 || throw(ArgumentError(
+        "ffw_rescale_q: k must be positive (got $k)."))
+    order ≥ 1 || throw(ArgumentError(
+        "ffw_rescale_q: order must be ≥ 1 (got $order)."))
+    T_h == 0 && return Inf
+    return (k * Tol / T_h) ^ (1 / (order + 1))
+end
+
+"""
+    adaptive_pade_step!(state::PadeStepperState{T}, f, order::Int,
+                        h_init::Number;
+                        adaptive_tol::Real = 1.0e-12,
+                        k_conservative::Real = 1.0e-3,
+                        max_rescales::Int = 50)
+        -> (state, P_u, meta::NamedTuple)
+
+Take one **adaptive** Padé-Taylor step.  Iterate `T(h) > Tol ⇒ h := q·h`
+(FFW 2017 §2.1.2 eq. 2 rescale) until either the truncation-error
+estimate satisfies `T(h) ≤ Tol` or `max_rescales` rescales have been
+attempted (Rule 1 fail-loud — does NOT silently accept a too-large
+step).  On accept, run the standard `pade_step_with_pade!` with the
+accepted `h` and return the new state, its Padé, and a metadata
+NamedTuple.
+
+`h_init` may be complex (wedge-direction step); rescaling multiplies
+by a real `q ∈ (0, 1]`, preserving the wedge direction.
+
+`meta`:
+  - `h_used::Real`     — magnitude of the accepted step `|h|`.
+  - `h_step::T`        — the *complex* accepted step `h_init·∏q_k`.
+  - `T_h::Real`        — final truncation-error estimate (≤ Tol).
+  - `n_rescales::Int`  — number of rescale iterations consumed.
+
+The caller (typically `PathNetwork.path_network_solve`) uses
+`meta.h_used` as the *seed* `h` for the next step (FFW md:93 "the
+initial step length is always the scaled step length stored at the
+current point").
+
+Throws:
+  - `ErrorException` if `max_rescales` exhausted with `T(h) > Tol`.
+  - `ArgumentError` if `adaptive_tol ≤ 0`, `k_conservative ≤ 0`, or
+    `max_rescales < 1`.
+"""
+function adaptive_pade_step!(state::PadeStepperState{T}, f, order::Int,
+                             h_init::Number;
+                             adaptive_tol::Real = 1.0e-12,
+                             k_conservative::Real = 1.0e-3,
+                             max_rescales::Int = 50) where {T}
+    adaptive_tol > 0 || throw(ArgumentError(
+        "adaptive_pade_step!: adaptive_tol must be positive (got $adaptive_tol)."))
+    k_conservative > 0 || throw(ArgumentError(
+        "adaptive_pade_step!: k_conservative must be positive (got $k_conservative)."))
+    max_rescales ≥ 1 || throw(ArgumentError(
+        "adaptive_pade_step!: max_rescales must be ≥ 1 (got $max_rescales)."))
+
+    h = T(h_init)
+    n_rescales = 0
+    Th = ffw_truncation_error(f, state.z, state.u, state.up, order, h)
+
+    while Th > adaptive_tol
+        n_rescales ≥ max_rescales && throw(ErrorException(
+            "adaptive_pade_step!: max_rescales=$max_rescales exhausted at " *
+            "z=$(state.z) with T(h)=$Th > Tol=$adaptive_tol.  Suggestion: " *
+            "tighten the controller (smaller h_init, larger max_rescales) " *
+            "or relax adaptive_tol."))
+        q = ffw_rescale_q(adaptive_tol, Th, order; k = k_conservative)
+        h *= q
+        n_rescales += 1
+        Th = ffw_truncation_error(f, state.z, state.u, state.up, order, h)
+    end
+
+    # Accepted: run the actual step.
+    _, P_u = pade_step_with_pade!(state, f, order, h)
+    meta = (h_used     = abs(h),
+            h_step     = h,
+            T_h        = Th,
+            n_rescales = n_rescales)
+    return state, P_u, meta
+end
+
+# Evaluate the polynomial `a` (low-to-high) at t = 1 — a Horner-style
+# sum.  Used by `ffw_truncation_error` to compute `a_rescaled(1)`.
+# Kept private; not exported.
+function _eval_poly_at_one(a::AbstractVector{T}) where {T}
+    s = zero(T)
+    @inbounds for k in eachindex(a)
+        s += a[k]
+    end
+    return s
 end
 
 end # module PadeStepper

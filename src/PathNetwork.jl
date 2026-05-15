@@ -72,13 +72,41 @@ the IC-on-real-axis precondition IS checked and throws an
 `ArgumentError` if violated (CLAUDE.md Rule 1).  Default `false`
 preserves the FW 2011 algorithm verbatim.
 
+## Adaptive Padé step size (`:adaptive_ffw`, opt-in)
+
+FFW 2017 §2.1.2 (`references/markdown/FFW2017_painleve_riemann_surfaces_preprint/
+FFW2017_painleve_riemann_surfaces_preprint.md:74-97`) replaces the FW
+2011 fixed `h` with a controller that estimates per-step truncation
+error `T(h) = |ε_{n+1} h^{n+1} / a(h)|` and rescales `h := q·h` with
+`q = (k·Tol/T(h))^(1/(n+1))` until `T(h) ≤ Tol`.  Accepted `|q·h|`
+seeds the next step's initial `h` — the controller has memory.
+
+The `:adaptive_ffw` policy (opt-in via `step_size_policy` kwarg)
+delegates to `PadeStepper.adaptive_pade_step!` for each wedge-
+direction step in Stage 1.  The controller magnitude is the real
+absolute step length; the wedge direction is preserved across
+rescales (a real `q ∈ (0, 1]` multiplies a complex `h` without
+rotation).
+
+The Stage-2 evaluation (canonical-Padé interpolation) is **unchanged**:
+each visited node stores its own real `visited_h[k]`, and Stage 2
+indexes the local Padé at `t = (z_f - z_v) / visited_h[k]` — heterogeneous
+node-by-node `h`s are naturally supported by the per-node-`h` storage
+already in place (worklog 034).
+
+Activate via `step_size_policy = :adaptive_ffw` and pass an
+`adaptive_tol` (default `1e-12`) and optional `k_conservative`
+(FFW default `1e-3`).
+
 ## Tier-3-to-5 deferrals (per ADR-0004)
 
   - **BVP composition (Tier 3)**: stub comment at end of this file.
   - **CoordTransforms (Tier 4)**: external wrapper, no change here.
   - **SheetTracker (Tier 5)**: external wrapper, no change here.
-  - **`:adaptive_ffw` step-size policy**: throws `ArgumentError` per
-    fail-fast discipline; Tier-4 work item.
+  - **Non-uniform Stage-1 nodes (Tier 4-A2)**: independent of adaptive
+    `h`; the `grid` kwarg accepts any `AbstractVector{<:Complex}` so a
+    higher-level node-placement wrapper can ship orthogonally to this
+    module.
 """
 module PathNetwork
 
@@ -87,6 +115,7 @@ using Printf:        @sprintf, @printf
 using Random:        shuffle, MersenneTwister
 using ..RobustPade:  PadeApproximant
 using ..PadeStepper: PadeStepperState, pade_step_with_pade!,
+                     adaptive_pade_step!, ffw_truncation_error, ffw_rescale_q,
                      _evaluate_pade, _evaluate_pade_deriv
 using ..Problems:    PadeTaylorProblem
 
@@ -160,7 +189,17 @@ Kwargs:
     pass explicitly only to override it.  FW 2011's standard is 30.
   - `wedge_angles`       — five angle offsets relative to goal direction.
   - `step_selection`     — `:min_u` (default; FW 2011) or `:steepest_descent`.
-  - `step_size_policy`   — `:fixed` (Tier-2 only); `:adaptive_ffw` throws.
+  - `step_size_policy`   — `:fixed` (default; FW 2011 constant `h`) or
+    `:adaptive_ffw` (FFW 2017 §2.1.2 controller; uses `adaptive_tol`
+    and `k_conservative` kwargs).
+  - `adaptive_tol`       — controller acceptance threshold for
+    `step_size_policy = :adaptive_ffw` (default `1e-12`).  Unused
+    under `:fixed`.
+  - `k_conservative`     — FFW 2017 conservative factor `k` in
+    `q = (k·Tol/T(h))^(1/(n+1))` (default `1e-3` per md:91).  Unused
+    under `:fixed`.
+  - `max_rescales`       — per-step cap on FFW rescale iterations
+    under `:adaptive_ffw` (default `50`).  Unused under `:fixed`.
   - `max_steps_per_target` — cap per-target Stage-1 walk length.
   - `rng_seed::Integer`  — for deterministic target shuffle (tests).
   - `enforce_real_axis_symmetry::Bool` — opt-in.  When `true`, walk only
@@ -206,6 +245,9 @@ function path_network_solve(prob::PadeTaylorProblem,
                             wedge_angles::AbstractVector{<:Real} = DEFAULT_WEDGE,
                             step_selection::Symbol  = :min_u,
                             step_size_policy::Symbol = :fixed,
+                            adaptive_tol::Real = 1.0e-12,
+                            k_conservative::Real = 1.0e-3,
+                            max_rescales::Integer = 50,
                             max_steps_per_target::Integer = 1000,
                             rng_seed::Integer = 0,
                             enforce_real_axis_symmetry::Bool = false,
@@ -215,14 +257,16 @@ function path_network_solve(prob::PadeTaylorProblem,
     if enforce_real_axis_symmetry
         return _solve_with_schwarz_reflection(
             prob, grid; h, order, wedge_angles, step_selection,
-            step_size_policy, max_steps_per_target, rng_seed,
-            verbose, progress_every)
+            step_size_policy, adaptive_tol, k_conservative, max_rescales,
+            max_steps_per_target, rng_seed, verbose, progress_every)
     end
 
-    step_size_policy === :fixed || throw(ArgumentError(
-        "path_network_solve: :adaptive_ffw step-size policy is a Tier-4 " *
-        "deferral (FFW 2017 §2.4, bead padetaylor-???); only :fixed is " *
-        "supported in Tier-2.  See ADR-0004."))
+    step_size_policy ∈ (:fixed, :adaptive_ffw) || throw(ArgumentError(
+        "path_network_solve: step_size_policy must be :fixed or " *
+        ":adaptive_ffw (got :$step_size_policy).  See ADR-0011 for " *
+        ":adaptive_ffw semantics."))
+    step_size_policy === :fixed || adaptive_tol > 0 || throw(ArgumentError(
+        "path_network_solve: adaptive_tol must be positive (got $adaptive_tol)."))
     step_selection in (:min_u, :steepest_descent) || throw(ArgumentError(
         "path_network_solve: step_selection must be :min_u or " *
         ":steepest_descent (got $step_selection)."))
@@ -263,11 +307,20 @@ function path_network_solve(prob::PadeTaylorProblem,
 
     t_start_stage1 = time()
     total_n_steps  = 0
+    # Per-target initial step magnitude.  Under :fixed this stays at
+    # the constant `h_T`; under :adaptive_ffw FFW md:93 prescribes
+    # "the initial step length is always the scaled step length stored
+    # at the current point" — i.e. the previous accepted step's |q·h|,
+    # threaded across the walk so the controller has memory.
     for (target_idx, target) in enumerate(targets)
         any(z -> isapprox(z, target; atol=10*eps(T)), visited_z) && continue
 
         idx_v = _nearest_visited(visited_z, target)
         z_cur, u_cur, up_cur = visited_z[idx_v], visited_u[idx_v], visited_up[idx_v]
+        # Seed `h_cur` from the visited node's stored step length
+        # (which is the FFW "scaled step length stored at the current
+        # point" under adaptive).  Under :fixed all visited_h are h_T.
+        h_cur = visited_h[idx_v]
 
         verbose && _verbose_target_start(target_idx, length(targets),
                                          target, z_cur, t_start_stage1)
@@ -277,7 +330,7 @@ function path_network_solve(prob::PadeTaylorProblem,
         # the walk chains off its immediate predecessor.
         parent_idx = idx_v
         n_steps = 0
-        while abs(z_cur - target) > h_T
+        while abs(z_cur - target) > h_cur
             n_steps        += 1
             total_n_steps  += 1
             n_steps > max_steps_per_target && throw(ErrorException(
@@ -286,17 +339,44 @@ function path_network_solve(prob::PadeTaylorProblem,
                 "current z = $z_cur, |z - target| = $(abs(z_cur - target))."))
 
             goal_dir = angle(target - z_cur)
-            evals = _wedge_evaluations(prob.f, z_cur, u_cur, up_cur,
-                                       order, h_T, goal_dir, wedge_angles)
 
-            idx_sel = _select_candidate(step_selection, evals, u_cur, up_cur,
-                                        goal_dir, wedge_angles)
+            # Adaptive rescale loop (FFW md:93): re-run the wedge,
+            # re-select min-|u|, re-compute T(h); if T(h) > Tol shrink
+            # h and try again.  Under :fixed this loop runs exactly
+            # once with h_step = h_T and skips the T(h) check.
+            h_step    = h_cur
+            n_resc    = 0
+            z_new, u_new, up_new, pade_sel = z_cur, CT(NaN, NaN), CT(NaN, NaN), nothing
+            while true
+                evals = _wedge_evaluations(prob.f, z_cur, u_cur, up_cur,
+                                           order, h_step, goal_dir, wedge_angles)
+                idx_sel = _select_candidate(step_selection, evals, u_cur, up_cur,
+                                            goal_dir, wedge_angles)
+                z_new, u_new, up_new, pade_sel = evals[idx_sel]
+                (!isfinite(abs(u_new)) || pade_sel === nothing) && throw(ErrorException(
+                    "path_network_solve: all 5 wedge candidates failed at " *
+                    "z=$z_cur (target=$target); shrink h or widen wedge."))
 
-            z_new, u_new, up_new, pade_sel = evals[idx_sel]
+                step_size_policy === :fixed && break
 
-            (!isfinite(abs(u_new)) || pade_sel === nothing) && throw(ErrorException(
-                "path_network_solve: all 5 wedge candidates failed at " *
-                "z=$z_cur (target=$target); shrink h or widen wedge."))
+                # :adaptive_ffw — estimate T(h) at the selected wedge
+                # direction.  The wedge angle θ_sel rotates the real
+                # h_step magnitude; ffw_truncation_error consumes the
+                # COMPLEX h that was actually taken.
+                θ_sel = T(goal_dir) + T(wedge_angles[idx_sel])
+                h_complex = Complex{T}(h_step * cos(θ_sel), h_step * sin(θ_sel))
+                Th = ffw_truncation_error(prob.f, z_cur, u_cur, up_cur,
+                                          Int(order), h_complex)
+                Th ≤ adaptive_tol && break
+                n_resc ≥ max_rescales && throw(ErrorException(
+                    "path_network_solve: :adaptive_ffw max_rescales=" *
+                    "$max_rescales exhausted at z=$z_cur, target=$target; " *
+                    "T(h)=$Th > Tol=$adaptive_tol.  Suggestion: tighten " *
+                    "max_rescales, relax adaptive_tol, or shorten initial h."))
+                q = ffw_rescale_q(adaptive_tol, Th, Int(order); k = k_conservative)
+                h_step *= q
+                n_resc += 1
+            end
 
             # Canonical (real-h) Padé centered at z_new, per ADR-0004's
             # design decision: Stage 2 always interpolates inside |t| ≤ 1
@@ -304,14 +384,19 @@ function path_network_solve(prob::PadeTaylorProblem,
             # above is consumed by step selection only; storing it as the
             # visited node's Padé would invalidate the `t = (z_f - z_v)/h`
             # Stage-2 evaluation (which assumes real h).  Cost: one extra
-            # Coefficients + RobustPade per visited node.
-            pade_canonical = _local_pade(prob.f, z_new, u_new, up_new, order, h_T)
+            # Coefficients + RobustPade per visited node.  Under
+            # :adaptive_ffw the canonical Padé uses the accepted
+            # h_step (FFW md:93: scaled length is stored at the point).
+            pade_canonical = _local_pade(prob.f, z_new, u_new, up_new, order, h_step)
+            # Update the per-walk seed for the next step.  Under :fixed
+            # this stays at h_T (h_step == h_T == h_cur).
+            h_cur = h_step
 
             push!(visited_z, z_new)
             push!(visited_u, u_new)
             push!(visited_up, up_new)
             push!(visited_pade, pade_canonical)
-            push!(visited_h, h_T)
+            push!(visited_h, h_step)
             push!(visited_parent, parent_idx)
             parent_idx = length(visited_z)   # next step chains off this node
 
@@ -386,6 +471,9 @@ function _solve_with_schwarz_reflection(prob::PadeTaylorProblem,
                                          wedge_angles::AbstractVector{<:Real},
                                          step_selection::Symbol,
                                          step_size_policy::Symbol,
+                                         adaptive_tol::Real,
+                                         k_conservative::Real,
+                                         max_rescales::Integer,
                                          max_steps_per_target::Integer,
                                          rng_seed::Integer,
                                          verbose::Bool = false,
@@ -423,6 +511,9 @@ function _solve_with_schwarz_reflection(prob::PadeTaylorProblem,
         h = h, order = order, wedge_angles = wedge_angles,
         step_selection = step_selection,
         step_size_policy = step_size_policy,
+        adaptive_tol = adaptive_tol,
+        k_conservative = k_conservative,
+        max_rescales = max_rescales,
         max_steps_per_target = max_steps_per_target,
         rng_seed = rng_seed,
         enforce_real_axis_symmetry = false,
