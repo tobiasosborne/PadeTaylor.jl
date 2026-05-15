@@ -58,10 +58,16 @@ up_tri =  0.3049055602612289
 # of roughly ≲ 1 to separate pole-field from smooth (see the
 # EdgeGatedSolve "Grid resolution matters" docstring); finer gives
 # more detail but the region-growing solve costs more per pass.  At
-# [-20, 20]² (5× the linear extent of FW Fig 3.1), N = 161 gives a
-# spacing of 0.25 and renders in a couple of minutes.  Drop to N = 81
-# (spacing 0.5) for a faster sanity pass.
-N = 161
+# [-20, 20]² (5× the linear extent of FW Fig 3.1):
+#   N =  81 (h_grid = 0.5)    fast sanity pass.
+#   N = 161 (h_grid = 0.25)   couple of minutes; the calibration anchor
+#                              of the h-aware level scaling.
+#   N = 641 (h_grid = 0.0625) 4× linear resolution; bead `padetaylor-f8l`'s
+#                              headline-render target.  Possible only with
+#                              the auto-scaled `edge_level` (the OLD fixed
+#                              0.001 default stalled the flood-fill below
+#                              h_grid ≈ 0.25).
+N = 641
 xs = range(-20.0, 20.0; length = N)
 ys = range(-20.0, 20.0; length = N)
 

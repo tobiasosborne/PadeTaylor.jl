@@ -237,7 +237,7 @@ end
                                 xs::AbstractVector{<:Real},
                                 ys::AbstractVector{<:Real};
                                 h = 0.5, order = prob.order,
-                                edge_level = 0.001,
+                                edge_level = :auto,
                                 seed_radius = nothing,
                                 grow_rings = 3,
                                 open_radius = 1,
@@ -250,8 +250,10 @@ docstring for the algorithm and the FW 2011 md:401 rationale).
 
 Kwargs:
   - `h`, `order` — passed through to `path_network_solve`.
-  - `edge_level` — `pole_field_mask` threshold (FW Fig 3.3 default
-    `0.001`, on `log₁₀|Δu|`).
+  - `edge_level` — `pole_field_mask` threshold on `log₁₀|Δu|`.  Default
+    `:auto` resolves to the h-aware `LEVEL0 + 2·log₁₀(min(h, H0)/H0)`
+    (anchor `(0.25, 0.001)`, clamped at `H0`) — see `EdgeDetector`'s
+    module docstring.  Pass `0.001` to reproduce FW Fig 3.3 verbatim.
   - `seed_radius` — radius around the IC (`prob.zspan[1]`) of the
     initial `field` seed. `nothing` ⇒ `max(3, 2.5·Δgrid)`, enough to
     reach the first poles of a Painlevé IVP without seeding a wide
@@ -273,7 +275,7 @@ function edge_gated_pole_field_solve(prob::PadeTaylorProblem,
                                      ys::AbstractVector{<:Real};
                                      h::Real          = 0.5,
                                      order::Integer   = prob.order,
-                                     edge_level::Real = 0.001,
+                                     edge_level::Union{Real,Symbol} = :auto,
                                      seed_radius      = nothing,
                                      grow_rings::Integer  = 3,
                                      open_radius::Integer = 1,

@@ -148,16 +148,18 @@ using PadeTaylor.EdgeDetector: laplacian_residual, pole_field_mask
         @test mask[center_i, center_j] == true
     end
 
-    @testset "ED.2.2: smooth vs pole separation at default level" begin
-        # On a smooth analytic grid, mask is all-false: |Δu| << 1 in
-        # the entire interior, so log₁₀|Δu| << 0.001.  On the
-        # 1/(z-z₀) grid, the high-|Δu| region forms a connected
-        # cluster around z₀.
+    @testset "ED.2.2: smooth vs pole separation at FW's published level 0.001" begin
+        # Pins FW Fig 3.3's specific contour (level = 0.001 on log₁₀|Δu|);
+        # passed explicitly because the bead `padetaylor-f8l` fix moved
+        # the default to an h-aware auto-level — at h=0.05 the auto
+        # default drops to ≈ -1.40 and would flag the entire 1/z grid
+        # (the FW recipe assumes the 0.001 contour, which is only
+        # well-calibrated at FW's own grid spacing).
         f_smooth(z) = exp(z)
         x_range = -1.0:0.05:1.0
         y_range = -1.0:0.05:1.0
         u_smooth = build_grid(f_smooth, x_range, y_range)
-        mask_smooth = pole_field_mask(u_smooth, 0.05)
+        mask_smooth = pole_field_mask(u_smooth, 0.05; level = 0.001)
         # No interior cell should be flagged.
         @test count(mask_smooth) == 0
 
@@ -166,7 +168,7 @@ using PadeTaylor.EdgeDetector: laplacian_residual, pole_field_mask
         z₀ = 0.0 + 0.0im
         f_pole(z) = inv(z - z₀)
         u_pole = build_grid(f_pole, x_range, y_range)
-        mask_pole = pole_field_mask(u_pole, 0.05)
+        mask_pole = pole_field_mask(u_pole, 0.05; level = 0.001)
         # At h=0.05 on a 41x41 grid with a pole at the origin, the
         # |Δu| > 10^0.001 ≈ 1 disk extends roughly to |z| ≲ 0.35
         # (since |∇²(1/z)| = 2/|z|³ = 1 at |z| ≈ 2^(1/3) · 0.5 once
@@ -208,21 +210,146 @@ using PadeTaylor.EdgeDetector: laplacian_residual, pole_field_mask
         @test count(mask_low) ≥ count(mask_high)
     end
 
+    @testset "ED.5.1 (bead padetaylor-f8l): _auto_level(h) — calibration anchor + clamp" begin
+        # The bead's formula: level(h) = LEVEL0 + 2·log₁₀(min(h, H0) / H0)
+        # with anchor (H0, LEVEL0) = (0.25, 0.001).  Smooth/pole-annulus
+        # 5-point residuals of a complex-analytic function scale as
+        # |Δu| ∝ h², so log₁₀|Δu| shifts additively by 2·log₁₀(h) and the
+        # threshold must follow.  Clamped at H0 so h ≥ H0 keeps FW's
+        # published 0.001 — preserves backward compatibility for the
+        # existing FW-figure test grids at h ∈ {0.333, 0.5, 0.75}.
+        LEVEL0 = 0.001
+        H0     = 0.25
+
+        # At the anchor:
+        @test EdgeDetector._auto_level(H0, Float64) ≈ LEVEL0
+
+        # For h < H0, drops by 2·log₁₀(h/H0):
+        @test EdgeDetector._auto_level(0.125,  Float64) ≈ LEVEL0 + 2*log10(0.5)
+        @test EdgeDetector._auto_level(0.0625, Float64) ≈ LEVEL0 + 2*log10(0.25)
+
+        # For h ≥ H0, clamp at LEVEL0 (the existing tests live here):
+        @test EdgeDetector._auto_level(0.333, Float64) ≈ LEVEL0
+        @test EdgeDetector._auto_level(0.5,   Float64) ≈ LEVEL0
+        @test EdgeDetector._auto_level(0.75,  Float64) ≈ LEVEL0
+        @test EdgeDetector._auto_level(1.0,   Float64) ≈ LEVEL0
+
+        # Element-type preservation (BigFloat-256 needs to thread):
+        @test EdgeDetector._auto_level(BigFloat("0.125"), BigFloat) isa BigFloat
+        @test EdgeDetector._auto_level(0.125, BigFloat) ≈ BigFloat(LEVEL0) + 2*log10(BigFloat("0.5"))
+    end
+
+    @testset "ED.5.2 (bead padetaylor-f8l): auto default tracks pole-annulus floor across h" begin
+        # For u(z) = 1/(z - z₀), the 5-point Laplacian residual at a
+        # lattice point z (away from z₀) is dominated by the truncation
+        # term `(h²/12)(∂⁴u/∂x⁴ + ∂⁴u/∂y⁴) = (4h²/|z-z₀|⁵)`.  At a
+        # FIXED spatial location, log₁₀|Δu| drops by 2·log₁₀(2) ≈ -0.60
+        # per halving of h — exactly the floor the auto-level formula
+        # tracks.  With the OLD fixed level=0.001 default this annulus
+        # cell drops below threshold at h=0.0625; with the NEW auto
+        # default it stays above.  This is the cell-to-cell connectivity
+        # the bead's flood-fill stall depends on.
+        z_pole = 0.05 + 0.05im   # off any lattice line at h ∈ {0.25, 0.125, 0.0625}
+        f(z)   = inv(z - z_pole)
+
+        function pole_grid(h)
+            N  = 2 * round(Int, 1.0 / h) + 1   # odd; lattice over [-1, 1]²
+            xs = range(-1.0, 1.0; length = N)
+            ys = range(-1.0, 1.0; length = N)
+            u  = ComplexF64[f(xs[i] + im * ys[j]) for i in 1:N, j in 1:N]
+            return u, xs, ys
+        end
+
+        for h in (0.25, 0.125, 0.0625)
+            u, xs, ys = pole_grid(h)
+            # Locate an interior cell at spatial distance ≈ 0.5 from the pole.
+            d_target  = 0.5
+            i_tgt, j_tgt = 0, 0
+            for i in 2:length(xs)-1, j in 2:length(ys)-1
+                z = xs[i] + im * ys[j]
+                if abs(abs(z - z_pole) - d_target) < h/2
+                    i_tgt, j_tgt = i, j; break
+                end
+            end
+            @test i_tgt > 0   # cell found
+
+            # NEW auto default: the cell IS flagged at all three h's.
+            mask_auto = pole_field_mask(u, h)
+            @test mask_auto[i_tgt, j_tgt] == true
+
+            # OLD fixed level=0.001 (FW recipe at the calibration anchor):
+            # works at h=0.25; fails at h=0.0625 — the bug.
+            mask_fw = pole_field_mask(u, h; level = 0.001)
+            if h ≤ 0.0625
+                @test mask_fw[i_tgt, j_tgt] == false   # demonstrates the bug
+            else
+                @test mask_fw[i_tgt, j_tgt] == true    # FW's anchor still works
+            end
+        end
+    end
+
+    @testset "ED.5.3 (bead padetaylor-f8l): :auto sentinel propagation + fail-loud on bad input" begin
+        # Spot-check the new Union{Real,Symbol} surface area.
+        z_pole = 0.05 + 0.05im
+        xs = range(-1.0, 1.0; length = 33)   # h = 1/16 = 0.0625
+        ys = xs
+        u  = ComplexF64[inv(xs[i] + im * ys[j] - z_pole) for i in 1:33, j in 1:33]
+        h  = step(xs)
+
+        # `:auto` is the default — explicit pass is a no-op.
+        @test pole_field_mask(u, h)            == pole_field_mask(u, h; level = :auto)
+
+        # Numeric override still works.
+        @test pole_field_mask(u, h; level = 0.001) isa BitMatrix
+
+        # Unknown Symbol is fail-loud per CLAUDE.md Rule 1.
+        @test_throws ArgumentError pole_field_mask(u, h; level = :not_a_real_sentinel)
+        # 1-arg form has no `h`, so `:auto` cannot resolve — must fail loud.
+        Δu = laplacian_residual(u, h)
+        @test_throws ArgumentError pole_field_mask(Δu; level = :auto)
+    end
+
 end
 
-# Mutation-proof procedure (verified 2026-05-13).
+# Mutation-proof procedure.
 #
-# Mutation A — change stencil centre coefficient from `-4` to `-3` in
-# `laplacian_residual`.  Bites:
-#   - ED.1.1: a non-zero residual `u_ij / h²` appears at every interior
-#     cell on the harmonic quadratic (instead of zero); `|Δu| ≈ 100`
-#     at u ≈ 1 with h=0.1, breaking the `< 1e-12` assertion.
-#   - ED.1.2: same.
+# Original procedure (verified 2026-05-13, ED.1.* / ED.2.*):
 #
-# Mutation B — drop the `/h²` factor in `laplacian_residual`.  Bites:
-#   - ED.1.3: magnitudes are scaled down by `h² = 0.01`, so the
-#     near-pole `|Δu|` is `~1` instead of `~100`, breaking the `> 100`
-#     assertion.
-#   - ED.2.2: log₁₀|Δu| values shift by 2; mask cells flip false.
+#   Mutation A — change stencil centre coefficient from `-4` to `-3` in
+#   `laplacian_residual`.  Bites:
+#     - ED.1.1: a non-zero residual `u_ij / h²` appears at every interior
+#       cell on the harmonic quadratic (instead of zero); `|Δu| ≈ 100`
+#       at u ≈ 1 with h=0.1, breaking the `< 1e-12` assertion.
+#     - ED.1.2: same.
 #
-# Both mutations restored before commit per CLAUDE.md Rule 4.
+#   Mutation B — drop the `/h²` factor in `laplacian_residual`.  Bites:
+#     - ED.1.3: magnitudes are scaled down by `h² = 0.01`, so the
+#       near-pole `|Δu|` is `~1` instead of `~100`, breaking the `> 100`
+#       assertion.
+#     - ED.2.2: log₁₀|Δu| values shift by 2; mask cells flip false.
+#
+# Bead `padetaylor-f8l` (verified 2026-05-15, ED.5.*):
+#
+#   Mutation M1 — revert `_auto_level` to `T(_LEVEL0)` (no h-scaling).
+#   Bites ED.5.1 (3 of the 9 assertions; the h<H0 scaling checks) and
+#   ED.5.2 at h=0.0625 (the annulus cell drops below threshold).
+#
+#   Mutation M2 — flip sign: `T(_LEVEL0) - 2*log10(min(...)/...)`.
+#   Bites ED.5.1 (3 assertions) and ED.5.2 (2 assertions at h≤0.125;
+#   the sign-flipped threshold becomes MORE restrictive at fine grids,
+#   the opposite of what's needed).
+#
+#   Mutation M3 — remove the clamp: `T(_LEVEL0) + 2*log10(T(h)/T(_H0))`
+#   (no `min` at H0).  Bites ED.5.1 (4 clamp assertions at h ≥ H0) and
+#   also bites EG.1.1 + EG.1.2 in `edge_gated_solve_test.jl` (the
+#   existing coarse-grid tests at h_grid = 0.75, where the unclamped
+#   threshold rises to +0.95 and the mask collapses).  The cascade
+#   into EG.1.x proves the clamp is load-bearing for backward compat,
+#   not just an aesthetic choice.
+#
+#   Mutation M4 — revert the 2-arg `pole_field_mask` default from
+#   `:auto` back to `0.001`.  Bites ED.5.2 (h=0.0625 annulus cell) and
+#   ED.5.3 (the `pole_field_mask(u, h) == pole_field_mask(u, h;
+#   level = :auto)` equality).
+#
+# All mutations restored before commit per CLAUDE.md Rule 4.

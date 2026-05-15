@@ -147,7 +147,7 @@ end
 """
     lattice_dispatch_solve(prob, bvp_f, bvp_∂f_∂u, xs, ys;
                            h_path = 0.5, order = prob.order,
-                           edge_level = 0.001,
+                           edge_level = :auto,
                            N_bvp = 20, bvp_tol = nothing,
                            mask = nothing) -> LatticeSolution
 
@@ -161,7 +161,7 @@ function lattice_dispatch_solve(prob::PadeTaylorProblem,
                                 ys::AbstractVector{<:Real};
                                 h_path::Real      = 0.5,
                                 order::Integer    = prob.order,
-                                edge_level::Real  = 0.001,
+                                edge_level::Union{Real,Symbol} = :auto,
                                 N_bvp::Integer    = 20,
                                 bvp_tol           = nothing,
                                 mask              = nothing)
@@ -180,8 +180,10 @@ function lattice_dispatch_solve(prob::PadeTaylorProblem,
     length(prob.y0) == 2 || throw(ArgumentError(
         "lattice_dispatch_solve: prob.y0 must be a 2-tuple " *
         "(u₀, u'₀) for 2nd-order IVP; got $(length(prob.y0)) entries."))
-    isfinite(edge_level) || throw(ArgumentError(
-        "lattice_dispatch_solve: edge_level must be finite (got $edge_level)."))
+    (edge_level === :auto || (edge_level isa Real && isfinite(edge_level))) ||
+        throw(ArgumentError(
+            "lattice_dispatch_solve: edge_level must be a finite Real " *
+            "or the `:auto` sentinel (got $(repr(edge_level)))."))
     N_bvp ≥ 4 || throw(ArgumentError(
         "lattice_dispatch_solve: N_bvp must be ≥ 4 (got $N_bvp); " *
         "detail: Chebyshev-Newton needs at least 5 nodes."))
