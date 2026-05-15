@@ -138,7 +138,7 @@ Per the RF2014+FFW2017 subagent: introduces five new architectural moves — exp
 | 3 | 197–199 | **T5** | PVI phase portrait revealing tronquée | Pole-free sector matches FFW; phase-portrait winding-number consistent across sheet boundaries. |
 | 4 | 234–236 | **T4** | PV tronquée + phase portrait, 3 sheets | As Fig 1 for PV. |
 | 5 | 238–240 | **T4** | PIII tronquée + BVP boundary points + cond-number | PFS-exterior + BVP-interior hybrid matches FFW; cond-number heat map shows exponential growth in pole-free sector. |
-| 6 | 295–297 | **T4** | PV generic 3 sheets spiraling | Pole spiral matches FFW on each sheet. |
+| 6 | 295–297 | **T4** | PV generic 3 sheets spiraling | Pole spiral matches FFW on each sheet. **SHIPPED — `figures/ffw2017_fig_6.jl` renders nine panels (3 sheets × 3 views: ζ-plane \|w(ζ)\|, z-plane \|u(z)\|, z-plane arg u(z) phase portrait) for `(α,β,γ,δ) = (1,-1,1,-1/2)`, IC `(z,u,u') = (1,2,-1)` over `Re ζ ∈ [-1, 2.5]`, three contiguous strips `Im ζ ∈ (-π, 5π]` (worklog 036, bead `padetaylor-mbu`). `test/ffw_fig_6_test.jl` `FF6.1.*` (24 GREEN assertions) pins per-sheet error (loose vs tight `adaptive_tol`) at `3.3e-12 / 7.0e-8 / 9.8e-8` for sheets 0/1/2 — comfortably under thresholds `3e-8 / 7e-5 / 2e-4`, beating FFW's `3e-9 / 7e-6 / 2e-5` (FFW md:297) on our reduced-window patch. PoC step B1 of the 11-step FFW figure plan, composing the just-shipped ADR-0011 adaptive Padé h + ADR-0012 non-uniform Stage-1 nodes.** |
 | 7 | 299–301 | **T5** | PVI generic 3 sheets | As Fig 2 for generic case. |
 
 ## §6. Tier-aggregated work plan

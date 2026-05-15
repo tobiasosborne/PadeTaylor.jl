@@ -50,4 +50,5 @@ using PadeTaylor
     include("painleve_solution_test.jl")
     include("painleve_named_test.jl")
     include("painleve_closed_form_test.jl")
+    include("ffw_fig_6_test.jl")
 end
