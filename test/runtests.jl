@@ -52,4 +52,5 @@ using PadeTaylor
     include("painleve_closed_form_test.jl")
     include("ffw_fig_6_test.jl")
     include("ffw_fig_1_test.jl")
+    include("ffw_fig_4_test.jl")
 end
