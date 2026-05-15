@@ -55,4 +55,5 @@ using PadeTaylor
     include("ffw_fig_1_test.jl")
     include("ffw_fig_4_test.jl")
     include("ivp_bvp_hybrid_test.jl")
+    include("ffw_fig_5_test.jl")
 end
