@@ -89,6 +89,7 @@ import ..PathNetwork: path_network_solve
 export PainleveProblem, PainleveSolution
 export poles, grid_values, equation, parameters, solutionname
 export tritronquee, hastings_mcleod
+export pii_rational, pii_airy, piv_entire
 
 # -----------------------------------------------------------------------------
 # Canonical RHS factories for the no-transform equations (PI, PII, PIV).
@@ -280,6 +281,14 @@ include("PainleveSolution.jl")
 # -----------------------------------------------------------------------------
 
 include("PainleveNamed.jl")
+
+# -----------------------------------------------------------------------------
+# Parametrised-family closed-form constructors (`pii_rational`,
+# `pii_airy`, `piv_entire`) — the second kind of named Painlevé solutions
+# in the ADR-0008 taxonomy.  ADR-0010 records the API decision.
+# -----------------------------------------------------------------------------
+
+include("PainleveClosedForm.jl")
 
 # -----------------------------------------------------------------------------
 # Forwarding methods — solver entry points that accept a `PainleveProblem`
