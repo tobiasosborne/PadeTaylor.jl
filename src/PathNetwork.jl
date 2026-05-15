@@ -98,15 +98,42 @@ Activate via `step_size_policy = :adaptive_ffw` and pass an
 `adaptive_tol` (default `1e-12`) and optional `k_conservative`
 (FFW default `1e-3`).
 
+## Non-uniform Stage-1 node placement (`node_separation`, opt-in)
+
+FFW 2017 §2.1.2 (`references/markdown/FFW2017_painleve_riemann_surfaces_preprint/
+FFW2017_painleve_riemann_surfaces_preprint.md:67-72` + md:97) observes
+that the pole densities of `P̃_III` / `P̃_V` solutions grow
+*exponentially* with `Re ζ` under the exponential transformations.  A
+uniform Stage-1 step is then over-resolved at small `Re ζ` (wide pole
+spacing, the walker wastes effort on smooth regions) and under-resolved
+at large `Re ζ` (pole spacing collapses below `h` and the walker can no
+longer reliably bridge them).
+
+FFW prescribe a **node-separation function** `R(ζ)` that specifies the
+distance from a node at `ζ` to its neighbours; for their Fig 1 PIII
+solution `R(ζ) = (8 - Re ζ)/20` (md:72), a linearly decreasing magnitude.
+We expose this via the opt-in kwarg `node_separation::Union{Nothing,
+Function} = nothing` on `path_network_solve`.
+
+When `node_separation === nothing` (the default), behaviour is byte-
+identical to the FW 2011 fixed-`h` walker; backward compat for every
+existing test is the load-bearing invariant.  When a function, the
+per-step initial step magnitude is `R(z_cur)` rather than the FFW
+"scaled step length stored at the current point" (md:93).  Under
+`step_size_policy = :adaptive_ffw` the adaptive controller may then
+shrink `R(z_cur)` via the `q ≤ 1` rescale; it cannot grow it.  Composition
+is therefore **R provides the spatial-density target; adaptive
+provides temporal-accuracy refinement**; the two stack orthogonally.
+
+`R(ζ::Complex{T}) -> T` must return a positive finite real.  We check
+this at every step and throw `ArgumentError` on non-positive or non-
+finite output (CLAUDE.md Rule 1).
+
 ## Tier-3-to-5 deferrals (per ADR-0004)
 
   - **BVP composition (Tier 3)**: stub comment at end of this file.
   - **CoordTransforms (Tier 4)**: external wrapper, no change here.
   - **SheetTracker (Tier 5)**: external wrapper, no change here.
-  - **Non-uniform Stage-1 nodes (Tier 4-A2)**: independent of adaptive
-    `h`; the `grid` kwarg accepts any `AbstractVector{<:Complex}` so a
-    higher-level node-placement wrapper can ship orthogonally to this
-    module.
 """
 module PathNetwork
 
@@ -171,6 +198,7 @@ end
                        wedge_angles=DEFAULT_WEDGE,
                        step_selection=:min_u,
                        step_size_policy=:fixed,
+                       node_separation=nothing,
                        max_steps_per_target=1000,
                        rng_seed=0,
                        enforce_real_axis_symmetry=false,
@@ -200,6 +228,18 @@ Kwargs:
     under `:fixed`.
   - `max_rescales`       — per-step cap on FFW rescale iterations
     under `:adaptive_ffw` (default `50`).  Unused under `:fixed`.
+  - `node_separation`    — `Union{Nothing, Function}`.  When `nothing`
+    (default), the walker advances by a constant `h` (FW 2011) or by
+    the controller-memory-seeded magnitude (`:adaptive_ffw`).  When a
+    function `R::Complex{T} -> T`, the per-step initial step magnitude
+    is `R(z_cur)` at every Stage-1 walker step.  Under `:adaptive_ffw`,
+    the controller may shrink that initial seed via the `q ≤ 1` rescale
+    but cannot grow it — so the per-step accepted `|h|` is bounded
+    above by `R(z_cur)`.  `R` must return a positive finite real
+    (`ArgumentError` thrown at step time otherwise — Rule 1).
+    FFW Fig 1 prescription is `R(ζ) = (8 - Re ζ)/20`
+    (`references/markdown/FFW2017_painleve_riemann_surfaces_preprint/
+    FFW2017_painleve_riemann_surfaces_preprint.md:72`).
   - `max_steps_per_target` — cap per-target Stage-1 walk length.
   - `rng_seed::Integer`  — for deterministic target shuffle (tests).
   - `enforce_real_axis_symmetry::Bool` — opt-in.  When `true`, walk only
@@ -248,6 +288,7 @@ function path_network_solve(prob::PadeTaylorProblem,
                             adaptive_tol::Real = 1.0e-12,
                             k_conservative::Real = 1.0e-3,
                             max_rescales::Integer = 50,
+                            node_separation::Union{Nothing, Function} = nothing,
                             max_steps_per_target::Integer = 1000,
                             rng_seed::Integer = 0,
                             enforce_real_axis_symmetry::Bool = false,
@@ -258,6 +299,7 @@ function path_network_solve(prob::PadeTaylorProblem,
         return _solve_with_schwarz_reflection(
             prob, grid; h, order, wedge_angles, step_selection,
             step_size_policy, adaptive_tol, k_conservative, max_rescales,
+            node_separation,
             max_steps_per_target, rng_seed, verbose, progress_every)
     end
 
@@ -330,7 +372,15 @@ function path_network_solve(prob::PadeTaylorProblem,
         # the walk chains off its immediate predecessor.
         parent_idx = idx_v
         n_steps = 0
-        while abs(z_cur - target) > h_cur
+        # The walk-termination distance.  Under fixed/adaptive without
+        # R it's `h_cur` (the prior accepted step length).  When R is
+        # supplied we use R(z_cur) — the spatial density target — for
+        # the same reason FFW prescribe R as the wedge-step magnitude:
+        # the walker should approach the target with the local
+        # density's resolution, not the controller's last memory.
+        term_dist = node_separation === nothing ? h_cur :
+                     _eval_node_separation(node_separation, z_cur, T)
+        while abs(z_cur - target) > term_dist
             n_steps        += 1
             total_n_steps  += 1
             n_steps > max_steps_per_target && throw(ErrorException(
@@ -340,11 +390,20 @@ function path_network_solve(prob::PadeTaylorProblem,
 
             goal_dir = angle(target - z_cur)
 
+            # FFW md:67-72 / md:97 non-uniform Stage-1 nodes: when
+            # `node_separation` is supplied, the per-step initial
+            # magnitude is `R(z_cur)` regardless of `step_size_policy`.
+            # Under :adaptive_ffw the controller may shrink R(z_cur)
+            # but cannot grow it (q ≤ 1).  Under :fixed R(z_cur)
+            # simply sets the magnitude — no rescale.
+            h_seed = node_separation === nothing ? h_cur :
+                      _eval_node_separation(node_separation, z_cur, T)
+
             # Adaptive rescale loop (FFW md:93): re-run the wedge,
             # re-select min-|u|, re-compute T(h); if T(h) > Tol shrink
             # h and try again.  Under :fixed this loop runs exactly
-            # once with h_step = h_T and skips the T(h) check.
-            h_step    = h_cur
+            # once with h_step = h_seed and skips the T(h) check.
+            h_step    = h_seed
             n_resc    = 0
             z_new, u_new, up_new, pade_sel = z_cur, CT(NaN, NaN), CT(NaN, NaN), nothing
             while true
@@ -389,7 +448,11 @@ function path_network_solve(prob::PadeTaylorProblem,
             # h_step (FFW md:93: scaled length is stored at the point).
             pade_canonical = _local_pade(prob.f, z_new, u_new, up_new, order, h_step)
             # Update the per-walk seed for the next step.  Under :fixed
-            # this stays at h_T (h_step == h_T == h_cur).
+            # this stays at h_T (h_step == h_T == h_cur).  Under
+            # :adaptive_ffw it carries the controller's accepted step
+            # length forward.  When `node_separation` is supplied,
+            # h_cur is irrelevant: the next iteration re-seeds h_seed
+            # from R(z_new).
             h_cur = h_step
 
             push!(visited_z, z_new)
@@ -401,6 +464,13 @@ function path_network_solve(prob::PadeTaylorProblem,
             parent_idx = length(visited_z)   # next step chains off this node
 
             z_cur, u_cur, up_cur = z_new, u_new, up_new
+
+            # Re-evaluate the termination distance at the new position.
+            # Under R(ζ) this can shrink as Re ζ grows; without R it
+            # stays at the controller-memory `h_cur` (which equals h_T
+            # under :fixed).
+            term_dist = node_separation === nothing ? h_cur :
+                         _eval_node_separation(node_separation, z_cur, T)
 
             if verbose && total_n_steps % progress_every == 0
                 _verbose_step(total_n_steps, target_idx, length(targets),
@@ -474,8 +544,9 @@ function _solve_with_schwarz_reflection(prob::PadeTaylorProblem,
                                          adaptive_tol::Real,
                                          k_conservative::Real,
                                          max_rescales::Integer,
-                                         max_steps_per_target::Integer,
-                                         rng_seed::Integer,
+                                         node_separation::Union{Nothing, Function} = nothing,
+                                         max_steps_per_target::Integer = 1000,
+                                         rng_seed::Integer = 0,
                                          verbose::Bool = false,
                                          progress_every::Integer = 500)
     T  = float(typeof(real(first(grid))))
@@ -514,6 +585,7 @@ function _solve_with_schwarz_reflection(prob::PadeTaylorProblem,
         adaptive_tol = adaptive_tol,
         k_conservative = k_conservative,
         max_rescales = max_rescales,
+        node_separation = node_separation,
         max_steps_per_target = max_steps_per_target,
         rng_seed = rng_seed,
         enforce_real_axis_symmetry = false,
@@ -553,6 +625,23 @@ function _local_pade(f, z::Complex{T}, u::Complex{T}, up::Complex{T},
     s = PadeStepperState{Complex{T}}(z, u, up)
     _, pade = pade_step_with_pade!(s, f, Int(order), h)
     return pade
+end
+
+# Evaluate the user-supplied `node_separation` function `R(z)` and
+# validate its output.  FFW md:72 prescribes a positive real step
+# magnitude; non-finite or non-positive returns are fail-loud per
+# CLAUDE.md Rule 1.  Result is coerced to `T` so the downstream
+# step-magnitude arithmetic stays in the working float type.
+function _eval_node_separation(R, z::Complex{T}, ::Type{T}) where T
+    r = R(z)
+    isfinite(r) || throw(ArgumentError(
+        "path_network_solve: node_separation R($z) returned a non-finite " *
+        "value ($r).  R must return a positive finite real (FFW 2017 §2.1.2 " *
+        "md:72 prescribes R(ζ) ∈ ℝ_{>0})."))
+    r > 0 || throw(ArgumentError(
+        "path_network_solve: node_separation R($z) returned $r ≤ 0.  R " *
+        "must return a positive finite real (FFW 2017 §2.1.2 md:72)."))
+    return T(r)
 end
 
 # Nearest visited node to `target` by Euclidean distance.  Lexicographic
