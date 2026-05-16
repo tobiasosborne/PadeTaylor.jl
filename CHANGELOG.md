@@ -183,6 +183,18 @@ steps shipped** as of worklog 045.
     23.4 s, single-file isolation — full `Pkg.test()` deferred due to OOM
     friction, see worklog 049).
 
+### Added — API audit (worklog 050, bead `padetaylor-qur`)
+
+  - **`docs/api-review-2026-05-16.md`** (743 LOC) — holistic pre-v1.0
+    review of the 39 exported symbols across 23 modules: kwarg naming,
+    return-type shape, error-message style, `!`-suffix discipline,
+    PascalCase/snake_case consistency, export-list completeness.  Advisory
+    only; no source files modified.  Identified 3 v1.0-blocking findings
+    (canonical `h` rename → `padetaylor-xds`; `max_iter` normalisation →
+    `padetaylor-0xn`; `pii_*` / `piv_entire` export omission →
+    `padetaylor-gvz`) + 5 P3 cosmetic + 4 P4 defer.  12 follow-up beads
+    spawned in total; these constitute the v1.0 normalisation work backlog.
+
 ### Open follow-ups (B5 remaining)
 
   - FFW Fig 3 (PVI phase portraits, bead `padetaylor-a1l`, blocked by
