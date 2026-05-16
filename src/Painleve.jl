@@ -81,7 +81,8 @@ using ..PathNetwork:     PathNetworkSolution
 using ..PoleField:       extract_poles
 using ..CoordTransforms: pIII_transformed_rhs, pV_transformed_rhs,
                          pIII_z_to_ζ, pIII_ζ_to_z, pV_z_to_ζ, pV_ζ_to_z
-using ..SheetTracker:    pVI_transformed_rhs
+using ..SheetTracker:    pVI_transformed_rhs, pVI_eta_transformed_rhs,
+                         pVI_z_to_η, pVI_η_to_z
 
 import ..Problems:    solve_pade
 import ..PathNetwork: path_network_solve
@@ -238,8 +239,11 @@ end
 # Shared assembly: validate, branch-point guard, transform the IC + zspan
 # endpoints into the ζ-frame, build the PadeTaylorProblem there.
 function _build_transformed(kw, eq::Symbol, rhs, z_to_ζ, ζ_to_z,
-                            branch_points)
-    _validate_kw(kw, eq, (:α, :β, :γ, :δ, :u0, :up0, :zspan), (:order,))
+                            branch_points;
+                            frame_tag::Symbol = :transformed,
+                            extra_optionals::Tuple = ())
+    _validate_kw(kw, eq, (:α, :β, :γ, :δ, :u0, :up0, :zspan),
+                 (:order, extra_optionals...))
     z0 = kw.zspan[1]
     any(b -> z0 == b, branch_points) && throw(ArgumentError(
         "PainleveProblem(:$eq): zspan[1] = $z0 is a fixed branch point " *
@@ -250,7 +254,7 @@ function _build_transformed(kw, eq::Symbol, rhs, z_to_ζ, ζ_to_z,
     prob = PadeTaylorProblem(rhs, (w0, wp0), (ζ0, ζ_end);
                              order = get(kw, :order, 30))
     return PainleveProblem(eq, (; α = kw.α, β = kw.β, γ = kw.γ, δ = kw.δ),
-                           prob, :transformed, z_to_ζ, ζ_to_z, nothing)
+                           prob, frame_tag, z_to_ζ, ζ_to_z, nothing)
 end
 
 _build_III(kw) = _build_transformed(
@@ -261,11 +265,34 @@ _build_V(kw) = _build_transformed(
     kw, :V, pV_transformed_rhs(kw.α, kw.β, kw.γ, kw.δ),
     pV_z_to_ζ, pV_ζ_to_z, (0,))
 
-# PVI reuses PV's z = exp(ζ) transform (FFW 2017 §2.2 / SheetTracker
-# docstring); its fixed branch points are z ∈ {0, 1}.
-_build_VI(kw) = _build_transformed(
-    kw, :VI, pVI_transformed_rhs(kw.α, kw.β, kw.γ, kw.δ),
-    pV_z_to_ζ, pV_ζ_to_z, (0, 1))
+# PVI accepts a `frame` kwarg selecting the coordinate of the
+# underlying `PadeTaylorProblem`.  `:transformed` (default) is the
+# ζ-plane equation (FFW eq. 3, md:144); `:transformed_eta` is the
+# η-plane equation (FFW eq. 5, md:154), reached by stacking a second
+# exponential atop the ζ-plane to push the `z = 0` branch out of the
+# finite plane.  The fixed branch points (`z ∈ {0, 1}`) are the same
+# IC-guard in either frame; the difference is in the solve-frame RHS
+# and the `z ↔ {ζ, η}` maps.
+function _build_VI(kw)
+    frame = get(kw, :frame, :transformed)
+    if frame === :transformed
+        return _build_transformed(
+            kw, :VI, pVI_transformed_rhs(kw.α, kw.β, kw.γ, kw.δ),
+            pV_z_to_ζ, pV_ζ_to_z, (0, 1);
+            frame_tag = :transformed, extra_optionals = (:frame,))
+    elseif frame === :transformed_eta
+        return _build_transformed(
+            kw, :VI, pVI_eta_transformed_rhs(kw.α, kw.β, kw.γ, kw.δ),
+            pVI_z_to_η, pVI_η_to_z, (0, 1);
+            frame_tag = :transformed_eta, extra_optionals = (:frame,))
+    else
+        throw(ArgumentError(
+            "PainleveProblem(:VI): unknown frame $(repr(frame)); expected " *
+            ":transformed (ζ-plane, FFW eq. 3) or :transformed_eta (η-plane, " *
+            "FFW eq. 5).  See `references/markdown/FFW2017_painleve_riemann_surfaces_preprint/" *
+            "FFW2017_painleve_riemann_surfaces_preprint.md:144` (ζ) and `:154` (η)."))
+    end
+end
 
 # -----------------------------------------------------------------------------
 # The PainleveSolution wrapper (struct + z-frame access surface).
@@ -311,17 +338,17 @@ PVI) is served only when its `ζ`-domain is real-typed; a complex
 suggestion to use `path_network_solve`.
 """
 function solve_pade(pp::PainleveProblem; kwargs...)
-    if pp.frame === :transformed && eltype(pp.problem.zspan) <: Complex
+    if pp.frame !== :direct && eltype(pp.problem.zspan) <: Complex
         throw(ArgumentError(
             "solve_pade(::PainleveProblem): the :$(pp.equation) problem is " *
-            "solved in a transformed ζ-frame with a *complex* ζ-domain, but " *
-            "solve_pade does fixed-step real-axis stepping (`state.z < " *
-            "z_end` is undefined for complex z).  Suggestion: use " *
-            "`path_network_solve(pp, grid)` for transformed-frame problems " *
-            "— it handles the complex ζ-domain and returns a z-frame " *
-            "PainleveSolution.  (solve_pade does serve a :transformed " *
-            "problem whose ζ-domain is genuinely real, i.e. built from " *
-            "real-valued ICs and span.)"))
+            "solved in a transformed $(pp.frame) frame with a *complex* " *
+            "domain, but solve_pade does fixed-step real-axis stepping " *
+            "(`state.z < z_end` is undefined for complex z).  Suggestion: " *
+            "use `path_network_solve(pp, grid)` for transformed-frame " *
+            "problems — it handles the complex solve-frame domain and " *
+            "returns a z-frame PainleveSolution.  (solve_pade does serve " *
+            "a transformed problem whose solve-frame domain is genuinely " *
+            "real, i.e. built from real-valued ICs and span.)"))
     end
     return _painleve_solution(pp, solve_pade(pp.problem; kwargs...))
 end

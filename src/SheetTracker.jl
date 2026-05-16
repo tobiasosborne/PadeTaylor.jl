@@ -34,6 +34,21 @@ the full PathNetwork-level routing is a follow-up.
     "obtained by setting u(z) = w(ζ), z = e^ζ in PVI"), so callers
     reuse `pV_z_to_ζ` / `pV_ζ_to_z` from `CoordTransforms`.
 
+  - `pVI_eta_transformed_rhs(α, β, γ, δ) -> (η, v, vp) -> v''`
+    Factory returning the η-plane PVI RHS closure (FFW 2017 eq. 5,
+    md:154).  The second exponential `ζ = e^η` stacked atop `z = e^ζ`
+    maps PVI's `ζ = 0` branch point (and thus `z = 0`) out of the
+    finite plane, leaving the `z = 1` lattice at `η = log|2π·k| +
+    i·arg(2π·i·k)` for `|k| ≥ 1` (md:148, eq. 4).  Region `Re η <
+    log(2π) ≈ 1.838` is branch-point-free (md:157).
+
+  - `pVI_z_to_η(z, u, up) -> (η, v, vp)`,
+    `pVI_η_to_z(η, v, vp) -> (z, u, up)`
+    Composition of the two exponential transforms (`ζ = log z`, `η =
+    log ζ`), with their inverses.  `v(η) = u(z)` (the dependent
+    variable is unchanged); the chain rule gives `vp = z · ζ · up`
+    forward and `up = vp / (z · ζ)` back.
+
   - `winding_delta(z_old, z_new, branch) -> Float64`
     Signed angle change `Δθ = arg(z_new - branch) - arg(z_old - branch)`
     normalised to `(-π, π]`.  Caller must ensure path steps are small
@@ -51,14 +66,31 @@ the full PathNetwork-level routing is a follow-up.
     / 2π)`.  A counterclockwise loop around `branch` adds `+2π` and
     increments `s` by `+1`; clockwise loop subtracts and decrements.
 
-## What's NOT in v1 (deferral notes)
+## η-plane double-exp transform (FFW 2017 §2.2.1, md:146-162)
 
-  - **η-plane PVI transform** (FFW 2017 eq. 5, md:154).  The
-    second exponential `ζ = e^η` makes the branch-point-free region
-    `Re η < log(2π)` more compact at the cost of nested `e^(e^η)`
-    arithmetic.  Useful for FFW Fig 2 first column ONLY; the
-    ζ-plane suffices for Figs 2 (column 2), 3, 7.  File a bead if a
-    downstream caller actually needs the η-plane.
+The η-plane equation is the price-paid form of the ζ-plane equation:
+nested `exp(exp(η))` arithmetic in every term, in exchange for a
+*finite* representation of the `z = 0` half-line on the *finite*
+η-plane.  The ζ-plane handles this only by walking off to `Re ζ = -∞`.
+
+The branch-point-free region `Re η < log(2π) ≈ 1.83788` is rectangular
+in `(Re η, Im η)`; FFW Fig 2 column 1 shows a PVI solution computed
+there.  Outside this region (`Re η > log(2π)`) the lattice points
+`η = log|2π·k| + i·arg(2π·i·k)` are branch points of the η-plane
+equation — they correspond to `ζ = 2π·i·k` (which corresponded to
+`z = 1`) — and circumambulation in the η-plane is required, no
+different in spirit from §2.2.2 ζ-plane circumambulation, just on a
+different parametrisation of the surface.
+
+When to prefer the η-plane over the ζ-plane (md:157-162): the η-plane
+gives a *compact* rectangular pole-free region containing infinitely
+many ζ-sheets folded together; the ζ-plane gives a strip-per-sheet
+unfolding of the same surface.  For producing a single figure of one
+solution on one rectangular region (Fig 2 column 1), the η-plane is
+the right tool; for tracking analytic continuation across sheets (Figs
+2 column 2, 3), the ζ-plane is.
+
+## What's NOT in v1 (deferral notes)
 
   - **Constrained-wedge PathNetwork variant** that REFUSES to overstep
     branch cuts and INCREMENTS the sheet counter on deliberate
@@ -96,6 +128,7 @@ sheet 0 is the principal sheet.  The integer returned by
 module SheetTracker
 
 export pVI_transformed_rhs
+export pVI_eta_transformed_rhs, pVI_z_to_η, pVI_η_to_z
 export winding_delta, accumulate_winding, sheet_index
 
 # -----------------------------------------------------------------------------
@@ -138,6 +171,97 @@ function pVI_transformed_rhs(α, β, γ, δ)
 
         return first + second + third
     end
+end
+
+# -----------------------------------------------------------------------------
+# PVI η-plane transformed RHS (FFW 2017 eq. 5, md:154)
+# -----------------------------------------------------------------------------
+
+"""
+    pVI_eta_transformed_rhs(α, β, γ, δ) -> (η, v, vp) -> v''
+
+Factory returning the η-plane PVI RHS closure (FFW 2017 eq. 5,
+md:154).  Plug directly into
+`PadeTaylorProblem(rhs, (v₀, v'₀), (η_start, η_end); order = ...)`.
+
+The η-plane equation, written character-by-character from FFW 2017
+md:154 (`E = exp(exp(η))` abbreviates the nested exponential):
+
+    d²v/dη² = (1/2)(1/v + 1/(v-1) + 1/(v - E)) (dv/dη)²
+              - (e^η·E/(E - 1) + e^η·E/(v - E) - 1) (dv/dη)
+              + v(v-1)(v-E) · e^(2η) / (E - 1)² ·
+                (α + β E/v² + γ(E-1)/(v-1)² + δ E(E-1)/(v - E)²)
+
+The `-1` inside the `(dv/dη)` bracket is the only place where the
+η-plane equation is NOT a structural copy of the ζ-plane equation
+(eq. 3, md:144) with `e^ζ → E`: it is the chain-rule artefact from
+stacking `ζ = e^η` on top of `z = e^ζ`.  Forgetting it is the easy
+hand-derivation mistake.
+
+Requires `v ∉ {0, 1, E}` and `E ≠ 1` (i.e., `e^η ∉ {2π·i·k : k ∈ ℤ}`,
+which on the principal branch means `η ∉ {log|2π·k| + i·arg(2π·i·k) :
+|k| ≥ 1}`).  These are the fixed singular surfaces of the η-plane
+equation; the region `Re η < log(2π)` is free of them.
+"""
+function pVI_eta_transformed_rhs(α, β, γ, δ)
+    return (η, v, vp) -> begin
+        eη   = exp(η)
+        E    = exp(eη)            # e^(e^η)
+        E_m1 = E - 1
+        v_m1 = v - 1
+        v_mE = v - E
+
+        first  = (1 / v + 1 / v_m1 + 1 / v_mE) * vp^2 / 2
+
+        second = -(eη * E / E_m1 + eη * E / v_mE - 1) * vp
+
+        param  = α +
+                 β * E / v^2 +
+                 γ * E_m1 / v_m1^2 +
+                 δ * E * E_m1 / v_mE^2
+        third  = v * v_m1 * v_mE * eη^2 / E_m1^2 * param
+
+        return first + second + third
+    end
+end
+
+# -----------------------------------------------------------------------------
+# PVI z ↔ η coordinate transforms (composition of two exponentials)
+# -----------------------------------------------------------------------------
+
+"""
+    pVI_z_to_η(z, u, up) -> (η, v, vp)
+
+Convert a PVI state `(z, u(z), u'(z))` to the η-plane state `(η,
+v(η), dv/dη)` via the composition `ζ = log z`, `η = log ζ` (principal
+branches).  Since `v(η) = w(ζ) = u(z)` (the dependent variable is
+unchanged through both transforms; FFW2017...md:146, md:151), the
+chain rule gives `dv/dη = (dw/dζ)·(dζ/dη) = (z·u')·ζ = z·log(z)·u'`.
+
+Singular at `z = 0` (where `ζ = -∞`) and at `z = 1` (where `ζ = 0`,
+so `η = -∞`); both correspond to PVI's fixed singularities.
+"""
+function pVI_z_to_η(z, u, up)
+    ζ  = log(z)
+    η  = log(ζ)
+    v  = u
+    vp = z * ζ * up
+    return (η, v, vp)
+end
+
+"""
+    pVI_η_to_z(η, v, vp) -> (z, u, up)
+
+Inverse of `pVI_z_to_η`.  `ζ = exp(η)`, `z = exp(ζ) = exp(exp(η))`,
+`u = v`, `u' = vp / (z·ζ)`.  Round-trip with `pVI_z_to_η` is exact
+to floating-point error on the principal branch.
+"""
+function pVI_η_to_z(η, v, vp)
+    ζ  = exp(η)
+    z  = exp(ζ)
+    u  = v
+    up = vp / (z * ζ)
+    return (z, u, up)
 end
 
 # -----------------------------------------------------------------------------

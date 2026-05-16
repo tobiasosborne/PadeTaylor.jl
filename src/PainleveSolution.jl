@@ -67,7 +67,7 @@ Self-describing wrapper around a raw solve-output `raw::S` for one of
 the six Painlevé equations.  Fields: `equation::Symbol` (`:I`…`:VI`),
 `params::NamedTuple`, `name::Union{Symbol,Nothing}` (a named-solution
 tag such as `:tritronquee`, or `nothing` for a generic IC),
-`frame::Symbol` (`:direct` | `:transformed`), the `to_frame` /
+`frame::Symbol` (`:direct` | `:transformed` | `:transformed_eta`), the `to_frame` /
 `from_frame` coordinate maps `(z,u,up) ↔ (ζ,w,wp)`, and `raw` (the
 underlying `PadeTaylorSolution` / `PathNetworkSolution` / …).
 

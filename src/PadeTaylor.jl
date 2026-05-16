@@ -93,6 +93,7 @@ using .EdgeGatedSolve: edge_gated_pole_field_solve, EdgeGatedSolution
 using .CoordTransforms: pIII_transformed_rhs, pV_transformed_rhs,
                         pIII_z_to_ζ, pIII_ζ_to_z, pV_z_to_ζ, pV_ζ_to_z
 using .SheetTracker:    pVI_transformed_rhs,
+                        pVI_eta_transformed_rhs, pVI_z_to_η, pVI_η_to_z,
                         winding_delta, accumulate_winding, sheet_index
 using .Painleve:        PainleveProblem, PainleveSolution,
                         poles, grid_values, equation, parameters, solutionname,
@@ -148,6 +149,7 @@ export edge_gated_pole_field_solve, EdgeGatedSolution
 export pIII_transformed_rhs, pV_transformed_rhs,
        pIII_z_to_ζ, pIII_ζ_to_z, pV_z_to_ζ, pV_ζ_to_z
 export pVI_transformed_rhs,
+       pVI_eta_transformed_rhs, pVI_z_to_η, pVI_η_to_z,
        winding_delta, accumulate_winding, sheet_index
 export PainleveProblem, PainleveSolution
 export poles, grid_values, equation, parameters, solutionname

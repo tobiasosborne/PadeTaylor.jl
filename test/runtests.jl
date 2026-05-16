@@ -47,6 +47,7 @@ using PadeTaylor
     include("fw_fig_41_test.jl")
     include("coord_transforms_test.jl")
     include("sheet_tracker_test.jl")
+    include("eta_pvi_test.jl")
     include("painleve_test.jl")
     include("painleve_solution_test.jl")
     include("painleve_named_test.jl")
