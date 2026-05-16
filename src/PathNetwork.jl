@@ -147,7 +147,7 @@ using ..PadeStepper: PadeStepperState, pade_step_with_pade!,
 using ..Problems:    PadeTaylorProblem
 using ..BranchTracker: resolve_cut_angles, any_cut_crossed, step_sheet_update
 
-export PathNetworkSolution, path_network_solve
+export PathNetworkSolution, path_network_solve, eval_at_sheet
 
 const DEFAULT_WEDGE = [-π/4, -π/8, 0.0, π/8, π/4]   # FW 2011 ±22.5°/±45°
 
@@ -281,6 +281,18 @@ Kwargs:
     inherits this sheet tuple; descendants accumulate from there.
     Defaults to `(0, 0, …)` — "this IC sits on the principal sheet
     of every branch".
+  - `grid_sheet`         — `Union{Nothing, Vector{Vector{Int}}}`
+    (default `nothing`).  When supplied (A5 / bead `padetaylor-hed`),
+    each entry `grid_sheet[i]` specifies the sheet tuple that grid
+    point `grid[i]` is queried against.  The Stage-2 nearest-visited
+    lookup is restricted to visited nodes whose `visited_sheet[k]
+    == grid_sheet[i]`; if no matching-sheet visited node lies within
+    `visited_h[k]` of `grid[i]`, the Stage-2 output is `NaN + NaN·im`
+    (same fail-soft pattern as the existing too-far-away case).  Must
+    match `length(grid)`; each inner vector must have length
+    `length(branch_points)`.  Throws on mismatch (Rule 1).  Default
+    `nothing` preserves the existing sheet-agnostic Euclidean
+    nearest-visited semantics.
   - `max_steps_per_target` — cap per-target Stage-1 walk length.
   - `rng_seed::Integer`  — for deterministic target shuffle (tests).
   - `enforce_real_axis_symmetry::Bool` — opt-in.  When `true`, walk only
@@ -335,6 +347,7 @@ function path_network_solve(prob::PadeTaylorProblem,
                             cross_branch::Bool = false,
                             initial_sheet::AbstractVector{<:Integer} =
                                 zeros(Int, length(branch_points)),
+                            grid_sheet::Union{Nothing, AbstractVector{<:AbstractVector{<:Integer}}} = nothing,
                             max_steps_per_target::Integer = 1000,
                             rng_seed::Integer = 0,
                             enforce_real_axis_symmetry::Bool = false,
@@ -381,6 +394,19 @@ function path_network_solve(prob::PadeTaylorProblem,
         throw(ArgumentError(
             "path_network_solve: cross_branch=true requires non-empty " *
             "branch_points; got branch_points = ()."))
+    end
+    # A5 / bead padetaylor-hed: validate grid_sheet shape.  Done here so
+    # malformed input throws BEFORE the Stage-1 walk (which can be
+    # minutes-long).
+    if grid_sheet !== nothing
+        length(grid_sheet) == length(grid) || throw(ArgumentError(
+            "path_network_solve: grid_sheet length $(length(grid_sheet)) " *
+            "must equal grid length $(length(grid))."))
+        for (i, s) in pairs(grid_sheet)
+            length(s) == length(branch_points) || throw(ArgumentError(
+                "path_network_solve: grid_sheet[$i] length $(length(s)) " *
+                "must equal branch_points length $(length(branch_points))."))
+        end
     end
 
     # Promote element type to Complex{T <: AbstractFloat}.
@@ -584,13 +610,26 @@ function path_network_solve(prob::PadeTaylorProblem,
         flush(stdout)
     end
 
-    # Stage 2: fine-grid extrapolation.
+    # Stage 2: fine-grid extrapolation.  A5 / bead padetaylor-hed adds
+    # sheet-aware nearest-visited when `grid_sheet` is supplied: each
+    # grid point's pool is restricted to visited nodes whose
+    # `visited_sheet[k] == grid_sheet[i]`.  When `grid_sheet === nothing`
+    # the lookup is pure Euclidean nearest-visited (legacy behaviour).
     grid_z  = collect(CT, grid)
     grid_u  = Vector{CT}(undef, length(grid_z))
     grid_up = Vector{CT}(undef, length(grid_z))
     nan_CT  = CT(NaN, NaN)
     for (i, z_f) in enumerate(grid_z)
-        idx_v = _nearest_visited(visited_z, z_f)
+        idx_v = grid_sheet === nothing ?
+                    _nearest_visited(visited_z, z_f) :
+                    _nearest_visited_on_sheet(visited_z, visited_sheet,
+                                              z_f, grid_sheet[i])
+        if idx_v == 0
+            # No matching-sheet visited node exists.
+            grid_u[i]  = nan_CT
+            grid_up[i] = nan_CT
+            continue
+        end
         z_v   = visited_z[idx_v]
         h_v   = visited_h[idx_v]
         if abs(z_f - z_v) > h_v
@@ -773,6 +812,34 @@ function _nearest_visited(visited_z::Vector{Complex{T}}, target::Complex{T}) whe
     return idx
 end
 
+# A5 / ADR-0013 §"Open follow-ups" / bead padetaylor-hed.
+# Same min-distance scan as `_nearest_visited`, restricted to visited
+# nodes whose `visited_sheet[k]` matches `sheet`.  Returns `0` if no
+# matching-sheet visited node exists — the caller treats that as
+# fail-soft (NaN output in Stage 2), same as the existing
+# "too-far-away" case (`abs(z_f - z_v) > visited_h[k]`).
+#
+# Lexicographic tie-break (real first, then imag) mirrors
+# `_nearest_visited` so results are deterministic.
+function _nearest_visited_on_sheet(visited_z::Vector{Complex{T}},
+                                    visited_sheet::Vector{Vector{Int}},
+                                    target::Complex{T},
+                                    sheet::AbstractVector{<:Integer}) where T
+    idx, best = 0, T(Inf)
+    @inbounds for i in eachindex(visited_z)
+        visited_sheet[i] == sheet || continue
+        d = abs(visited_z[i] - target)
+        if idx == 0 || d < best ||
+           (d == best &&
+            (real(visited_z[i]) < real(visited_z[idx]) ||
+             (real(visited_z[i]) == real(visited_z[idx]) &&
+              imag(visited_z[i]) < imag(visited_z[idx]))))
+            idx, best = i, d
+        end
+    end
+    return idx
+end
+
 # Try each of 5 wedge directions; return Vector of (z_new, u_new, up_new, pade).
 # A failed candidate gets (z_cur, Inf+0im, 0+0im, nothing) so it loses min-|u|.
 #
@@ -848,6 +915,64 @@ function _select_candidate(selection::Symbol, evals,
         offsets = (T(goal_dir) + T(θ) for θ in wedge_angles)
         return argmin(abs(θ_sd - off) for off in offsets)
     end
+end
+
+# -----------------------------------------------------------------------------
+# A5 public accessor: post-hoc per-point sheet-aware evaluation
+# (bead padetaylor-hed, complement to the grid_sheet kwarg).
+# -----------------------------------------------------------------------------
+
+"""
+    eval_at_sheet(sol::PathNetworkSolution, z::Complex, sheet::AbstractVector{<:Integer}) -> (u, up)
+
+Evaluate the stored solution at a single point `z`, restricting the
+nearest-visited lookup to visited nodes whose `visited_sheet[k]`
+equals `sheet`.  Returns `(NaN+NaN·im, NaN+NaN·im)` if no
+matching-sheet visited node lies within `visited_h[k]` of `z`
+(fail-soft, same as Stage-2's too-far-away case).
+
+Use this for post-hoc per-point queries: figure scripts rendering a
+multi-sheet PVI heatmap call `eval_at_sheet(sol, z, [k_branch_1,
+k_branch_2])` for each pixel.  When all queries are vectorisable
+into a `grid` ahead of time, prefer the `grid_sheet` kwarg of
+`path_network_solve` instead — it amortises the Stage-1 build cost
+across all query points.
+
+Throws `ArgumentError` if `length(sheet) != length(sol.visited_sheet[1])`
+(only checked when there is at least one visited node with a non-empty
+sheet tuple).
+"""
+function eval_at_sheet(sol::PathNetworkSolution{T},
+                       z::Complex,
+                       sheet::AbstractVector{<:Integer}) where T
+    CT     = Complex{T}
+    sheet_branched = !isempty(sol.visited_sheet) &&
+                      !isempty(sol.visited_sheet[1])
+    if sheet_branched
+        length(sheet) == length(sol.visited_sheet[1]) || throw(ArgumentError(
+            "eval_at_sheet: sheet length $(length(sheet)) must equal " *
+            "visited_sheet inner length $(length(sol.visited_sheet[1]))."))
+    elseif !isempty(sheet)
+        throw(ArgumentError(
+            "eval_at_sheet: solution has no branch points " *
+            "(visited_sheet entries are empty), but caller passed " *
+            "sheet of length $(length(sheet))."))
+    end
+    z_CT   = CT(z)
+    sheet_typed = collect(Int, sheet)
+    idx_v  = _nearest_visited_on_sheet(sol.visited_z, sol.visited_sheet,
+                                        z_CT, sheet_typed)
+    nan_CT = CT(NaN, NaN)
+    idx_v == 0 && return (nan_CT, nan_CT)
+    z_v    = sol.visited_z[idx_v]
+    h_v    = sol.visited_h[idx_v]
+    if abs(z_CT - z_v) > h_v
+        return (nan_CT, nan_CT)
+    end
+    t = (z_CT - z_v) / h_v
+    u  = _evaluate_pade(sol.visited_pade[idx_v], t)
+    up = _evaluate_pade_deriv(sol.visited_pade[idx_v], t) / h_v
+    return (u, up)
 end
 
 # TIER-3 INTERFACE: BVP dispatcher (bead padetaylor-804) consumes
