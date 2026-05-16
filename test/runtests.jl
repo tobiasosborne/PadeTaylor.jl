@@ -17,6 +17,7 @@ using PadeTaylor
         @test isdefined(PadeTaylor, :LatticeDispatcher)
         @test isdefined(PadeTaylor, :CoordTransforms)
         @test isdefined(PadeTaylor, :SheetTracker)
+        @test isdefined(PadeTaylor, :BranchTracker)
         @test isdefined(PadeTaylor, :Painleve)
         @test isdefined(PadeTaylor, :IVPBVPHybrid)
     end
@@ -32,6 +33,8 @@ using PadeTaylor
     include("padestepper_test.jl")
     include("problems_test.jl")
     include("pathnetwork_test.jl")
+    include("branch_tracker_test.jl")
+    include("path_network_branch_test.jl")
     include("adaptive_step_test.jl")
     include("non_uniform_nodes_test.jl")
     include("polefield_test.jl")

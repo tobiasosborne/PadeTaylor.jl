@@ -145,6 +145,7 @@ using ..PadeStepper: PadeStepperState, pade_step_with_pade!,
                      adaptive_pade_step!, ffw_truncation_error, ffw_rescale_q,
                      _evaluate_pade, _evaluate_pade_deriv
 using ..Problems:    PadeTaylorProblem
+using ..BranchTracker: resolve_cut_angles, any_cut_crossed, step_sheet_update
 
 export PathNetworkSolution, path_network_solve
 
@@ -176,6 +177,18 @@ immediate predecessor.
 A `NaN + NaN·im` entry in `grid_u` or `grid_up` signals that the
 corresponding `grid` point was not within `h` of any visited node;
 fail-loud per CLAUDE.md Rule 1.
+
+`visited_sheet[k]` is a per-branch Riemann-sheet index tuple
+(`Vector{Int}`) populated by `BranchTracker` when `branch_points` is
+non-empty (ADR-0013).  For the default `branch_points = ()` call,
+every entry is `Int[]` (zero-length).  When N branches are supplied,
+`length(visited_sheet[k]) == N` for every visited node, with the
+root carrying the `initial_sheet` kwarg's value.
+
+A 9-arg convenience constructor (without `visited_sheet`) is
+provided for backward-compat with pre-ADR-0013 callers (e.g.
+existing test fixtures and external wrappers); it defaults
+`visited_sheet` to the empty `Vector{Int}[]`.
 """
 struct PathNetworkSolution{T <: AbstractFloat}
     visited_z      :: Vector{Complex{T}}
@@ -187,7 +200,13 @@ struct PathNetworkSolution{T <: AbstractFloat}
     grid_z         :: Vector{Complex{T}}
     grid_u         :: Vector{Complex{T}}
     grid_up        :: Vector{Complex{T}}
+    visited_sheet  :: Vector{Vector{Int}}      # per-branch sheet tuple per node (ADR-0013)
 end
+
+# Backward-compat 9-arg constructor: defaults visited_sheet to empty.
+PathNetworkSolution{T}(vz, vu, vup, vp, vh, vpar, gz, gu, gup) where {T} =
+    PathNetworkSolution{T}(vz, vu, vup, vp, vh, vpar, gz, gu, gup,
+                           Vector{Int}[])
 
 # -----------------------------------------------------------------------------
 # Public driver
@@ -240,6 +259,28 @@ Kwargs:
     FFW Fig 1 prescription is `R(ζ) = (8 - Re ζ)/20`
     (`references/markdown/FFW2017_painleve_riemann_surfaces_preprint/
     FFW2017_painleve_riemann_surfaces_preprint.md:72`).
+  - `branch_points`      — `Tuple{Vararg{Complex}}` (ADR-0013).
+    Empty `()` default = no branches, byte-equivalent to the pre-A4
+    walker.  When non-empty, the wedge selector consults
+    `BranchTracker.any_cut_crossed` on each candidate to enforce the
+    Riemann-sheet structure.  Each branch point carries a half-line
+    cut from itself along direction `branch_cut_angles[k]` (default
+    `arg = π`, Julia `log` convention).
+  - `branch_cut_angles`  — `Real` or `Tuple{Vararg{Real}}` of cut
+    directions per branch (default `π`).  Scalar broadcasts to all
+    branches; tuple must match `length(branch_points)`.
+  - `cross_branch`       — `Bool` (default `false`).  In refuse mode
+    (`false`) any wedge candidate whose step segment crosses a cut
+    is forbidden; if all 5 are forbidden the walker throws (CLAUDE.md
+    Rule 1).  In cross mode (`true`) candidates are allowed to cross
+    and the per-branch sheet counter (`visited_sheet`) is updated
+    via `sign(winding_delta(z_cur, z_new, b_k))` for each crossed
+    branch.  Throws if combined with `branch_points = ()`.
+  - `initial_sheet`      — `AbstractVector{<:Integer}` of length
+    `length(branch_points)` (default zeros).  The root visited node
+    inherits this sheet tuple; descendants accumulate from there.
+    Defaults to `(0, 0, …)` — "this IC sits on the principal sheet
+    of every branch".
   - `max_steps_per_target` — cap per-target Stage-1 walk length.
   - `rng_seed::Integer`  — for deterministic target shuffle (tests).
   - `enforce_real_axis_symmetry::Bool` — opt-in.  When `true`, walk only
@@ -289,6 +330,11 @@ function path_network_solve(prob::PadeTaylorProblem,
                             k_conservative::Real = 1.0e-3,
                             max_rescales::Integer = 50,
                             node_separation::Union{Nothing, Function} = nothing,
+                            branch_points::Tuple = (),
+                            branch_cut_angles = π,
+                            cross_branch::Bool = false,
+                            initial_sheet::AbstractVector{<:Integer} =
+                                zeros(Int, length(branch_points)),
                             max_steps_per_target::Integer = 1000,
                             rng_seed::Integer = 0,
                             enforce_real_axis_symmetry::Bool = false,
@@ -296,6 +342,11 @@ function path_network_solve(prob::PadeTaylorProblem,
                             progress_every::Integer = 500)
 
     if enforce_real_axis_symmetry
+        isempty(branch_points) || throw(ArgumentError(
+            "path_network_solve: enforce_real_axis_symmetry=true combined " *
+            "with non-empty branch_points is not supported (the Schwarz " *
+            "mirror step assumes a simply connected upper half plane).  " *
+            "Set one or the other.  See ADR-0013 §\"Open follow-ups\"."))
         return _solve_with_schwarz_reflection(
             prob, grid; h, order, wedge_angles, step_selection,
             step_size_policy, adaptive_tol, k_conservative, max_rescales,
@@ -318,6 +369,20 @@ function path_network_solve(prob::PadeTaylorProblem,
     h > 0 || throw(ArgumentError(
         "path_network_solve: h must be positive real (got $h)."))
 
+    # Branch / sheet input validation (ADR-0013).
+    length(initial_sheet) == length(branch_points) || throw(ArgumentError(
+        "path_network_solve: initial_sheet length $(length(initial_sheet)) " *
+        "must equal branch_points length $(length(branch_points)).  " *
+        "Default initial_sheet = zeros(Int, length(branch_points))."))
+    cut_angles_resolved = resolve_cut_angles(branch_points, branch_cut_angles)
+    sheet_root = collect(Int, initial_sheet)
+    branched   = !isempty(branch_points)
+    if !branched && cross_branch
+        throw(ArgumentError(
+            "path_network_solve: cross_branch=true requires non-empty " *
+            "branch_points; got branch_points = ()."))
+    end
+
     # Promote element type to Complex{T <: AbstractFloat}.
     T     = float(typeof(real(first(grid))))
     CT    = Complex{T}
@@ -335,6 +400,8 @@ function path_network_solve(prob::PadeTaylorProblem,
     visited_pade   = [pade_0]
     visited_h      = [h_T]
     visited_parent = [0]               # root has no parent
+    visited_sheet  = branched ? Vector{Int}[copy(sheet_root)] :
+                                 Vector{Int}[Int[]]
 
     # Stage 1: build path tree.  Random target shuffle (FW 2011 line 156).
     rng     = MersenneTwister(rng_seed)
@@ -409,12 +476,28 @@ function path_network_solve(prob::PadeTaylorProblem,
             while true
                 evals = _wedge_evaluations(prob.f, z_cur, u_cur, up_cur,
                                            order, h_step, goal_dir, wedge_angles)
+                # ADR-0013 refuse mode: nullify any candidate whose step
+                # crosses a branch cut.  Stays a no-op in the default
+                # (no-branches) case and in cross_branch=true.
+                if branched && !cross_branch
+                    evals = _filter_forbidden_candidates(
+                        evals, z_cur, branch_points, cut_angles_resolved, CT)
+                end
                 idx_sel = _select_candidate(step_selection, evals, u_cur, up_cur,
                                             goal_dir, wedge_angles)
                 z_new, u_new, up_new, pade_sel = evals[idx_sel]
-                (!isfinite(abs(u_new)) || pade_sel === nothing) && throw(ErrorException(
-                    "path_network_solve: all 5 wedge candidates failed at " *
-                    "z=$z_cur (target=$target); shrink h or widen wedge."))
+                if !isfinite(abs(u_new)) || pade_sel === nothing
+                    msg = "path_network_solve: all 5 wedge candidates failed at " *
+                          "z=$z_cur (target=$target); shrink h or widen wedge."
+                    if branched && !cross_branch
+                        msg *= "  (Refuse mode active with " *
+                               "$(length(branch_points)) branch_points: all " *
+                               "candidates may be forbidden by the cut " *
+                               "constraint — consider cross_branch=true or " *
+                               "redirect branch_cut_angles.)"
+                    end
+                    throw(ErrorException(msg))
+                end
 
                 step_size_policy === :fixed && break
 
@@ -461,6 +544,20 @@ function path_network_solve(prob::PadeTaylorProblem,
             push!(visited_pade, pade_canonical)
             push!(visited_h, h_step)
             push!(visited_parent, parent_idx)
+            # Sheet bookkeeping (ADR-0013).  Refuse mode: copies parent's
+            # sheet (no crossing happened by construction).  Cross mode:
+            # checks each branch cut for crossing and bumps per
+            # sign(winding_delta).  Default no-branches: pushes Int[].
+            if branched
+                push!(visited_sheet,
+                      cross_branch ?
+                          step_sheet_update(visited_sheet[parent_idx],
+                                            z_cur, z_new,
+                                            branch_points, cut_angles_resolved) :
+                          copy(visited_sheet[parent_idx]))
+            else
+                push!(visited_sheet, Int[])
+            end
             parent_idx = length(visited_z)   # next step chains off this node
 
             z_cur, u_cur, up_cur = z_new, u_new, up_new
@@ -508,7 +605,23 @@ function path_network_solve(prob::PadeTaylorProblem,
 
     return PathNetworkSolution{T}(visited_z, visited_u, visited_up,
                                   visited_pade, visited_h, visited_parent,
-                                  grid_z, grid_u, grid_up)
+                                  grid_z, grid_u, grid_up, visited_sheet)
+end
+
+# ADR-0013 refuse-mode filter: replace each forbidden candidate with the
+# same shape as a Padé failure (Inf-|u| sentinel, nothing-Padé), so the
+# downstream `_select_candidate` naturally skips it (min_u of Inf is
+# large; steepest_descent's pade-nothing check follows the same path
+# the Padé-failure already does in the existing "all 5 failed" guard).
+function _filter_forbidden_candidates(evals, z_cur, branches, cut_angles, ::Type{CT}) where CT
+    return map(evals) do e
+        z_n, _, _, pade = e
+        if pade !== nothing && any_cut_crossed(z_cur, z_n, branches, cut_angles)
+            (z_cur, CT(Inf, 0), CT(0, 0), nothing)
+        else
+            e
+        end
+    end
 end
 
 # -----------------------------------------------------------------------------

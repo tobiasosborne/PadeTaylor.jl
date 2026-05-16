@@ -28,6 +28,7 @@ Four algorithmically independent layers, per ADR-0001:
                           the IVP to the pole field (FW §3.2.2 + md:401).
  14. `CoordTransforms`   — Exponential coordinate maps for PIII / PV (FFW 2017 §2.1, Tier-4).
  15. `SheetTracker`      — PVI ζ-plane RHS + winding-number primitives (FFW 2017 §2.2, Tier-5).
+ 16. `BranchTracker`     — Walker-side cut-crossing predicate + per-branch sheet bookkeeping (ADR-0013).
 
 ## Determinism
 
@@ -67,6 +68,11 @@ include("Coefficients.jl")
 include("StepControl.jl")
 include("PadeStepper.jl")
 include("Problems.jl")
+# SheetTracker is loaded before PathNetwork because BranchTracker (the
+# walker-side cut-respecting layer per ADR-0013) reuses SheetTracker's
+# `winding_delta` primitive, and PathNetwork in turn uses BranchTracker.
+include("SheetTracker.jl")
+include("BranchTracker.jl")
 include("PathNetwork.jl")
 include("PoleField.jl")
 include("BVP.jl")
@@ -75,7 +81,6 @@ include("EdgeDetector.jl")
 include("LatticeDispatcher.jl")
 include("EdgeGatedSolve.jl")
 include("CoordTransforms.jl")
-include("SheetTracker.jl")
 include("Painleve.jl")
 include("IVPBVPHybrid.jl")
 
