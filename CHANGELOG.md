@@ -140,6 +140,49 @@ steps shipped** as of worklog 045.
     due to OOM friction, see worklog 048).  Existing 2508 assertions
     unchanged.
 
+### Fixed — Lattice-dispatcher v3 (worklog 049, bead `padetaylor-0tj`)
+
+  - **`lattice_dispatch_solve` BC-corruption divergence** — on PI tritronquée
+    at large N (e.g. 121×121 over `[-20,20]²`, `h_grid = 0.333`), the plain
+    `path_network_solve` IVP source walked into smooth pole-free sectors and
+    returned corrupted values there (FW 2011
+    `references/markdown/FW2011_painleve_methodology_JCP230/FW2011_painleve_methodology_JCP230.md:401`:
+    "smooth regions are unstable regions for any IVP solver").  Those corrupted
+    values became the Dirichlet BCs for the per-row BVP, causing Newton
+    divergence (`‖Δu‖_∞ = 0.4458` vs `tol = 1.8e-12`).  Fixed by switching
+    the default IVP source to `edge_gated_pole_field_solve` (ADR-0017;
+    bead `padetaylor-0tj`).  Smooth cells outside the gated field are
+    `NaN + NaN·im` — Rule 1 honesty.  Manual `mask` kwarg still routes through
+    plain `path_network_solve` (API contract preserved).
+
+### Changed — Lattice-dispatcher v3 (worklog 049, bead `padetaylor-0tj`)
+
+  - **`lattice_dispatch_solve` default IVP source** — switched from plain
+    `path_network_solve` to `edge_gated_pole_field_solve` (ADR-0017;
+    bead `padetaylor-0tj`).  Consequence: smooth cells outside the gated field
+    are `NaN + NaN·im` by default (was: plausible-but-wrong IVP-integrated
+    values).  Manual `mask` kwarg still routes through plain `path_network_solve`.
+  - **LD.1.1 pre-existing assertion adjusted** — the LD.1.1 `bvp_solutions == 0`
+    assertion (which expected zero BVP cells under the old full-grid IVP default)
+    is updated to `bvp_solutions ≤ 5`; under the new edge-gated default the
+    one-ring dilation provides a small finite number of valid BVP flanks.
+    The semantic flip is documented in `test/lattice_dispatcher_test.jl`.
+
+### Added — Lattice-dispatcher v3 (worklog 049, bead `padetaylor-0tj`)
+
+  - **`strict::Bool = true` kwarg on `lattice_dispatch_solve`** — `strict = false`
+    catches Newton non-convergence (`ErrorException` matching the exact message
+    from `src/BVP.jl:332-338`) and tags the affected cells `:bvp_fail`
+    instead of throwing.  `strict = true` (default) preserves the v1/v2
+    fail-fast behaviour; every existing test invariant is unchanged.
+  - **`:bvp_fail` added to the `region_tag` enum** — was `{:ivp, :bvp,
+    :ivp_only}`; now `{:ivp, :bvp, :bvp_fail, :ivp_only}`.  Downstream
+    consumers pattern-matching on the enum need a fourth arm (none currently do).
+  - +61 new LD.X.* assertions across 7 testsets in
+    `test/lattice_dispatcher_test.jl`; mutation-X applied (RED→GREEN verified,
+    23.4 s, single-file isolation — full `Pkg.test()` deferred due to OOM
+    friction, see worklog 049).
+
 ### Open follow-ups (B5 remaining)
 
   - FFW Fig 3 (PVI phase portraits, bead `padetaylor-a1l`, blocked by

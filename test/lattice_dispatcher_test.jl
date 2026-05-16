@@ -53,10 +53,18 @@ using PadeTaylor
         # mask=false cell is :bvp OR :ivp_only.  (No untagged cells.)
         @test count(sol.region_tag .== :ivp) == count(sol.mask)
         @test all(t -> t in (:ivp, :bvp, :ivp_only), sol.region_tag)
-        # PI tritronquée wedge is at grid edge (positive real axis) →
-        # no smooth run is two-sided-flanked → zero BVP fills.
-        @test length(sol.bvp_solutions) == 0
-        @test count(sol.region_tag .== :bvp) == 0
+        # Under ADR-0017 (bead padetaylor-0tj) the default IVP source is
+        # `edge_gated_pole_field_solve`, whose tighter, edge-confirmed
+        # mask exposes a small number of smooth cells along the wedge
+        # boundary that *are* two-sided-flanked by field cells (the v2
+        # plain `path_network_solve` source produced an over-inclusive
+        # mask under which the same cells were un-flanked).  Pin to a
+        # small finite count rather than `== 0`; the exact count (2 on
+        # this fixture at HEAD) is geometry-sensitive, so we bound it
+        # rather than equate it to avoid brittleness under further mask
+        # refinement.
+        @test length(sol.bvp_solutions) ≤ 5
+        @test count(sol.region_tag .== :bvp) == length(sol.bvp_solutions)
     end
 
     # ---- LD.1.2: linear u''=u with supplied mask, BVP fill triggers --------
@@ -201,6 +209,241 @@ using PadeTaylor
         # Restored.
     end
 
+    # ====================================================================
+    # Phase 12 v3 / bead `padetaylor-0tj` / ADR-0017 — `strict::Bool`
+    # kwarg + edge-gated IVP source.  Tests LD.X.1 … LD.X.7.
+    #
+    # Divergence-trigger trick used by LD.X.3 / LD.X.4: pass `bvp_tol`
+    # tighter than Newton's step-norm floor (`eps^(3/4)` ≈ 1e-12 for
+    # Float64).  At `bvp_tol = 1e-300` Newton runs `maxiter = 10`
+    # iterations without ever satisfying `‖Δu‖_∞ ≤ tol` and `bvp_solve`
+    # throws the documented `ErrorException("bvp_solve: Newton did not
+    # converge…")` — exactly the failure mode `strict = false` is meant
+    # to swallow.  This is fixture-independent and works on both the
+    # auto and mask paths.
+    # ====================================================================
+
+    # ---- LD.X.1: strict=true (default) still throws on forced divergence ---
+    @testset "LD.X.1: strict=true throws on BVP non-convergence (back-compat)" begin
+        # PI tritronquée on a small mask-driven fixture; impossibly tight
+        # `bvp_tol` forces the per-row BVP to diverge.  Default (no kwarg)
+        # must rethrow the bvp_solve ErrorException verbatim.
+        f_PI(z, u, up) = 6 * u^2 + z
+        f_PI_1(z, u)   = 6 * u^2 + z
+        ∂f_PI_1(z, u)  = 12 * u
+        u_tri, up_tri  = -0.1875543083404949, 0.3049055602612289
+
+        N = 11
+        xs = range(-2.0, 2.0; length = N)
+        ys = range(-2.0, 2.0; length = N)
+        zspan = (0.0 + 0.0im, ComplexF64(2.0 * sqrt(2)))
+        prob  = PadeTaylorProblem(f_PI, (u_tri, up_tri), zspan; order = 20)
+
+        # Mask path: flanks at i ∈ {3, 9} on every interior row, so the
+        # dispatcher tries to BVP-fill the run i ∈ 4:8 on each row.
+        mask = falses(N, N)
+        for j in 2:(N - 1)
+            mask[3, j] = true
+            mask[9, j] = true
+        end
+
+        # Default (strict=true) — must throw, message-matched.
+        @test_throws ErrorException lattice_dispatch_solve(
+            prob, f_PI_1, ∂f_PI_1, xs, ys;
+            h_path = 0.5, order = 20, mask = mask, bvp_tol = 1e-300)
+
+        # Explicit strict=true — same.
+        @test_throws ErrorException lattice_dispatch_solve(
+            prob, f_PI_1, ∂f_PI_1, xs, ys;
+            h_path = 0.5, order = 20, mask = mask, bvp_tol = 1e-300,
+            strict = true)
+    end
+
+    # ---- LD.X.2: strict=false returns a LatticeSolution (fail-soft) --------
+    @testset "LD.X.2: strict=false swallows Newton non-convergence" begin
+        f_PI(z, u, up) = 6 * u^2 + z
+        f_PI_1(z, u)   = 6 * u^2 + z
+        ∂f_PI_1(z, u)  = 12 * u
+        u_tri, up_tri  = -0.1875543083404949, 0.3049055602612289
+
+        N = 11
+        xs = range(-2.0, 2.0; length = N)
+        ys = range(-2.0, 2.0; length = N)
+        zspan = (0.0 + 0.0im, ComplexF64(2.0 * sqrt(2)))
+        prob  = PadeTaylorProblem(f_PI, (u_tri, up_tri), zspan; order = 20)
+
+        mask = falses(N, N)
+        for j in 2:(N - 1)
+            mask[3, j] = true
+            mask[9, j] = true
+        end
+
+        # Fail-soft — must NOT throw, must return a LatticeSolution.
+        sol = lattice_dispatch_solve(prob, f_PI_1, ∂f_PI_1, xs, ys;
+                                     h_path = 0.5, order = 20,
+                                     mask = mask, bvp_tol = 1e-300,
+                                     strict = false)
+        @test sol isa LatticeSolution
+        @test size(sol.region_tag) == (N, N)
+        # No `:bvp` cell may carry NaN — only converged BVPs got that tag.
+        for i in 1:N, j in 1:N
+            if sol.region_tag[i, j] == :bvp
+                @test isfinite(sol.grid_u[i, j])
+            end
+        end
+    end
+
+    # ---- LD.X.3: :bvp_fail tags appear when BVP diverges -------------------
+    @testset "LD.X.3: :bvp_fail tag appears under forced divergence" begin
+        f_PI(z, u, up) = 6 * u^2 + z
+        f_PI_1(z, u)   = 6 * u^2 + z
+        ∂f_PI_1(z, u)  = 12 * u
+        u_tri, up_tri  = -0.1875543083404949, 0.3049055602612289
+
+        N = 11
+        xs = range(-2.0, 2.0; length = N)
+        ys = range(-2.0, 2.0; length = N)
+        zspan = (0.0 + 0.0im, ComplexF64(2.0 * sqrt(2)))
+        prob  = PadeTaylorProblem(f_PI, (u_tri, up_tri), zspan; order = 20)
+
+        mask = falses(N, N)
+        for j in 2:(N - 1)
+            mask[3, j] = true
+            mask[9, j] = true
+        end
+
+        sol = lattice_dispatch_solve(prob, f_PI_1, ∂f_PI_1, xs, ys;
+                                     h_path = 0.5, order = 20,
+                                     mask = mask, bvp_tol = 1e-300,
+                                     strict = false)
+        # Every bridgeable run hits divergence ⇒ at least one :bvp_fail.
+        @test count(sol.region_tag .== :bvp_fail) > 0
+        # And by construction every smooth-run cell flips to :bvp_fail
+        # (no row converges, so no :bvp tag survives in the bridged span).
+        @test count(sol.region_tag .== :bvp) == 0
+    end
+
+    # ---- LD.X.4: :bvp_fail cells retain their IVP values (no overwrite) ----
+    @testset "LD.X.4: :bvp_fail cells keep their pre-BVP values" begin
+        # Manual-mask path: pre-BVP values are the `path_network_solve`
+        # IVP run, which is finite everywhere on this benign linear
+        # fixture.  After fail-soft divergence, the :bvp_fail cells must
+        # bit-exactly match the IVP reference computed on the same grid.
+        f_lin_2(z, u, up) = u
+        f_lin_1(z, u)     = u
+        ∂f_lin_1(z, u)    = one(u)
+
+        N = 11
+        xs = range(-1.5, 1.5; length = N)
+        ys = range(-1.5, 1.5; length = N)
+        zspan = (0.0 + 0.0im, ComplexF64(1.5 * sqrt(2)))
+        prob  = PadeTaylorProblem(f_lin_2, (1.0, 0.0), zspan; order = 20)
+
+        mask = falses(N, N)
+        for j in 2:(N - 1)
+            mask[3, j] = true
+            mask[9, j] = true
+        end
+
+        sol = lattice_dispatch_solve(prob, f_lin_1, ∂f_lin_1, xs, ys;
+                                     h_path = 0.5, order = 20,
+                                     mask = mask, bvp_tol = 1e-300,
+                                     strict = false)
+
+        # Independent IVP reference on the same mask path.  Mirrors the
+        # mask-path branch of lattice_dispatch_solve verbatim (the same
+        # call into path_network_solve over the vec'd grid).
+        grid_z = ComplexF64[xs[i] + im * ys[j] for i in 1:N, j in 1:N]
+        pn_ref = PadeTaylor.path_network_solve(prob, vec(grid_z);
+                                               h = 0.5, order = 20)
+        ivp_u  = Matrix{ComplexF64}(reshape(pn_ref.grid_u, (N, N)))
+
+        n_fail = 0
+        for i in 1:N, j in 1:N
+            if sol.region_tag[i, j] == :bvp_fail
+                n_fail += 1
+                @test sol.grid_u[i, j] == ivp_u[i, j]
+            end
+        end
+        @test n_fail > 0
+    end
+
+    # ---- LD.X.5: manual-mask fallback path still works ---------------------
+    @testset "LD.X.5: mask kwarg still routes through path_network_solve" begin
+        # Reproduces LD.1.2 in miniature — supplied mask → manual path,
+        # BVP fill happens, region tags correct, return value is shape-OK.
+        f_lin_2(z, u, up) = u
+        f_lin_1(z, u)     = u
+        ∂f_lin_1(z, u)    = one(u)
+        N = 11
+        xs = range(-1.5, 1.5; length = N)
+        ys = range(-1.5, 1.5; length = N)
+        zspan = (0.0 + 0.0im, ComplexF64(1.5 * sqrt(2)))
+        prob  = PadeTaylorProblem(f_lin_2, (1.0, 0.0), zspan; order = 20)
+        mask = falses(N, N)
+        for j in 2:(N - 1)
+            mask[3, j] = true
+            mask[9, j] = true
+        end
+        sol = lattice_dispatch_solve(prob, f_lin_1, ∂f_lin_1, xs, ys;
+                                     h_path = 0.5, order = 20, mask = mask)
+        @test sol isa LatticeSolution
+        @test size(sol.grid_u) == (N, N)
+        @test sol.region_tag[3, 6] == :ivp
+        @test sol.region_tag[6, 6] == :bvp     # interior of bridged run
+        @test sol.region_tag[1, 6] == :ivp_only
+        @test length(sol.bvp_solutions) == N - 2
+    end
+
+    # ---- LD.X.6: region_tag enumeration correctness ------------------------
+    @testset "LD.X.6: region_tag ⊆ {:ivp, :bvp, :bvp_fail, :ivp_only}" begin
+        # Run the LD.X.2 fixture (which exercises :ivp, :bvp_fail, and
+        # :ivp_only) and assert the unique tag set is a subset of the
+        # documented enum.  Catches typos (e.g., `:bvp_failed`).
+        f_PI(z, u, up) = 6 * u^2 + z
+        f_PI_1(z, u)   = 6 * u^2 + z
+        ∂f_PI_1(z, u)  = 12 * u
+        u_tri, up_tri  = -0.1875543083404949, 0.3049055602612289
+        N = 11
+        xs = range(-2.0, 2.0; length = N)
+        ys = range(-2.0, 2.0; length = N)
+        zspan = (0.0 + 0.0im, ComplexF64(2.0 * sqrt(2)))
+        prob  = PadeTaylorProblem(f_PI, (u_tri, up_tri), zspan; order = 20)
+        mask = falses(N, N)
+        for j in 2:(N - 1)
+            mask[3, j] = true
+            mask[9, j] = true
+        end
+        sol = lattice_dispatch_solve(prob, f_PI_1, ∂f_PI_1, xs, ys;
+                                     h_path = 0.5, order = 20,
+                                     mask = mask, bvp_tol = 1e-300,
+                                     strict = false)
+        allowed = Set([:ivp, :bvp, :bvp_fail, :ivp_only])
+        @test issubset(Set(unique(sol.region_tag)), allowed)
+    end
+
+    # ---- LD.X.7: strict=false on the auto (edge-gated) path returns OK ----
+    @testset "LD.X.7: strict=false on the default edge-gated path" begin
+        # No mask supplied → edge-gated IVP fill.  With a tractable
+        # `bvp_tol`, the v3 default code path must complete cleanly on
+        # the PI tritronquée fixture.  Confirms the new default code
+        # path is robust (no spurious BVP failures on a smooth fixture).
+        f_PI(z, u, up) = 6 * u^2 + z
+        f_PI_1(z, u)   = 6 * u^2 + z
+        ∂f_PI_1(z, u)  = 12 * u
+        u_tri, up_tri  = -0.1875543083404949, 0.3049055602612289
+        N = 21
+        xs = range(-4.0, 4.0; length = N)
+        ys = range(-4.0, 4.0; length = N)
+        zspan = (0.0 + 0.0im, ComplexF64(4.0 * sqrt(2)))
+        prob  = PadeTaylorProblem(f_PI, (u_tri, up_tri), zspan; order = 30)
+        sol = lattice_dispatch_solve(prob, f_PI_1, ∂f_PI_1, xs, ys;
+                                     h_path = 0.5, order = 30, strict = false)
+        @test sol isa LatticeSolution
+        # Auto path: region tags use the full enum.
+        @test all(t -> t in (:ivp, :bvp, :bvp_fail, :ivp_only), sol.region_tag)
+    end
+
 end
 
 # Mutation-proof procedure (verified 2026-05-13).
@@ -222,3 +465,30 @@ end
 # bookkeeping correct".
 #
 # Both mutations restored before commit per CLAUDE.md Rule 4.
+#
+# ─────────────────────────────────────────────────────────────────────
+# Mutation-proof for the v3 / bead `padetaylor-0tj` testsets
+# (LD.X.1 … LD.X.7), verified 2026-05-16.
+#
+# Mutation X — invert the strict gate in `src/LatticeDispatcher.jl`
+# around line 414, changing
+#     if !strict && err isa ErrorException && occursin(...)
+# to
+#     if strict && err isa ErrorException && occursin(...)
+# This swaps the fail-soft semantics: `strict = false` (the documented
+# fail-soft mode) now rethrows, while `strict = true` swallows.  The
+# whole `strict::Bool` feature is defeated.
+#
+# Verified bite (single Julia run, file in isolation):
+#   • LD.X.2 (strict=false ... swallows Newton non-convergence) goes
+#     RED — the lattice_dispatch_solve call now rethrows the
+#     `ErrorException("bvp_solve: Newton did not converge…")` rather
+#     than returning a LatticeSolution.
+#   • LD.X.3 / LD.X.4 / LD.X.6 also bite because the strict=false
+#     fixtures they share all rethrow before tagging anything.
+#   • LD.X.1 (strict=true still throws) goes GREEN by accident (the
+#     inverted gate happens to also catch under strict=true, but the
+#     two explicit `strict=true` `@test_throws` assertions fail
+#     because the throw is now swallowed).  Net: LD.X.1 also bites.
+#
+# Restored verbatim before commit.

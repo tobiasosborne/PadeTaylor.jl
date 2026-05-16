@@ -28,9 +28,11 @@ Four algorithmically independent layers, per ADR-0001:
  10. `BVP`           — Chebyshev-Newton spectral BVP solver (Tier-3).
  11. `Dispatcher`    — 1D IVP↔BVP chain composition per FW 2011 §4.4.
  12. `EdgeDetector`  — 5-point Laplacian pole-field classifier (FW §3.2.2).
- 13. `LatticeDispatcher` — 2D-lattice composition with per-row BVP fill (FW §4.4).
- 14. `EdgeGatedSolve`    — region-growing edge-gated path-network: confines
+ 13. `EdgeGatedSolve`    — region-growing edge-gated path-network: confines
                           the IVP to the pole field (FW §3.2.2 + md:401).
+ 14. `LatticeDispatcher` — 2D-lattice composition with per-row BVP fill
+                          (FW §4.4); IVP source is `EdgeGatedSolve` by default
+                          (ADR-0017, bead `padetaylor-0tj`).
  15. `CoordTransforms`   — Exponential coordinate maps for PIII / PV (FFW 2017 §2.1, Tier-4).
  16. `SheetTracker`      — PVI ζ-plane RHS + winding-number primitives (FFW 2017 §2.2, Tier-5).
  17. `BranchTracker`     — Walker-side cut-crossing predicate + per-branch sheet bookkeeping (ADR-0013).
@@ -90,8 +92,8 @@ include("PoleField.jl")
 include("BVP.jl")
 include("Dispatcher.jl")
 include("EdgeDetector.jl")
-include("LatticeDispatcher.jl")
 include("EdgeGatedSolve.jl")
+include("LatticeDispatcher.jl")
 include("CoordTransforms.jl")
 include("Painleve.jl")
 include("IVPBVPHybrid.jl")
@@ -106,8 +108,8 @@ using .PoleField:   extract_poles
 using .BVP:         bvp_solve, BVPSolution
 using .Dispatcher:  dispatch_solve, DispatcherSolution, IVPSegment, BVPSegment
 using .EdgeDetector: laplacian_residual, pole_field_mask
-using .LatticeDispatcher: lattice_dispatch_solve, LatticeSolution
 using .EdgeGatedSolve: edge_gated_pole_field_solve, EdgeGatedSolution
+using .LatticeDispatcher: lattice_dispatch_solve, LatticeSolution
 using .CoordTransforms: pIII_transformed_rhs, pV_transformed_rhs,
                         pIII_z_to_ζ, pIII_ζ_to_z, pV_z_to_ζ, pV_ζ_to_z
 using .SheetTracker:    pVI_transformed_rhs,
