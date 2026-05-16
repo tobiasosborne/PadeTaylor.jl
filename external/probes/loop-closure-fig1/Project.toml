@@ -1,0 +1,10 @@
+[deps]
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+DelaunayTriangulation = "927a84f5-c5f4-47a5-9785-b46e178433df"
+NearestNeighbors = "b8a86587-4115-5ab1-83bc-aa920d37bbce"
+PadeTaylor = "00000000-0000-0000-0000-000000000001"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+
+[sources]
+PadeTaylor = {path = "../../.."}

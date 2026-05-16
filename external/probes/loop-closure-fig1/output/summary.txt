@@ -1,0 +1,23 @@
+verdict_numbers_only: Confirmed-pending-spatial-check (≥1 edge above 1e-3; see spatial map)
+n_visited:            2664
+n_sheet0:             850
+n_delaunay_edges:     2526
+n_tree_edges:         840
+n_nontree:            1689
+n_good_evals:         1689
+n_pade_blowups:       0
+median_dP_rel:        2.569389e-12
+p90_dP_rel:           2.216262e-05
+p99_dP_rel:           1.059648e-01
+max_dP_rel:           9.964997e-01
+n_above_1e-10:        438
+n_above_1e-6:         202
+n_above_1e-3:         107
+corr_treedist:        0.1764
+corr_extrapmax:       0.1367
+wall_walk_s:          16.47
+wall_eval_s:          0.16
+bad_re_median:        3.544
+bad_im_median:        -3.917
+bad_frac_re_gt_3:     0.6485
+bad_frac_abs_im_gt_pi: 0.7772
