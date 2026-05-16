@@ -63,4 +63,5 @@ using PadeTaylor
     include("ivp_bvp_hybrid_test.jl")
     include("ffw_fig_5_test.jl")
     include("ffw_fig_2_test.jl")
+    include("ffw_fig_3_test.jl")
 end
