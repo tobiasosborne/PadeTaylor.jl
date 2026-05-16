@@ -54,8 +54,10 @@ docs/design_section_6_path_network.md scope), are all shipped:
 | **A5** | Sheet-aware Stage-2 (`grid_sheet` kwarg + `eval_at_sheet` accessor) | ✅ **shipped** (worklog 043, bead `padetaylor-hed`); ADR-less additive extension to A4 substrate; unblocks B5 multi-sheet rendering | +30 SA.* |
 | **FFW Fig 2** | PVI three-method reproduction (η + ζ-refuse + ζ-cross) — first B5 figure | ✅ **shipped** (worklog 044, bead `padetaylor-n93`); demonstrates full A1+A2+A3+A4+A5+A6 composition on a single tronquée P_VI problem | +19 FF2.* |
 | **Stage-2 extrapolate** | `extrapolate=true` kwarg + new `eval_at` accessor (ADR-0015) — fixes white-gap artefact across all FFW figures | ✅ **shipped** (worklog 045, bead `padetaylor-afs`); aligns Stage-2 with FFW md:62 spec (no disc-radius cutoff); Fig 1/2/4/6 now render at **100% coverage** (was 0.9–98%) | +30 SX.* |
+| **FFW Fig 3** | PVI phase portraits in ζ + z planes (sheet 0 + alt sheet) | ✅ **shipped** (worklog 046, bead `padetaylor-a1l`); reuses Fig 2's A4 cross-mode + A5 sheet-aware machinery on a wider ζ-window with HSV phase-portrait rendering + z-plane Cartesian resample (Fig 4 pattern); **zero new `src/` code** | +20 FF3.* |
+| **FFW Fig 7** | Generic (non-tronquée) PVI in η + ζ + z planes — closes the 11-step FFW arc | ✅ **shipped** (worklog 047, bead `padetaylor-mgx`); first generic PVI figure; FFW md:281 `log10\|u\|` z-plane convention; first multi-branch-point routing (`branch_points = (0im, ±2πi)`) — confirmed `BranchTracker` tuple API works for the multi-point case; +41 FF7.* assertions | +41 FF7.* |
 
-**2447 / 2447 tests passing** as of worklog 045 (`HEAD = 6dad724`, all pushed).  **v0.1.0 tagged** (`38a49ae`, `CHANGELOG.md` ships); **Documenter site** generated (`30b3298`).  Since v0.1.0: classical-Padé F64 default (worklogs 020+021); **thirteen FW 2011 figures reproduced** in a new `figures/` project (Fig 3.1–3.3, 4.1, 4.2–4.4, 4.7, 4.8, 5.1, 5.2; worklogs 022–029); **ADR-0006 + `src/Painleve.jl`** — the `PainleveProblem` per-equation builder layer (worklog 026); `PoleField` (027), `EdgeGatedSolve` (028), the FW Fig 4.1 full composition (029), the `PainleveSolution` wrapper + Makie extension (ADR-0007, worklog 030), the `tritronquee` / `hastings_mcleod` named constructors (ADR-0008, worklog 031), the `EdgeDetector` h-aware level fix that unblocked the N=641 hero render (ADR-0009, worklog 032), and the closed-form Painlevé families `pii_rational` / `pii_airy` / `piv_entire` (ADR-0010, worklog 033).  See the "Session 2026-05-15" entry below for the worklog-032–033 rundown; older sessions live in `HANDOFF_ARCHIVE.md`.
+**2508 / 2508 tests passing** as of worklog 047 (`HEAD = 1331755`, all committed; push pending).  **v0.1.0 tagged** (`38a49ae`, `CHANGELOG.md` ships); **Documenter site** generated (`30b3298`).  Since v0.1.0: classical-Padé F64 default (worklogs 020+021); **thirteen FW 2011 figures reproduced** in a new `figures/` project (Fig 3.1–3.3, 4.1, 4.2–4.4, 4.7, 4.8, 5.1, 5.2; worklogs 022–029); **ADR-0006 + `src/Painleve.jl`** — the `PainleveProblem` per-equation builder layer (worklog 026); `PoleField` (027), `EdgeGatedSolve` (028), the FW Fig 4.1 full composition (029), the `PainleveSolution` wrapper + Makie extension (ADR-0007, worklog 030), the `tritronquee` / `hastings_mcleod` named constructors (ADR-0008, worklog 031), the `EdgeDetector` h-aware level fix that unblocked the N=641 hero render (ADR-0009, worklog 032), and the closed-form Painlevé families `pii_rational` / `pii_airy` / `piv_entire` (ADR-0010, worklog 033).  See the "Session 2026-05-15" entry below for the worklog-032–033 rundown; older sessions live in `HANDOFF_ARCHIVE.md`.
 
 **Phase 6 shipped 2026-05-09 on the pivoted scope** — the v1
 acceptance is a Padé-vs-Taylor pole-bridge demonstration (one stored
@@ -415,13 +417,11 @@ type is a prerequisite for Phase 8 but unrelated to Phase 7.
 bd ready -n 30
 ```
 
-Run `bd ready -n 30` for the live list.  As of worklog 045 there are
+Run `bd ready -n 30` for the live list.  As of worklog 047 there are
 no open P0/P1 beads; the ready queue is all P2/P3.  Notable open beads
 worth knowing about:
 
-**B5 next-up (FFW 2017 arc remaining)**:
-- `padetaylor-a1l` **P2 [feature]** — FFW Fig 3 (PVI phase portraits).  Now unblocked (Fig 2 shipped).  Mostly reuses Fig 2's solves; adds phase-portrait rendering in ζ + z planes.
-- `padetaylor-mgx` **P2 [feature]** — FFW Fig 7 (generic PVI in η/ζ/z planes).  Independent of Fig 3.  Different parameters; same structural shape as Fig 2.
+**FFW 2017 11-step arc**: ✅ **ALL 11/11 SHIPPED** — A1–A6 + B1–B4 + B5{Fig 2, 3, 7} all closed.  No remaining work in the FFW arc itself.
 
 **FFW v1 corner lifts**:
 - `padetaylor-ykg` **P3 [task]** — `pIII_asymptotic_ic` higher-order coefficients (`a_3, a_4, ...`).  Closes the FFW Fig 5 `~10⁻²` v1 gap.
@@ -444,7 +444,7 @@ worth knowing about:
 - `padetaylor-p3l` **P3** — quantitative pole-count pin for FW Fig 4.3/4.4.
 - `padetaylor-zzw` **P3** — performance profiling pass.
 
-**Next work item**: complete B5 — FFW Fig 3 (PVI phase portraits, bead `padetaylor-a1l`, blocked by Fig 2 which is now shipped → ready) and FFW Fig 7 (generic PVI in η/ζ/z planes, bead `padetaylor-mgx`, independent).  Fig 3 mostly reuses Fig 2's solves; Fig 7 mirrors Fig 2's structure with different parameters `(α,β,γ,δ) = (1,-1,3/4,-3/2)` at IC `u(2) = 3/2`.  After B5 the 11-step plan is complete.
+**Next work item**: FFW 11-step arc complete.  Pick from the remaining open P2/P3 beads above — most natural candidates are (a) **`padetaylor-ykg`** (lift the FFW Fig 5 `~10⁻²` v1 gap by adding `pIII_asymptotic_ic` higher-order coefficients), which unblocks both `padetaylor-i76` and `padetaylor-5k9`; (b) **`padetaylor-zwh`** (widen FFW Fig 1 to FFW's full `Re ζ ∈ [-2, 8]` via Poisson-disk Stage-1 nodes — would also help Fig 3 / Fig 7 / Fig 2 reduce their rng_seed fragility); or (c) **`padetaylor-qum`** (split `PathNetwork.jl` for Rule 6 LOC cap — now at ~1010 LOC).  Alternatively pick up the multi-branch-point routing surfaced by Fig 7 (worklog 047 §"multi-branch-point investigation") and convert the architecture-ready-but-unexercised `ζ = ±2πi` handling into a properly tested capability.
 
 ## Hard-won lessons (don't repeat these)
 
@@ -535,7 +535,27 @@ Quick summary:
 
 ## Last commit before this handoff
 
-`HEAD = 6dad724` ("extrapolate=true Stage-2 kwarg (bead padetaylor-afs, ADR-0015)").  The substantive arc this session: A3 η-plane PVI from stashed WIP (`acb7989`, worklog 041) → A4 constrained-wedge + sheet bookkeeping (`09217af`, worklog 042, ADR-0013, new `src/BranchTracker.jl`) → A5 sheet-aware Stage-2 + `eval_at_sheet` (`c685f7b`, worklog 043) → B5 Fig 2 first three-method PVI render (`1313297`, worklog 044) → user-flagged white-gap fix: `extrapolate=true` kwarg + new `eval_at` accessor + 4-figure re-render to 100% coverage (`6dad724`, worklog 045, ADR-0015).  Test suite **2447 / 2447 GREEN** (was 2220 at session start; +227 assertions).  Everything committed and pushed (`git log origin/main..HEAD` is empty).  Older sessions (worklogs 011 through 020 / pre-v0.1.0) live in `HANDOFF_ARCHIVE.md`.
+`HEAD = 1331755` ("B5 Fig 7 SHIPPED — generic PVI in η + ζ + z planes (bead padetaylor-mgx)").  Two commits this session, closing the FFW 11-step arc at 11/11: B5 Fig 3 PVI phase portraits (`55fd533`, worklog 046, bead `padetaylor-a1l`) → B5 Fig 7 generic PVI three-frame (`1331755`, worklog 047, bead `padetaylor-mgx`).  Test suite **2467 → 2508 GREEN** (+61 assertions this session; +20 FF3.* + +41 FF7.*).  Both commits land on `main`; push pending.
+
+### Session 2026-05-16 (continuation 2) — FFW B5 closeout: Figs 3 + 7 (worklogs 046–047)
+
+Orchestrated session: parent agent coordinates, opus subagents do plan + implementation per figure; one Julia process at a time per CLAUDE.md Rule 7.  Two commits, two worklogs, **+61 GREEN assertions**, **FFW 11-step arc complete (11/11)**.
+
+  - **B5 Fig 3 — PVI phase portraits** (`55fd533`, worklog 046, bead `padetaylor-a1l` **closed**) — second of three B5 figures.  Three columns × two rows (sheet [0] top, alt sheet bottom): `|w(ζ)|` modulus + `arg w(ζ)` HSV phase + `arg u(z)` HSV phase on z-plane Cartesian-resample (Fig 4 pattern lifted).  Reuses Fig 2's PVI problem `(α,β,γ,δ)=(4,-4,8,-8)`, IC `u(10)=0.4295…` with a FRESH cross-mode A4 solve over Re ζ ∈ [-1.5, 2.5] (vs Fig 2's [0.05, 3.0]).  526 visited tree nodes; sheet distribution `[0] => 477, [1] => 49`; **100% Stage-2 coverage** on both panels.  Three mutations: M1 (corrupt α) 15 ERROR (walker destabilises), M3 (drop cross_branch) 15 ERROR, M4 (drop sheet bookkeeping) 5 RED + 1 ERROR.  Honest v1 corners: reduced z-window vs FFW `[1/100, 10]`, rng_seed=2 hard-coded for sheet [1] reproducibility, no explicit cut-line annotation.  **Zero new `src/` code** — pure composition.
+
+  - **B5 Fig 7 — generic PVI in η + ζ + z planes** (`1331755`, worklog 047, bead `padetaylor-mgx` **closed**) — closes the FFW arc.  First GENERIC (non-tronquée) PVI figure.  Two solves: η-frame via A3 inside `Re η < log 2π` branch-point-free region; ζ-frame via A4 `cross_branch=true` + winding ring + A2 `node_separation = R(ζ) = max(0.05, (4 - Re ζ)/10)`.  z-plane column rendered as `log10|u(z)|` (FFW md:281: z-residues scale with |z₀|; log compresses dynamic range).  **First figure to exercise multi-branch-point routing**: `branch_points = (0im, +2πi, -2πi)` — confirmed `BranchTracker`'s tuple API supports the multi-point case (sheet counter is a length-3 `Vector{Int}` per node; ±2πi counters stay 0 in this window but architecture is ready).  Five mutations: M1 (α) 3 FAIL, M3 (cross_branch) 1 ERROR + cascade, M4 (sheet bookkeeping) 4 FAIL + 1 ERROR, M5 (log10 → bare abs in render kernel) 7 FAIL on the load-bearing FF7.1.8 invariant.  **M2 (drop node_separation) is HONEST NON-BITE** (Rule 9 documented): at this window/density `:adaptive_ffw` alone shrinks h sufficiently; the kwarg is figure-side ergonomic only.  rng_seed=1 picked from a 5-seed sweep (16 alt-sheet nodes).  Honest v1 corners: single principal-sheet η-strip (FFW shows 3); reduced z-window `|z| ∈ [0.45, 4.48]`; `ζ=±2πi` circumambulation architecture-ready but unexercised at this window.  41 GREEN assertions.  **Zero new `src/` code**; new `figures/_ffw2017_fig_7_helpers.jl` (~75 LOC + docstring) extracts the Makie-free render kernel so the test exercises the EXACT figure code path (M5 mutation bites the kernel, not a parallel copy).
+
+**Open beads filed this session**: none new.  Both `padetaylor-a1l` and `padetaylor-mgx` **closed**.
+
+**FFW 11-step arc final status**: ✅ **11/11 done** — A1 adaptive_ffw; A2 node_separation; A3 η-plane PVI; A4 constrained-wedge + sheet bookkeeping; A5 sheet-aware Stage-2; A6 IVP+BVP hybrid; B1 Fig 6; B2 Fig 1; B3 Fig 4; B4 Fig 5; B5 Figs 2 + 3 + 7.  Plus the user-flagged ADR-0015 `extrapolate=true` fix and the multi-branch-point capability surfaced by Fig 7.
+
+**Hard-won lessons added this session**:
+
+  42. **`node_separation` doesn't always bite when expected.** Plan predicted M2 would crash the walker on dense generic poles; reality is `:adaptive_ffw` alone handles it at our window/density (1536 visited nodes without `node_separation` vs 205 with).  `node_separation` becomes load-bearing only at wider windows or when the adaptive controller would need many rejection passes per step.  At Fig 7's scale it's figure-side ergonomic (faster solve, fewer nodes), not algorithmically required.  Documented in worklog 047 §"Mutation M2 honest non-bite."  Lesson: a v1 walker passing without an opt-in kwarg is not evidence the kwarg is unnecessary in general; it's evidence the v1 scope didn't reach the regime where the kwarg becomes load-bearing.
+
+  43. **Multi-branch-point `branch_points` tuple has worked all along.** Fig 7 passed `(0im, +2πi, -2πi)` as a 3-tuple; `BranchTracker` correctly resolves a length-3 `Vector{Int}` sheet counter per node.  No `src/` change needed — the capability was there since A4 shipped (worklog 042).  Worth knowing for future PVI work where the `ζ = 2πi·k` lattice points become reachable from the walker (currently they don't for tronquée Figs 2/3 or for the limited-window generic Fig 7).
+
+  44. **Render kernel extraction enables true rendering invariant tests.** Fig 7's FF7.1.8 (`log10|u|` rendering invariant) required the figure script and test to share the EXACT same code path so that an M5 mutation (`log10 → abs`) bites the actual code, not a parallel copy.  Solution: extract `figures/_ffw2017_fig_7_helpers.jl` as a Makie-free pure-Julia helper module included by both.  This is a precedent worth lifting for future figures with load-bearing rendering invariants.
 
 ### Session 2026-05-16 — A3/A4/A5 + B5 Fig 2 + extrapolate Stage-2 (worklogs 041–045)
 
