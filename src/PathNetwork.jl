@@ -147,7 +147,7 @@ using ..PadeStepper: PadeStepperState, pade_step_with_pade!,
 using ..Problems:    PadeTaylorProblem
 using ..BranchTracker: resolve_cut_angles, any_cut_crossed, step_sheet_update
 
-export PathNetworkSolution, path_network_solve, eval_at_sheet
+export PathNetworkSolution, path_network_solve, eval_at, eval_at_sheet
 
 const DEFAULT_WEDGE = [-π/4, -π/8, 0.0, π/8, π/4]   # FW 2011 ±22.5°/±45°
 
@@ -293,6 +293,16 @@ Kwargs:
     `length(branch_points)`.  Throws on mismatch (Rule 1).  Default
     `nothing` preserves the existing sheet-agnostic Euclidean
     nearest-visited semantics.
+  - `extrapolate`        — `Bool` (default `false`, ADR-0015).  When
+    `false`, Stage-2 cells more than `visited_h[idx]` from the
+    nearest visited node receive `NaN + NaN·im` — fail-soft per
+    ADR-0004 + CLAUDE.md Rule 1.  When `true`, the disc-radius
+    check is skipped and the nearest-node Padé is evaluated
+    regardless of `|t|` vs 1 — matches FFW 2017 §2.1.1 (md:62)
+    Stage-2 spec; eliminates the white-gap artefact in figure
+    renders at the cost of degraded accuracy past `|t|=1`.
+    Opt-in to preserve the default-on Rule 1 contract; figure
+    scripts pass `extrapolate=true` to get filled panels.
   - `max_steps_per_target` — cap per-target Stage-1 walk length.
   - `rng_seed::Integer`  — for deterministic target shuffle (tests).
   - `enforce_real_axis_symmetry::Bool` — opt-in.  When `true`, walk only
@@ -348,6 +358,7 @@ function path_network_solve(prob::PadeTaylorProblem,
                             initial_sheet::AbstractVector{<:Integer} =
                                 zeros(Int, length(branch_points)),
                             grid_sheet::Union{Nothing, AbstractVector{<:AbstractVector{<:Integer}}} = nothing,
+                            extrapolate::Bool = false,
                             max_steps_per_target::Integer = 1000,
                             rng_seed::Integer = 0,
                             enforce_real_axis_symmetry::Bool = false,
@@ -632,7 +643,10 @@ function path_network_solve(prob::PadeTaylorProblem,
         end
         z_v   = visited_z[idx_v]
         h_v   = visited_h[idx_v]
-        if abs(z_f - z_v) > h_v
+        # ADR-0015: extrapolate=true skips the disc-radius check
+        # to match FFW md:62's Stage-2 spec (evaluate Padé at every
+        # fine-grid cell regardless of |t| vs 1).
+        if !extrapolate && abs(z_f - z_v) > h_v
             grid_u[i]  = nan_CT
             grid_up[i] = nan_CT
         else
@@ -944,7 +958,8 @@ sheet tuple).
 """
 function eval_at_sheet(sol::PathNetworkSolution{T},
                        z::Complex,
-                       sheet::AbstractVector{<:Integer}) where T
+                       sheet::AbstractVector{<:Integer};
+                       extrapolate::Bool = false) where T
     CT     = Complex{T}
     sheet_branched = !isempty(sol.visited_sheet) &&
                       !isempty(sol.visited_sheet[1])
@@ -966,7 +981,51 @@ function eval_at_sheet(sol::PathNetworkSolution{T},
     idx_v == 0 && return (nan_CT, nan_CT)
     z_v    = sol.visited_z[idx_v]
     h_v    = sol.visited_h[idx_v]
-    if abs(z_CT - z_v) > h_v
+    # ADR-0015: extrapolate=true skips disc-radius check (FFW md:62).
+    # ADR-0015: extrapolate=true skips disc-radius check (FFW md:62).
+    if !extrapolate && abs(z_CT - z_v) > h_v
+        return (nan_CT, nan_CT)
+    end
+    t = (z_CT - z_v) / h_v
+    u  = _evaluate_pade(sol.visited_pade[idx_v], t)
+    up = _evaluate_pade_deriv(sol.visited_pade[idx_v], t) / h_v
+    return (u, up)
+end
+
+# -----------------------------------------------------------------------------
+# ADR-0015 sheet-blind public accessor: per-point Stage-2 eval without
+# the A5 sheet restriction.  Replaces the local `stage2_eval_blind`
+# helpers figure scripts have historically rolled themselves.
+# -----------------------------------------------------------------------------
+
+"""
+    eval_at(sol::PathNetworkSolution, z::Complex; extrapolate=false) -> (u, up)
+
+Evaluate the stored solution at a single point `z` using the nearest
+visited node's local Padé approximant.  Sheet-blind: the lookup
+ignores `visited_sheet`.  For sheet-restricted queries on multi-sheet
+solutions, use `eval_at_sheet`.
+
+When `extrapolate = false` (the default), returns `(NaN+NaN·im,
+NaN+NaN·im)` if `z` lies more than `visited_h[idx_v]` from the
+nearest visited node — fail-soft per ADR-0004 / CLAUDE.md Rule 1.
+
+When `extrapolate = true`, the disc-radius check is skipped and the
+nearest-node Padé is evaluated regardless; matches FFW 2017 §2.1.1
+(md:62) Stage-2 behaviour.  Used by figure scripts that prefer
+filled rendering panels over fail-soft NaN gaps.  See ADR-0015 for
+the rationale.
+"""
+function eval_at(sol::PathNetworkSolution{T},
+                 z::Complex;
+                 extrapolate::Bool = false) where T
+    CT     = Complex{T}
+    z_CT   = CT(z)
+    idx_v  = _nearest_visited(sol.visited_z, z_CT)
+    z_v    = sol.visited_z[idx_v]
+    h_v    = sol.visited_h[idx_v]
+    nan_CT = CT(NaN, NaN)
+    if !extrapolate && abs(z_CT - z_v) > h_v
         return (nan_CT, nan_CT)
     end
     t = (z_CT - z_v) / h_v

@@ -237,32 +237,13 @@ sol = path_network_solve(prob, stage1_targets;
         time() - t0, length(sol.visited_z))
 
 # ----------------------------------------------------------------------
-# Manual Stage 2 (worklog 037 helper).  Nearest-visited lookup + local
-# Padé evaluation; out-of-disc cells return NaN.
+# Manual Stage 2 via the public eval_at(...; extrapolate=true)
+# accessor (ADR-0015 / worklog 045).  Matches FFW md:62 Stage-2 spec
+# — eliminates white gaps at the cost of Padé extrapolation past
+# |t|=1 for cells far from any visited node.
 # ----------------------------------------------------------------------
 function stage2_eval(sol, points)
-    nv = length(sol.visited_z)
-    out = Vector{ComplexF64}(undef, length(points))
-    for (i, zf) in enumerate(points)
-        best_k = 1
-        best_d = abs(zf - sol.visited_z[1])
-        for k in 2:nv
-            d = abs(zf - sol.visited_z[k])
-            if d < best_d
-                best_d = d
-                best_k = k
-            end
-        end
-        hv = sol.visited_h[best_k]
-        if best_d > hv
-            out[i] = complex(NaN, NaN)
-        else
-            t = (zf - sol.visited_z[best_k]) / hv
-            out[i] = PadeTaylor.PathNetwork._evaluate_pade(
-                sol.visited_pade[best_k], t)
-        end
-    end
-    return out
+    return [eval_at(sol, zf; extrapolate = true)[1] for zf in points]
 end
 
 t0 = time()

@@ -56,7 +56,6 @@ using PadeTaylor.SheetTracker:   pVI_transformed_rhs,
                                   pVI_eta_transformed_rhs,
                                   pVI_z_to_η, pVI_η_to_z
 using PadeTaylor.CoordTransforms: pV_z_to_ζ, pV_ζ_to_z
-using PadeTaylor.PathNetwork:    _evaluate_pade
 using CairoMakie
 using Printf
 
@@ -224,30 +223,14 @@ end
 println("  Visited-sheet distribution: ", sheet_counts)
 
 # ----------------------------------------------------------------------
-# Manual Stage 2 for sheet-blind solves: nearest-visited Padé eval.
+# Manual Stage 2 for sheet-blind solves: nearest-visited Padé eval via
+# the package's public `eval_at(sol, z; extrapolate=true)` accessor
+# (ADR-0015).  `extrapolate=true` skips the disc-radius cutoff to
+# match FFW md:62's Stage-2 spec — fills the rendered panels without
+# white gaps, accepting that cells past |t|=1 are Padé-extrapolated.
 # ----------------------------------------------------------------------
 function stage2_eval_blind(sol::PathNetworkSolution, points)
-    nv = length(sol.visited_z)
-    out = Vector{ComplexF64}(undef, length(points))
-    for (i, zf) in enumerate(points)
-        best_k = 1
-        best_d = abs(zf - sol.visited_z[1])
-        for k in 2:nv
-            d = abs(zf - sol.visited_z[k])
-            if d < best_d
-                best_d = d
-                best_k = k
-            end
-        end
-        hv = sol.visited_h[best_k]
-        if best_d > hv
-            out[i] = complex(NaN, NaN)
-        else
-            t = (zf - sol.visited_z[best_k]) / hv
-            out[i] = _evaluate_pade(sol.visited_pade[best_k], t)
-        end
-    end
-    return out
+    return [eval_at(sol, zf; extrapolate = true)[1] for zf in points]
 end
 
 # ----------------------------------------------------------------------
@@ -291,10 +274,11 @@ W_ζ3_sheet0   = Matrix{ComplexF64}(undef, NX, NY_DOUBLE)
 W_ζ3_sheetalt = Matrix{ComplexF64}(undef, NX, NY_DOUBLE)
 for j in 1:NY_DOUBLE, i in 1:NX
     z = complex(ζ_xs[i], ζ3_ys[j])
-    u0_at, _ = eval_at_sheet(sol_ζ3, z, [0])
+    u0_at, _ = eval_at_sheet(sol_ζ3, z, [0]; extrapolate = true)
     W_ζ3_sheet0[i, j]   = u0_at
     if !isempty(alt_sheet_label)
-        u_alt, _ = eval_at_sheet(sol_ζ3, z, alt_sheet_label)
+        u_alt, _ = eval_at_sheet(sol_ζ3, z, alt_sheet_label;
+                                  extrapolate = true)
         W_ζ3_sheetalt[i, j] = u_alt
     else
         W_ζ3_sheetalt[i, j] = complex(NaN, NaN)

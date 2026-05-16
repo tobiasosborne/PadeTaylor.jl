@@ -36,6 +36,7 @@ using PadeTaylor
     include("branch_tracker_test.jl")
     include("path_network_branch_test.jl")
     include("sheet_aware_stage2_test.jl")
+    include("extrapolate_test.jl")
     include("adaptive_step_test.jl")
     include("non_uniform_nodes_test.jl")
     include("polefield_test.jl")

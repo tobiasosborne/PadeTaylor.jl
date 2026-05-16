@@ -88,7 +88,7 @@ include("IVPBVPHybrid.jl")
 using .Problems:    PadeTaylorProblem, solve_pade, PadeTaylorSolution, taylor_eval
 using .RobustPade:  robust_pade, PadeApproximant
 using .Coefficients: taylor_coefficients_1st, taylor_coefficients_2nd
-using .PathNetwork: path_network_solve, PathNetworkSolution, eval_at_sheet
+using .PathNetwork: path_network_solve, PathNetworkSolution, eval_at, eval_at_sheet
 using .PoleField:   extract_poles
 using .BVP:         bvp_solve, BVPSolution
 using .Dispatcher:  dispatch_solve, DispatcherSolution, IVPSegment, BVPSegment
@@ -144,7 +144,7 @@ function painleveplot end
 export PadeTaylorProblem, solve_pade, PadeTaylorSolution, taylor_eval
 export robust_pade, PadeApproximant
 export taylor_coefficients_1st, taylor_coefficients_2nd
-export path_network_solve, PathNetworkSolution, eval_at_sheet
+export path_network_solve, PathNetworkSolution, eval_at, eval_at_sheet
 export extract_poles
 export bvp_solve, BVPSolution
 export dispatch_solve, DispatcherSolution, IVPSegment, BVPSegment

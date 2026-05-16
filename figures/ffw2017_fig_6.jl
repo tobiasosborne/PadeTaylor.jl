@@ -167,7 +167,8 @@ sol = path_network_solve(prob, grid;
                           adaptive_tol = ADAPT_TOL,
                           k_conservative = K_CONS,
                           max_rescales = MAX_RESC,
-                          max_steps_per_target = 4000)
+                          max_steps_per_target = 4000,
+                          extrapolate = true)   # ADR-0015: FFW md:62 Stage-2
 @printf("  Stage 1 + Stage 2 in %.2f s; %d visited tree nodes.\n",
         time() - t0, length(sol.visited_z))
 

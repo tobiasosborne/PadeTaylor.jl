@@ -249,28 +249,12 @@ sol = path_network_solve(prob, stage1_targets;
 # `visited_pade`, `visited_h` for exactly this kind of downstream use.
 # ----------------------------------------------------------------------
 function stage2_eval(sol, points)
-    nv = length(sol.visited_z)
-    out = Vector{ComplexF64}(undef, length(points))
-    for (i, zf) in enumerate(points)
-        # Nearest visited node (linear scan; nv ~ few thousand).
-        best_k = 1
-        best_d = abs(zf - sol.visited_z[1])
-        for k in 2:nv
-            d = abs(zf - sol.visited_z[k])
-            if d < best_d
-                best_d = d
-                best_k = k
-            end
-        end
-        hv = sol.visited_h[best_k]
-        if best_d > hv
-            out[i] = complex(NaN, NaN)
-        else
-            t = (zf - sol.visited_z[best_k]) / hv
-            out[i] = PadeTaylor.PathNetwork._evaluate_pade(sol.visited_pade[best_k], t)
-        end
-    end
-    return out
+    # Per ADR-0015: extrapolate=true matches FFW md:62's Stage-2
+    # spec (evaluate Padé at every fine-grid cell regardless of |t|
+    # vs 1).  Eliminates the white-gap artefact from the disc-radius
+    # check.  Cells past |t|=1 are Padé-extrapolated (degraded
+    # accuracy but always finite).
+    return [eval_at(sol, zf; extrapolate = true)[1] for zf in points]
 end
 
 t0 = time()
