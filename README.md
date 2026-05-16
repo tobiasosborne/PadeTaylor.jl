@@ -145,14 +145,14 @@ The package is a layered stack — each tier builds on the one below, and you ca
 | **IVP driver** | march along a path, with dense output | `PadeTaylorProblem`, `solve_pade` |
 | **Path network** | navigate the whole complex plane around pole fields | `path_network_solve`, `extract_poles` |
 | **BVP + composition** | spectral BVP solver; auto IVP/BVP dispatch in 1-D and 2-D | `bvp_solve`, `dispatch_solve`, `lattice_dispatch_solve`, `edge_gated_pole_field_solve` |
-| **Multivalued tier** | coordinate transforms (PIII/PV) + Riemann-sheet tracking (PVI) | `pIII_transformed_rhs`, `pV_z_to_ζ`, `sheet_index` |
+| **Multivalued tier** | coordinate transforms (PIII/PV) + Riemann-sheet tracking (PVI) + walker-side cut respect | `pIII_transformed_rhs`, `pV_z_to_ζ`, `pVI_eta_transformed_rhs`, `sheet_index`, `path_network_solve(...; branch_points, cross_branch, grid_sheet)`, `eval_at`, `eval_at_sheet` |
 | **Painlevé layer** | per-equation problem builder + self-describing solution wrapper | `PainleveProblem`, `PainleveSolution`, `tritronquee`, `hastings_mcleod` |
 
 Internally the core itself is four layers: an SVD dispatcher (`LinAlg`) → robust Padé conversion (`RobustPade`) → Taylor jet generation (`Coefficients`) and step control (`StepControl`) → the one-step orchestrator (`PadeStepper`). Every source module is a self-contained, literate "chapter" kept under 200 lines. See `docs/adr/0001-four-layer-architecture.md` for the rationale.
 
 ## Status
 
-**v0.1.0 — research-grade; all architectural tiers shipped.** The package is not yet registered in the Julia General registry. **1630 / 1630 tests passing.**
+**v0.1.0 — research-grade; all architectural tiers shipped.** The package is not yet registered in the Julia General registry. **2447 / 2447 tests passing.**
 
 Headline empirical result: the FW 2011 Table 5.1 long-range integration of the equianharmonic Weierstrass ℘-function to `z = 30` reaches a relative error of `2.13·10⁻¹⁴` in 256-bit precision — beating the `8.34·10⁻¹⁴` reported by Fornberg & Weideman. See `CHANGELOG.md` for the full release notes, per-tier deliverables, and known limitations.
 

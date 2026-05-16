@@ -7,11 +7,11 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
-Post-v0.1.0 work, all on `main` and pushed.  Test suite **1630 / 1630
-GREEN** (up from 1311 at the v0.1.0 tag).  19 source modules (up from
-14); 8 ADRs (up from 4); 31 worklog shards (up from 18).
+Post-v0.1.0 work, all on `main` and pushed.  Test suite **2447 / 2447
+GREEN** (up from 1311 at the v0.1.0 tag).  21 source modules (up from
+14); 13 ADRs (up from 4); 45 worklog shards (up from 18).
 
-### Added
+### Added — worklogs 020–033
 
   - `RobustPade.classical_pade_diagonal` — the classical FW 2011
     §5.1.4 Toeplitz-backslash diagonal Padé.  Now the default at
@@ -47,9 +47,76 @@ GREEN** (up from 1311 at the v0.1.0 tag).  19 source modules (up from
     FW 2011 figures as runnable scripts (Fig 3.1–3.3, 4.1, 4.2–4.4,
     4.7, 4.8, 5.1, 5.2), each writing a PNG to `figures/output/`.
   - Documenter.jl docs site at `docs/build/`.
-  - ADRs 0005–0008: classical-Padé default at `Float64` (0005),
+  - ADRs 0005–0010: classical-Padé default at `Float64` (0005),
     `PainleveProblem` layer (0006), `PainleveSolution` wrapper (0007),
-    named-transcendent constructors (0008).
+    named-transcendent constructors (0008), `EdgeDetector` h-aware
+    level (0009), `pii_rational` / `pii_airy` / `piv_entire`
+    closed-form Painlevé families (0010).
+
+### Added — FFW 2017 arc (worklogs 034–045)
+
+The 11-step plan to reproduce the seven FFW 2017 figures.  **8 of 11
+steps shipped** as of worklog 045.
+
+  - **A1 adaptive Padé step** (`:adaptive_ffw` step_size_policy on
+    `path_network_solve`, worklog 034, ADR-0011) — FFW 2017 §2.1.2
+    truncation-error controller `q = (k·Tol/T(h))^(1/(n+1))`.
+  - **A2 non-uniform Stage-1 nodes** (`node_separation::Function`
+    kwarg, worklog 035, ADR-0012) — FFW Fig 1 prescription
+    `R(ζ) = (8 - Re ζ)/20`.
+  - **A3 η-plane PVI** (`pVI_eta_transformed_rhs` + `pVI_z_to_η` /
+    `pVI_η_to_z` + `:transformed_eta` frame on `PainleveProblem(:VI)`,
+    worklog 041) — FFW 2017 eq. 5 (md:154) verbatim; branch-point-free
+    region `Re η < log(2π)`.
+  - **A4 constrained-wedge routing + per-branch sheet bookkeeping**
+    (new `src/BranchTracker.jl` module with `segment_crosses_cut`,
+    `any_cut_crossed`, `step_sheet_update`, `resolve_cut_angles`;
+    `branch_points` + `branch_cut_angles` + `cross_branch` +
+    `initial_sheet` kwargs on `path_network_solve` + new
+    `visited_sheet` field on `PathNetworkSolution`, worklog 042,
+    ADR-0013) — FFW 2017 §2.2.2 (md:163-189).
+  - **A5 sheet-aware Stage-2** (`grid_sheet` kwarg on
+    `path_network_solve` + new public `eval_at_sheet(sol, z, sheet)`
+    accessor, worklog 043) — Stage-2 lookup restricted to matching-
+    sheet visited nodes.
+  - **A6 IVP+BVP hybrid driver** (`solve_pole_free_hybrid` +
+    `IVPBVPSolution` + `pIII_asymptotic_ic` in new
+    `src/IVPBVPHybrid.jl`, worklog 039, ADR-0014) — FFW 2017 §3
+    PFS↔BVP coupling for pole-free sectors.  Additive 3-arg-RHS
+    overload `bvp_solve(f, ∂f_∂u, ∂f_∂up, ...)` for the `(w')²/w` PIII
+    term.
+  - **`extrapolate=true` Stage-2 kwarg + new public `eval_at(sol, z;
+    extrapolate=false)` accessor** (worklog 045, ADR-0015) — aligns
+    Stage-2 with FFW md:62 spec (evaluate Padé at every fine-grid
+    cell regardless of disc radius).  Default `false` preserves
+    CLAUDE.md Rule 1 fail-soft NaN contract; opt-in `true` fills
+    figure renders without white gaps.
+  - **B1 FFW Fig 6** PV generic three-sheet (`figures/ffw2017_fig_6.jl`,
+    worklog 036) — first FFW 2017 figure reproduced; per-sheet errors
+    beat FFW by 2-3 orders.
+  - **B2 FFW Fig 1** PIII three-sheet spiral (`figures/ffw2017_fig_1.jl`,
+    worklog 037) — FFW's headline figure; sheet-0 conjugate-symmetry
+    median 4e-15 beats FFW Exp-2's 1e-6 by 9 orders.
+  - **B3 FFW Fig 4** PV tronquée three-sheet
+    (`figures/ffw2017_fig_4.jl`, worklog 038).
+  - **B4 FFW Fig 5** PIII tronquée + cond-number heatmap
+    (`figures/ffw2017_fig_5.jl`, worklog 040) — uses A6 hybrid driver;
+    cond-number pin `κ_r(z=30) ≈ 157` matches FFW md:264.
+  - **B5 FFW Fig 2** PVI three-method reproduction (η + ζ-refuse +
+    ζ-cross, `figures/ffw2017_fig_2.jl`, worklog 044) — first
+    end-to-end demo of A1+A2+A3+A4+A5+A6 stack composition.
+
+### Changed
+
+  - All four updated FFW 2017 figure scripts (Fig 1, 2, 4, 6) opt into
+    `extrapolate=true` Stage-2 and render at **100% coverage** (was
+    0.9–98% pre-ADR-0015).
+
+### Open follow-ups (B5 remaining)
+
+  - FFW Fig 3 (PVI phase portraits, bead `padetaylor-a1l`, blocked by
+    Fig 2 → now unblocked).
+  - FFW Fig 7 (generic PVI in η/ζ/z planes, bead `padetaylor-mgx`).
 
 ## [0.1.0] — 2026-05-13
 
