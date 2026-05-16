@@ -18,17 +18,22 @@ Four algorithmically independent layers, per ADR-0001:
   5. `PadeStepper`   — Orchestrates one step: Taylor → Padé → step.
   6. `Problems`      — `PadeTaylorProblem` / `solve_pade` public API.
   7. `PathNetwork`   — FW 2011 §3.1 5-direction wedge path-tree (Tier-2).
-  8. `PoleField`     — pole locations from a solved path-network's Padé
+  8. `Diagnostics`   — `DiagnosticReport` / `EdgeReport` containers + the
+                       `quality_diagnose` generic (Delaunay-backed method
+                       in `ext/PadeTaylorDiagnosticsExt.jl`); loop-closure
+                       quality certificate for `PathNetworkSolution`
+                       (ADR-0016).
+  9. `PoleField`     — pole locations from a solved path-network's Padé
                        store (FW 2011 Fig 4.7/4.8 capability).
-  9. `BVP`           — Chebyshev-Newton spectral BVP solver (Tier-3).
- 10. `Dispatcher`    — 1D IVP↔BVP chain composition per FW 2011 §4.4.
- 11. `EdgeDetector`  — 5-point Laplacian pole-field classifier (FW §3.2.2).
- 12. `LatticeDispatcher` — 2D-lattice composition with per-row BVP fill (FW §4.4).
- 13. `EdgeGatedSolve`    — region-growing edge-gated path-network: confines
+ 10. `BVP`           — Chebyshev-Newton spectral BVP solver (Tier-3).
+ 11. `Dispatcher`    — 1D IVP↔BVP chain composition per FW 2011 §4.4.
+ 12. `EdgeDetector`  — 5-point Laplacian pole-field classifier (FW §3.2.2).
+ 13. `LatticeDispatcher` — 2D-lattice composition with per-row BVP fill (FW §4.4).
+ 14. `EdgeGatedSolve`    — region-growing edge-gated path-network: confines
                           the IVP to the pole field (FW §3.2.2 + md:401).
- 14. `CoordTransforms`   — Exponential coordinate maps for PIII / PV (FFW 2017 §2.1, Tier-4).
- 15. `SheetTracker`      — PVI ζ-plane RHS + winding-number primitives (FFW 2017 §2.2, Tier-5).
- 16. `BranchTracker`     — Walker-side cut-crossing predicate + per-branch sheet bookkeeping (ADR-0013).
+ 15. `CoordTransforms`   — Exponential coordinate maps for PIII / PV (FFW 2017 §2.1, Tier-4).
+ 16. `SheetTracker`      — PVI ζ-plane RHS + winding-number primitives (FFW 2017 §2.2, Tier-5).
+ 17. `BranchTracker`     — Walker-side cut-crossing predicate + per-branch sheet bookkeeping (ADR-0013).
 
 ## Determinism
 
@@ -73,6 +78,13 @@ include("Problems.jl")
 # `winding_delta` primitive, and PathNetwork in turn uses BranchTracker.
 include("SheetTracker.jl")
 include("BranchTracker.jl")
+# Diagnostics declares the core DiagnosticReport / EdgeReport containers
+# and the empty `quality_diagnose` generic; PathNetwork then embeds the
+# Union{Nothing, DiagnosticReport} field on PathNetworkSolution and
+# attaches reports when path_network_solve is called with diagnose=true.
+# The Delaunay-backed method lives in ext/PadeTaylorDiagnosticsExt.jl
+# (ADR-0016 + ADR-0003).
+include("Diagnostics.jl")
 include("PathNetwork.jl")
 include("PoleField.jl")
 include("BVP.jl")
@@ -89,6 +101,7 @@ using .Problems:    PadeTaylorProblem, solve_pade, PadeTaylorSolution, taylor_ev
 using .RobustPade:  robust_pade, PadeApproximant
 using .Coefficients: taylor_coefficients_1st, taylor_coefficients_2nd
 using .PathNetwork: path_network_solve, PathNetworkSolution, eval_at, eval_at_sheet
+using .Diagnostics: DiagnosticReport, EdgeReport, quality_diagnose
 using .PoleField:   extract_poles
 using .BVP:         bvp_solve, BVPSolution
 using .Dispatcher:  dispatch_solve, DispatcherSolution, IVPSegment, BVPSegment
@@ -145,6 +158,7 @@ export PadeTaylorProblem, solve_pade, PadeTaylorSolution, taylor_eval
 export robust_pade, PadeApproximant
 export taylor_coefficients_1st, taylor_coefficients_2nd
 export path_network_solve, PathNetworkSolution, eval_at, eval_at_sheet
+export DiagnosticReport, EdgeReport, quality_diagnose
 export extract_poles
 export bvp_solve, BVPSolution
 export dispatch_solve, DispatcherSolution, IVPSegment, BVPSegment

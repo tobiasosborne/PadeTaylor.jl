@@ -2,7 +2,7 @@
 
 julia_version = "1.12.3"
 manifest_format = "2.0"
-project_hash = "93359a5dbf8c8ef6986a63a3cae5a6a7588716f2"
+project_hash = "0e343a0e61239a282b31a1ed7f79cc8030388eef"
 
 [[deps.Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
@@ -145,7 +145,7 @@ uuid = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 version = "1.8.1"
 
 [[deps.PadeTaylor]]
-deps = ["GenericLinearAlgebra", "LinearAlgebra", "Polynomials", "Printf", "Random", "SpecialFunctions", "TaylorSeries"]
+deps = ["GenericLinearAlgebra", "LinearAlgebra", "Polynomials", "Printf", "Random", "SpecialFunctions", "Statistics", "TaylorSeries"]
 path = "."
 uuid = "00000000-0000-0000-0000-000000000001"
 version = "0.1.0"
@@ -153,11 +153,13 @@ version = "0.1.0"
     [deps.PadeTaylor.extensions]
     PadeTaylorArblibExt = "Arblib"
     PadeTaylorCommonSolveExt = "CommonSolve"
+    PadeTaylorDiagnosticsExt = "DelaunayTriangulation"
     PadeTaylorMakieExt = "Makie"
 
     [deps.PadeTaylor.weakdeps]
     Arblib = "fb37089c-8514-4489-9461-98f9c8763369"
     CommonSolve = "38540f10-b2f7-11e9-35d8-d573e4eb0ff2"
+    DelaunayTriangulation = "927a84f5-c5f4-47a5-9785-b46e178433df"
     Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 
 [[deps.Polynomials]]
@@ -236,6 +238,16 @@ version = "2.7.2"
 git-tree-sha1 = "6ab403037779dae8c514bad259f32a447262455a"
 uuid = "1e83bf80-4336-4d27-bf5d-d5a4f845583c"
 version = "1.4.4"
+
+[[deps.Statistics]]
+deps = ["LinearAlgebra"]
+git-tree-sha1 = "ae3bb1eb3bba077cd276bc5cfc337cc65c3075c0"
+uuid = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+version = "1.11.1"
+weakdeps = ["SparseArrays"]
+
+    [deps.Statistics.extensions]
+    SparseArraysExt = ["SparseArrays"]
 
 [[deps.StyledStrings]]
 uuid = "f489334b-da3d-4c2e-b8f0-e476e12c162b"

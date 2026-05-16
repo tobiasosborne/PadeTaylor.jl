@@ -112,6 +112,34 @@ steps shipped** as of worklog 045.
     `extrapolate=true` Stage-2 and render at **100% coverage** (was
     0.9–98% pre-ADR-0015).
 
+### Added — Diagnostics layer (worklog 048, bead `padetaylor-5t4`)
+
+  - `Diagnostics.quality_diagnose(sol) → DiagnosticReport` — first-class
+    loop-closure quality certificate on `PathNetworkSolution`.  Computes
+    the per-edge midpoint disagreement `ΔP_rel := |P_A(M) - P_B(M)| /
+    (|P_A(M)| + |P_B(M)| + ε)` over every non-tree Delaunay edge on
+    sheet 0 of the visited-node graph, returning a `DiagnosticReport`
+    with `(n_nodes, n_nontree, median, p90, p99, max, n_above_tol,
+    n_catastrophic, edge_reports)` fields.  Motivated by the trimodal
+    distribution found in the Fig 1 loop-closure probe
+    (`external/probes/loop-closure-fig1/REPORT.md:34-77`): 6.3 % of
+    loop closures catastrophic (`ΔP_rel > 1e-3`), clustering at
+    high-Re ζ and near sheet boundaries.  See ADR-0016.
+  - `PathNetworkSolution` gains `diagnostics::Union{Nothing,
+    DiagnosticReport}` field (11th); backward-compat constructors
+    preserve all existing call sites.
+  - `path_network_solve` gains `diagnose::Bool = false` kwarg;
+    `diagnose=true` attaches the report to the returned solution.
+  - `PadeTaylorDiagnosticsExt` — weak-dep extension loading
+    `DelaunayTriangulation` (ADR-0016; same pattern as ADR-0003).
+    Without the extension, `quality_diagnose` throws a helpful
+    `ErrorException`.
+  - +32 new DG.* assertions across 8 testsets in
+    `test/diagnose_test.jl`; mutation-prove A applied (RED→GREEN
+    verified, 18 s, single-file isolation — full `Pkg.test()` deferred
+    due to OOM friction, see worklog 048).  Existing 2508 assertions
+    unchanged.
+
 ### Open follow-ups (B5 remaining)
 
   - FFW Fig 3 (PVI phase portraits, bead `padetaylor-a1l`, blocked by

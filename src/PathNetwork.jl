@@ -146,6 +146,7 @@ using ..PadeStepper: PadeStepperState, pade_step_with_pade!,
                      _evaluate_pade, _evaluate_pade_deriv
 using ..Problems:    PadeTaylorProblem
 using ..BranchTracker: resolve_cut_angles, any_cut_crossed, step_sheet_update
+using ..Diagnostics: DiagnosticReport, quality_diagnose
 
 export PathNetworkSolution, path_network_solve, eval_at, eval_at_sheet
 
@@ -185,10 +186,21 @@ every entry is `Int[]` (zero-length).  When N branches are supplied,
 `length(visited_sheet[k]) == N` for every visited node, with the
 root carrying the `initial_sheet` kwarg's value.
 
-A 9-arg convenience constructor (without `visited_sheet`) is
-provided for backward-compat with pre-ADR-0013 callers (e.g.
-existing test fixtures and external wrappers); it defaults
-`visited_sheet` to the empty `Vector{Int}[]`.
+A 9-arg convenience constructor (without `visited_sheet` and
+`diagnostics`) is provided for backward-compat with pre-ADR-0013
+callers (e.g. existing test fixtures and external wrappers); it
+defaults `visited_sheet` to the empty `Vector{Int}[]` and
+`diagnostics` to `nothing`.  A 10-arg constructor (without
+`diagnostics`, ADR-0016) is provided for callers that pre-date the
+diagnostics layer but already populate `visited_sheet`; it defaults
+`diagnostics` to `nothing`.
+
+`diagnostics` is `nothing` by default; populated to a
+`Diagnostics.DiagnosticReport` when the caller passes
+`diagnose = true` to `path_network_solve` (ADR-0016).  The
+`DiagnosticReport` type is a thin core type; its computation lives in
+the `PadeTaylorDiagnosticsExt` package extension and requires
+`using DelaunayTriangulation` to activate.
 """
 struct PathNetworkSolution{T <: AbstractFloat}
     visited_z      :: Vector{Complex{T}}
@@ -201,12 +213,21 @@ struct PathNetworkSolution{T <: AbstractFloat}
     grid_u         :: Vector{Complex{T}}
     grid_up        :: Vector{Complex{T}}
     visited_sheet  :: Vector{Vector{Int}}      # per-branch sheet tuple per node (ADR-0013)
+    diagnostics    :: Union{Nothing, DiagnosticReport}  # loop-closure certificate (ADR-0016)
 end
 
-# Backward-compat 9-arg constructor: defaults visited_sheet to empty.
+# Backward-compat 9-arg constructor: defaults visited_sheet to empty
+# and diagnostics to nothing.
 PathNetworkSolution{T}(vz, vu, vup, vp, vh, vpar, gz, gu, gup) where {T} =
     PathNetworkSolution{T}(vz, vu, vup, vp, vh, vpar, gz, gu, gup,
-                           Vector{Int}[])
+                           Vector{Int}[], nothing)
+
+# Backward-compat 10-arg constructor (ADR-0016): defaults diagnostics
+# to nothing for callers that already populate visited_sheet but
+# predate the diagnostics layer.
+PathNetworkSolution{T}(vz, vu, vup, vp, vh, vpar, gz, gu, gup, vsh) where {T} =
+    PathNetworkSolution{T}(vz, vu, vup, vp, vh, vpar, gz, gu, gup,
+                           vsh, nothing)
 
 # -----------------------------------------------------------------------------
 # Public driver
@@ -303,6 +324,16 @@ Kwargs:
     renders at the cost of degraded accuracy past `|t|=1`.
     Opt-in to preserve the default-on Rule 1 contract; figure
     scripts pass `extrapolate=true` to get filled panels.
+  - `diagnose`           — `Bool` (default `false`, ADR-0016).  When
+    `true`, post-solve computes a loop-closure quality certificate
+    via `Diagnostics.quality_diagnose(sol)` and attaches it to the
+    returned solution's `diagnostics` field.  Requires
+    `using DelaunayTriangulation` (or another package that loads it);
+    without that, throws `ArgumentError` with a suggestion (the
+    Delaunay-backed method lives in `ext/PadeTaylorDiagnosticsExt.jl`).
+    Sheet-0 only at v1; multi-sheet deferred to bead `padetaylor-8py`.
+    Default `false` leaves `sol.diagnostics === nothing` and
+    preserves every existing test invariant byte-for-byte.
   - `max_steps_per_target` — cap per-target Stage-1 walk length.
   - `rng_seed::Integer`  — for deterministic target shuffle (tests).
   - `enforce_real_axis_symmetry::Bool` — opt-in.  When `true`, walk only
@@ -359,6 +390,7 @@ function path_network_solve(prob::PadeTaylorProblem,
                                 zeros(Int, length(branch_points)),
                             grid_sheet::Union{Nothing, AbstractVector{<:AbstractVector{<:Integer}}} = nothing,
                             extrapolate::Bool = false,
+                            diagnose::Bool = false,
                             max_steps_per_target::Integer = 1000,
                             rng_seed::Integer = 0,
                             enforce_real_axis_symmetry::Bool = false,
@@ -371,11 +403,15 @@ function path_network_solve(prob::PadeTaylorProblem,
             "with non-empty branch_points is not supported (the Schwarz " *
             "mirror step assumes a simply connected upper half plane).  " *
             "Set one or the other.  See ADR-0013 §\"Open follow-ups\"."))
-        return _solve_with_schwarz_reflection(
+        sol_sch = _solve_with_schwarz_reflection(
             prob, grid; h, order, wedge_angles, step_selection,
             step_size_policy, adaptive_tol, k_conservative, max_rescales,
             node_separation,
             max_steps_per_target, rng_seed, verbose, progress_every)
+        # ADR-0016: diagnose=true wraps the Schwarz return too, so the
+        # eager opt-in is uniform across both code paths.
+        T_sch = float(typeof(real(first(grid))))
+        return diagnose ? _attach_diagnostics(sol_sch, T_sch) : sol_sch
     end
 
     step_size_policy ∈ (:fixed, :adaptive_ffw) || throw(ArgumentError(
@@ -656,9 +692,40 @@ function path_network_solve(prob::PadeTaylorProblem,
         end
     end
 
-    return PathNetworkSolution{T}(visited_z, visited_u, visited_up,
+    sol = PathNetworkSolution{T}(visited_z, visited_u, visited_up,
                                   visited_pade, visited_h, visited_parent,
                                   grid_z, grid_u, grid_up, visited_sheet)
+
+    diagnose || return sol
+    return _attach_diagnostics(sol, T)
+end
+
+# ADR-0016: eager opt-in diagnostics wrap.  When `diagnose=true`, call
+# the empty generic `Diagnostics.quality_diagnose`; if no
+# `DelaunayTriangulation`-backed method is loaded the call raises a
+# `MethodError`, which we rethrow as an `ArgumentError` carrying the
+# explicit `using DelaunayTriangulation` suggestion (CLAUDE.md Rule 1
+# — fail loud with a suggestion).
+function _attach_diagnostics(sol::PathNetworkSolution{T}, ::Type{T}) where T
+    report = try
+        quality_diagnose(sol)
+    catch err
+        if err isa MethodError && err.f === quality_diagnose
+            throw(ArgumentError(
+                "path_network_solve: diagnose=true requested but the " *
+                "Diagnostics extension is not loaded.  Suggestion: add " *
+                "`using DelaunayTriangulation` (or any package that " *
+                "loads it) to your session; this activates " *
+                "PadeTaylorDiagnosticsExt and provides the " *
+                "Delaunay-backed quality_diagnose method (ADR-0016)."))
+        end
+        rethrow()
+    end
+    return PathNetworkSolution{T}(sol.visited_z, sol.visited_u, sol.visited_up,
+                                   sol.visited_pade, sol.visited_h,
+                                   sol.visited_parent,
+                                   sol.grid_z, sol.grid_u, sol.grid_up,
+                                   sol.visited_sheet, report)
 end
 
 # ADR-0013 refuse-mode filter: replace each forbidden candidate with the

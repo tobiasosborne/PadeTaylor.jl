@@ -10,34 +10,40 @@ Polynomials          = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
 Printf               = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Random               = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SpecialFunctions     = "276daf66-3868-5448-9aa4-cd146d93841b"
+Statistics           = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 TaylorSeries         = "6aa5eb33-94cf-58f4-a9d0-e4b2c4fc25ea"
 
 [weakdeps]
-Arblib      = "fb37089c-8514-4489-9461-98f9c8763369"
-CommonSolve = "38540f10-b2f7-11e9-35d8-d573e4eb0ff2"
-Makie       = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+Arblib                  = "fb37089c-8514-4489-9461-98f9c8763369"
+CommonSolve             = "38540f10-b2f7-11e9-35d8-d573e4eb0ff2"
+DelaunayTriangulation   = "927a84f5-c5f4-47a5-9785-b46e178433df"
+Makie                   = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 
 [extensions]
-PadeTaylorArblibExt = "Arblib"
-PadeTaylorCommonSolveExt = "CommonSolve"
-PadeTaylorMakieExt = "Makie"
+PadeTaylorArblibExt        = "Arblib"
+PadeTaylorCommonSolveExt   = "CommonSolve"
+PadeTaylorDiagnosticsExt   = "DelaunayTriangulation"
+PadeTaylorMakieExt         = "Makie"
 
 [compat]
 Arblib = "1"
 CommonSolve = "0.2"
+DelaunayTriangulation = "1"
 GenericLinearAlgebra = "0.3"
 LinearAlgebra = "1"
 Makie = "0.24"
 Polynomials = "4"
 SpecialFunctions = "2"
+Statistics = "1"
 TaylorSeries = "0.21"
 julia = "1.10"
 
 [extras]
 Arblib = "fb37089c-8514-4489-9461-98f9c8763369"
 CommonSolve = "38540f10-b2f7-11e9-35d8-d573e4eb0ff2"
+DelaunayTriangulation = "927a84f5-c5f4-47a5-9785-b46e178433df"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Arblib", "CommonSolve", "Makie", "Test"]
+test = ["Arblib", "CommonSolve", "DelaunayTriangulation", "Makie", "Test"]

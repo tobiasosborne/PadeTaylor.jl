@@ -49,6 +49,7 @@ using PadeTaylor
     include("ext_commonsolve_test.jl")
     include("ext_arblib_test.jl")
     include("ext_makie_test.jl")
+    include("diagnose_test.jl")
     include("fw_fig_41_test.jl")
     include("coord_transforms_test.jl")
     include("sheet_tracker_test.jl")

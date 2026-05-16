@@ -143,7 +143,7 @@ The package is a layered stack — each tier builds on the one below, and you ca
 |---|---|---|
 | **Core** | Taylor series → robust Padé → one solver step | `robust_pade`, `taylor_coefficients_2nd`, `pade_step!` |
 | **IVP driver** | march along a path, with dense output | `PadeTaylorProblem`, `solve_pade` |
-| **Path network** | navigate the whole complex plane around pole fields | `path_network_solve`, `extract_poles` |
+| **Path network** | navigate the whole complex plane around pole fields | `path_network_solve`, `extract_poles`, `quality_diagnose` |
 | **BVP + composition** | spectral BVP solver; auto IVP/BVP dispatch in 1-D and 2-D | `bvp_solve`, `dispatch_solve`, `lattice_dispatch_solve`, `edge_gated_pole_field_solve` |
 | **Multivalued tier** | coordinate transforms (PIII/PV) + Riemann-sheet tracking (PVI) + walker-side cut respect | `pIII_transformed_rhs`, `pV_z_to_ζ`, `pVI_eta_transformed_rhs`, `sheet_index`, `path_network_solve(...; branch_points, cross_branch, grid_sheet)`, `eval_at`, `eval_at_sheet` |
 | **Painlevé layer** | per-equation problem builder + self-describing solution wrapper | `PainleveProblem`, `PainleveSolution`, `tritronquee`, `hastings_mcleod` |
