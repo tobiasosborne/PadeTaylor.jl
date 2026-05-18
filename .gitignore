@@ -41,3 +41,5 @@ figures/Manifest.toml
 
 # Local scheduling lockfiles.
 .claude/scheduled_tasks.lock
+external/probes/heun-oracle/capture.log
+external/probes/heun-oracle/capture.stderr
