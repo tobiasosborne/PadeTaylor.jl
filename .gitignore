@@ -13,6 +13,11 @@ external/TaylorIntegration.jl/
 external/TaylorSeries.jl/
 external/chebfun/
 external/DMSUITE/
+external/heun-refs/motygin-Heun/
+external/heun-refs/motygin-confluent-Heun/
+external/heun-refs/birkandan-integralseries/
+external/heun-refs/birkandan-symODE2/
+external/heun-refs/bamber-HeunC-cpp/
 
 # Marker page-image extractions — keep the .md files, skip the bulky .jpeg.
 references/markdown/**/*.jpeg

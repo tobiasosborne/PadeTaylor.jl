@@ -1,0 +1,1129 @@
+<!DOCTYPE html><html lang="en">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<title>DLMF: §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions</title>
+<link rel="shortcut icon" href="./style/DLMF-16.png" type="image/png">
+<script type="text/javascript"><!--
+	var PATH="DLMF:/31.2";
+	var ROOT="./";
+      //--></script>
+<script type="text/javascript" src="./style/jquery.js"><!-- non-empty so ie6 will accept it --></script>
+<script type="text/javascript" src="./style/jquery.leaveNotice.js"><!-- non-empty so ie6 will accept it --></script>
+<script type="text/javascript" src="./style/DLMF.js"><!-- non-empty so ie6 will accept it --></script>
+<script async="" type="text/javascript" id="_fed_an_ua_tag" src="https://dap.digitalgov.gov/Universal-Federated-Analytics-Min.js?agency=DOC&amp;subagency=NIST&amp;pua=UA-37115410-44&amp;yt=true&amp;exts=ppsx,pps,f90,sch,rtf,wrl,txz,m1v,xlsm,msi,xsd,f,tif,eps,mpg,xml,pl,xlt,c"><!-- non-empty so ie6 will accept it --></script><script async="" src="https://www.googletagmanager.com/gtag/js?id=G-BZB64W4M0L"></script><script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-BZB64W4M0L');
+      </script>
+<link rel="stylesheet" type="text/css" href="./style/LaTeXML.css">
+<link rel="stylesheet" type="text/css" href="./style/DLMF.css">
+<link rel="stylesheet" type="text/css" href="./style/print.css" media="print">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="top" href="./" title="DLMF">
+<link rel="copyright" href="./about/notices" title="Copyright">
+<link rel="search" href="./search/search" title="Search">
+<link rel="help" class="ltx_help" href="./help/" title="Help">
+<link rel="up" href="./31#PT2" title="Properties ‣ Chapter 31 Heun Functions">
+<link rel="up up" href="./31" title="Chapter 31 Heun Functions">
+<link rel="start" href="./" title="">
+<link rel="prev" href="./31.1" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions">
+<link rel="next" href="./31.3" title="§31.3 Basic Solutions ‣ Properties ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.1" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.3" title="§31.3 Basic Solutions ‣ Properties ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.4" title="§31.4 Solutions Analytic at Two Singularities: Heun Functions ‣ Properties ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.5" title="§31.5 Solutions Analytic at Three Singularities: Heun Polynomials ‣ Properties ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.6" title="§31.6 Path-Multiplicative Solutions ‣ Properties ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.7" title="§31.7 Relations to Other Functions ‣ Properties ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.8" title="§31.8 Solutions via Quadratures ‣ Properties ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.9" title="§31.9 Orthogonality ‣ Properties ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.10" title="§31.10 Integral Equations and Representations ‣ Properties ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.11" title="§31.11 Expansions in Series of Hypergeometric Functions ‣ Properties ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.12" title="§31.12 Confluent Forms of Heun’s Equation ‣ Properties ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.13" title="§31.13 Asymptotic Approximations ‣ Properties ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.14" title="§31.14 General Fuchsian Equation ‣ Properties ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.15" title="§31.15 Stieltjes Polynomials ‣ Properties ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.16" title="§31.16 Mathematical Applications ‣ Applications ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.17" title="§31.17 Physical Applications ‣ Applications ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.18" title="§31.18 Methods of Computation ‣ Computation ‣ Chapter 31 Heun Functions">
+<link rel="document" href="./front/foreword" title="Foreword">
+<link rel="document" href="./front/preface" title="Preface">
+<link rel="document" href="./front/introduction" title="Mathematical Introduction">
+<link rel="chapter" href="./1" title="Chapter 1 Algebraic and Analytic Methods">
+<link rel="chapter" href="./2" title="Chapter 2 Asymptotic Approximations">
+<link rel="chapter" href="./3" title="Chapter 3 Numerical Methods">
+<link rel="chapter" href="./4" title="Chapter 4 Elementary Functions">
+<link rel="chapter" href="./5" title="Chapter 5 Gamma Function">
+<link rel="chapter" href="./6" title="Chapter 6 Exponential, Logarithmic, Sine, and Cosine Integrals">
+<link rel="chapter" href="./7" title="Chapter 7 Error Functions, Dawson’s and Fresnel Integrals">
+<link rel="chapter" href="./8" title="Chapter 8 Incomplete Gamma and Related Functions">
+<link rel="chapter" href="./9" title="Chapter 9 Airy and Related Functions">
+<link rel="chapter" href="./10" title="Chapter 10 Bessel Functions">
+<link rel="chapter" href="./11" title="Chapter 11 Struve and Related Functions">
+<link rel="chapter" href="./12" title="Chapter 12 Parabolic Cylinder Functions">
+<link rel="chapter" href="./13" title="Chapter 13 Confluent Hypergeometric Functions">
+<link rel="chapter" href="./14" title="Chapter 14 Legendre and Related Functions">
+<link rel="chapter" href="./15" title="Chapter 15 Hypergeometric Function">
+<link rel="chapter" href="./16" title="Chapter 16 Generalized Hypergeometric Functions and Meijer 𝐺-Function">
+<link rel="chapter" href="./17" title="Chapter 17 𝑞-Hypergeometric and Related Functions">
+<link rel="chapter" href="./18" title="Chapter 18 Orthogonal Polynomials">
+<link rel="chapter" href="./19" title="Chapter 19 Elliptic Integrals">
+<link rel="chapter" href="./20" title="Chapter 20 Theta Functions">
+<link rel="chapter" href="./21" title="Chapter 21 Multidimensional Theta Functions">
+<link rel="chapter" href="./22" title="Chapter 22 Jacobian Elliptic Functions">
+<link rel="chapter" href="./23" title="Chapter 23 Weierstrass Elliptic and Modular Functions">
+<link rel="chapter" href="./24" title="Chapter 24 Bernoulli and Euler Polynomials">
+<link rel="chapter" href="./25" title="Chapter 25 Zeta and Related Functions">
+<link rel="chapter" href="./26" title="Chapter 26 Combinatorial Analysis">
+<link rel="chapter" href="./27" title="Chapter 27 Functions of Number Theory">
+<link rel="chapter" href="./28" title="Chapter 28 Mathieu Functions and Hill’s Equation">
+<link rel="chapter" href="./29" title="Chapter 29 Lamé Functions">
+<link rel="chapter" href="./30" title="Chapter 30 Spheroidal Wave Functions">
+<link rel="chapter" href="./31" title="Chapter 31 Heun Functions">
+<link rel="chapter" href="./32" title="Chapter 32 Painlevé Transcendents">
+<link rel="chapter" href="./33" title="Chapter 33 Coulomb Functions">
+<link rel="chapter" href="./34" title="Chapter 34 3⁢𝑗,6⁢𝑗,9⁢𝑗 Symbols">
+<link rel="chapter" href="./35" title="Chapter 35 Functions of Matrix Argument">
+<link rel="chapter" href="./36" title="Chapter 36 Integrals with Coalescing Saddles">
+<link rel="bibliography" href="./bib/" title="Bibliography">
+<link rel="index" href="./idx/" title="Index">
+<link rel="glossary" href="./not/" title="Notations">
+<link rel="document" href="./lof/" title="List of Figures">
+<link rel="document" href="./lot/" title="List of Tables">
+<link rel="document" href="./software/" title="Software Index">
+<link rel="document" href="./errata/" title="Errata">
+<link rel="document" href="./help/" title="Need Help?">
+<link rel="document" href="./search/" title="Advanced Search">
+<link rel="document" href="./about/" title="About the Project">
+<meta name="keywords" lang="en" content="-homotopic transformations, Heun equation, Heun’s equation, Jacobi’s elliptic, Jacobi’s elliptic form, Weierstrass’s, Weierstrass’s form, accessory parameter, automorphisms, classification, classification of parameters, composite, doubly-periodic forms, exponent parameters, homographic transformations, normal form, parameters, singularities, singularity parameter, trigonometric form">
+</head>
+<body class="color_default textfont_default titlefont_default fontsize_default navbar_default">
+<div class="ltx_page_navbar">
+<div class="ltx_page_navlogo"><a href="./" title="Digital Library of Mathematical Functions"><span>DLMF</span></a></div>
+<div class="ltx_page_navitems">
+<form method="get" action="./search/search">
+<ul>
+<li><a href="./idx/">Index</a></li>
+<li><a href="./not/">Notations</a></li>
+<li><small><input type="text" name="q" value="" size="6" class="ltx_page_navitem_search"><button type="submit">Search</button></small></li>
+<li><a href="./help/" class="ltx_help">Help?</a></li>
+<li><a href="./help/cite">Citing</a></li>
+<li><a href="./help/customize" class="ltx_customize">Customize</a></li>
+<li id="showinfo"><a href="" onclick="showInfo(); return false;" title="Show Annotations">Annotate</a></li>
+<li id="hideinfo"><a href="" onclick="hideInfo(); return false;">UnAnnotate</a></li>
+</ul>
+</form>
+</div>
+<div class="ltx_page_navsponsors">
+<div><a href="./about/" class="ltx_page_navabout">About the Project</a></div>
+</div>
+</div>
+<div class="ltx_page_main">
+<div class="ltx_page_header">
+<a href="./31" title="" class="ltx_ref" rel="up up"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">31 </span>Heun Functions</span></a><a href="./31#PT2" title="In Chapter 31 Heun Functions" class="ltx_ref" rel="up"><span class="ltx_text ltx_ref_title">Properties</span></a><a href="./31.1" title="In Notation ‣ Chapter 31 Heun Functions" class="ltx_ref" rel="prev"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">31.1 </span>Special Notation</span></a><a href="./31.3" title="In Properties ‣ Chapter 31 Heun Functions" class="ltx_ref" rel="next"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">31.3 </span>Basic Solutions</span></a>
+</div>
+<div class="ltx_page_content">
+<section class="ltx_section ltx_leqno">
+<h1 class="ltx_title ltx_title_section">
+<span class="ltx_tag ltx_tag_section">§31.2 </span>Differential Equations</h1>
+<div id="info" class="ltx_metadata ltx_info">
+<span href="" class="ltx_infoicon ltx_icon" title="Show Annotations"><span class="ltx_font_bold">ⓘ</span></span>
+<div class="ltx_infocontent">
+<dl>
+<dt>Permalink:</dt>
+<dd><a href="./31.2" title="" class="ltx_ref">http://dlmf.nist.gov/31.2</a></dd>
+<dt>See also:</dt>
+<dd>Annotations for <a href="./31#info" title="Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Ch.31</span></a>
+</dd>
+</dl>
+</div>
+</div>
+
+<h6>Contents</h6>
+<ol class="ltx_toclist ltx_toclist_section">
+<li class="ltx_tocentry"><a href="#i"><span class="ltx_tag ltx_tag_subsection">§31.2(i) </span>Heun’s Equation</a></li>
+<li class="ltx_tocentry"><a href="#ii"><span class="ltx_tag ltx_tag_subsection">§31.2(ii) </span>Normal Form of Heun’s Equation</a></li>
+<li class="ltx_tocentry"><a href="#iii"><span class="ltx_tag ltx_tag_subsection">§31.2(iii) </span>Trigonometric Form</a></li>
+<li class="ltx_tocentry"><a href="#iv"><span class="ltx_tag ltx_tag_subsection">§31.2(iv) </span>Doubly-Periodic Forms</a></li>
+<li class="ltx_tocentry"><a href="#v"><span class="ltx_tag ltx_tag_subsection">§31.2(v) </span>Heun’s Equation Automorphisms</a></li>
+</ol>
+<section id="i" class="ltx_subsection">
+<h2 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">§31.2(i) </span>Heun’s Equation</h2>
+<div id="i.info" class="ltx_metadata ltx_info">
+<span href="" class="ltx_infoicon ltx_icon" title="Show Annotations"><span class="ltx_font_bold">ⓘ</span></span>
+<div class="ltx_infocontent">
+<dl>
+<dt>Keywords:</dt>
+<dd>
+<a class="ltx_keyword" href="./search/search?q=Heun%20equation">Heun equation</a>, <a class="ltx_keyword" href="./search/search?q=Heun%20equation">Heun’s equation</a>, <a class="ltx_keyword" href="./search/search?q=accessory%20parameter">accessory parameter</a>, <a class="ltx_keyword" href="./search/search?q=classification">classification</a>, <a class="ltx_keyword" href="./search/search?q=classification%20of%20parameters">classification of parameters</a>, <a class="ltx_keyword" href="./search/search?q=exponent%20parameters">exponent parameters</a>, <a class="ltx_keyword" href="./search/search?q=parameters">parameters</a>, <a class="ltx_keyword" href="./search/search?q=singularities">singularities</a>, <a class="ltx_keyword" href="./search/search?q=singularity%20parameter">singularity parameter</a>
+</dd>
+<dt>Notes:</dt>
+<dd>See <cite class="ltx_cite ltx_citemacro_citet">Erdélyi<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="./bib/E#bib755" title="Higher Transcendental Functions. Vol. III" class="ltx_ref">1955</a>, Chapter XV)</cite> and
+<cite class="ltx_cite ltx_citemacro_citet">Ronveaux (<a href="./bib/R#bib1965" title="Heun’s Differential Equations" class="ltx_ref">1995</a>, Part A, p. 7)</cite>.</dd>
+<dt>Permalink:</dt>
+<dd><a href="./31.2.i" title="" class="ltx_ref">http://dlmf.nist.gov/31.2.i</a></dd>
+<dt>See also:</dt>
+<dd>Annotations for <a href="./31.2#info" title="§31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2</span></a> and
+<a href="./31#info" title="Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Ch.31</span></a>
+</dd>
+</dl>
+</div>
+</div>
+
+<div id="i.p1" class="ltx_para">
+<table id="E1" class="ltx_equation ltx_eqn_table">
+
+<tbody>
+<tr class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td rowspan="1" class="ltx_eqn_cell ltx_eqn_eqno ltx_align_middle ltx_align_left"><span class="ltx_tag ltx_tag_equation ltx_align_left">31.2.1</span></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_eqn_cell ltx_align_center"><math class="ltx_Math" altimg="E1.png" altimg-height="63px" altimg-valign="-22px" altimg-width="552px" alttext="\frac{{\mathrm{d}}^{2}w}{{\mathrm{d}z}^{2}}+\left(\frac{\gamma}{z}+\frac{%
+\delta}{z-1}+\frac{\epsilon}{z-a}\right)\frac{\mathrm{d}w}{\mathrm{d}z}+\frac{%
+\alpha\beta z-q}{z(z-1)(z-a)}w=0," display="block"><mrow><mrow><mrow><mfrac><mrow><msup><mo href="./1.4#E4" title="derivative of 𝑓 with respect to 𝑥">d</mo><mn>2</mn></msup><mi>w</mi></mrow><msup><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi></mrow><mn href="./1.4#E4" title="derivative of 𝑓 with respect to 𝑥">2</mn></msup></mfrac><mo>+</mo><mrow><mrow><mo>(</mo><mrow><mfrac><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi><mi href="./31.1#t1.r2" title="complex variable">z</mi></mfrac><mo>+</mo><mfrac><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi><mrow><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>−</mo><mn>1</mn></mrow></mfrac><mo>+</mo><mfrac><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi><mrow><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>−</mo><mi href="./31.1#t1.r4" title="complex parameter">a</mi></mrow></mfrac></mrow><mo>)</mo></mrow><mo>⁢</mo><mfrac><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi>w</mi></mrow><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi></mrow></mfrac></mrow><mo>+</mo><mrow><mfrac><mrow><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">β</mi><mo>⁢</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi></mrow><mo>−</mo><mi href="./31.1#t1.r5" title="real or complex parameter">q</mi></mrow><mrow><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>⁢</mo><mrow><mo stretchy="false">(</mo><mrow><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>−</mo><mn>1</mn></mrow><mo stretchy="false">)</mo></mrow><mo>⁢</mo><mrow><mo stretchy="false">(</mo><mrow><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>−</mo><mi href="./31.1#t1.r4" title="complex parameter">a</mi></mrow><mo stretchy="false">)</mo></mrow></mrow></mfrac><mo>⁢</mo><mi>w</mi></mrow></mrow><mo>=</mo><mn>0</mn></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+</tr>
+<tr class="ltx_eqn_row"><td class="ltx_eqn_cell ltx_align_right" colspan="4"><span class="ltx_constraint"><math class="ltx_Math" altimg="m58.png" altimg-height="22px" altimg-valign="-6px" altimg-width="200px" alttext="\alpha+\beta+1=\gamma+\delta+\epsilon" display="inline"><mrow><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi><mo>+</mo><mi href="./31.1#t1.r5" title="real or complex parameter">β</mi><mo>+</mo><mn>1</mn></mrow><mo>=</mo><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi><mo>+</mo><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi><mo>+</mo><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi></mrow></mrow></math>.</span></td></tr>
+<tr><td class="ltx_align_right" colspan="4">
+<div id="E1.info" class="ltx_metadata ltx_info">
+<span href="" class="ltx_infoicon ltx_icon" title="Show Annotations"><span class="ltx_font_bold">ⓘ</span></span>
+<div class="ltx_infocontent">
+<dl>
+<dt>Symbols:</dt>
+<dd>
+<a href="./1.4#E4" title="(1.4.4) ‣ §1.4(iii) Derivatives ‣ §1.4 Calculus of One Variable ‣ Topics of Discussion ‣ Chapter 1 Algebraic and Analytic Methods" class="ltx_ref"><math class="ltx_Math" altimg="m73.png" altimg-height="31px" altimg-valign="-9px" altimg-width="28px" alttext="\frac{\mathrm{d}\NVar{f}}{\mathrm{d}\NVar{x}}" display="inline"><mfrac><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi class="ltx_nvar">f</mi></mrow><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi class="ltx_nvar">x</mi></mrow></mfrac></math>: derivative of <math class="ltx_Math" altimg="m113.png" altimg-height="22px" altimg-valign="-6px" altimg-width="17px" alttext="f" display="inline"><mi>f</mi></math> with respect to <math class="ltx_Math" altimg="m128.png" altimg-height="13px" altimg-valign="-2px" altimg-width="16px" alttext="x" display="inline"><mi>x</mi></math></a>,
+<a href="./31.1#t1.r2" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m129.png" altimg-height="13px" altimg-valign="-2px" altimg-width="15px" alttext="z" display="inline"><mi href="./31.1#t1.r2" title="complex variable">z</mi></math>:  complex variable</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m74.png" altimg-height="17px" altimg-valign="-6px" altimg-width="16px" alttext="\gamma" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m69.png" altimg-height="18px" altimg-valign="-2px" altimg-width="14px" alttext="\delta" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m71.png" altimg-height="13px" altimg-valign="-2px" altimg-width="13px" alttext="\epsilon" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r4" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m109.png" altimg-height="13px" altimg-valign="-2px" altimg-width="15px" alttext="a" display="inline"><mi href="./31.1#t1.r4" title="complex parameter">a</mi></math>:  complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m116.png" altimg-height="17px" altimg-valign="-6px" altimg-width="14px" alttext="q" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">q</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m60.png" altimg-height="13px" altimg-valign="-2px" altimg-width="18px" alttext="\alpha" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi></math>:  real or complex parameter</a> and
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m64.png" altimg-height="22px" altimg-valign="-6px" altimg-width="17px" alttext="\beta" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">β</mi></math>:  real or complex parameter</a>
+</dd>
+<dt>Referenced by:</dt>
+<dd>
+<a href="./29.2#ii.p3" title="§29.2(ii) Other Forms ‣ §29.2 Differential Equations ‣ Lamé Functions ‣ Chapter 29 Lamé Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§29.2(ii)</span></a>,
+<a href="./31.11#iii.p2" title="§31.11(iii) Type I ‣ §31.11 Expansions in Series of Hypergeometric Functions ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.11(iii)</span></a>,
+<a href="./31.12#p1" title="§31.12 Confluent Forms of Heun’s Equation ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.12</span></a>,
+<a href="./31.13#p2" title="§31.13 Asymptotic Approximations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.13</span></a>,
+<a href="./31.14#i.p1" title="§31.14(i) Definitions ‣ §31.14 General Fuchsian Equation ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.14(i)</span></a>,
+<a href="./31.17#i.p2" title="§31.17(i) Addition of Three Quantum Spins ‣ §31.17 Physical Applications ‣ Applications ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.17(i)</span></a>,
+<a href="./31.18#p1" title="§31.18 Methods of Computation ‣ Computation ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.18</span></a>,
+<a href="./31.2#Px3.p1" title="𝐹-Homotopic Transformations ‣ §31.2(v) Heun’s Equation Automorphisms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2(v)</span></a>,
+<a href="./31.2#Px4.p1" title="Homographic Transformations ‣ §31.2(v) Heun’s Equation Automorphisms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2(v)</span></a>,
+<a href="./31.2#Px5.p1" title="Composite Transformations ‣ §31.2(v) Heun’s Equation Automorphisms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2(v)</span></a>,
+<a href="./31.2#i.p1" title="§31.2(i) Heun’s Equation ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2(i)</span></a>,
+<a href="./31.3#i.p1" title="§31.3(i) Fuchs–Frobenius Solutions at 𝑧=0 ‣ §31.3 Basic Solutions ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.3(i)</span></a>,
+<a href="./31.3#i.p2" title="§31.3(i) Fuchs–Frobenius Solutions at 𝑧=0 ‣ §31.3 Basic Solutions ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.3(i)</span></a>,
+<a href="./31.3#ii.p1" title="§31.3(ii) Fuchs–Frobenius Solutions at Other Singularities ‣ §31.3 Basic Solutions ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.3(ii)</span></a>,
+<a href="./31.3#ii.p2" title="§31.3(ii) Fuchs–Frobenius Solutions at Other Singularities ‣ §31.3 Basic Solutions ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.3(ii)</span></a>,
+<a href="./31.3#ii.p3" title="§31.3(ii) Fuchs–Frobenius Solutions at Other Singularities ‣ §31.3 Basic Solutions ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.3(ii)</span></a>,
+<a href="./31.3#iii.p1" title="§31.3(iii) Equivalent Expressions ‣ §31.3 Basic Solutions ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.3(iii)</span></a>,
+<a href="./31.3#iii.p2" title="§31.3(iii) Equivalent Expressions ‣ §31.3 Basic Solutions ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.3(iii)</span></a>,
+<a href="./31.4#p3" title="§31.4 Solutions Analytic at Two Singularities: Heun Functions ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.4</span></a>,
+<a href="./31.5#p1" title="§31.5 Solutions Analytic at Three Singularities: Heun Polynomials ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.5</span></a>,
+<a href="./31.6#p1" title="§31.6 Path-Multiplicative Solutions ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.6</span></a>,
+<a href="./31.7#ii.p1" title="§31.7(ii) Relations to Lamé Functions ‣ §31.7 Relations to Other Functions ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.7(ii)</span></a>,
+<a href="./31.8#p1" title="§31.8 Solutions via Quadratures ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.8</span></a>,
+<a href="./31.8#p2" title="§31.8 Solutions via Quadratures ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.8</span></a>,
+<a href="./31.8#p3" title="§31.8 Solutions via Quadratures ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.8</span></a>
+</dd>
+<dt>Permalink:</dt>
+<dd><a href="./31.2.E1" title="" class="ltx_ref">http://dlmf.nist.gov/31.2.E1</a></dd>
+<dt>Encodings:</dt>
+<dd>
+<a href="./31.2.E1.tex">TeX</a>, <a href="./31.2.E1.pmml">pMML</a>, <a href="./31.2.E1.png">png</a>
+</dd>
+<dt>See also:</dt>
+<dd>Annotations for <a href="./31.2#i.info" title="§31.2(i) Heun’s Equation ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2(i)</span></a>,
+<a href="./31.2#info" title="§31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2</span></a> and
+<a href="./31#info" title="Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Ch.31</span></a>
+</dd>
+</dl>
+</div>
+</div>
+</td></tr>
+</tbody>
+</table>
+<p class="ltx_p">This equation has regular singularities at <math class="ltx_Math" altimg="m38.png" altimg-height="21px" altimg-valign="-6px" altimg-width="84px" alttext="0,1,a,\infty" display="inline"><mrow><mn>0</mn><mo>,</mo><mn>1</mn><mo>,</mo><mi href="./31.1#t1.r4" title="complex parameter">a</mi><mo>,</mo><mi mathvariant="normal">∞</mi></mrow></math>, with corresponding
+exponents <math class="ltx_Math" altimg="m107.png" altimg-height="25px" altimg-valign="-7px" altimg-width="92px" alttext="\{0,1-\gamma\}" display="inline"><mrow><mo stretchy="false">{</mo><mn>0</mn><mo>,</mo><mrow><mn>1</mn><mo>−</mo><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi></mrow><mo stretchy="false">}</mo></mrow></math>, <math class="ltx_Math" altimg="m105.png" altimg-height="25px" altimg-valign="-7px" altimg-width="90px" alttext="\{0,1-\delta\}" display="inline"><mrow><mo stretchy="false">{</mo><mn>0</mn><mo>,</mo><mrow><mn>1</mn><mo>−</mo><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi></mrow><mo stretchy="false">}</mo></mrow></math>, <math class="ltx_Math" altimg="m106.png" altimg-height="25px" altimg-valign="-7px" altimg-width="89px" alttext="\{0,1-\epsilon\}" display="inline"><mrow><mo stretchy="false">{</mo><mn>0</mn><mo>,</mo><mrow><mn>1</mn><mo>−</mo><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi></mrow><mo stretchy="false">}</mo></mrow></math>,
+<math class="ltx_Math" altimg="m108.png" altimg-height="25px" altimg-valign="-7px" altimg-width="60px" alttext="\{\alpha,\beta\}" display="inline"><mrow><mo stretchy="false">{</mo><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi><mo>,</mo><mi href="./31.1#t1.r5" title="real or complex parameter">β</mi><mo stretchy="false">}</mo></mrow></math>, respectively (§<a href="./2.7#i" title="§2.7(i) Regular Singularities: Fuchs–Frobenius Theory ‣ §2.7 Differential Equations ‣ Areas ‣ Chapter 2 Asymptotic Approximations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.7(i)</span></a>). All other homogeneous
+linear differential equations of the second order having four regular
+singularities in the extended complex plane, <math class="ltx_Math" altimg="m77.png" altimg-height="25px" altimg-valign="-7px" altimg-width="84px" alttext="\mathbb{C}\cup\{\infty\}" display="inline"><mrow><mi href="./front/introduction#common.t1.r1" title="complex plane">ℂ</mi><mo href="./front/introduction#common.t1.r28" title="union">∪</mo><mrow><mo stretchy="false">{</mo><mi mathvariant="normal">∞</mi><mo stretchy="false">}</mo></mrow></mrow></math>, can
+be transformed into (<a href="./31.2#E1" title="(31.2.1) ‣ §31.2(i) Heun’s Equation ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">31.2.1</span></a>).</p>
+</div>
+<div id="i.p2" class="ltx_para">
+<p class="ltx_p">The parameters play different roles: <math class="ltx_Math" altimg="m109.png" altimg-height="13px" altimg-valign="-2px" altimg-width="15px" alttext="a" display="inline"><mi href="./31.1#t1.r4" title="complex parameter">a</mi></math> is the <em class="ltx_emph ltx_font_italic">singularity parameter</em>;
+<math class="ltx_Math" altimg="m59.png" altimg-height="22px" altimg-valign="-6px" altimg-width="97px" alttext="\alpha,\beta,\gamma,\delta,\epsilon" display="inline"><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi><mo>,</mo><mi href="./31.1#t1.r5" title="real or complex parameter">β</mi><mo>,</mo><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi><mo>,</mo><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi><mo>,</mo><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi></mrow></math> are <em class="ltx_emph ltx_font_italic">exponent parameters</em>; <math class="ltx_Math" altimg="m116.png" altimg-height="17px" altimg-valign="-6px" altimg-width="14px" alttext="q" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">q</mi></math> is the
+<em class="ltx_emph ltx_font_italic">accessory parameter</em>. The total number of free parameters is six.</p>
+</div>
+</section>
+<section id="ii" class="ltx_subsection">
+<h2 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">§31.2(ii) </span>Normal Form of Heun’s Equation</h2>
+<div id="ii.info" class="ltx_metadata ltx_info">
+<span href="" class="ltx_infoicon ltx_icon" title="Show Annotations"><span class="ltx_font_bold">ⓘ</span></span>
+<div class="ltx_infocontent">
+<dl>
+<dt>Keywords:</dt>
+<dd>
+<a class="ltx_keyword" href="./search/search?q=Heun%20equation">Heun’s equation</a>, <a class="ltx_keyword" href="./search/search?q=normal%20form">normal form</a>
+</dd>
+<dt>Permalink:</dt>
+<dd><a href="./31.2.ii" title="" class="ltx_ref">http://dlmf.nist.gov/31.2.ii</a></dd>
+<dt>See also:</dt>
+<dd>Annotations for <a href="./31.2#info" title="§31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2</span></a> and
+<a href="./31#info" title="Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Ch.31</span></a>
+</dd>
+</dl>
+</div>
+</div>
+
+<div id="ii.p1" class="ltx_para">
+<table id="E2" class="ltx_equation ltx_eqn_table">
+
+<tbody>
+<tr class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td rowspan="1" class="ltx_eqn_cell ltx_eqn_eqno ltx_align_middle ltx_align_left"><span class="ltx_tag ltx_tag_equation ltx_align_left">31.2.2</span></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_eqn_cell ltx_align_center"><math class="ltx_Math" altimg="E2.png" altimg-height="31px" altimg-valign="-7px" altimg-width="384px" alttext="w(z)=z^{-\gamma/2}(z-1)^{-\delta/2}(z-a)^{-\epsilon/2}W(z)," display="block"><mrow><mrow><mrow><mi>w</mi><mo>⁡</mo><mrow><mo stretchy="false">(</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo stretchy="false">)</mo></mrow></mrow><mo>=</mo><mrow><msup><mi href="./31.1#t1.r2" title="complex variable">z</mi><mrow><mo>−</mo><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi><mo>/</mo><mn>2</mn></mrow></mrow></msup><mo>⁢</mo><msup><mrow><mo stretchy="false">(</mo><mrow><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>−</mo><mn>1</mn></mrow><mo stretchy="false">)</mo></mrow><mrow><mo>−</mo><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi><mo>/</mo><mn>2</mn></mrow></mrow></msup><mo>⁢</mo><msup><mrow><mo stretchy="false">(</mo><mrow><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>−</mo><mi href="./31.1#t1.r4" title="complex parameter">a</mi></mrow><mo stretchy="false">)</mo></mrow><mrow><mo>−</mo><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi><mo>/</mo><mn>2</mn></mrow></mrow></msup><mo>⁢</mo><mrow><mi href="./31.2#E3" title="solution">W</mi><mo>⁡</mo><mrow><mo stretchy="false">(</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo stretchy="false">)</mo></mrow></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+</tr>
+<tr><td class="ltx_align_right" colspan="4">
+<div id="E2.info" class="ltx_metadata ltx_info">
+<span href="" class="ltx_infoicon ltx_icon" title="Show Annotations"><span class="ltx_font_bold">ⓘ</span></span>
+<div class="ltx_infocontent">
+<dl>
+<dt>Symbols:</dt>
+<dd>
+<a href="./31.1#t1.r2" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m129.png" altimg-height="13px" altimg-valign="-2px" altimg-width="15px" alttext="z" display="inline"><mi href="./31.1#t1.r2" title="complex variable">z</mi></math>:  complex variable</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m74.png" altimg-height="17px" altimg-valign="-6px" altimg-width="16px" alttext="\gamma" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m69.png" altimg-height="18px" altimg-valign="-2px" altimg-width="14px" alttext="\delta" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m71.png" altimg-height="13px" altimg-valign="-2px" altimg-width="13px" alttext="\epsilon" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r4" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m109.png" altimg-height="13px" altimg-valign="-2px" altimg-width="15px" alttext="a" display="inline"><mi href="./31.1#t1.r4" title="complex parameter">a</mi></math>:  complex parameter</a> and
+<a href="./31.2#E3" title="(31.2.3) ‣ §31.2(ii) Normal Form of Heun’s Equation ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m56.png" altimg-height="25px" altimg-valign="-7px" altimg-width="53px" alttext="W(z)" display="inline"><mrow><mi href="./31.2#E3" title="solution">W</mi><mo>⁡</mo><mrow><mo stretchy="false">(</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo stretchy="false">)</mo></mrow></mrow></math>:  solution</a>
+</dd>
+<dt>Permalink:</dt>
+<dd><a href="./31.2.E2" title="" class="ltx_ref">http://dlmf.nist.gov/31.2.E2</a></dd>
+<dt>Encodings:</dt>
+<dd>
+<a href="./31.2.E2.tex">TeX</a>, <a href="./31.2.E2.pmml">pMML</a>, <a href="./31.2.E2.png">png</a>
+</dd>
+<dt>See also:</dt>
+<dd>Annotations for <a href="./31.2#ii.info" title="§31.2(ii) Normal Form of Heun’s Equation ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2(ii)</span></a>,
+<a href="./31.2#info" title="§31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2</span></a> and
+<a href="./31#info" title="Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Ch.31</span></a>
+</dd>
+</dl>
+</div>
+</div>
+</td></tr>
+</tbody>
+</table>
+<table id="E3" class="ltx_equation ltx_eqn_table">
+
+<tbody>
+<tr class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td rowspan="1" class="ltx_eqn_cell ltx_eqn_eqno ltx_align_middle ltx_align_left"><span class="ltx_tag ltx_tag_equation ltx_align_left">31.2.3</span></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_eqn_cell ltx_align_center"><math class="ltx_Math" altimg="E3.png" altimg-height="110px" altimg-valign="-22px" altimg-width="571px" alttext="\frac{{\mathrm{d}}^{2}W}{{\mathrm{d}z}^{2}}=\left(\frac{A}{z}+\frac{B}{z-1}+%
+\frac{C}{z-a}+\frac{D}{z^{2}}+\frac{E}{(z-1)^{2}}+\frac{F}{(z-a)^{2}}\right)W," display="block"><mrow><mrow><mfrac><mrow><msup><mo href="./1.4#E4" title="derivative of 𝑓 with respect to 𝑥">d</mo><mn>2</mn></msup><mi href="./31.2#E3" title="solution">W</mi></mrow><msup><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi></mrow><mn href="./1.4#E4" title="derivative of 𝑓 with respect to 𝑥">2</mn></msup></mfrac><mo>=</mo><mrow><mrow><mo>(</mo><mrow><mfrac><mi href="./31.2#E4" title="𝐴">A</mi><mi href="./31.1#t1.r2" title="complex variable">z</mi></mfrac><mo>+</mo><mfrac><mi href="./31.2#E4" title="𝐵">B</mi><mrow><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>−</mo><mn>1</mn></mrow></mfrac><mo>+</mo><mfrac><mi href="./31.2#E4" title="𝐶">C</mi><mrow><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>−</mo><mi href="./31.1#t1.r4" title="complex parameter">a</mi></mrow></mfrac><mo>+</mo><mfrac><mi href="./31.2#E4" title="𝐷">D</mi><msup><mi href="./31.1#t1.r2" title="complex variable">z</mi><mn>2</mn></msup></mfrac><mo>+</mo><mfrac><mi href="./31.2#E4" title="𝐸">E</mi><msup><mrow><mo stretchy="false">(</mo><mrow><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>−</mo><mn>1</mn></mrow><mo stretchy="false">)</mo></mrow><mn>2</mn></msup></mfrac><mo>+</mo><mfrac><mi href="./31.2#E4" title="𝐹">F</mi><msup><mrow><mo stretchy="false">(</mo><mrow><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>−</mo><mi href="./31.1#t1.r4" title="complex parameter">a</mi></mrow><mo stretchy="false">)</mo></mrow><mn>2</mn></msup></mfrac></mrow><mo>)</mo></mrow><mo>⁢</mo><mi href="./31.2#E3" title="solution">W</mi></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+</tr>
+<tr class="ltx_eqn_row"><td class="ltx_eqn_cell ltx_align_right" colspan="4"><span class="ltx_constraint"><math class="ltx_Math" altimg="m47.png" altimg-height="20px" altimg-valign="-4px" altimg-width="142px" alttext="A+B+C=0" display="inline"><mrow><mrow><mi href="./31.2#E4" title="𝐴">A</mi><mo>+</mo><mi href="./31.2#E4" title="𝐵">B</mi><mo>+</mo><mi href="./31.2#E4" title="𝐶">C</mi></mrow><mo>=</mo><mn>0</mn></mrow></math>,</span></td></tr>
+<tr><td class="ltx_align_right" colspan="4">
+<div id="E3.info" class="ltx_metadata ltx_info">
+<span href="" class="ltx_infoicon ltx_icon" title="Show Annotations"><span class="ltx_font_bold">ⓘ</span></span>
+<div class="ltx_infocontent">
+<dl>
+<dt>Defines:</dt>
+<dd><span class="ltx_text"><math class="ltx_Math" altimg="m56.png" altimg-height="25px" altimg-valign="-7px" altimg-width="53px" alttext="W(z)" display="inline"><mrow><mi href="./31.2#E3" title="solution">W</mi><mo>⁡</mo><mrow><mo stretchy="false">(</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo stretchy="false">)</mo></mrow></mrow></math>:  solution (locally)</span></dd>
+<dt>Symbols:</dt>
+<dd>
+<a href="./1.4#E4" title="(1.4.4) ‣ §1.4(iii) Derivatives ‣ §1.4 Calculus of One Variable ‣ Topics of Discussion ‣ Chapter 1 Algebraic and Analytic Methods" class="ltx_ref"><math class="ltx_Math" altimg="m73.png" altimg-height="31px" altimg-valign="-9px" altimg-width="28px" alttext="\frac{\mathrm{d}\NVar{f}}{\mathrm{d}\NVar{x}}" display="inline"><mfrac><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi class="ltx_nvar">f</mi></mrow><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi class="ltx_nvar">x</mi></mrow></mfrac></math>: derivative of <math class="ltx_Math" altimg="m113.png" altimg-height="22px" altimg-valign="-6px" altimg-width="17px" alttext="f" display="inline"><mi>f</mi></math> with respect to <math class="ltx_Math" altimg="m128.png" altimg-height="13px" altimg-valign="-2px" altimg-width="16px" alttext="x" display="inline"><mi>x</mi></math></a>,
+<a href="./31.1#t1.r2" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m129.png" altimg-height="13px" altimg-valign="-2px" altimg-width="15px" alttext="z" display="inline"><mi href="./31.1#t1.r2" title="complex variable">z</mi></math>:  complex variable</a>,
+<a href="./31.1#t1.r4" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m109.png" altimg-height="13px" altimg-valign="-2px" altimg-width="15px" alttext="a" display="inline"><mi href="./31.1#t1.r4" title="complex parameter">a</mi></math>:  complex parameter</a>,
+<a href="./31.2#E4" title="(31.2.4) ‣ §31.2(ii) Normal Form of Heun’s Equation ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m48.png" altimg-height="18px" altimg-valign="-2px" altimg-width="20px" alttext="A" display="inline"><mi href="./31.2#E4" title="𝐴">A</mi></math></a>,
+<a href="./31.2#E4" title="(31.2.4) ‣ §31.2(ii) Normal Form of Heun’s Equation ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m49.png" altimg-height="18px" altimg-valign="-2px" altimg-width="21px" alttext="B" display="inline"><mi href="./31.2#E4" title="𝐵">B</mi></math></a>,
+<a href="./31.2#E4" title="(31.2.4) ‣ §31.2(ii) Normal Form of Heun’s Equation ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m50.png" altimg-height="18px" altimg-valign="-2px" altimg-width="21px" alttext="C" display="inline"><mi href="./31.2#E4" title="𝐶">C</mi></math></a>,
+<a href="./31.2#E4" title="(31.2.4) ‣ §31.2(ii) Normal Form of Heun’s Equation ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m51.png" altimg-height="18px" altimg-valign="-2px" altimg-width="22px" alttext="D" display="inline"><mi href="./31.2#E4" title="𝐷">D</mi></math></a>,
+<a href="./31.2#E4" title="(31.2.4) ‣ §31.2(ii) Normal Form of Heun’s Equation ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m52.png" altimg-height="18px" altimg-valign="-2px" altimg-width="21px" alttext="E" display="inline"><mi href="./31.2#E4" title="𝐸">E</mi></math></a> and
+<a href="./31.2#E4" title="(31.2.4) ‣ §31.2(ii) Normal Form of Heun’s Equation ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m53.png" altimg-height="18px" altimg-valign="-2px" altimg-width="21px" alttext="F" display="inline"><mi href="./31.2#E4" title="𝐹">F</mi></math></a>
+</dd>
+<dt>Permalink:</dt>
+<dd><a href="./31.2.E3" title="" class="ltx_ref">http://dlmf.nist.gov/31.2.E3</a></dd>
+<dt>Encodings:</dt>
+<dd>
+<a href="./31.2.E3.tex">TeX</a>, <a href="./31.2.E3.pmml">pMML</a>, <a href="./31.2.E3.png">png</a>
+</dd>
+<dt>See also:</dt>
+<dd>Annotations for <a href="./31.2#ii.info" title="§31.2(ii) Normal Form of Heun’s Equation ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2(ii)</span></a>,
+<a href="./31.2#info" title="§31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2</span></a> and
+<a href="./31#info" title="Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Ch.31</span></a>
+</dd>
+</dl>
+</div>
+</div>
+</td></tr>
+</tbody>
+</table>
+<table id="E4" class="ltx_equationgroup ltx_eqn_table">
+<tbody>
+<tr id="Ex1" class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td rowspan="6" class="ltx_eqn_cell ltx_eqn_eqno ltx_align_middle ltx_align_left"><span class="ltx_tag ltx_tag_equationgroup ltx_align_left">31.2.4</span></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_td ltx_align_right ltx_eqn_cell"><math class="ltx_Math" altimg="m19.png" altimg-height="20px" altimg-valign="-2px" altimg-width="22px" alttext="\displaystyle A" display="inline"><mi href="./31.2#E4" title="𝐴">A</mi></math></td>
+<td class="ltx_td ltx_align_left ltx_eqn_cell"><math class="ltx_Math" altimg="m5.png" altimg-height="49px" altimg-valign="-16px" altimg-width="170px" alttext="\displaystyle=-\frac{\gamma\delta}{2}-\frac{\gamma\epsilon}{2a}+\frac{q}{a}," display="inline"><mrow><mrow><mi></mi><mo>=</mo><mrow><mrow><mrow><mo>−</mo><mstyle displaystyle="true"><mfrac><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi></mrow><mn>2</mn></mfrac></mstyle></mrow><mo>−</mo><mstyle displaystyle="true"><mfrac><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi></mrow><mrow><mn>2</mn><mo>⁢</mo><mi href="./31.1#t1.r4" title="complex parameter">a</mi></mrow></mfrac></mstyle></mrow><mo>+</mo><mstyle displaystyle="true"><mfrac><mi href="./31.1#t1.r5" title="real or complex parameter">q</mi><mi href="./31.1#t1.r4" title="complex parameter">a</mi></mfrac></mstyle></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+</tr>
+<tr id="Ex2" class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_td ltx_align_right ltx_eqn_cell"><math class="ltx_Math" altimg="m20.png" altimg-height="20px" altimg-valign="-2px" altimg-width="23px" alttext="\displaystyle B" display="inline"><mi href="./31.2#E4" title="𝐵">B</mi></math></td>
+<td class="ltx_td ltx_align_left ltx_eqn_cell"><math class="ltx_Math" altimg="m7.png" altimg-height="54px" altimg-valign="-21px" altimg-width="257px" alttext="\displaystyle=\frac{\gamma\delta}{2}-\frac{\delta\epsilon}{2(a-1)}-\frac{q-%
+\alpha\beta}{a-1}," display="inline"><mrow><mrow><mi></mi><mo>=</mo><mrow><mstyle displaystyle="true"><mfrac><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi></mrow><mn>2</mn></mfrac></mstyle><mo>−</mo><mstyle displaystyle="true"><mfrac><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi></mrow><mrow><mn>2</mn><mo>⁢</mo><mrow><mo stretchy="false">(</mo><mrow><mi href="./31.1#t1.r4" title="complex parameter">a</mi><mo>−</mo><mn>1</mn></mrow><mo stretchy="false">)</mo></mrow></mrow></mfrac></mstyle><mo>−</mo><mstyle displaystyle="true"><mfrac><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">q</mi><mo>−</mo><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">β</mi></mrow></mrow><mrow><mi href="./31.1#t1.r4" title="complex parameter">a</mi><mo>−</mo><mn>1</mn></mrow></mfrac></mstyle></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+</tr>
+<tr id="Ex3" class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_td ltx_align_right ltx_eqn_cell"><math class="ltx_Math" altimg="m21.png" altimg-height="20px" altimg-valign="-2px" altimg-width="23px" alttext="\displaystyle C" display="inline"><mi href="./31.2#E4" title="𝐶">C</mi></math></td>
+<td class="ltx_td ltx_align_left ltx_eqn_cell"><math class="ltx_Math" altimg="m8.png" altimg-height="54px" altimg-valign="-21px" altimg-width="268px" alttext="\displaystyle=\frac{\gamma\epsilon}{2a}+\frac{\delta\epsilon}{2(a-1)}-\frac{a%
+\alpha\beta-q}{a(a-1)}," display="inline"><mrow><mrow><mi></mi><mo>=</mo><mrow><mrow><mstyle displaystyle="true"><mfrac><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi></mrow><mrow><mn>2</mn><mo>⁢</mo><mi href="./31.1#t1.r4" title="complex parameter">a</mi></mrow></mfrac></mstyle><mo>+</mo><mstyle displaystyle="true"><mfrac><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi></mrow><mrow><mn>2</mn><mo>⁢</mo><mrow><mo stretchy="false">(</mo><mrow><mi href="./31.1#t1.r4" title="complex parameter">a</mi><mo>−</mo><mn>1</mn></mrow><mo stretchy="false">)</mo></mrow></mrow></mfrac></mstyle></mrow><mo>−</mo><mstyle displaystyle="true"><mfrac><mrow><mrow><mi href="./31.1#t1.r4" title="complex parameter">a</mi><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">β</mi></mrow><mo>−</mo><mi href="./31.1#t1.r5" title="real or complex parameter">q</mi></mrow><mrow><mi href="./31.1#t1.r4" title="complex parameter">a</mi><mo>⁢</mo><mrow><mo stretchy="false">(</mo><mrow><mi href="./31.1#t1.r4" title="complex parameter">a</mi><mo>−</mo><mn>1</mn></mrow><mo stretchy="false">)</mo></mrow></mrow></mfrac></mstyle></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+</tr>
+<tr id="Ex4" class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_td ltx_align_right ltx_eqn_cell"><math class="ltx_Math" altimg="m22.png" altimg-height="20px" altimg-valign="-2px" altimg-width="24px" alttext="\displaystyle D" display="inline"><mi href="./31.2#E4" title="𝐷">D</mi></math></td>
+<td class="ltx_td ltx_align_left ltx_eqn_cell"><math class="ltx_Math" altimg="m12.png" altimg-height="43px" altimg-valign="-9px" altimg-width="152px" alttext="\displaystyle=\tfrac{1}{2}\gamma\left(\tfrac{1}{2}\gamma-1\right)," display="inline"><mrow><mrow><mi></mi><mo>=</mo><mrow><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi></mrow><mo>−</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+</tr>
+<tr id="Ex5" class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_td ltx_align_right ltx_eqn_cell"><math class="ltx_Math" altimg="m23.png" altimg-height="20px" altimg-valign="-2px" altimg-width="23px" alttext="\displaystyle E" display="inline"><mi href="./31.2#E4" title="𝐸">E</mi></math></td>
+<td class="ltx_td ltx_align_left ltx_eqn_cell"><math class="ltx_Math" altimg="m10.png" altimg-height="43px" altimg-valign="-9px" altimg-width="148px" alttext="\displaystyle=\tfrac{1}{2}\delta\left(\tfrac{1}{2}\delta-1\right)," display="inline"><mrow><mrow><mi></mi><mo>=</mo><mrow><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi></mrow><mo>−</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+</tr>
+<tr id="Ex6" class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_td ltx_align_right ltx_eqn_cell"><math class="ltx_Math" altimg="m24.png" altimg-height="20px" altimg-valign="-2px" altimg-width="23px" alttext="\displaystyle F" display="inline"><mi href="./31.2#E4" title="𝐹">F</mi></math></td>
+<td class="ltx_td ltx_align_left ltx_eqn_cell"><math class="ltx_Math" altimg="m11.png" altimg-height="43px" altimg-valign="-9px" altimg-width="145px" alttext="\displaystyle=\tfrac{1}{2}\epsilon\left(\tfrac{1}{2}\epsilon-1\right)." display="inline"><mrow><mrow><mi></mi><mo>=</mo><mrow><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi></mrow><mo>−</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow></mrow><mo lspace="0em">.</mo></mrow></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+</tr>
+<tr><td class="ltx_align_right" colspan="5">
+<div id="E4.info" class="ltx_metadata ltx_info">
+<span href="" class="ltx_infoicon ltx_icon" title="Show Annotations"><span class="ltx_font_bold">ⓘ</span></span>
+<div class="ltx_infocontent">
+<dl>
+<dt>Defines:</dt>
+<dd>
+<span class="ltx_text"><math class="ltx_Math" altimg="m48.png" altimg-height="18px" altimg-valign="-2px" altimg-width="20px" alttext="A" display="inline"><mi href="./31.2#E4" title="𝐴">A</mi></math> (locally)</span>,
+<span class="ltx_text"><math class="ltx_Math" altimg="m49.png" altimg-height="18px" altimg-valign="-2px" altimg-width="21px" alttext="B" display="inline"><mi href="./31.2#E4" title="𝐵">B</mi></math> (locally)</span>,
+<span class="ltx_text"><math class="ltx_Math" altimg="m50.png" altimg-height="18px" altimg-valign="-2px" altimg-width="21px" alttext="C" display="inline"><mi href="./31.2#E4" title="𝐶">C</mi></math> (locally)</span>,
+<span class="ltx_text"><math class="ltx_Math" altimg="m51.png" altimg-height="18px" altimg-valign="-2px" altimg-width="22px" alttext="D" display="inline"><mi href="./31.2#E4" title="𝐷">D</mi></math> (locally)</span>,
+<span class="ltx_text"><math class="ltx_Math" altimg="m52.png" altimg-height="18px" altimg-valign="-2px" altimg-width="21px" alttext="E" display="inline"><mi href="./31.2#E4" title="𝐸">E</mi></math> (locally)</span> and
+<span class="ltx_text"><math class="ltx_Math" altimg="m53.png" altimg-height="18px" altimg-valign="-2px" altimg-width="21px" alttext="F" display="inline"><mi href="./31.2#E4" title="𝐹">F</mi></math> (locally)</span>
+</dd>
+<dt>Symbols:</dt>
+<dd>
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m74.png" altimg-height="17px" altimg-valign="-6px" altimg-width="16px" alttext="\gamma" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m69.png" altimg-height="18px" altimg-valign="-2px" altimg-width="14px" alttext="\delta" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m71.png" altimg-height="13px" altimg-valign="-2px" altimg-width="13px" alttext="\epsilon" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r4" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m109.png" altimg-height="13px" altimg-valign="-2px" altimg-width="15px" alttext="a" display="inline"><mi href="./31.1#t1.r4" title="complex parameter">a</mi></math>:  complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m116.png" altimg-height="17px" altimg-valign="-6px" altimg-width="14px" alttext="q" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">q</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m60.png" altimg-height="13px" altimg-valign="-2px" altimg-width="18px" alttext="\alpha" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi></math>:  real or complex parameter</a> and
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m64.png" altimg-height="22px" altimg-valign="-6px" altimg-width="17px" alttext="\beta" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">β</mi></math>:  real or complex parameter</a>
+</dd>
+<dt>Permalink:</dt>
+<dd><a href="./31.2.E4" title="" class="ltx_ref">http://dlmf.nist.gov/31.2.E4</a></dd>
+<dt>Encodings:</dt>
+<dd>
+<a href="./31.2.E4a.tex">TeX</a>, <a href="./31.2.E4b.tex">TeX</a>, <a href="./31.2.E4c.tex">TeX</a>, <a href="./31.2.E4d.tex">TeX</a>, <a href="./31.2.E4e.tex">TeX</a>, <a href="./31.2.E4f.tex">TeX</a>, <a href="./31.2.E4a.pmml">pMML</a>, <a href="./31.2.E4b.pmml">pMML</a>, <a href="./31.2.E4c.pmml">pMML</a>, <a href="./31.2.E4d.pmml">pMML</a>, <a href="./31.2.E4e.pmml">pMML</a>, <a href="./31.2.E4f.pmml">pMML</a>, <a href="./31.2.E4a.png">png</a>, <a href="./31.2.E4b.png">png</a>, <a href="./31.2.E4c.png">png</a>, <a href="./31.2.E4d.png">png</a>, <a href="./31.2.E4e.png">png</a>, <a href="./31.2.E4f.png">png</a>
+</dd>
+<dt>See also:</dt>
+<dd>Annotations for <a href="./31.2#ii.info" title="§31.2(ii) Normal Form of Heun’s Equation ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2(ii)</span></a>,
+<a href="./31.2#info" title="§31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2</span></a> and
+<a href="./31#info" title="Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Ch.31</span></a>
+</dd>
+</dl>
+</div>
+</div>
+</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="iii" class="ltx_subsection">
+<h2 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">§31.2(iii) </span>Trigonometric Form</h2>
+<div id="iii.info" class="ltx_metadata ltx_info">
+<span href="" class="ltx_infoicon ltx_icon" title="Show Annotations"><span class="ltx_font_bold">ⓘ</span></span>
+<div class="ltx_infocontent">
+<dl>
+<dt>Keywords:</dt>
+<dd>
+<a class="ltx_keyword" href="./search/search?q=Heun%20equation">Heun’s equation</a>, <a class="ltx_keyword" href="./search/search?q=trigonometric%20form">trigonometric form</a>
+</dd>
+<dt>Permalink:</dt>
+<dd><a href="./31.2.iii" title="" class="ltx_ref">http://dlmf.nist.gov/31.2.iii</a></dd>
+<dt>See also:</dt>
+<dd>Annotations for <a href="./31.2#info" title="§31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2</span></a> and
+<a href="./31#info" title="Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Ch.31</span></a>
+</dd>
+</dl>
+</div>
+</div>
+
+<div id="iii.p1" class="ltx_para">
+<table id="E5" class="ltx_equation ltx_eqn_table">
+
+<tbody>
+<tr class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td rowspan="1" class="ltx_eqn_cell ltx_eqn_eqno ltx_align_middle ltx_align_left"><span class="ltx_tag ltx_tag_equation ltx_align_left">31.2.5</span></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_eqn_cell ltx_align_center"><math class="ltx_Math" altimg="E5.png" altimg-height="28px" altimg-valign="-6px" altimg-width="96px" alttext="z={\sin}^{2}\theta," display="block"><mrow><mrow><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>=</mo><mrow><msup><mi href="./4.14#E1" title="sine function">sin</mi><mn>2</mn></msup><mo lspace="0.167em">⁡</mo><mi>θ</mi></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+</tr>
+<tr><td class="ltx_align_right" colspan="4">
+<div id="E5.info" class="ltx_metadata ltx_info">
+<span href="" class="ltx_infoicon ltx_icon" title="Show Annotations"><span class="ltx_font_bold">ⓘ</span></span>
+<div class="ltx_infocontent">
+<dl>
+<dt>Symbols:</dt>
+<dd>
+<a href="./4.14#E1" title="(4.14.1) ‣ §4.14 Definitions and Periodicity ‣ Trigonometric Functions ‣ Chapter 4 Elementary Functions" class="ltx_ref"><math class="ltx_Math" altimg="m84.png" altimg-height="18px" altimg-valign="-2px" altimg-width="44px" alttext="\sin\NVar{z}" display="inline"><mrow><mi href="./4.14#E1" title="sine function">sin</mi><mo lspace="0.167em">⁡</mo><mi class="ltx_nvar" href="./4.1#t1.r4" title="complex variable">z</mi></mrow></math>: sine function</a> and
+<a href="./31.1#t1.r2" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m129.png" altimg-height="13px" altimg-valign="-2px" altimg-width="15px" alttext="z" display="inline"><mi href="./31.1#t1.r2" title="complex variable">z</mi></math>:  complex variable</a>
+</dd>
+<dt>Permalink:</dt>
+<dd><a href="./31.2.E5" title="" class="ltx_ref">http://dlmf.nist.gov/31.2.E5</a></dd>
+<dt>Encodings:</dt>
+<dd>
+<a href="./31.2.E5.tex">TeX</a>, <a href="./31.2.E5.pmml">pMML</a>, <a href="./31.2.E5.png">png</a>
+</dd>
+<dt>See also:</dt>
+<dd>Annotations for <a href="./31.2#iii.info" title="§31.2(iii) Trigonometric Form ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2(iii)</span></a>,
+<a href="./31.2#info" title="§31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2</span></a> and
+<a href="./31#info" title="Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Ch.31</span></a>
+</dd>
+</dl>
+</div>
+</div>
+</td></tr>
+</tbody>
+</table>
+<table id="E6" class="ltx_equation ltx_eqn_table">
+
+<tbody>
+<tr class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td rowspan="1" class="ltx_eqn_cell ltx_eqn_eqno ltx_align_middle ltx_align_left"><span class="ltx_tag ltx_tag_equation ltx_align_left">31.2.6</span></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_eqn_cell ltx_align_center"><math class="ltx_Math" altimg="E6.png" altimg-height="64px" altimg-valign="-22px" altimg-width="738px" alttext="\frac{{\mathrm{d}}^{2}w}{{\mathrm{d}\theta}^{2}}+\left({(2\gamma-1)\cot\theta-%
+(2\delta-1)\tan\theta}-\frac{\epsilon\sin\left(2\theta\right)}{a-{\sin}^{2}%
+\theta}\right)\frac{\mathrm{d}w}{\mathrm{d}\theta}+4\frac{\alpha\beta{\sin}^{2%
+}\theta-q}{a-{\sin}^{2}\theta}w=0." display="block"><mrow><mrow><mrow><mfrac><mrow><msup><mo href="./1.4#E4" title="derivative of 𝑓 with respect to 𝑥">d</mo><mn>2</mn></msup><mi>w</mi></mrow><msup><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi>θ</mi></mrow><mn href="./1.4#E4" title="derivative of 𝑓 with respect to 𝑥">2</mn></msup></mfrac><mo>+</mo><mrow><mrow><mo>(</mo><mrow><mrow><mrow><mo stretchy="false">(</mo><mrow><mrow><mn>2</mn><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi></mrow><mo>−</mo><mn>1</mn></mrow><mo stretchy="false">)</mo></mrow><mo lspace="0.167em">⁢</mo><mrow><mi href="./4.14#E7" title="cotangent function">cot</mi><mo lspace="0.167em">⁡</mo><mi>θ</mi></mrow></mrow><mo>−</mo><mrow><mrow><mo stretchy="false">(</mo><mrow><mrow><mn>2</mn><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi></mrow><mo>−</mo><mn>1</mn></mrow><mo stretchy="false">)</mo></mrow><mo lspace="0.167em">⁢</mo><mrow><mi href="./4.14#E4" title="tangent function">tan</mi><mo lspace="0.167em">⁡</mo><mi>θ</mi></mrow></mrow><mo>−</mo><mfrac><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi><mo lspace="0.167em">⁢</mo><mrow><mi href="./4.14#E1" title="sine function">sin</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mn>2</mn><mo>⁢</mo><mi>θ</mi></mrow><mo>)</mo></mrow></mrow></mrow><mrow><mi href="./31.1#t1.r4" title="complex parameter">a</mi><mo>−</mo><mrow><msup><mi href="./4.14#E1" title="sine function">sin</mi><mn>2</mn></msup><mo lspace="0.167em">⁡</mo><mi>θ</mi></mrow></mrow></mfrac></mrow><mo>)</mo></mrow><mo>⁢</mo><mfrac><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi>w</mi></mrow><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi>θ</mi></mrow></mfrac></mrow><mo>+</mo><mrow><mn>4</mn><mo>⁢</mo><mfrac><mrow><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">β</mi><mo lspace="0.167em">⁢</mo><mrow><msup><mi href="./4.14#E1" title="sine function">sin</mi><mn>2</mn></msup><mo lspace="0.167em">⁡</mo><mi>θ</mi></mrow></mrow><mo>−</mo><mi href="./31.1#t1.r5" title="real or complex parameter">q</mi></mrow><mrow><mi href="./31.1#t1.r4" title="complex parameter">a</mi><mo>−</mo><mrow><msup><mi href="./4.14#E1" title="sine function">sin</mi><mn>2</mn></msup><mo lspace="0.167em">⁡</mo><mi>θ</mi></mrow></mrow></mfrac><mo>⁢</mo><mi>w</mi></mrow></mrow><mo>=</mo><mn>0</mn></mrow><mo lspace="0em">.</mo></mrow></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+</tr>
+<tr><td class="ltx_align_right" colspan="4">
+<div id="E6.info" class="ltx_metadata ltx_info">
+<span href="" class="ltx_infoicon ltx_icon" title="Show Annotations"><span class="ltx_font_bold">ⓘ</span></span>
+<div class="ltx_infocontent">
+<dl>
+<dt>Symbols:</dt>
+<dd>
+<a href="./4.14#E7" title="(4.14.7) ‣ §4.14 Definitions and Periodicity ‣ Trigonometric Functions ‣ Chapter 4 Elementary Functions" class="ltx_ref"><math class="ltx_Math" altimg="m68.png" altimg-height="17px" altimg-valign="-2px" altimg-width="46px" alttext="\cot\NVar{z}" display="inline"><mrow><mi href="./4.14#E7" title="cotangent function">cot</mi><mo lspace="0.167em">⁡</mo><mi class="ltx_nvar" href="./4.1#t1.r4" title="complex variable">z</mi></mrow></math>: cotangent function</a>,
+<a href="./1.4#E4" title="(1.4.4) ‣ §1.4(iii) Derivatives ‣ §1.4 Calculus of One Variable ‣ Topics of Discussion ‣ Chapter 1 Algebraic and Analytic Methods" class="ltx_ref"><math class="ltx_Math" altimg="m73.png" altimg-height="31px" altimg-valign="-9px" altimg-width="28px" alttext="\frac{\mathrm{d}\NVar{f}}{\mathrm{d}\NVar{x}}" display="inline"><mfrac><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi class="ltx_nvar">f</mi></mrow><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi class="ltx_nvar">x</mi></mrow></mfrac></math>: derivative of <math class="ltx_Math" altimg="m113.png" altimg-height="22px" altimg-valign="-6px" altimg-width="17px" alttext="f" display="inline"><mi>f</mi></math> with respect to <math class="ltx_Math" altimg="m128.png" altimg-height="13px" altimg-valign="-2px" altimg-width="16px" alttext="x" display="inline"><mi>x</mi></math></a>,
+<a href="./4.14#E1" title="(4.14.1) ‣ §4.14 Definitions and Periodicity ‣ Trigonometric Functions ‣ Chapter 4 Elementary Functions" class="ltx_ref"><math class="ltx_Math" altimg="m84.png" altimg-height="18px" altimg-valign="-2px" altimg-width="44px" alttext="\sin\NVar{z}" display="inline"><mrow><mi href="./4.14#E1" title="sine function">sin</mi><mo lspace="0.167em">⁡</mo><mi class="ltx_nvar" href="./4.1#t1.r4" title="complex variable">z</mi></mrow></math>: sine function</a>,
+<a href="./4.14#E4" title="(4.14.4) ‣ §4.14 Definitions and Periodicity ‣ Trigonometric Functions ‣ Chapter 4 Elementary Functions" class="ltx_ref"><math class="ltx_Math" altimg="m85.png" altimg-height="17px" altimg-valign="-2px" altimg-width="48px" alttext="\tan\NVar{z}" display="inline"><mrow><mi href="./4.14#E4" title="tangent function">tan</mi><mo lspace="0.167em">⁡</mo><mi class="ltx_nvar" href="./4.1#t1.r4" title="complex variable">z</mi></mrow></math>: tangent function</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m74.png" altimg-height="17px" altimg-valign="-6px" altimg-width="16px" alttext="\gamma" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m69.png" altimg-height="18px" altimg-valign="-2px" altimg-width="14px" alttext="\delta" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m71.png" altimg-height="13px" altimg-valign="-2px" altimg-width="13px" alttext="\epsilon" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r4" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m109.png" altimg-height="13px" altimg-valign="-2px" altimg-width="15px" alttext="a" display="inline"><mi href="./31.1#t1.r4" title="complex parameter">a</mi></math>:  complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m116.png" altimg-height="17px" altimg-valign="-6px" altimg-width="14px" alttext="q" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">q</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m60.png" altimg-height="13px" altimg-valign="-2px" altimg-width="18px" alttext="\alpha" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi></math>:  real or complex parameter</a> and
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m64.png" altimg-height="22px" altimg-valign="-6px" altimg-width="17px" alttext="\beta" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">β</mi></math>:  real or complex parameter</a>
+</dd>
+<dt>Permalink:</dt>
+<dd><a href="./31.2.E6" title="" class="ltx_ref">http://dlmf.nist.gov/31.2.E6</a></dd>
+<dt>Encodings:</dt>
+<dd>
+<a href="./31.2.E6.tex">TeX</a>, <a href="./31.2.E6.pmml">pMML</a>, <a href="./31.2.E6.png">png</a>
+</dd>
+<dt>See also:</dt>
+<dd>Annotations for <a href="./31.2#iii.info" title="§31.2(iii) Trigonometric Form ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2(iii)</span></a>,
+<a href="./31.2#info" title="§31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2</span></a> and
+<a href="./31#info" title="Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Ch.31</span></a>
+</dd>
+</dl>
+</div>
+</div>
+</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="iv" class="ltx_subsection">
+<h2 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">§31.2(iv) </span>Doubly-Periodic Forms</h2>
+<div id="iv.info" class="ltx_metadata ltx_info">
+<span href="" class="ltx_infoicon ltx_icon" title="Show Annotations"><span class="ltx_font_bold">ⓘ</span></span>
+<div class="ltx_infocontent">
+<dl>
+<dt>Notes:</dt>
+<dd>See <cite class="ltx_cite ltx_citemacro_citet">Ronveaux (<a href="./bib/R#bib1965" title="Heun’s Differential Equations" class="ltx_ref">1995</a>, Part A, p. 26)</cite>.</dd>
+<dt>Permalink:</dt>
+<dd><a href="./31.2.iv" title="" class="ltx_ref">http://dlmf.nist.gov/31.2.iv</a></dd>
+<dt>See also:</dt>
+<dd>Annotations for <a href="./31.2#info" title="§31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2</span></a> and
+<a href="./31#info" title="Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Ch.31</span></a>
+</dd>
+</dl>
+</div>
+</div>
+
+<section id="Px1" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">Jacobi’s Elliptic Form</h3>
+<div id="Px1.info" class="ltx_metadata ltx_info">
+<span href="" class="ltx_infoicon ltx_icon" title="Show Annotations"><span class="ltx_font_bold">ⓘ</span></span>
+<div class="ltx_infocontent">
+<dl>
+<dt>Keywords:</dt>
+<dd>
+<a class="ltx_keyword" href="./search/search?q=Heun%20equation">Heun’s equation</a>, <a class="ltx_keyword" href="./search/search?q=Jacobi%20elliptic">Jacobi’s elliptic</a>, <a class="ltx_keyword" href="./search/search?q=Jacobi%20elliptic%20form">Jacobi’s elliptic form</a>, <a class="ltx_keyword" href="./search/search?q=doubly-periodic%20forms">doubly-periodic forms</a>
+</dd>
+<dt>See also:</dt>
+<dd>Annotations for <a href="./31.2#iv.info" title="§31.2(iv) Doubly-Periodic Forms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2(iv)</span></a>,
+<a href="./31.2#info" title="§31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2</span></a> and
+<a href="./31#info" title="Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Ch.31</span></a>
+</dd>
+</dl>
+</div>
+</div>
+
+<div id="Px1.p1" class="ltx_para">
+<p class="ltx_p">With the notation of §<a href="./22.2" title="§22.2 Definitions ‣ Properties ‣ Chapter 22 Jacobian Elliptic Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">22.2</span></a> let</p>
+<table id="E7" class="ltx_equationgroup ltx_eqn_table">
+<tbody>
+<tr id="Ex7" class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td rowspan="2" class="ltx_eqn_cell ltx_eqn_eqno ltx_align_middle ltx_align_left"><span class="ltx_tag ltx_tag_equationgroup ltx_align_left">31.2.7</span></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_td ltx_align_right ltx_eqn_cell"><math class="ltx_Math" altimg="m27.png" altimg-height="15px" altimg-valign="-2px" altimg-width="18px" alttext="\displaystyle a" display="inline"><mi href="./31.1#t1.r4" title="complex parameter">a</mi></math></td>
+<td class="ltx_td ltx_align_left ltx_eqn_cell"><math class="ltx_Math" altimg="m17.png" altimg-height="28px" altimg-valign="-6px" altimg-width="68px" alttext="\displaystyle=k^{-2}," display="inline"><mrow><mrow><mi></mi><mo>=</mo><msup><mi href="./31.2#E7" title="modulus">k</mi><mrow><mo>−</mo><mn>2</mn></mrow></msup></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+</tr>
+<tr id="Ex8" class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_td ltx_align_right ltx_eqn_cell"><math class="ltx_Math" altimg="m37.png" altimg-height="15px" altimg-valign="-2px" altimg-width="17px" alttext="\displaystyle z" display="inline"><mi href="./31.1#t1.r2" title="complex variable">z</mi></math></td>
+<td class="ltx_td ltx_align_left ltx_eqn_cell"><math class="ltx_Math" altimg="m18.png" altimg-height="40px" altimg-valign="-7px" altimg-width="123px" alttext="\displaystyle={\operatorname{sn}}^{2}\left(\zeta,k\right)." display="inline"><mrow><mrow><mi></mi><mo>=</mo><mrow><msup><mi href="./22.2#E4" title="Jacobian elliptic function">sn</mi><mn>2</mn></msup><mo>⁡</mo><mrow><mo>(</mo><mi href="./31.2#E9" title="change of variable">ζ</mi><mo>,</mo><mi href="./31.2#E7" title="modulus">k</mi><mo>)</mo></mrow></mrow></mrow><mo lspace="0em">.</mo></mrow></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+</tr>
+<tr><td class="ltx_align_right" colspan="5">
+<div id="E7.info" class="ltx_metadata ltx_info">
+<span href="" class="ltx_infoicon ltx_icon" title="Show Annotations"><span class="ltx_font_bold">ⓘ</span></span>
+<div class="ltx_infocontent">
+<dl>
+<dt>Defines:</dt>
+<dd><span class="ltx_text"><math class="ltx_Math" altimg="m115.png" altimg-height="18px" altimg-valign="-2px" altimg-width="16px" alttext="k" display="inline"><mi href="./31.2#E7" title="modulus">k</mi></math>:  modulus (locally)</span></dd>
+<dt>Symbols:</dt>
+<dd>
+<a href="./22.2#E4" title="(22.2.4) ‣ §22.2 Definitions ‣ Properties ‣ Chapter 22 Jacobian Elliptic Functions" class="ltx_ref"><math class="ltx_Math" altimg="m83.png" altimg-height="25px" altimg-valign="-7px" altimg-width="75px" alttext="\operatorname{sn}\left(\NVar{z},\NVar{k}\right)" display="inline"><mrow><mi href="./22.2#E4" title="Jacobian elliptic function">sn</mi><mo>⁡</mo><mrow><mo>(</mo><mi class="ltx_nvar" href="./22.1#t1.r2" title="complex">z</mi><mo>,</mo><mi class="ltx_nvar" href="./22.1#t1.r3" title="modulus">k</mi><mo>)</mo></mrow></mrow></math>: Jacobian elliptic function</a>,
+<a href="./31.1#t1.r2" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m129.png" altimg-height="13px" altimg-valign="-2px" altimg-width="15px" alttext="z" display="inline"><mi href="./31.1#t1.r2" title="complex variable">z</mi></math>:  complex variable</a>,
+<a href="./31.1#t1.r4" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m109.png" altimg-height="13px" altimg-valign="-2px" altimg-width="15px" alttext="a" display="inline"><mi href="./31.1#t1.r4" title="complex parameter">a</mi></math>:  complex parameter</a> and
+<a href="./31.2#E9" title="(31.2.9) ‣ Weierstrass’s Form ‣ §31.2(iv) Doubly-Periodic Forms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m104.png" altimg-height="22px" altimg-valign="-6px" altimg-width="15px" alttext="\zeta" display="inline"><mi href="./31.2#E9" title="change of variable">ζ</mi></math>:  change of variable</a>
+</dd>
+<dt>Permalink:</dt>
+<dd><a href="./31.2.E7" title="" class="ltx_ref">http://dlmf.nist.gov/31.2.E7</a></dd>
+<dt>Encodings:</dt>
+<dd>
+<a href="./31.2.E7a.tex">TeX</a>, <a href="./31.2.E7b.tex">TeX</a>, <a href="./31.2.E7a.pmml">pMML</a>, <a href="./31.2.E7b.pmml">pMML</a>, <a href="./31.2.E7a.png">png</a>, <a href="./31.2.E7b.png">png</a>
+</dd>
+<dt>See also:</dt>
+<dd>Annotations for <a href="./31.2#Px1.info" title="Jacobi’s Elliptic Form ‣ §31.2(iv) Doubly-Periodic Forms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2(iv)</span></a>,
+<a href="./31.2#iv.info" title="§31.2(iv) Doubly-Periodic Forms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2(iv)</span></a>,
+<a href="./31.2#info" title="§31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2</span></a> and
+<a href="./31#info" title="Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Ch.31</span></a>
+</dd>
+</dl>
+</div>
+</div>
+</td></tr>
+</tbody>
+</table>
+<p class="ltx_p">Then (suppressing the parameter <math class="ltx_Math" altimg="m115.png" altimg-height="18px" altimg-valign="-2px" altimg-width="16px" alttext="k" display="inline"><mi href="./31.2#E7" title="modulus">k</mi></math>)</p>
+<table id="E8" class="ltx_equation ltx_eqn_table">
+
+<tbody>
+<tr class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td rowspan="1" class="ltx_eqn_cell ltx_eqn_eqno ltx_align_middle ltx_align_left"><span class="ltx_tag ltx_tag_equation ltx_align_left">31.2.8</span></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_Math ltx_eqn_cell ltx_align_center"><math class="ltx_Math" alttext="\frac{{\mathrm{d}}^{2}w}{{\mathrm{d}\zeta}^{2}}+\left((2\gamma-1)\frac{%
+\operatorname{cn}\zeta\operatorname{dn}\zeta}{\operatorname{sn}\zeta}-(2\delta%
+-1)\frac{\operatorname{sn}\zeta\operatorname{dn}\zeta}{\operatorname{cn}\zeta}%
+-(2\epsilon-1)k^{2}\frac{\operatorname{sn}\zeta\operatorname{cn}\zeta}{%
+\operatorname{dn}\zeta}\right)\frac{\mathrm{d}w}{\mathrm{d}\zeta}+4k^{2}(%
+\alpha\beta{\operatorname{sn}}^{2}\zeta-q)w=0." display="block"><mrow><mtable align="baseline 1" columnalign="left" displaystyle="true"><mtr><mtd class="ltx_align_left"><mrow><mtable align="baseline 1" columnalign="left" displaystyle="true"><mtr><mtd class="ltx_align_left"><mfrac><mrow><msup><mo href="./1.4#E4" title="derivative of 𝑓 with respect to 𝑥">d</mo><mn>2</mn></msup><mi>w</mi></mrow><msup><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi href="./31.2#E9" title="change of variable">ζ</mi></mrow><mn href="./1.4#E4" title="derivative of 𝑓 with respect to 𝑥">2</mn></msup></mfrac><mo>+</mo><mrow><mrow><mo>(</mo><mrow><mrow><mrow><mo stretchy="false">(</mo><mrow><mrow><mn>2</mn><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi></mrow><mo>−</mo><mn>1</mn></mrow><mo stretchy="false">)</mo></mrow><mo>⁢</mo><mfrac><mrow><mrow><mi href="./22.2#E5" title="Jacobian elliptic function">cn</mi><mo lspace="0.167em">⁡</mo><mi href="./31.2#E9" title="change of variable">ζ</mi></mrow><mo lspace="0.167em">⁢</mo><mrow><mi href="./22.2#E6" title="Jacobian elliptic function">dn</mi><mo lspace="0.167em">⁡</mo><mi href="./31.2#E9" title="change of variable">ζ</mi></mrow></mrow><mrow><mi href="./22.2#E4" title="Jacobian elliptic function">sn</mi><mo lspace="0.167em">⁡</mo><mi href="./31.2#E9" title="change of variable">ζ</mi></mrow></mfrac></mrow><mo>−</mo><mrow><mrow><mo stretchy="false">(</mo><mrow><mrow><mn>2</mn><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi></mrow><mo>−</mo><mn>1</mn></mrow><mo stretchy="false">)</mo></mrow><mo>⁢</mo><mfrac><mrow><mrow><mi href="./22.2#E4" title="Jacobian elliptic function">sn</mi><mo lspace="0.167em">⁡</mo><mi href="./31.2#E9" title="change of variable">ζ</mi></mrow><mo lspace="0.167em">⁢</mo><mrow><mi href="./22.2#E6" title="Jacobian elliptic function">dn</mi><mo lspace="0.167em">⁡</mo><mi href="./31.2#E9" title="change of variable">ζ</mi></mrow></mrow><mrow><mi href="./22.2#E5" title="Jacobian elliptic function">cn</mi><mo lspace="0.167em">⁡</mo><mi href="./31.2#E9" title="change of variable">ζ</mi></mrow></mfrac></mrow><mo>−</mo><mrow><mrow><mo stretchy="false">(</mo><mrow><mrow><mn>2</mn><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi></mrow><mo>−</mo><mn>1</mn></mrow><mo stretchy="false">)</mo></mrow><mo>⁢</mo><msup><mi href="./31.2#E7" title="modulus">k</mi><mn>2</mn></msup><mo>⁢</mo><mfrac><mrow><mrow><mi href="./22.2#E4" title="Jacobian elliptic function">sn</mi><mo lspace="0.167em">⁡</mo><mi href="./31.2#E9" title="change of variable">ζ</mi></mrow><mo lspace="0.167em">⁢</mo><mrow><mi href="./22.2#E5" title="Jacobian elliptic function">cn</mi><mo lspace="0.167em">⁡</mo><mi href="./31.2#E9" title="change of variable">ζ</mi></mrow></mrow><mrow><mi href="./22.2#E6" title="Jacobian elliptic function">dn</mi><mo lspace="0.167em">⁡</mo><mi href="./31.2#E9" title="change of variable">ζ</mi></mrow></mfrac></mrow></mrow><mo>)</mo></mrow><mo>⁢</mo><mfrac><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi>w</mi></mrow><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi href="./31.2#E9" title="change of variable">ζ</mi></mrow></mfrac></mrow></mtd></mtr><mtr><mtd class="ltx_align_left"><mspace style="width:2em;" width="2em"></mspace><mo>+</mo><mrow><mn>4</mn><mo>⁢</mo><msup><mi href="./31.2#E7" title="modulus">k</mi><mn>2</mn></msup><mo>⁢</mo><mrow><mo stretchy="false">(</mo><mrow><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">β</mi><mo lspace="0.167em">⁢</mo><mrow><msup><mi href="./22.2#E4" title="Jacobian elliptic function">sn</mi><mn>2</mn></msup><mo lspace="0.167em">⁡</mo><mi href="./31.2#E9" title="change of variable">ζ</mi></mrow></mrow><mo>−</mo><mi href="./31.1#t1.r5" title="real or complex parameter">q</mi></mrow><mo stretchy="false">)</mo></mrow><mo>⁢</mo><mi>w</mi></mrow></mtd></mtr></mtable></mrow></mtd></mtr><mtr><mtd class="ltx_align_left"><mspace style="width:2em;" width="2em"></mspace><mo>=</mo><mn>0</mn><mo lspace="0em">.</mo></mtd></mtr></mtable></mrow></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+</tr>
+<tr><td class="ltx_align_right" colspan="4">
+<div id="E8.info" class="ltx_metadata ltx_info">
+<span href="" class="ltx_infoicon ltx_icon" title="Show Annotations"><span class="ltx_font_bold">ⓘ</span></span>
+<div class="ltx_infocontent">
+<dl>
+<dt>Symbols:</dt>
+<dd>
+<a href="./22.2#E5" title="(22.2.5) ‣ §22.2 Definitions ‣ Properties ‣ Chapter 22 Jacobian Elliptic Functions" class="ltx_ref"><math class="ltx_Math" altimg="m81.png" altimg-height="25px" altimg-valign="-7px" altimg-width="76px" alttext="\operatorname{cn}\left(\NVar{z},\NVar{k}\right)" display="inline"><mrow><mi href="./22.2#E5" title="Jacobian elliptic function">cn</mi><mo>⁡</mo><mrow><mo>(</mo><mi class="ltx_nvar" href="./22.1#t1.r2" title="complex">z</mi><mo>,</mo><mi class="ltx_nvar" href="./22.1#t1.r3" title="modulus">k</mi><mo>)</mo></mrow></mrow></math>: Jacobian elliptic function</a>,
+<a href="./22.2#E6" title="(22.2.6) ‣ §22.2 Definitions ‣ Properties ‣ Chapter 22 Jacobian Elliptic Functions" class="ltx_ref"><math class="ltx_Math" altimg="m82.png" altimg-height="25px" altimg-valign="-7px" altimg-width="78px" alttext="\operatorname{dn}\left(\NVar{z},\NVar{k}\right)" display="inline"><mrow><mi href="./22.2#E6" title="Jacobian elliptic function">dn</mi><mo>⁡</mo><mrow><mo>(</mo><mi class="ltx_nvar" href="./22.1#t1.r2" title="complex">z</mi><mo>,</mo><mi class="ltx_nvar" href="./22.1#t1.r3" title="modulus">k</mi><mo>)</mo></mrow></mrow></math>: Jacobian elliptic function</a>,
+<a href="./22.2#E4" title="(22.2.4) ‣ §22.2 Definitions ‣ Properties ‣ Chapter 22 Jacobian Elliptic Functions" class="ltx_ref"><math class="ltx_Math" altimg="m83.png" altimg-height="25px" altimg-valign="-7px" altimg-width="75px" alttext="\operatorname{sn}\left(\NVar{z},\NVar{k}\right)" display="inline"><mrow><mi href="./22.2#E4" title="Jacobian elliptic function">sn</mi><mo>⁡</mo><mrow><mo>(</mo><mi class="ltx_nvar" href="./22.1#t1.r2" title="complex">z</mi><mo>,</mo><mi class="ltx_nvar" href="./22.1#t1.r3" title="modulus">k</mi><mo>)</mo></mrow></mrow></math>: Jacobian elliptic function</a>,
+<a href="./1.4#E4" title="(1.4.4) ‣ §1.4(iii) Derivatives ‣ §1.4 Calculus of One Variable ‣ Topics of Discussion ‣ Chapter 1 Algebraic and Analytic Methods" class="ltx_ref"><math class="ltx_Math" altimg="m73.png" altimg-height="31px" altimg-valign="-9px" altimg-width="28px" alttext="\frac{\mathrm{d}\NVar{f}}{\mathrm{d}\NVar{x}}" display="inline"><mfrac><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi class="ltx_nvar">f</mi></mrow><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi class="ltx_nvar">x</mi></mrow></mfrac></math>: derivative of <math class="ltx_Math" altimg="m113.png" altimg-height="22px" altimg-valign="-6px" altimg-width="17px" alttext="f" display="inline"><mi>f</mi></math> with respect to <math class="ltx_Math" altimg="m128.png" altimg-height="13px" altimg-valign="-2px" altimg-width="16px" alttext="x" display="inline"><mi>x</mi></math></a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m74.png" altimg-height="17px" altimg-valign="-6px" altimg-width="16px" alttext="\gamma" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m69.png" altimg-height="18px" altimg-valign="-2px" altimg-width="14px" alttext="\delta" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m71.png" altimg-height="13px" altimg-valign="-2px" altimg-width="13px" alttext="\epsilon" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m116.png" altimg-height="17px" altimg-valign="-6px" altimg-width="14px" alttext="q" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">q</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m60.png" altimg-height="13px" altimg-valign="-2px" altimg-width="18px" alttext="\alpha" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m64.png" altimg-height="22px" altimg-valign="-6px" altimg-width="17px" alttext="\beta" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">β</mi></math>:  real or complex parameter</a>,
+<a href="./31.2#E9" title="(31.2.9) ‣ Weierstrass’s Form ‣ §31.2(iv) Doubly-Periodic Forms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m104.png" altimg-height="22px" altimg-valign="-6px" altimg-width="15px" alttext="\zeta" display="inline"><mi href="./31.2#E9" title="change of variable">ζ</mi></math>:  change of variable</a> and
+<a href="./31.2#E7" title="(31.2.7) ‣ Jacobi’s Elliptic Form ‣ §31.2(iv) Doubly-Periodic Forms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m115.png" altimg-height="18px" altimg-valign="-2px" altimg-width="16px" alttext="k" display="inline"><mi href="./31.2#E7" title="modulus">k</mi></math>:  modulus</a>
+</dd>
+<dt>Referenced by:</dt>
+<dd><a href="./31.7#ii.p1" title="§31.7(ii) Relations to Lamé Functions ‣ §31.7 Relations to Other Functions ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.7(ii)</span></a></dd>
+<dt>Permalink:</dt>
+<dd><a href="./31.2.E8" title="" class="ltx_ref">http://dlmf.nist.gov/31.2.E8</a></dd>
+<dt>Encodings:</dt>
+<dd>
+<a href="./31.2.E8.tex">TeX</a>, <a href="./31.2.E8.pmml">pMML</a>, <a href="./31.2.E8.png">png</a>
+</dd>
+<dt>See also:</dt>
+<dd>Annotations for <a href="./31.2#Px1.info" title="Jacobi’s Elliptic Form ‣ §31.2(iv) Doubly-Periodic Forms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2(iv)</span></a>,
+<a href="./31.2#iv.info" title="§31.2(iv) Doubly-Periodic Forms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2(iv)</span></a>,
+<a href="./31.2#info" title="§31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2</span></a> and
+<a href="./31#info" title="Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Ch.31</span></a>
+</dd>
+</dl>
+</div>
+</div>
+</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="Px2" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">Weierstrass’s Form</h3>
+<div id="Px2.info" class="ltx_metadata ltx_info">
+<span href="" class="ltx_infoicon ltx_icon" title="Show Annotations"><span class="ltx_font_bold">ⓘ</span></span>
+<div class="ltx_infocontent">
+<dl>
+<dt>Keywords:</dt>
+<dd>
+<a class="ltx_keyword" href="./search/search?q=Heun%20equation">Heun’s equation</a>, <a class="ltx_keyword" href="./search/search?q=Weierstrass%E2%80%99s">Weierstrass’s</a>, <a class="ltx_keyword" href="./search/search?q=Weierstrass%20form">Weierstrass’s form</a>, <a class="ltx_keyword" href="./search/search?q=doubly-periodic%20forms">doubly-periodic forms</a>
+</dd>
+<dt>See also:</dt>
+<dd>Annotations for <a href="./31.2#iv.info" title="§31.2(iv) Doubly-Periodic Forms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2(iv)</span></a>,
+<a href="./31.2#info" title="§31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2</span></a> and
+<a href="./31#info" title="Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Ch.31</span></a>
+</dd>
+</dl>
+</div>
+</div>
+
+<div id="Px2.p1" class="ltx_para">
+<p class="ltx_p">With the notation of §§<a href="./19.2#ii" title="§19.2(ii) Legendre’s Integrals ‣ §19.2 Definitions ‣ Legendre’s Integrals ‣ Chapter 19 Elliptic Integrals" class="ltx_ref"><span class="ltx_text ltx_ref_tag">19.2(ii)</span></a> and <a href="./23.2" title="§23.2 Definitions and Periodic Properties ‣ Weierstrass Elliptic Functions ‣ Chapter 23 Weierstrass Elliptic and Modular Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">23.2</span></a> let</p>
+<table id="E9" class="ltx_equationgroup ltx_eqn_table">
+<tbody>
+<tr id="Ex9" class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td rowspan="6" class="ltx_eqn_cell ltx_eqn_eqno ltx_align_middle ltx_align_left"><span class="ltx_tag ltx_tag_equationgroup ltx_align_left">31.2.9</span></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_td ltx_align_right ltx_eqn_cell"><math class="ltx_Math" altimg="m36.png" altimg-height="24px" altimg-valign="-2px" altimg-width="27px" alttext="\displaystyle k^{2}" display="inline"><msup><mi href="./31.2#E7" title="modulus">k</mi><mn>2</mn></msup></math></td>
+<td class="ltx_td ltx_align_left ltx_eqn_cell"><math class="ltx_Math" altimg="m1.png" altimg-height="27px" altimg-valign="-7px" altimg-width="204px" alttext="\displaystyle=(e_{2}-e_{3})/(e_{1}-e_{3})," display="inline"><mrow><mrow><mi></mi><mo>=</mo><mrow><mrow><mo stretchy="false">(</mo><mrow><mrow><msub><mi href="./23.3#i" title="Weierstrass lattice roots">e</mi><mn>2</mn></msub><mo>⁡</mo></mrow><mo>−</mo><mrow><msub><mi href="./23.3#i" title="Weierstrass lattice roots">e</mi><mn>3</mn></msub><mo>⁡</mo></mrow></mrow><mo stretchy="false">)</mo></mrow><mo>/</mo><mrow><mo stretchy="false">(</mo><mrow><mrow><msub><mi href="./23.3#i" title="Weierstrass lattice roots">e</mi><mn>1</mn></msub><mo>⁡</mo></mrow><mo>−</mo><mrow><msub><mi href="./23.3#i" title="Weierstrass lattice roots">e</mi><mn>3</mn></msub><mo>⁡</mo></mrow></mrow><mo stretchy="false">)</mo></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+</tr>
+<tr id="Ex10" class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_td ltx_align_right ltx_eqn_cell"><math class="ltx_Math" altimg="m26.png" altimg-height="24px" altimg-valign="-6px" altimg-width="17px" alttext="\displaystyle\zeta" display="inline"><mi href="./31.2#E9" title="change of variable">ζ</mi></math></td>
+<td class="ltx_td ltx_align_left ltx_eqn_cell"><math class="ltx_Math" altimg="m9.png" altimg-height="31px" altimg-valign="-7px" altimg-width="206px" alttext="\displaystyle=\mathrm{i}{K^{\prime}}+\xi(e_{1}-e_{3})^{1/2}," display="inline"><mrow><mrow><mi></mi><mo>=</mo><mrow><mrow><mi href="./1.9#E1" mathvariant="normal" title="imaginary unit">i</mi><mo>⁢</mo><mrow><msup><mi href="./19.2#E8_1" title="Legendre’s complementary complete elliptic integral of the first kind">K</mi><mo href="./19.2#E8_1" title="Legendre’s complementary complete elliptic integral of the first kind">′</mo></msup><mo>⁡</mo></mrow></mrow><mo>+</mo><mrow><mi>ξ</mi><mo>⁢</mo><msup><mrow><mo stretchy="false">(</mo><mrow><mrow><msub><mi href="./23.3#i" title="Weierstrass lattice roots">e</mi><mn>1</mn></msub><mo>⁡</mo></mrow><mo>−</mo><mrow><msub><mi href="./23.3#i" title="Weierstrass lattice roots">e</mi><mn>3</mn></msub><mo>⁡</mo></mrow></mrow><mo stretchy="false">)</mo></mrow><mrow><mn>1</mn><mo>/</mo><mn>2</mn></mrow></msup></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+</tr>
+<tr id="Ex11" class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_td ltx_align_right ltx_eqn_cell"><math class="ltx_Math" altimg="m33.png" altimg-height="18px" altimg-valign="-5px" altimg-width="26px" alttext="\displaystyle e_{1}" display="inline"><mrow><msub><mi href="./23.3#i" title="Weierstrass lattice roots">e</mi><mn>1</mn></msub><mo>⁡</mo></mrow></math></td>
+<td class="ltx_td ltx_align_left ltx_eqn_cell"><math class="ltx_Math" altimg="m13.png" altimg-height="40px" altimg-valign="-7px" altimg-width="99px" alttext="\displaystyle=\wp\left(\omega_{1}\right)," display="inline"><mrow><mrow><mi></mi><mo>=</mo><mrow><mi href="./23.2#E4" mathvariant="normal" title="Weierstrass ℘-function">℘</mi><mo>⁡</mo><mrow><mo>(</mo><msub><mi href="./31.2#Px2.p1" title="nonzero complex number">ω</mi><mn>1</mn></msub><mo>)</mo></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+</tr>
+<tr id="Ex12" class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_td ltx_align_right ltx_eqn_cell"><math class="ltx_Math" altimg="m34.png" altimg-height="18px" altimg-valign="-5px" altimg-width="26px" alttext="\displaystyle e_{2}" display="inline"><mrow><msub><mi href="./23.3#i" title="Weierstrass lattice roots">e</mi><mn>2</mn></msub><mo>⁡</mo></mrow></math></td>
+<td class="ltx_td ltx_align_left ltx_eqn_cell"><math class="ltx_Math" altimg="m14.png" altimg-height="40px" altimg-valign="-7px" altimg-width="99px" alttext="\displaystyle=\wp\left(\omega_{2}\right)," display="inline"><mrow><mrow><mi></mi><mo>=</mo><mrow><mi href="./23.2#E4" mathvariant="normal" title="Weierstrass ℘-function">℘</mi><mo>⁡</mo><mrow><mo>(</mo><msub><mi href="./31.2#Px2.p1" title="nonzero complex number">ω</mi><mn>2</mn></msub><mo>)</mo></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+</tr>
+<tr id="Ex13" class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_td ltx_align_right ltx_eqn_cell"><math class="ltx_Math" altimg="m35.png" altimg-height="18px" altimg-valign="-5px" altimg-width="26px" alttext="\displaystyle e_{3}" display="inline"><mrow><msub><mi href="./23.3#i" title="Weierstrass lattice roots">e</mi><mn>3</mn></msub><mo>⁡</mo></mrow></math></td>
+<td class="ltx_td ltx_align_left ltx_eqn_cell"><math class="ltx_Math" altimg="m15.png" altimg-height="40px" altimg-valign="-7px" altimg-width="99px" alttext="\displaystyle=\wp\left(\omega_{3}\right)," display="inline"><mrow><mrow><mi></mi><mo>=</mo><mrow><mi href="./23.2#E4" mathvariant="normal" title="Weierstrass ℘-function">℘</mi><mo>⁡</mo><mrow><mo>(</mo><msub><mi href="./31.2#Px2.p1" title="nonzero complex number">ω</mi><mn>3</mn></msub><mo>)</mo></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+</tr>
+<tr id="Ex14" class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td colspan="2" class="ltx_td ltx_align_center ltx_eqn_cell"><math class="ltx_Math" altimg="m32.png" altimg-height="23px" altimg-valign="-6px" altimg-width="158px" alttext="\displaystyle e_{1}+e_{2}+e_{3}=0," display="inline"><mrow><mrow><mrow><mrow><msub><mi href="./23.3#i" title="Weierstrass lattice roots">e</mi><mn>1</mn></msub><mo>⁡</mo></mrow><mo>+</mo><mrow><msub><mi href="./23.3#i" title="Weierstrass lattice roots">e</mi><mn>2</mn></msub><mo>⁡</mo></mrow><mo>+</mo><mrow><msub><mi href="./23.3#i" title="Weierstrass lattice roots">e</mi><mn>3</mn></msub><mo>⁡</mo></mrow></mrow><mo>=</mo><mn>0</mn></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+</tr>
+<tr><td class="ltx_align_right" colspan="5">
+<div id="E9.info" class="ltx_metadata ltx_info">
+<span href="" class="ltx_infoicon ltx_icon" title="Show Annotations"><span class="ltx_font_bold">ⓘ</span></span>
+<div class="ltx_infocontent">
+<dl>
+<dt>Defines:</dt>
+<dd><span class="ltx_text"><math class="ltx_Math" altimg="m104.png" altimg-height="22px" altimg-valign="-6px" altimg-width="15px" alttext="\zeta" display="inline"><mi href="./31.2#E9" title="change of variable">ζ</mi></math>:  change of variable (locally)</span></dd>
+<dt>Symbols:</dt>
+<dd>
+<a href="./23.2#E4" title="(23.2.4) ‣ §23.2(ii) Weierstrass Elliptic Functions ‣ §23.2 Definitions and Periodic Properties ‣ Weierstrass Elliptic Functions ‣ Chapter 23 Weierstrass Elliptic and Modular Functions" class="ltx_ref"><math class="ltx_Math" altimg="m101.png" altimg-height="25px" altimg-valign="-7px" altimg-width="48px" alttext="\wp\left(\NVar{z}\right)" display="inline"><mrow><mi href="./23.2#E4" mathvariant="normal" title="Weierstrass ℘-function">℘</mi><mo>⁡</mo><mrow><mo>(</mo><mi class="ltx_nvar" href="./23.1#t1.r4" title="complex">z</mi><mo>)</mo></mrow></mrow></math>
+(= <math class="ltx_Math" altimg="m103.png" altimg-height="25px" altimg-valign="-7px" altimg-width="67px" alttext="\wp\left(z|\mathbb{L}\right)" display="inline"><mrow><mi href="./23.2#E4" mathvariant="normal" title="Weierstrass ℘-function">℘</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mi href="./23.1#t1.r4" title="complex">z</mi><mo fence="false">|</mo><mi href="./23.1#t1.r1" title="lattice">𝕃</mi></mrow><mo>)</mo></mrow></mrow></math> = <math class="ltx_Math" altimg="m102.png" altimg-height="25px" altimg-valign="-7px" altimg-width="105px" alttext="\wp\left(z;g_{2},g_{3}\right)" display="inline"><mrow><mi href="./23.3#E8" mathvariant="normal" title="Weierstrass ℘-function">℘</mi><mo>⁡</mo><mrow><mo>(</mo><mi href="./23.1#t1.r4" title="complex">z</mi><mo>;</mo><mrow><msub><mi href="./23.3#EGx1" title="Weierstrass lattice invariants 𝑔₂⁡, 𝑔₃⁡">g</mi><mn>2</mn></msub><mo>⁡</mo></mrow><mo>,</mo><mrow><msub><mi href="./23.3#EGx1" title="Weierstrass lattice invariants 𝑔₂⁡, 𝑔₃⁡">g</mi><mn>3</mn></msub><mo>⁡</mo></mrow><mo>)</mo></mrow></mrow></math>): Weierstrass <math class="ltx_Math" altimg="m100.png" altimg-height="17px" altimg-valign="-6px" altimg-width="18px" alttext="\wp" display="inline"><mi href="./23.2#E4" mathvariant="normal" title="Weierstrass ℘-function">℘</mi></math>-function</a>,
+<a href="./23.3#i" title="§23.3(i) Invariants, Roots, and Discriminant ‣ §23.3 Differential Equations ‣ Weierstrass Elliptic Functions ‣ Chapter 23 Weierstrass Elliptic and Modular Functions" class="ltx_ref"><math class="ltx_Math" altimg="m112.png" altimg-height="19px" altimg-valign="-8px" altimg-width="23px" alttext="e_{\NVar{j}}" display="inline"><mrow><msub><mi href="./23.3#i" title="Weierstrass lattice roots">e</mi><mi class="ltx_nvar">j</mi></msub><mo>⁡</mo></mrow></math>: Weierstrass lattice roots</a>,
+<a href="./19.2#E8_1" title="(19.2.8_1) ‣ §19.2(ii) Legendre’s Integrals ‣ §19.2 Definitions ‣ Legendre’s Integrals ‣ Chapter 19 Elliptic Integrals" class="ltx_ref"><math class="ltx_Math" altimg="m130.png" altimg-height="25px" altimg-valign="-7px" altimg-width="60px" alttext="{K^{\prime}}\left(\NVar{k}\right)" display="inline"><mrow><msup><mi href="./19.2#E8_1" title="Legendre’s complementary complete elliptic integral of the first kind">K</mi><mo href="./19.2#E8_1" title="Legendre’s complementary complete elliptic integral of the first kind">′</mo></msup><mo>⁡</mo><mrow><mo>(</mo><mi class="ltx_nvar" href="./19.1#p1.t1.r3" title="real or complex modulus">k</mi><mo>)</mo></mrow></mrow></math>: Legendre’s complementary complete elliptic integral of the first kind</a>,
+<a href="./1.9#E1" title="(1.9.1) ‣ §1.9(i) Complex Numbers ‣ §1.9 Calculus of a Complex Variable ‣ Topics of Discussion ‣ Chapter 1 Algebraic and Analytic Methods" class="ltx_ref"><math class="ltx_Math" altimg="m79.png" altimg-height="18px" altimg-valign="-2px" altimg-width="10px" alttext="\mathrm{i}" display="inline"><mi href="./1.9#E1" mathvariant="normal" title="imaginary unit">i</mi></math>: imaginary unit</a>,
+<a href="./31.2#Px2.p1" title="Weierstrass’s Form ‣ §31.2(iv) Doubly-Periodic Forms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m80.png" altimg-height="19px" altimg-valign="-8px" altimg-width="26px" alttext="\omega_{j}" display="inline"><msub><mi href="./31.2#Px2.p1" title="nonzero complex number">ω</mi><mi href="./31.1#t1.r3" title="nonnegative integer">j</mi></msub></math>:  nonzero complex number</a>,
+<a href="./31.2#Px2.p1" title="Weierstrass’s Form ‣ §31.2(iv) Doubly-Periodic Forms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m78.png" altimg-height="18px" altimg-valign="-2px" altimg-width="18px" alttext="\mathbb{L}" display="inline"><mi href="./31.2#Px2.p1" title="lattice">𝕃</mi></math>:  lattice</a> and
+<a href="./31.2#E7" title="(31.2.7) ‣ Jacobi’s Elliptic Form ‣ §31.2(iv) Doubly-Periodic Forms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m115.png" altimg-height="18px" altimg-valign="-2px" altimg-width="16px" alttext="k" display="inline"><mi href="./31.2#E7" title="modulus">k</mi></math>:  modulus</a>
+</dd>
+<dt>Permalink:</dt>
+<dd><a href="./31.2.E9" title="" class="ltx_ref">http://dlmf.nist.gov/31.2.E9</a></dd>
+<dt>Encodings:</dt>
+<dd>
+<a href="./31.2.E9a.tex">TeX</a>, <a href="./31.2.E9b.tex">TeX</a>, <a href="./31.2.E9c.tex">TeX</a>, <a href="./31.2.E9d.tex">TeX</a>, <a href="./31.2.E9e.tex">TeX</a>, <a href="./31.2.E9f.tex">TeX</a>, <a href="./31.2.E9a.pmml">pMML</a>, <a href="./31.2.E9b.pmml">pMML</a>, <a href="./31.2.E9c.pmml">pMML</a>, <a href="./31.2.E9d.pmml">pMML</a>, <a href="./31.2.E9e.pmml">pMML</a>, <a href="./31.2.E9f.pmml">pMML</a>, <a href="./31.2.E9a.png">png</a>, <a href="./31.2.E9b.png">png</a>, <a href="./31.2.E9c.png">png</a>, <a href="./31.2.E9d.png">png</a>, <a href="./31.2.E9e.png">png</a>, <a href="./31.2.E9f.png">png</a>
+</dd>
+<dt>See also:</dt>
+<dd>Annotations for <a href="./31.2#Px2.info" title="Weierstrass’s Form ‣ §31.2(iv) Doubly-Periodic Forms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2(iv)</span></a>,
+<a href="./31.2#iv.info" title="§31.2(iv) Doubly-Periodic Forms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2(iv)</span></a>,
+<a href="./31.2#info" title="§31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2</span></a> and
+<a href="./31#info" title="Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Ch.31</span></a>
+</dd>
+</dl>
+</div>
+</div>
+</td></tr>
+</tbody>
+</table>
+<p class="ltx_p">where <math class="ltx_Math" altimg="m40.png" altimg-height="20px" altimg-valign="-5px" altimg-width="37px" alttext="2\omega_{1}" display="inline"><mrow><mn>2</mn><mo>⁢</mo><msub><mi href="./31.2#Px2.p1" title="nonzero complex number">ω</mi><mn>1</mn></msub></mrow></math> and
+<math class="ltx_Math" altimg="m41.png" altimg-height="20px" altimg-valign="-5px" altimg-width="37px" alttext="2\omega_{3}" display="inline"><mrow><mn>2</mn><mo>⁢</mo><msub><mi href="./31.2#Px2.p1" title="nonzero complex number">ω</mi><mn>3</mn></msub></mrow></math> with <math class="ltx_Math" altimg="m57.png" altimg-height="25px" altimg-valign="-7px" altimg-width="132px" alttext="\Im\left(\omega_{3}/\omega_{1}\right)&gt;0" display="inline"><mrow><mrow><mi href="./1.9#E2" mathvariant="normal" title="imaginary part">ℑ</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><msub><mi href="./31.2#Px2.p1" title="nonzero complex number">ω</mi><mn>3</mn></msub><mo>/</mo><msub><mi href="./31.2#Px2.p1" title="nonzero complex number">ω</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow></mrow><mo>&gt;</mo><mn>0</mn></mrow></math> are generators of
+the lattice <math class="ltx_Math" altimg="m78.png" altimg-height="18px" altimg-valign="-2px" altimg-width="18px" alttext="\mathbb{L}" display="inline"><mi href="./31.2#Px2.p1" title="lattice">𝕃</mi></math> for <math class="ltx_Math" altimg="m103.png" altimg-height="25px" altimg-valign="-7px" altimg-width="67px" alttext="\wp\left(z|\mathbb{L}\right)" display="inline"><mrow><mi href="./23.2#E4" mathvariant="normal" title="Weierstrass ℘-function">℘</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo fence="false">|</mo><mi href="./31.2#Px2.p1" title="lattice">𝕃</mi></mrow><mo>)</mo></mrow></mrow></math>. Then</p>
+<table id="E10" class="ltx_equation ltx_eqn_table">
+
+<tbody>
+<tr class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td rowspan="1" class="ltx_eqn_cell ltx_eqn_eqno ltx_align_middle ltx_align_left"><span class="ltx_tag ltx_tag_equation ltx_align_left">31.2.10</span></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_eqn_cell ltx_align_center"><math class="ltx_Math" altimg="E10.png" altimg-height="202px" altimg-valign="-7px" altimg-width="288px" alttext="w(\xi)=\left(\wp\left(\xi\right)-e_{3}\right)^{(1-2\gamma)/4}\left(\wp\left(%
+\xi\right)-e_{2}\right)^{(1-2\delta)/4}\*\left(\wp\left(\xi\right)-e_{1}\right%
+)^{(1-2\epsilon)/4}W(\xi)," display="block"><mrow><mrow><mrow><mi>w</mi><mo>⁡</mo><mrow><mo stretchy="false">(</mo><mi>ξ</mi><mo stretchy="false">)</mo></mrow></mrow><mo>=</mo><mrow><msup><mrow><mo>(</mo><mrow><mrow><mi href="./23.2#E4" mathvariant="normal" title="Weierstrass ℘-function">℘</mi><mo>⁡</mo><mrow><mo>(</mo><mi>ξ</mi><mo>)</mo></mrow></mrow><mo>−</mo><mrow><msub><mi href="./23.3#i" title="Weierstrass lattice roots">e</mi><mn>3</mn></msub><mo>⁡</mo></mrow></mrow><mo>)</mo></mrow><mrow><mrow><mo stretchy="false">(</mo><mrow><mn>1</mn><mo>−</mo><mrow><mn>2</mn><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi></mrow></mrow><mo stretchy="false">)</mo></mrow><mo>/</mo><mn>4</mn></mrow></msup><mo>⁢</mo><msup><mrow><mo>(</mo><mrow><mrow><mi href="./23.2#E4" mathvariant="normal" title="Weierstrass ℘-function">℘</mi><mo>⁡</mo><mrow><mo>(</mo><mi>ξ</mi><mo>)</mo></mrow></mrow><mo>−</mo><mrow><msub><mi href="./23.3#i" title="Weierstrass lattice roots">e</mi><mn>2</mn></msub><mo>⁡</mo></mrow></mrow><mo>)</mo></mrow><mrow><mrow><mo stretchy="false">(</mo><mrow><mn>1</mn><mo>−</mo><mrow><mn>2</mn><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi></mrow></mrow><mo stretchy="false">)</mo></mrow><mo>/</mo><mn>4</mn></mrow></msup><mo>⁢</mo><msup><mrow><mo>(</mo><mrow><mrow><mi href="./23.2#E4" mathvariant="normal" title="Weierstrass ℘-function">℘</mi><mo>⁡</mo><mrow><mo>(</mo><mi>ξ</mi><mo>)</mo></mrow></mrow><mo>−</mo><mrow><msub><mi href="./23.3#i" title="Weierstrass lattice roots">e</mi><mn>1</mn></msub><mo>⁡</mo></mrow></mrow><mo>)</mo></mrow><mrow><mrow><mo stretchy="false">(</mo><mrow><mn>1</mn><mo>−</mo><mrow><mn>2</mn><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi></mrow></mrow><mo stretchy="false">)</mo></mrow><mo>/</mo><mn>4</mn></mrow></msup><mo>⁢</mo><mrow><mi href="./31.2#E11" title="solution">W</mi><mo>⁡</mo><mrow><mo stretchy="false">(</mo><mi>ξ</mi><mo stretchy="false">)</mo></mrow></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+</tr>
+<tr><td class="ltx_align_right" colspan="4">
+<div id="E10.info" class="ltx_metadata ltx_info">
+<span href="" class="ltx_infoicon ltx_icon" title="Show Annotations"><span class="ltx_font_bold">ⓘ</span></span>
+<div class="ltx_infocontent">
+<dl>
+<dt>Symbols:</dt>
+<dd>
+<a href="./23.2#E4" title="(23.2.4) ‣ §23.2(ii) Weierstrass Elliptic Functions ‣ §23.2 Definitions and Periodic Properties ‣ Weierstrass Elliptic Functions ‣ Chapter 23 Weierstrass Elliptic and Modular Functions" class="ltx_ref"><math class="ltx_Math" altimg="m101.png" altimg-height="25px" altimg-valign="-7px" altimg-width="48px" alttext="\wp\left(\NVar{z}\right)" display="inline"><mrow><mi href="./23.2#E4" mathvariant="normal" title="Weierstrass ℘-function">℘</mi><mo>⁡</mo><mrow><mo>(</mo><mi class="ltx_nvar" href="./23.1#t1.r4" title="complex">z</mi><mo>)</mo></mrow></mrow></math>
+(= <math class="ltx_Math" altimg="m103.png" altimg-height="25px" altimg-valign="-7px" altimg-width="67px" alttext="\wp\left(z|\mathbb{L}\right)" display="inline"><mrow><mi href="./23.2#E4" mathvariant="normal" title="Weierstrass ℘-function">℘</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mi href="./23.1#t1.r4" title="complex">z</mi><mo fence="false">|</mo><mi href="./23.1#t1.r1" title="lattice">𝕃</mi></mrow><mo>)</mo></mrow></mrow></math> = <math class="ltx_Math" altimg="m102.png" altimg-height="25px" altimg-valign="-7px" altimg-width="105px" alttext="\wp\left(z;g_{2},g_{3}\right)" display="inline"><mrow><mi href="./23.3#E8" mathvariant="normal" title="Weierstrass ℘-function">℘</mi><mo>⁡</mo><mrow><mo>(</mo><mi href="./23.1#t1.r4" title="complex">z</mi><mo>;</mo><mrow><msub><mi href="./23.3#EGx1" title="Weierstrass lattice invariants 𝑔₂⁡, 𝑔₃⁡">g</mi><mn>2</mn></msub><mo>⁡</mo></mrow><mo>,</mo><mrow><msub><mi href="./23.3#EGx1" title="Weierstrass lattice invariants 𝑔₂⁡, 𝑔₃⁡">g</mi><mn>3</mn></msub><mo>⁡</mo></mrow><mo>)</mo></mrow></mrow></math>): Weierstrass <math class="ltx_Math" altimg="m100.png" altimg-height="17px" altimg-valign="-6px" altimg-width="18px" alttext="\wp" display="inline"><mi href="./23.2#E4" mathvariant="normal" title="Weierstrass ℘-function">℘</mi></math>-function</a>,
+<a href="./23.3#i" title="§23.3(i) Invariants, Roots, and Discriminant ‣ §23.3 Differential Equations ‣ Weierstrass Elliptic Functions ‣ Chapter 23 Weierstrass Elliptic and Modular Functions" class="ltx_ref"><math class="ltx_Math" altimg="m112.png" altimg-height="19px" altimg-valign="-8px" altimg-width="23px" alttext="e_{\NVar{j}}" display="inline"><mrow><msub><mi href="./23.3#i" title="Weierstrass lattice roots">e</mi><mi class="ltx_nvar">j</mi></msub><mo>⁡</mo></mrow></math>: Weierstrass lattice roots</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m74.png" altimg-height="17px" altimg-valign="-6px" altimg-width="16px" alttext="\gamma" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m69.png" altimg-height="18px" altimg-valign="-2px" altimg-width="14px" alttext="\delta" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m71.png" altimg-height="13px" altimg-valign="-2px" altimg-width="13px" alttext="\epsilon" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi></math>:  real or complex parameter</a>,
+<a href="./31.2#Px2.p1" title="Weierstrass’s Form ‣ §31.2(iv) Doubly-Periodic Forms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m78.png" altimg-height="18px" altimg-valign="-2px" altimg-width="18px" alttext="\mathbb{L}" display="inline"><mi href="./31.2#Px2.p1" title="lattice">𝕃</mi></math>:  lattice</a> and
+<a href="./31.2#E11" title="(31.2.11) ‣ Weierstrass’s Form ‣ §31.2(iv) Doubly-Periodic Forms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m55.png" altimg-height="25px" altimg-valign="-7px" altimg-width="53px" alttext="W(\xi)" display="inline"><mrow><mi href="./31.2#E11" title="solution">W</mi><mo>⁡</mo><mrow><mo stretchy="false">(</mo><mi>ξ</mi><mo stretchy="false">)</mo></mrow></mrow></math>:  solution</a>
+</dd>
+<dt>Permalink:</dt>
+<dd><a href="./31.2.E10" title="" class="ltx_ref">http://dlmf.nist.gov/31.2.E10</a></dd>
+<dt>Encodings:</dt>
+<dd>
+<a href="./31.2.E10.tex">TeX</a>, <a href="./31.2.E10.pmml">pMML</a>, <a href="./31.2.E10.png">png</a>
+</dd>
+<dt>See also:</dt>
+<dd>Annotations for <a href="./31.2#Px2.info" title="Weierstrass’s Form ‣ §31.2(iv) Doubly-Periodic Forms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2(iv)</span></a>,
+<a href="./31.2#iv.info" title="§31.2(iv) Doubly-Periodic Forms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2(iv)</span></a>,
+<a href="./31.2#info" title="§31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2</span></a> and
+<a href="./31#info" title="Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Ch.31</span></a>
+</dd>
+</dl>
+</div>
+</div>
+</td></tr>
+</tbody>
+</table>
+<p class="ltx_p">where <math class="ltx_Math" altimg="m55.png" altimg-height="25px" altimg-valign="-7px" altimg-width="53px" alttext="W(\xi)" display="inline"><mrow><mi href="./31.2#E11" title="solution">W</mi><mo>⁡</mo><mrow><mo stretchy="false">(</mo><mi>ξ</mi><mo stretchy="false">)</mo></mrow></mrow></math> satisfies</p>
+<table id="E11" class="ltx_equation ltx_eqn_table">
+
+<tbody>
+<tr class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td rowspan="1" class="ltx_eqn_cell ltx_eqn_eqno ltx_align_middle ltx_align_left"><span class="ltx_tag ltx_tag_equation ltx_align_left">31.2.11</span></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_eqn_cell ltx_align_center"><math class="ltx_Math" altimg="E11.png" altimg-height="157px" altimg-valign="-9px" altimg-width="253px" alttext="\ifrac{{\mathrm{d}}^{2}W}{{\mathrm{d}\xi}^{2}}+\left(H+b_{0}\wp\left(\xi\right%
+)+b_{1}\wp\left(\xi+\omega_{1}\right)+b_{2}\wp\left(\xi+\omega_{2}\right)+b_{3%
+}\wp\left(\xi+\omega_{3}\right)\right)W=0," display="block"><mrow><mrow><mrow><mrow><mrow><msup><mo href="./1.4#E4" title="derivative of 𝑓 with respect to 𝑥">d</mo><mn>2</mn></msup><mi href="./31.2#E11" title="solution">W</mi></mrow><mo href="./1.4#E4" lspace="0em" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">/</mo><msup><mrow><mo href="./1.4#E4" lspace="0em" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi>ξ</mi></mrow><mn href="./1.4#E4" title="derivative of 𝑓 with respect to 𝑥">2</mn></msup></mrow><mo>+</mo><mrow><mrow><mo>(</mo><mrow><mi href="./31.2#E12" title="𝐻">H</mi><mo>+</mo><mrow><msub><mi href="./31.2#E12" title="coefficients">b</mi><mn>0</mn></msub><mo>⁢</mo><mrow><mi href="./23.2#E4" mathvariant="normal" title="Weierstrass ℘-function">℘</mi><mo>⁡</mo><mrow><mo>(</mo><mi>ξ</mi><mo>)</mo></mrow></mrow></mrow><mo>+</mo><mrow><msub><mi href="./31.2#E12" title="coefficients">b</mi><mn>1</mn></msub><mo>⁢</mo><mrow><mi href="./23.2#E4" mathvariant="normal" title="Weierstrass ℘-function">℘</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mi>ξ</mi><mo>+</mo><msub><mi href="./31.2#Px2.p1" title="nonzero complex number">ω</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow></mrow></mrow><mo>+</mo><mrow><msub><mi href="./31.2#E12" title="coefficients">b</mi><mn>2</mn></msub><mo>⁢</mo><mrow><mi href="./23.2#E4" mathvariant="normal" title="Weierstrass ℘-function">℘</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mi>ξ</mi><mo>+</mo><msub><mi href="./31.2#Px2.p1" title="nonzero complex number">ω</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></mrow><mo>+</mo><mrow><msub><mi href="./31.2#E12" title="coefficients">b</mi><mn>3</mn></msub><mo>⁢</mo><mrow><mi href="./23.2#E4" mathvariant="normal" title="Weierstrass ℘-function">℘</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mi>ξ</mi><mo>+</mo><msub><mi href="./31.2#Px2.p1" title="nonzero complex number">ω</mi><mn>3</mn></msub></mrow><mo>)</mo></mrow></mrow></mrow></mrow><mo>)</mo></mrow><mo>⁢</mo><mi href="./31.2#E11" title="solution">W</mi></mrow></mrow><mo>=</mo><mn>0</mn></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+</tr>
+<tr><td class="ltx_align_right" colspan="4">
+<div id="E11.info" class="ltx_metadata ltx_info">
+<span href="" class="ltx_infoicon ltx_icon" title="Show Annotations"><span class="ltx_font_bold">ⓘ</span></span>
+<div class="ltx_infocontent">
+<dl>
+<dt>Defines:</dt>
+<dd><span class="ltx_text"><math class="ltx_Math" altimg="m55.png" altimg-height="25px" altimg-valign="-7px" altimg-width="53px" alttext="W(\xi)" display="inline"><mrow><mi href="./31.2#E11" title="solution">W</mi><mo>⁡</mo><mrow><mo stretchy="false">(</mo><mi>ξ</mi><mo stretchy="false">)</mo></mrow></mrow></math>:  solution (locally)</span></dd>
+<dt>Symbols:</dt>
+<dd>
+<a href="./23.2#E4" title="(23.2.4) ‣ §23.2(ii) Weierstrass Elliptic Functions ‣ §23.2 Definitions and Periodic Properties ‣ Weierstrass Elliptic Functions ‣ Chapter 23 Weierstrass Elliptic and Modular Functions" class="ltx_ref"><math class="ltx_Math" altimg="m101.png" altimg-height="25px" altimg-valign="-7px" altimg-width="48px" alttext="\wp\left(\NVar{z}\right)" display="inline"><mrow><mi href="./23.2#E4" mathvariant="normal" title="Weierstrass ℘-function">℘</mi><mo>⁡</mo><mrow><mo>(</mo><mi class="ltx_nvar" href="./23.1#t1.r4" title="complex">z</mi><mo>)</mo></mrow></mrow></math>
+(= <math class="ltx_Math" altimg="m103.png" altimg-height="25px" altimg-valign="-7px" altimg-width="67px" alttext="\wp\left(z|\mathbb{L}\right)" display="inline"><mrow><mi href="./23.2#E4" mathvariant="normal" title="Weierstrass ℘-function">℘</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mi href="./23.1#t1.r4" title="complex">z</mi><mo fence="false">|</mo><mi href="./23.1#t1.r1" title="lattice">𝕃</mi></mrow><mo>)</mo></mrow></mrow></math> = <math class="ltx_Math" altimg="m102.png" altimg-height="25px" altimg-valign="-7px" altimg-width="105px" alttext="\wp\left(z;g_{2},g_{3}\right)" display="inline"><mrow><mi href="./23.3#E8" mathvariant="normal" title="Weierstrass ℘-function">℘</mi><mo>⁡</mo><mrow><mo>(</mo><mi href="./23.1#t1.r4" title="complex">z</mi><mo>;</mo><mrow><msub><mi href="./23.3#EGx1" title="Weierstrass lattice invariants 𝑔₂⁡, 𝑔₃⁡">g</mi><mn>2</mn></msub><mo>⁡</mo></mrow><mo>,</mo><mrow><msub><mi href="./23.3#EGx1" title="Weierstrass lattice invariants 𝑔₂⁡, 𝑔₃⁡">g</mi><mn>3</mn></msub><mo>⁡</mo></mrow><mo>)</mo></mrow></mrow></math>): Weierstrass <math class="ltx_Math" altimg="m100.png" altimg-height="17px" altimg-valign="-6px" altimg-width="18px" alttext="\wp" display="inline"><mi href="./23.2#E4" mathvariant="normal" title="Weierstrass ℘-function">℘</mi></math>-function</a>,
+<a href="./1.4#E4" title="(1.4.4) ‣ §1.4(iii) Derivatives ‣ §1.4 Calculus of One Variable ‣ Topics of Discussion ‣ Chapter 1 Algebraic and Analytic Methods" class="ltx_ref"><math class="ltx_Math" altimg="m73.png" altimg-height="31px" altimg-valign="-9px" altimg-width="28px" alttext="\frac{\mathrm{d}\NVar{f}}{\mathrm{d}\NVar{x}}" display="inline"><mfrac><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi class="ltx_nvar">f</mi></mrow><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi class="ltx_nvar">x</mi></mrow></mfrac></math>: derivative of <math class="ltx_Math" altimg="m113.png" altimg-height="22px" altimg-valign="-6px" altimg-width="17px" alttext="f" display="inline"><mi>f</mi></math> with respect to <math class="ltx_Math" altimg="m128.png" altimg-height="13px" altimg-valign="-2px" altimg-width="16px" alttext="x" display="inline"><mi>x</mi></math></a>,
+<a href="./31.2#Px2.p1" title="Weierstrass’s Form ‣ §31.2(iv) Doubly-Periodic Forms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m80.png" altimg-height="19px" altimg-valign="-8px" altimg-width="26px" alttext="\omega_{j}" display="inline"><msub><mi href="./31.2#Px2.p1" title="nonzero complex number">ω</mi><mi href="./31.1#t1.r3" title="nonnegative integer">j</mi></msub></math>:  nonzero complex number</a>,
+<a href="./31.2#Px2.p1" title="Weierstrass’s Form ‣ §31.2(iv) Doubly-Periodic Forms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m78.png" altimg-height="18px" altimg-valign="-2px" altimg-width="18px" alttext="\mathbb{L}" display="inline"><mi href="./31.2#Px2.p1" title="lattice">𝕃</mi></math>:  lattice</a>,
+<a href="./31.2#E12" title="(31.2.12) ‣ Weierstrass’s Form ‣ §31.2(iv) Doubly-Periodic Forms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m111.png" altimg-height="24px" altimg-valign="-8px" altimg-width="22px" alttext="b_{j}" display="inline"><msub><mi href="./31.2#E12" title="coefficients">b</mi><mi href="./31.1#t1.r3" title="nonnegative integer">j</mi></msub></math>:  coefficients</a> and
+<a href="./31.2#E12" title="(31.2.12) ‣ Weierstrass’s Form ‣ §31.2(iv) Doubly-Periodic Forms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m54.png" altimg-height="18px" altimg-valign="-2px" altimg-width="23px" alttext="H" display="inline"><mi href="./31.2#E12" title="𝐻">H</mi></math></a>
+</dd>
+<dt>Permalink:</dt>
+<dd><a href="./31.2.E11" title="" class="ltx_ref">http://dlmf.nist.gov/31.2.E11</a></dd>
+<dt>Encodings:</dt>
+<dd>
+<a href="./31.2.E11.tex">TeX</a>, <a href="./31.2.E11.pmml">pMML</a>, <a href="./31.2.E11.png">png</a>
+</dd>
+<dt>See also:</dt>
+<dd>Annotations for <a href="./31.2#Px2.info" title="Weierstrass’s Form ‣ §31.2(iv) Doubly-Periodic Forms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2(iv)</span></a>,
+<a href="./31.2#iv.info" title="§31.2(iv) Doubly-Periodic Forms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2(iv)</span></a>,
+<a href="./31.2#info" title="§31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2</span></a> and
+<a href="./31#info" title="Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Ch.31</span></a>
+</dd>
+</dl>
+</div>
+</div>
+</td></tr>
+</tbody>
+</table>
+<p class="ltx_p">with</p>
+<table id="E12" class="ltx_equationgroup ltx_eqn_table">
+<tbody>
+<tr id="Ex15" class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td rowspan="5" class="ltx_eqn_cell ltx_eqn_eqno ltx_align_middle ltx_align_left"><span class="ltx_tag ltx_tag_equationgroup ltx_align_left">31.2.12</span></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_td ltx_align_right ltx_eqn_cell"><math class="ltx_Math" altimg="m28.png" altimg-height="23px" altimg-valign="-5px" altimg-width="25px" alttext="\displaystyle b_{0}" display="inline"><msub><mi href="./31.2#E12" title="coefficients">b</mi><mn>0</mn></msub></math></td>
+<td class="ltx_td ltx_align_left ltx_eqn_cell"><math class="ltx_Math" altimg="m6.png" altimg-height="31px" altimg-valign="-9px" altimg-width="368px" alttext="\displaystyle=4\alpha\beta-(\gamma+\delta+\epsilon-\tfrac{1}{2})(\gamma+\delta%
++\epsilon-\tfrac{3}{2})," display="inline"><mrow><mrow><mi></mi><mo>=</mo><mrow><mrow><mn>4</mn><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">β</mi></mrow><mo>−</mo><mrow><mrow><mo stretchy="false">(</mo><mrow><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi><mo>+</mo><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi><mo>+</mo><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi></mrow><mo>−</mo><mfrac><mn>1</mn><mn>2</mn></mfrac></mrow><mo stretchy="false">)</mo></mrow><mo>⁢</mo><mrow><mo stretchy="false">(</mo><mrow><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi><mo>+</mo><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi><mo>+</mo><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi></mrow><mo>−</mo><mfrac><mn>3</mn><mn>2</mn></mfrac></mrow><mo stretchy="false">)</mo></mrow></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+</tr>
+<tr id="Ex16" class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_td ltx_align_right ltx_eqn_cell"><math class="ltx_Math" altimg="m29.png" altimg-height="23px" altimg-valign="-5px" altimg-width="25px" alttext="\displaystyle b_{1}" display="inline"><msub><mi href="./31.2#E12" title="coefficients">b</mi><mn>1</mn></msub></math></td>
+<td class="ltx_td ltx_align_left ltx_eqn_cell"><math class="ltx_Math" altimg="m3.png" altimg-height="31px" altimg-valign="-9px" altimg-width="177px" alttext="\displaystyle=-(\epsilon-\tfrac{1}{2})(\epsilon-\tfrac{3}{2})," display="inline"><mrow><mrow><mi></mi><mo>=</mo><mrow><mo>−</mo><mrow><mrow><mo stretchy="false">(</mo><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi><mo>−</mo><mfrac><mn>1</mn><mn>2</mn></mfrac></mrow><mo stretchy="false">)</mo></mrow><mo>⁢</mo><mrow><mo stretchy="false">(</mo><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi><mo>−</mo><mfrac><mn>3</mn><mn>2</mn></mfrac></mrow><mo stretchy="false">)</mo></mrow></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+</tr>
+<tr id="Ex17" class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_td ltx_align_right ltx_eqn_cell"><math class="ltx_Math" altimg="m30.png" altimg-height="23px" altimg-valign="-5px" altimg-width="25px" alttext="\displaystyle b_{2}" display="inline"><msub><mi href="./31.2#E12" title="coefficients">b</mi><mn>2</mn></msub></math></td>
+<td class="ltx_td ltx_align_left ltx_eqn_cell"><math class="ltx_Math" altimg="m2.png" altimg-height="31px" altimg-valign="-9px" altimg-width="180px" alttext="\displaystyle=-(\delta-\tfrac{1}{2})(\delta-\tfrac{3}{2})," display="inline"><mrow><mrow><mi></mi><mo>=</mo><mrow><mo>−</mo><mrow><mrow><mo stretchy="false">(</mo><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi><mo>−</mo><mfrac><mn>1</mn><mn>2</mn></mfrac></mrow><mo stretchy="false">)</mo></mrow><mo>⁢</mo><mrow><mo stretchy="false">(</mo><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi><mo>−</mo><mfrac><mn>3</mn><mn>2</mn></mfrac></mrow><mo stretchy="false">)</mo></mrow></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+</tr>
+<tr id="Ex18" class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_td ltx_align_right ltx_eqn_cell"><math class="ltx_Math" altimg="m31.png" altimg-height="23px" altimg-valign="-5px" altimg-width="25px" alttext="\displaystyle b_{3}" display="inline"><msub><mi href="./31.2#E12" title="coefficients">b</mi><mn>3</mn></msub></math></td>
+<td class="ltx_td ltx_align_left ltx_eqn_cell"><math class="ltx_Math" altimg="m4.png" altimg-height="31px" altimg-valign="-9px" altimg-width="184px" alttext="\displaystyle=-(\gamma-\tfrac{1}{2})(\gamma-\tfrac{3}{2})," display="inline"><mrow><mrow><mi></mi><mo>=</mo><mrow><mo>−</mo><mrow><mrow><mo stretchy="false">(</mo><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi><mo>−</mo><mfrac><mn>1</mn><mn>2</mn></mfrac></mrow><mo stretchy="false">)</mo></mrow><mo>⁢</mo><mrow><mo stretchy="false">(</mo><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi><mo>−</mo><mfrac><mn>3</mn><mn>2</mn></mfrac></mrow><mo stretchy="false">)</mo></mrow></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+</tr>
+<tr id="Ex19" class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_td ltx_align_right ltx_eqn_cell"><math class="ltx_Math" altimg="m25.png" altimg-height="20px" altimg-valign="-2px" altimg-width="26px" alttext="\displaystyle H" display="inline"><mi href="./31.2#E12" title="𝐻">H</mi></math></td>
+<td class="ltx_td ltx_align_left ltx_eqn_cell"><math class="ltx_Math" altimg="m16.png" altimg-height="29px" altimg-valign="-7px" altimg-width="668px" alttext="\displaystyle=e_{1}(\gamma+\delta-1)^{2}+e_{2}(\gamma+\epsilon-1)^{2}+e_{3}(%
+\delta+\epsilon-1)^{2}-4\alpha\beta e_{3}-4q(e_{2}-e_{3})." display="inline"><mrow><mrow><mi></mi><mo>=</mo><mrow><mrow><mrow><mrow><msub><mi href="./23.3#i" title="Weierstrass lattice roots">e</mi><mn>1</mn></msub><mo lspace="0.222em">⁡</mo></mrow><mo rspace="0.222em">⁢</mo><msup><mrow><mo stretchy="false">(</mo><mrow><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi><mo>+</mo><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi></mrow><mo>−</mo><mn>1</mn></mrow><mo stretchy="false">)</mo></mrow><mn>2</mn></msup></mrow><mo>+</mo><mrow><mrow><msub><mi href="./23.3#i" title="Weierstrass lattice roots">e</mi><mn>2</mn></msub><mo lspace="0.222em">⁡</mo></mrow><mo rspace="0.222em">⁢</mo><msup><mrow><mo stretchy="false">(</mo><mrow><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi><mo>+</mo><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi></mrow><mo>−</mo><mn>1</mn></mrow><mo stretchy="false">)</mo></mrow><mn>2</mn></msup></mrow><mo>+</mo><mrow><mrow><msub><mi href="./23.3#i" title="Weierstrass lattice roots">e</mi><mn>3</mn></msub><mo lspace="0.222em">⁡</mo></mrow><mo rspace="0.222em">⁢</mo><msup><mrow><mo stretchy="false">(</mo><mrow><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi><mo>+</mo><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi></mrow><mo>−</mo><mn>1</mn></mrow><mo stretchy="false">)</mo></mrow><mn>2</mn></msup></mrow></mrow><mo>−</mo><mrow><mn>4</mn><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">β</mi><mo>⁢</mo><mrow><msub><mi href="./23.3#i" title="Weierstrass lattice roots">e</mi><mn>3</mn></msub><mo>⁡</mo></mrow></mrow><mo>−</mo><mrow><mn>4</mn><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">q</mi><mo>⁢</mo><mrow><mo stretchy="false">(</mo><mrow><mrow><msub><mi href="./23.3#i" title="Weierstrass lattice roots">e</mi><mn>2</mn></msub><mo>⁡</mo></mrow><mo>−</mo><mrow><msub><mi href="./23.3#i" title="Weierstrass lattice roots">e</mi><mn>3</mn></msub><mo>⁡</mo></mrow></mrow><mo stretchy="false">)</mo></mrow></mrow></mrow></mrow><mo lspace="0em">.</mo></mrow></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+</tr>
+<tr><td class="ltx_align_right" colspan="5">
+<div id="E12.info" class="ltx_metadata ltx_info">
+<span href="" class="ltx_infoicon ltx_icon" title="Show Annotations"><span class="ltx_font_bold">ⓘ</span></span>
+<div class="ltx_infocontent">
+<dl>
+<dt>Defines:</dt>
+<dd>
+<span class="ltx_text"><math class="ltx_Math" altimg="m111.png" altimg-height="24px" altimg-valign="-8px" altimg-width="22px" alttext="b_{j}" display="inline"><msub><mi href="./31.2#E12" title="coefficients">b</mi><mi href="./31.1#t1.r3" title="nonnegative integer">j</mi></msub></math>:  coefficients (locally)</span> and
+<span class="ltx_text"><math class="ltx_Math" altimg="m54.png" altimg-height="18px" altimg-valign="-2px" altimg-width="23px" alttext="H" display="inline"><mi href="./31.2#E12" title="𝐻">H</mi></math> (locally)</span>
+</dd>
+<dt>Symbols:</dt>
+<dd>
+<a href="./23.3#i" title="§23.3(i) Invariants, Roots, and Discriminant ‣ §23.3 Differential Equations ‣ Weierstrass Elliptic Functions ‣ Chapter 23 Weierstrass Elliptic and Modular Functions" class="ltx_ref"><math class="ltx_Math" altimg="m112.png" altimg-height="19px" altimg-valign="-8px" altimg-width="23px" alttext="e_{\NVar{j}}" display="inline"><mrow><msub><mi href="./23.3#i" title="Weierstrass lattice roots">e</mi><mi class="ltx_nvar">j</mi></msub><mo>⁡</mo></mrow></math>: Weierstrass lattice roots</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m74.png" altimg-height="17px" altimg-valign="-6px" altimg-width="16px" alttext="\gamma" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m69.png" altimg-height="18px" altimg-valign="-2px" altimg-width="14px" alttext="\delta" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m71.png" altimg-height="13px" altimg-valign="-2px" altimg-width="13px" alttext="\epsilon" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r3" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m114.png" altimg-height="22px" altimg-valign="-6px" altimg-width="14px" alttext="j" display="inline"><mi href="./31.1#t1.r3" title="nonnegative integer">j</mi></math>:  nonnegative integer</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m116.png" altimg-height="17px" altimg-valign="-6px" altimg-width="14px" alttext="q" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">q</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m60.png" altimg-height="13px" altimg-valign="-2px" altimg-width="18px" alttext="\alpha" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m64.png" altimg-height="22px" altimg-valign="-6px" altimg-width="17px" alttext="\beta" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">β</mi></math>:  real or complex parameter</a> and
+<a href="./31.2#Px2.p1" title="Weierstrass’s Form ‣ §31.2(iv) Doubly-Periodic Forms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m78.png" altimg-height="18px" altimg-valign="-2px" altimg-width="18px" alttext="\mathbb{L}" display="inline"><mi href="./31.2#Px2.p1" title="lattice">𝕃</mi></math>:  lattice</a>
+</dd>
+<dt>Permalink:</dt>
+<dd><a href="./31.2.E12" title="" class="ltx_ref">http://dlmf.nist.gov/31.2.E12</a></dd>
+<dt>Encodings:</dt>
+<dd>
+<a href="./31.2.E12a.tex">TeX</a>, <a href="./31.2.E12b.tex">TeX</a>, <a href="./31.2.E12c.tex">TeX</a>, <a href="./31.2.E12d.tex">TeX</a>, <a href="./31.2.E12e.tex">TeX</a>, <a href="./31.2.E12a.pmml">pMML</a>, <a href="./31.2.E12b.pmml">pMML</a>, <a href="./31.2.E12c.pmml">pMML</a>, <a href="./31.2.E12d.pmml">pMML</a>, <a href="./31.2.E12e.pmml">pMML</a>, <a href="./31.2.E12a.png">png</a>, <a href="./31.2.E12b.png">png</a>, <a href="./31.2.E12c.png">png</a>, <a href="./31.2.E12d.png">png</a>, <a href="./31.2.E12e.png">png</a>
+</dd>
+<dt>See also:</dt>
+<dd>Annotations for <a href="./31.2#Px2.info" title="Weierstrass’s Form ‣ §31.2(iv) Doubly-Periodic Forms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2(iv)</span></a>,
+<a href="./31.2#iv.info" title="§31.2(iv) Doubly-Periodic Forms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2(iv)</span></a>,
+<a href="./31.2#info" title="§31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2</span></a> and
+<a href="./31#info" title="Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Ch.31</span></a>
+</dd>
+</dl>
+</div>
+</div>
+</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+</section>
+<section id="v" class="ltx_subsection">
+<h2 class="ltx_title ltx_title_subsection">
+<span class="ltx_tag ltx_tag_subsection">§31.2(v) </span>Heun’s Equation Automorphisms</h2>
+<div id="v.info" class="ltx_metadata ltx_info">
+<span href="" class="ltx_infoicon ltx_icon" title="Show Annotations"><span class="ltx_font_bold">ⓘ</span></span>
+<div class="ltx_infocontent">
+<dl>
+<dt>Keywords:</dt>
+<dd>
+<a class="ltx_keyword" href="./search/search?q=Heun%20equation">Heun’s equation</a>, <a class="ltx_keyword" href="./search/search?q=automorphisms">automorphisms</a>
+</dd>
+<dt>Referenced by:</dt>
+<dd>
+<a href="./31.3#iii.p1" title="§31.3(iii) Equivalent Expressions ‣ §31.3 Basic Solutions ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.3(iii)</span></a>,
+<a href="./31.8#p3" title="§31.8 Solutions via Quadratures ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.8</span></a>
+</dd>
+<dt>Permalink:</dt>
+<dd><a href="./31.2.v" title="" class="ltx_ref">http://dlmf.nist.gov/31.2.v</a></dd>
+<dt>See also:</dt>
+<dd>Annotations for <a href="./31.2#info" title="§31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2</span></a> and
+<a href="./31#info" title="Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Ch.31</span></a>
+</dd>
+</dl>
+</div>
+</div>
+
+<section id="Px3" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">
+<math class="ltx_Math" altimg="m53.png" altimg-height="18px" altimg-valign="-2px" altimg-width="21px" alttext="F" display="inline"><mi href="./31.2#E4" title="𝐹">F</mi></math>-Homotopic Transformations</h3>
+<div id="Px3.info" class="ltx_metadata ltx_info">
+<span href="" class="ltx_infoicon ltx_icon" title="Show Annotations"><span class="ltx_font_bold">ⓘ</span></span>
+<div class="ltx_infocontent">
+<dl>
+<dt>Keywords:</dt>
+<dd>
+<a class="ltx_keyword" href="./search/search?q=F-homotopic%20transformations"><math class="ltx_Math" altimg="m53.png" altimg-height="18px" altimg-valign="-2px" altimg-width="21px" alttext="F" display="inline"><mi href="./31.2#E4" title="𝐹">F</mi></math>-homotopic transformations</a>, <a class="ltx_keyword" href="./search/search?q=Heun%20equation">Heun’s equation</a>, <a class="ltx_keyword" href="./search/search?q=automorphisms">automorphisms</a>
+</dd>
+<dt>Notes:</dt>
+<dd>See <cite class="ltx_cite ltx_citemacro_citet">Ronveaux (<a href="./bib/R#bib1965" title="Heun’s Differential Equations" class="ltx_ref">1995</a>, Part A, p. 16)</cite>.</dd>
+<dt>See also:</dt>
+<dd>Annotations for <a href="./31.2#v.info" title="§31.2(v) Heun’s Equation Automorphisms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2(v)</span></a>,
+<a href="./31.2#info" title="§31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2</span></a> and
+<a href="./31#info" title="Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Ch.31</span></a>
+</dd>
+</dl>
+</div>
+</div>
+
+<div id="Px3.p1" class="ltx_para">
+<p class="ltx_p"><math class="ltx_Math" altimg="m124.png" altimg-height="26px" altimg-valign="-7px" altimg-width="167px" alttext="w(z)=z^{1-\gamma}w_{1}(z)" display="inline"><mrow><mrow><mi>w</mi><mo>⁡</mo><mrow><mo stretchy="false">(</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo stretchy="false">)</mo></mrow></mrow><mo>=</mo><mrow><msup><mi href="./31.1#t1.r2" title="complex variable">z</mi><mrow><mn>1</mn><mo>−</mo><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi></mrow></msup><mo>⁢</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>⁡</mo><mrow><mo stretchy="false">(</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo stretchy="false">)</mo></mrow></mrow></mrow></mrow></math> satisfies (<a href="./31.2#E1" title="(31.2.1) ‣ §31.2(i) Heun’s Equation ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">31.2.1</span></a>) if <math class="ltx_Math" altimg="m125.png" altimg-height="16px" altimg-valign="-5px" altimg-width="28px" alttext="w_{1}" display="inline"><msub><mi>w</mi><mn>1</mn></msub></math> is a
+solution of (<a href="./31.2#E1" title="(31.2.1) ‣ §31.2(i) Heun’s Equation ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">31.2.1</span></a>) with transformed parameters
+<math class="ltx_Math" altimg="m117.png" altimg-height="25px" altimg-valign="-7px" altimg-width="221px" alttext="q_{1}=q+(a\delta+\epsilon)(1-\gamma)" display="inline"><mrow><msub><mi href="./31.1#t1.r5" title="real or complex parameter">q</mi><mn>1</mn></msub><mo>=</mo><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">q</mi><mo>+</mo><mrow><mrow><mo stretchy="false">(</mo><mrow><mrow><mi href="./31.1#t1.r4" title="complex parameter">a</mi><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi></mrow><mo>+</mo><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi></mrow><mo stretchy="false">)</mo></mrow><mo>⁢</mo><mrow><mo stretchy="false">(</mo><mrow><mn>1</mn><mo>−</mo><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi></mrow><mo stretchy="false">)</mo></mrow></mrow></mrow></mrow></math>;
+<math class="ltx_Math" altimg="m61.png" altimg-height="21px" altimg-valign="-6px" altimg-width="141px" alttext="\alpha_{1}=\alpha+1-\gamma" display="inline"><mrow><msub><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi><mn>1</mn></msub><mo>=</mo><mrow><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi><mo>+</mo><mn>1</mn></mrow><mo>−</mo><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi></mrow></mrow></math>, <math class="ltx_Math" altimg="m65.png" altimg-height="22px" altimg-valign="-6px" altimg-width="139px" alttext="\beta_{1}=\beta+1-\gamma" display="inline"><mrow><msub><mi href="./31.1#t1.r5" title="real or complex parameter">β</mi><mn>1</mn></msub><mo>=</mo><mrow><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">β</mi><mo>+</mo><mn>1</mn></mrow><mo>−</mo><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi></mrow></mrow></math>,
+<math class="ltx_Math" altimg="m75.png" altimg-height="21px" altimg-valign="-6px" altimg-width="100px" alttext="\gamma_{1}=2-\gamma" display="inline"><mrow><msub><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi><mn>1</mn></msub><mo>=</mo><mrow><mn>2</mn><mo>−</mo><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi></mrow></mrow></math>.
+Next, <math class="ltx_Math" altimg="m121.png" altimg-height="27px" altimg-valign="-7px" altimg-width="218px" alttext="w(z)=(z-1)^{1-\delta}w_{2}(z)" display="inline"><mrow><mrow><mi>w</mi><mo>⁡</mo><mrow><mo stretchy="false">(</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo stretchy="false">)</mo></mrow></mrow><mo>=</mo><mrow><msup><mrow><mo stretchy="false">(</mo><mrow><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>−</mo><mn>1</mn></mrow><mo stretchy="false">)</mo></mrow><mrow><mn>1</mn><mo>−</mo><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi></mrow></msup><mo>⁢</mo><mrow><msub><mi>w</mi><mn>2</mn></msub><mo>⁡</mo><mrow><mo stretchy="false">(</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo stretchy="false">)</mo></mrow></mrow></mrow></mrow></math> satisfies
+(<a href="./31.2#E1" title="(31.2.1) ‣ §31.2(i) Heun’s Equation ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">31.2.1</span></a>) if <math class="ltx_Math" altimg="m126.png" altimg-height="16px" altimg-valign="-5px" altimg-width="28px" alttext="w_{2}" display="inline"><msub><mi>w</mi><mn>2</mn></msub></math> is a solution of (<a href="./31.2#E1" title="(31.2.1) ‣ §31.2(i) Heun’s Equation ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">31.2.1</span></a>) with
+transformed parameters <math class="ltx_Math" altimg="m118.png" altimg-height="25px" altimg-valign="-7px" altimg-width="171px" alttext="q_{2}=q+a\gamma(1-\delta)" display="inline"><mrow><msub><mi href="./31.1#t1.r5" title="real or complex parameter">q</mi><mn>2</mn></msub><mo>=</mo><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">q</mi><mo>+</mo><mrow><mi href="./31.1#t1.r4" title="complex parameter">a</mi><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi><mo>⁢</mo><mrow><mo stretchy="false">(</mo><mrow><mn>1</mn><mo>−</mo><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi></mrow><mo stretchy="false">)</mo></mrow></mrow></mrow></mrow></math>;
+<math class="ltx_Math" altimg="m62.png" altimg-height="21px" altimg-valign="-5px" altimg-width="139px" alttext="\alpha_{2}=\alpha+1-\delta" display="inline"><mrow><msub><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi><mn>2</mn></msub><mo>=</mo><mrow><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi><mo>+</mo><mn>1</mn></mrow><mo>−</mo><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi></mrow></mrow></math>, <math class="ltx_Math" altimg="m66.png" altimg-height="22px" altimg-valign="-6px" altimg-width="137px" alttext="\beta_{2}=\beta+1-\delta" display="inline"><mrow><msub><mi href="./31.1#t1.r5" title="real or complex parameter">β</mi><mn>2</mn></msub><mo>=</mo><mrow><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">β</mi><mo>+</mo><mn>1</mn></mrow><mo>−</mo><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi></mrow></mrow></math>,
+<math class="ltx_Math" altimg="m70.png" altimg-height="21px" altimg-valign="-5px" altimg-width="96px" alttext="\delta_{2}=2-\delta" display="inline"><mrow><msub><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi><mn>2</mn></msub><mo>=</mo><mrow><mn>2</mn><mo>−</mo><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi></mrow></mrow></math>.
+Lastly, <math class="ltx_Math" altimg="m122.png" altimg-height="26px" altimg-valign="-7px" altimg-width="217px" alttext="w(z)=(z-a)^{1-\epsilon}w_{3}(z)" display="inline"><mrow><mrow><mi>w</mi><mo>⁡</mo><mrow><mo stretchy="false">(</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo stretchy="false">)</mo></mrow></mrow><mo>=</mo><mrow><msup><mrow><mo stretchy="false">(</mo><mrow><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>−</mo><mi href="./31.1#t1.r4" title="complex parameter">a</mi></mrow><mo stretchy="false">)</mo></mrow><mrow><mn>1</mn><mo>−</mo><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi></mrow></msup><mo>⁢</mo><mrow><msub><mi>w</mi><mn>3</mn></msub><mo>⁡</mo><mrow><mo stretchy="false">(</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo stretchy="false">)</mo></mrow></mrow></mrow></mrow></math> satisfies
+(<a href="./31.2#E1" title="(31.2.1) ‣ §31.2(i) Heun’s Equation ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">31.2.1</span></a>) if <math class="ltx_Math" altimg="m127.png" altimg-height="16px" altimg-valign="-5px" altimg-width="28px" alttext="w_{3}" display="inline"><msub><mi>w</mi><mn>3</mn></msub></math> is a solution of (<a href="./31.2#E1" title="(31.2.1) ‣ §31.2(i) Heun’s Equation ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">31.2.1</span></a>) with
+transformed parameters <math class="ltx_Math" altimg="m119.png" altimg-height="25px" altimg-valign="-7px" altimg-width="158px" alttext="q_{3}=q+\gamma(1-\epsilon)" display="inline"><mrow><msub><mi href="./31.1#t1.r5" title="real or complex parameter">q</mi><mn>3</mn></msub><mo>=</mo><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">q</mi><mo>+</mo><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi><mo>⁢</mo><mrow><mo stretchy="false">(</mo><mrow><mn>1</mn><mo>−</mo><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi></mrow><mo stretchy="false">)</mo></mrow></mrow></mrow></mrow></math>;
+<math class="ltx_Math" altimg="m63.png" altimg-height="20px" altimg-valign="-5px" altimg-width="137px" alttext="\alpha_{3}=\alpha+1-\epsilon" display="inline"><mrow><msub><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi><mn>3</mn></msub><mo>=</mo><mrow><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi><mo>+</mo><mn>1</mn></mrow><mo>−</mo><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi></mrow></mrow></math>, <math class="ltx_Math" altimg="m67.png" altimg-height="22px" altimg-valign="-6px" altimg-width="135px" alttext="\beta_{3}=\beta+1-\epsilon" display="inline"><mrow><msub><mi href="./31.1#t1.r5" title="real or complex parameter">β</mi><mn>3</mn></msub><mo>=</mo><mrow><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">β</mi><mo>+</mo><mn>1</mn></mrow><mo>−</mo><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi></mrow></mrow></math>,
+<math class="ltx_Math" altimg="m72.png" altimg-height="20px" altimg-valign="-5px" altimg-width="94px" alttext="\epsilon_{3}=2-\epsilon" display="inline"><mrow><msub><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi><mn>3</mn></msub><mo>=</mo><mrow><mn>2</mn><mo>−</mo><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi></mrow></mrow></math>. By composing these three steps, there result
+<math class="ltx_Math" altimg="m42.png" altimg-height="21px" altimg-valign="-2px" altimg-width="62px" alttext="2^{3}=8" display="inline"><mrow><msup><mn>2</mn><mn>3</mn></msup><mo>=</mo><mn>8</mn></mrow></math> possible transformations of the dependent variable (including the
+identity transformation) that preserve the form of (<a href="./31.2#E1" title="(31.2.1) ‣ §31.2(i) Heun’s Equation ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">31.2.1</span></a>).</p>
+</div>
+</section>
+<section id="Px4" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">Homographic Transformations</h3>
+<div id="Px4.info" class="ltx_metadata ltx_info">
+<span href="" class="ltx_infoicon ltx_icon" title="Show Annotations"><span class="ltx_font_bold">ⓘ</span></span>
+<div class="ltx_infocontent">
+<dl>
+<dt>Keywords:</dt>
+<dd>
+<a class="ltx_keyword" href="./search/search?q=Heun%20equation">Heun’s equation</a>, <a class="ltx_keyword" href="./search/search?q=automorphisms">automorphisms</a>, <a class="ltx_keyword" href="./search/search?q=homographic%20transformations">homographic transformations</a>
+</dd>
+<dt>See also:</dt>
+<dd>Annotations for <a href="./31.2#v.info" title="§31.2(v) Heun’s Equation Automorphisms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2(v)</span></a>,
+<a href="./31.2#info" title="§31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2</span></a> and
+<a href="./31#info" title="Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Ch.31</span></a>
+</dd>
+</dl>
+</div>
+</div>
+
+<div id="Px4.p1" class="ltx_para">
+<p class="ltx_p">There are <math class="ltx_Math" altimg="m45.png" altimg-height="18px" altimg-valign="-2px" altimg-width="69px" alttext="4!=24" display="inline"><mrow><mrow><mn>4</mn><mo href="./front/introduction#common.t1.r15" title="factorial (as in 𝑛!)">!</mo></mrow><mo>=</mo><mn>24</mn></mrow></math> homographies <math class="ltx_Math" altimg="m95.png" altimg-height="25px" altimg-valign="-7px" altimg-width="250px" alttext="\tilde{z}(z)=(Az+B)/(Cz+D)" display="inline"><mrow><mrow><mover accent="true"><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>~</mo></mover><mo>⁢</mo><mrow><mo stretchy="false">(</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo stretchy="false">)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mo stretchy="false">(</mo><mrow><mrow><mi href="./31.2#E4" title="𝐴">A</mi><mo>⁢</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi></mrow><mo>+</mo><mi href="./31.2#E4" title="𝐵">B</mi></mrow><mo stretchy="false">)</mo></mrow><mo>/</mo><mrow><mo stretchy="false">(</mo><mrow><mrow><mi href="./31.2#E4" title="𝐶">C</mi><mo>⁢</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi></mrow><mo>+</mo><mi href="./31.2#E4" title="𝐷">D</mi></mrow><mo stretchy="false">)</mo></mrow></mrow></mrow></math> that take
+<math class="ltx_Math" altimg="m38.png" altimg-height="21px" altimg-valign="-6px" altimg-width="84px" alttext="0,1,a,\infty" display="inline"><mrow><mn>0</mn><mo>,</mo><mn>1</mn><mo>,</mo><mi href="./31.1#t1.r4" title="complex parameter">a</mi><mo>,</mo><mi mathvariant="normal">∞</mi></mrow></math> to some permutation of <math class="ltx_Math" altimg="m39.png" altimg-height="24px" altimg-valign="-6px" altimg-width="90px" alttext="0,1,a^{\prime},\infty" display="inline"><mrow><mn>0</mn><mo>,</mo><mn>1</mn><mo>,</mo><msup><mi href="./31.1#t1.r4" title="complex parameter">a</mi><mo>′</mo></msup><mo>,</mo><mi mathvariant="normal">∞</mi></mrow></math>, where <math class="ltx_Math" altimg="m110.png" altimg-height="20px" altimg-valign="-2px" altimg-width="21px" alttext="a^{\prime}" display="inline"><msup><mi href="./31.1#t1.r4" title="complex parameter">a</mi><mo>′</mo></msup></math> may differ
+from <math class="ltx_Math" altimg="m109.png" altimg-height="13px" altimg-valign="-2px" altimg-width="15px" alttext="a" display="inline"><mi href="./31.1#t1.r4" title="complex parameter">a</mi></math>. If <math class="ltx_Math" altimg="m96.png" altimg-height="25px" altimg-valign="-7px" altimg-width="80px" alttext="\tilde{z}=\tilde{z}(z)" display="inline"><mrow><mover accent="true"><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>~</mo></mover><mo>=</mo><mrow><mover accent="true"><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>~</mo></mover><mo>⁢</mo><mrow><mo stretchy="false">(</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo stretchy="false">)</mo></mrow></mrow></mrow></math> is one of the <math class="ltx_Math" altimg="m43.png" altimg-height="18px" altimg-valign="-2px" altimg-width="58px" alttext="3!=6" display="inline"><mrow><mrow><mn>3</mn><mo href="./front/introduction#common.t1.r15" title="factorial (as in 𝑛!)">!</mo></mrow><mo>=</mo><mn>6</mn></mrow></math> homographies
+that map <math class="ltx_Math" altimg="m76.png" altimg-height="13px" altimg-valign="-2px" altimg-width="25px" alttext="\infty" display="inline"><mi mathvariant="normal">∞</mi></math> to <math class="ltx_Math" altimg="m76.png" altimg-height="13px" altimg-valign="-2px" altimg-width="25px" alttext="\infty" display="inline"><mi mathvariant="normal">∞</mi></math>, then <math class="ltx_Math" altimg="m123.png" altimg-height="25px" altimg-valign="-7px" altimg-width="116px" alttext="w(z)=\tilde{w}(\tilde{z})" display="inline"><mrow><mrow><mi>w</mi><mo>⁡</mo><mrow><mo stretchy="false">(</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo stretchy="false">)</mo></mrow></mrow><mo>=</mo><mrow><mover accent="true"><mi>w</mi><mo>~</mo></mover><mo>⁢</mo><mrow><mo stretchy="false">(</mo><mover accent="true"><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>~</mo></mover><mo stretchy="false">)</mo></mrow></mrow></mrow></math> satisfies
+(<a href="./31.2#E1" title="(31.2.1) ‣ §31.2(i) Heun’s Equation ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">31.2.1</span></a>) if <math class="ltx_Math" altimg="m94.png" altimg-height="25px" altimg-valign="-7px" altimg-width="46px" alttext="\tilde{w}(\tilde{z})" display="inline"><mrow><mover accent="true"><mi>w</mi><mo>~</mo></mover><mo>⁢</mo><mrow><mo stretchy="false">(</mo><mover accent="true"><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>~</mo></mover><mo stretchy="false">)</mo></mrow></mrow></math> is a solution of
+(<a href="./31.2#E1" title="(31.2.1) ‣ §31.2(i) Heun’s Equation ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">31.2.1</span></a>) with <math class="ltx_Math" altimg="m129.png" altimg-height="13px" altimg-valign="-2px" altimg-width="15px" alttext="z" display="inline"><mi href="./31.1#t1.r2" title="complex variable">z</mi></math> replaced by <math class="ltx_Math" altimg="m99.png" altimg-height="18px" altimg-valign="-2px" altimg-width="15px" alttext="\tilde{z}" display="inline"><mover accent="true"><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>~</mo></mover></math> and appropriately
+transformed parameters. For example, if <math class="ltx_Math" altimg="m98.png" altimg-height="25px" altimg-valign="-7px" altimg-width="74px" alttext="\tilde{z}=z/a" display="inline"><mrow><mover accent="true"><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>~</mo></mover><mo>=</mo><mrow><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>/</mo><mi href="./31.1#t1.r4" title="complex parameter">a</mi></mrow></mrow></math>, then the parameters
+are <math class="ltx_Math" altimg="m90.png" altimg-height="25px" altimg-valign="-7px" altimg-width="75px" alttext="\tilde{a}=1/a" display="inline"><mrow><mover accent="true"><mi href="./31.1#t1.r4" title="complex parameter">a</mi><mo>~</mo></mover><mo>=</mo><mrow><mn>1</mn><mo>/</mo><mi href="./31.1#t1.r4" title="complex parameter">a</mi></mrow></mrow></math>, <math class="ltx_Math" altimg="m93.png" altimg-height="25px" altimg-valign="-7px" altimg-width="73px" alttext="\tilde{q}=q/a" display="inline"><mrow><mover accent="true"><mi href="./31.1#t1.r5" title="real or complex parameter">q</mi><mo>~</mo></mover><mo>=</mo><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">q</mi><mo>/</mo><mi href="./31.1#t1.r4" title="complex parameter">a</mi></mrow></mrow></math>; <math class="ltx_Math" altimg="m88.png" altimg-height="24px" altimg-valign="-2px" altimg-width="50px" alttext="\tilde{\delta}=\epsilon" display="inline"><mrow><mover accent="true"><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi><mo>~</mo></mover><mo>=</mo><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi></mrow></math>,
+<math class="ltx_Math" altimg="m89.png" altimg-height="18px" altimg-valign="-2px" altimg-width="50px" alttext="\tilde{\epsilon}=\delta" display="inline"><mrow><mover accent="true"><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi><mo>~</mo></mover><mo>=</mo><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi></mrow></math>. If <math class="ltx_Math" altimg="m96.png" altimg-height="25px" altimg-valign="-7px" altimg-width="80px" alttext="\tilde{z}=\tilde{z}(z)" display="inline"><mrow><mover accent="true"><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>~</mo></mover><mo>=</mo><mrow><mover accent="true"><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>~</mo></mover><mo>⁢</mo><mrow><mo stretchy="false">(</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo stretchy="false">)</mo></mrow></mrow></mrow></math> is one of the
+<math class="ltx_Math" altimg="m44.png" altimg-height="20px" altimg-valign="-4px" altimg-width="110px" alttext="4!-3!=18" display="inline"><mrow><mrow><mrow><mn>4</mn><mo href="./front/introduction#common.t1.r15" title="factorial (as in 𝑛!)">!</mo></mrow><mo>−</mo><mrow><mn>3</mn><mo href="./front/introduction#common.t1.r15" title="factorial (as in 𝑛!)">!</mo></mrow></mrow><mo>=</mo><mn>18</mn></mrow></math> homographies that do not map <math class="ltx_Math" altimg="m76.png" altimg-height="13px" altimg-valign="-2px" altimg-width="25px" alttext="\infty" display="inline"><mi mathvariant="normal">∞</mi></math> to <math class="ltx_Math" altimg="m76.png" altimg-height="13px" altimg-valign="-2px" altimg-width="25px" alttext="\infty" display="inline"><mi mathvariant="normal">∞</mi></math>, then an
+appropriate prefactor must be included on the right-hand side. For example,
+<math class="ltx_Math" altimg="m120.png" altimg-height="26px" altimg-valign="-7px" altimg-width="276px" alttext="w(z)=(1-z)^{-\alpha}\tilde{w}(z/(z-1))" display="inline"><mrow><mrow><mi>w</mi><mo>⁡</mo><mrow><mo stretchy="false">(</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo stretchy="false">)</mo></mrow></mrow><mo>=</mo><mrow><msup><mrow><mo stretchy="false">(</mo><mrow><mn>1</mn><mo>−</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi></mrow><mo stretchy="false">)</mo></mrow><mrow><mo>−</mo><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi></mrow></msup><mo>⁢</mo><mover accent="true"><mi>w</mi><mo>~</mo></mover><mo>⁢</mo><mrow><mo stretchy="false">(</mo><mrow><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>/</mo><mrow><mo stretchy="false">(</mo><mrow><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>−</mo><mn>1</mn></mrow><mo stretchy="false">)</mo></mrow></mrow><mo stretchy="false">)</mo></mrow></mrow></mrow></math>, which arises from
+<math class="ltx_Math" altimg="m97.png" altimg-height="25px" altimg-valign="-7px" altimg-width="126px" alttext="\tilde{z}=z/(z-1)" display="inline"><mrow><mover accent="true"><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>~</mo></mover><mo>=</mo><mrow><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>/</mo><mrow><mo stretchy="false">(</mo><mrow><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>−</mo><mn>1</mn></mrow><mo stretchy="false">)</mo></mrow></mrow></mrow></math>, satisfies (<a href="./31.2#E1" title="(31.2.1) ‣ §31.2(i) Heun’s Equation ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">31.2.1</span></a>) if <math class="ltx_Math" altimg="m94.png" altimg-height="25px" altimg-valign="-7px" altimg-width="46px" alttext="\tilde{w}(\tilde{z})" display="inline"><mrow><mover accent="true"><mi>w</mi><mo>~</mo></mover><mo>⁢</mo><mrow><mo stretchy="false">(</mo><mover accent="true"><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>~</mo></mover><mo stretchy="false">)</mo></mrow></mrow></math>
+is a solution of (<a href="./31.2#E1" title="(31.2.1) ‣ §31.2(i) Heun’s Equation ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">31.2.1</span></a>) with <math class="ltx_Math" altimg="m129.png" altimg-height="13px" altimg-valign="-2px" altimg-width="15px" alttext="z" display="inline"><mi href="./31.1#t1.r2" title="complex variable">z</mi></math> replaced by <math class="ltx_Math" altimg="m99.png" altimg-height="18px" altimg-valign="-2px" altimg-width="15px" alttext="\tilde{z}" display="inline"><mover accent="true"><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>~</mo></mover></math> and
+transformed parameters <math class="ltx_Math" altimg="m91.png" altimg-height="25px" altimg-valign="-7px" altimg-width="127px" alttext="\tilde{a}=a/(a-1)" display="inline"><mrow><mover accent="true"><mi href="./31.1#t1.r4" title="complex parameter">a</mi><mo>~</mo></mover><mo>=</mo><mrow><mi href="./31.1#t1.r4" title="complex parameter">a</mi><mo>/</mo><mrow><mo stretchy="false">(</mo><mrow><mi href="./31.1#t1.r4" title="complex parameter">a</mi><mo>−</mo><mn>1</mn></mrow><mo stretchy="false">)</mo></mrow></mrow></mrow></math>,
+<math class="ltx_Math" altimg="m92.png" altimg-height="25px" altimg-valign="-7px" altimg-width="219px" alttext="\tilde{q}=-(q-a\alpha\gamma)/(a-1)" display="inline"><mrow><mover accent="true"><mi href="./31.1#t1.r5" title="real or complex parameter">q</mi><mo>~</mo></mover><mo>=</mo><mrow><mo>−</mo><mrow><mrow><mo stretchy="false">(</mo><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">q</mi><mo>−</mo><mrow><mi href="./31.1#t1.r4" title="complex parameter">a</mi><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi><mo>⁢</mo><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi></mrow></mrow><mo stretchy="false">)</mo></mrow><mo>/</mo><mrow><mo stretchy="false">(</mo><mrow><mi href="./31.1#t1.r4" title="complex parameter">a</mi><mo>−</mo><mn>1</mn></mrow><mo stretchy="false">)</mo></mrow></mrow></mrow></mrow></math>;
+<math class="ltx_Math" altimg="m86.png" altimg-height="28px" altimg-valign="-6px" altimg-width="129px" alttext="\tilde{\beta}=\alpha+1-\delta" display="inline"><mrow><mover accent="true"><mi href="./31.1#t1.r5" title="real or complex parameter">β</mi><mo>~</mo></mover><mo>=</mo><mrow><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi><mo>+</mo><mn>1</mn></mrow><mo>−</mo><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi></mrow></mrow></math>, <math class="ltx_Math" altimg="m87.png" altimg-height="28px" altimg-valign="-6px" altimg-width="129px" alttext="\tilde{\delta}=\alpha+1-\beta" display="inline"><mrow><mover accent="true"><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi><mo>~</mo></mover><mo>=</mo><mrow><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi><mo>+</mo><mn>1</mn></mrow><mo>−</mo><mi href="./31.1#t1.r5" title="real or complex parameter">β</mi></mrow></mrow></math>.</p>
+</div>
+</section>
+<section id="Px5" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">Composite Transformations</h3>
+<div id="Px5.info" class="ltx_metadata ltx_info">
+<span href="" class="ltx_infoicon ltx_icon" title="Show Annotations"><span class="ltx_font_bold">ⓘ</span></span>
+<div class="ltx_infocontent">
+<dl>
+<dt>Keywords:</dt>
+<dd>
+<a class="ltx_keyword" href="./search/search?q=Heun%20equation">Heun’s equation</a>, <a class="ltx_keyword" href="./search/search?q=automorphisms">automorphisms</a>, <a class="ltx_keyword" href="./search/search?q=composite">composite</a>
+</dd>
+<dt>See also:</dt>
+<dd>Annotations for <a href="./31.2#v.info" title="§31.2(v) Heun’s Equation Automorphisms ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2(v)</span></a>,
+<a href="./31.2#info" title="§31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.2</span></a> and
+<a href="./31#info" title="Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Ch.31</span></a>
+</dd>
+</dl>
+</div>
+</div>
+
+<div id="Px5.p1" class="ltx_para">
+<p class="ltx_p">There are <math class="ltx_Math" altimg="m46.png" altimg-height="17px" altimg-valign="-2px" altimg-width="109px" alttext="8\cdot 24=192" display="inline"><mrow><mrow><mn>8</mn><mo lspace="0.222em" rspace="0.222em">⋅</mo><mn>24</mn></mrow><mo>=</mo><mn>192</mn></mrow></math> automorphisms of equation (<a href="./31.2#E1" title="(31.2.1) ‣ §31.2(i) Heun’s Equation ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">31.2.1</span></a>) by
+compositions of <math class="ltx_Math" altimg="m53.png" altimg-height="18px" altimg-valign="-2px" altimg-width="21px" alttext="F" display="inline"><mi href="./31.2#E4" title="𝐹">F</mi></math>-homotopic and homographic transformations. Each is a
+substitution of dependent and/or independent variables that preserves the form
+of (<a href="./31.2#E1" title="(31.2.1) ‣ §31.2(i) Heun’s Equation ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">31.2.1</span></a>). Except for the identity automorphism, each alters the
+parameters.</p>
+</div>
+</section>
+</section>
+</section>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_siblings">
+<a href="./31.1" title="In Notation ‣ Chapter 31 Heun Functions" class="ltx_ref" rel="prev"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">31.1 </span>Special Notation</span></a><a href="./31.3" title="In Properties ‣ Chapter 31 Heun Functions" class="ltx_ref" rel="next"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">31.3 </span>Basic Solutions</span></a>
+</div>
+<div class="ltx_footer_links ltx_centering">
+<a href="./about/notices">© 2010–2026 NIST</a> / <a href="./about/notices#S2">Disclaimer</a> / <a href="/cdn-cgi/l/email-protection#0b4f47464d266d6e6e6f696a68604b6562787f256c647d">Feedback</a>;
+ Version 1.2.6;
+Release date 2026-03-15.</div>
+<span id="pagesettings"></span>
+<div class="ltx_nist_logo"><a href="http://www.nist.gov/"><img src="./style/nistidc.png" width="500" alt="NIST"></a></div>
+<div class="ltx_nist_links ltx_align_right">
+<a href="https://www.nist.gov/privacy-policy">Site Privacy</a> <a href="https://www.nist.gov/oism/accessibility">Accessibility</a> <a href="https://www.nist.gov/privacy">Privacy Program</a> <a href="https://www.nist.gov/oism/copyrights">Copyrights</a> <a href="https://www.commerce.gov/vulnerability-disclosure-policy">Vulnerability Disclosure</a> <a href="https://www.nist.gov/no-fear-act-policy">No Fear Act Policy</a> <a href="https://www.nist.gov/foia">FOIA</a> <a href="https://www.nist.gov/environmental-policy-statement">Environmental Policy</a> <a href="https://www.nist.gov/summary-report-scientific-integrity">Scientific Integrity</a> <a href="https://www.nist.gov/nist-information-quality-standards">Information Quality Standards</a> <a href="https://www.commerce.gov/">Commerce.gov</a> <a href="http://www.science.gov/">Science.gov</a> <a href="http://www.usa.gov/">USA.gov</a>
+</div>
+</div>
+</div>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9fdd59c23d7c43d0',t:'MTc3OTEzMzQwNA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

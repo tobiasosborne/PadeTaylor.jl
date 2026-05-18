@@ -1,0 +1,457 @@
+<!DOCTYPE html><html lang="en">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<title>DLMF: §31.12 Confluent Forms of Heun’s Equation ‣ Properties ‣ Chapter 31 Heun Functions</title>
+<link rel="shortcut icon" href="./style/DLMF-16.png" type="image/png">
+<script type="text/javascript"><!--
+	var PATH="DLMF:/31.12";
+	var ROOT="./";
+      //--></script>
+<script type="text/javascript" src="./style/jquery.js"><!-- non-empty so ie6 will accept it --></script>
+<script type="text/javascript" src="./style/jquery.leaveNotice.js"><!-- non-empty so ie6 will accept it --></script>
+<script type="text/javascript" src="./style/DLMF.js"><!-- non-empty so ie6 will accept it --></script>
+<script async="" type="text/javascript" id="_fed_an_ua_tag" src="https://dap.digitalgov.gov/Universal-Federated-Analytics-Min.js?agency=DOC&amp;subagency=NIST&amp;pua=UA-37115410-44&amp;yt=true&amp;exts=ppsx,pps,f90,sch,rtf,wrl,txz,m1v,xlsm,msi,xsd,f,tif,eps,mpg,xml,pl,xlt,c"><!-- non-empty so ie6 will accept it --></script><script async="" src="https://www.googletagmanager.com/gtag/js?id=G-BZB64W4M0L"></script><script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-BZB64W4M0L');
+      </script>
+<link rel="stylesheet" type="text/css" href="./style/LaTeXML.css">
+<link rel="stylesheet" type="text/css" href="./style/DLMF.css">
+<link rel="stylesheet" type="text/css" href="./style/print.css" media="print">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="top" href="./" title="DLMF">
+<link rel="copyright" href="./about/notices" title="Copyright">
+<link rel="search" href="./search/search" title="Search">
+<link rel="help" class="ltx_help" href="./help/" title="Help">
+<link rel="up" href="./31#PT2" title="Properties ‣ Chapter 31 Heun Functions">
+<link rel="up up" href="./31" title="Chapter 31 Heun Functions">
+<link rel="start" href="./" title="">
+<link rel="prev" href="./31.11" title="§31.11 Expansions in Series of Hypergeometric Functions ‣ Properties ‣ Chapter 31 Heun Functions">
+<link rel="next" href="./31.13" title="§31.13 Asymptotic Approximations ‣ Properties ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.1" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.2" title="§31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.3" title="§31.3 Basic Solutions ‣ Properties ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.4" title="§31.4 Solutions Analytic at Two Singularities: Heun Functions ‣ Properties ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.5" title="§31.5 Solutions Analytic at Three Singularities: Heun Polynomials ‣ Properties ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.6" title="§31.6 Path-Multiplicative Solutions ‣ Properties ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.7" title="§31.7 Relations to Other Functions ‣ Properties ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.8" title="§31.8 Solutions via Quadratures ‣ Properties ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.9" title="§31.9 Orthogonality ‣ Properties ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.10" title="§31.10 Integral Equations and Representations ‣ Properties ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.11" title="§31.11 Expansions in Series of Hypergeometric Functions ‣ Properties ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.13" title="§31.13 Asymptotic Approximations ‣ Properties ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.14" title="§31.14 General Fuchsian Equation ‣ Properties ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.15" title="§31.15 Stieltjes Polynomials ‣ Properties ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.16" title="§31.16 Mathematical Applications ‣ Applications ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.17" title="§31.17 Physical Applications ‣ Applications ‣ Chapter 31 Heun Functions">
+<link rel="section" href="./31.18" title="§31.18 Methods of Computation ‣ Computation ‣ Chapter 31 Heun Functions">
+<link rel="document" href="./front/foreword" title="Foreword">
+<link rel="document" href="./front/preface" title="Preface">
+<link rel="document" href="./front/introduction" title="Mathematical Introduction">
+<link rel="chapter" href="./1" title="Chapter 1 Algebraic and Analytic Methods">
+<link rel="chapter" href="./2" title="Chapter 2 Asymptotic Approximations">
+<link rel="chapter" href="./3" title="Chapter 3 Numerical Methods">
+<link rel="chapter" href="./4" title="Chapter 4 Elementary Functions">
+<link rel="chapter" href="./5" title="Chapter 5 Gamma Function">
+<link rel="chapter" href="./6" title="Chapter 6 Exponential, Logarithmic, Sine, and Cosine Integrals">
+<link rel="chapter" href="./7" title="Chapter 7 Error Functions, Dawson’s and Fresnel Integrals">
+<link rel="chapter" href="./8" title="Chapter 8 Incomplete Gamma and Related Functions">
+<link rel="chapter" href="./9" title="Chapter 9 Airy and Related Functions">
+<link rel="chapter" href="./10" title="Chapter 10 Bessel Functions">
+<link rel="chapter" href="./11" title="Chapter 11 Struve and Related Functions">
+<link rel="chapter" href="./12" title="Chapter 12 Parabolic Cylinder Functions">
+<link rel="chapter" href="./13" title="Chapter 13 Confluent Hypergeometric Functions">
+<link rel="chapter" href="./14" title="Chapter 14 Legendre and Related Functions">
+<link rel="chapter" href="./15" title="Chapter 15 Hypergeometric Function">
+<link rel="chapter" href="./16" title="Chapter 16 Generalized Hypergeometric Functions and Meijer 𝐺-Function">
+<link rel="chapter" href="./17" title="Chapter 17 𝑞-Hypergeometric and Related Functions">
+<link rel="chapter" href="./18" title="Chapter 18 Orthogonal Polynomials">
+<link rel="chapter" href="./19" title="Chapter 19 Elliptic Integrals">
+<link rel="chapter" href="./20" title="Chapter 20 Theta Functions">
+<link rel="chapter" href="./21" title="Chapter 21 Multidimensional Theta Functions">
+<link rel="chapter" href="./22" title="Chapter 22 Jacobian Elliptic Functions">
+<link rel="chapter" href="./23" title="Chapter 23 Weierstrass Elliptic and Modular Functions">
+<link rel="chapter" href="./24" title="Chapter 24 Bernoulli and Euler Polynomials">
+<link rel="chapter" href="./25" title="Chapter 25 Zeta and Related Functions">
+<link rel="chapter" href="./26" title="Chapter 26 Combinatorial Analysis">
+<link rel="chapter" href="./27" title="Chapter 27 Functions of Number Theory">
+<link rel="chapter" href="./28" title="Chapter 28 Mathieu Functions and Hill’s Equation">
+<link rel="chapter" href="./29" title="Chapter 29 Lamé Functions">
+<link rel="chapter" href="./30" title="Chapter 30 Spheroidal Wave Functions">
+<link rel="chapter" href="./31" title="Chapter 31 Heun Functions">
+<link rel="chapter" href="./32" title="Chapter 32 Painlevé Transcendents">
+<link rel="chapter" href="./33" title="Chapter 33 Coulomb Functions">
+<link rel="chapter" href="./34" title="Chapter 34 3⁢𝑗,6⁢𝑗,9⁢𝑗 Symbols">
+<link rel="chapter" href="./35" title="Chapter 35 Functions of Matrix Argument">
+<link rel="chapter" href="./36" title="Chapter 36 Integrals with Coalescing Saddles">
+<link rel="bibliography" href="./bib/" title="Bibliography">
+<link rel="index" href="./idx/" title="Index">
+<link rel="glossary" href="./not/" title="Notations">
+<link rel="document" href="./lof/" title="List of Figures">
+<link rel="document" href="./lot/" title="List of Tables">
+<link rel="document" href="./software/" title="Software Index">
+<link rel="document" href="./errata/" title="Errata">
+<link rel="document" href="./help/" title="Need Help?">
+<link rel="document" href="./search/" title="Advanced Search">
+<link rel="document" href="./about/" title="About the Project">
+<meta name="keywords" lang="en" content="Coulomb spheroidal functions, Heun’s equation, Mathieu functions, applications, as confluent Heun functions, biconfluent, biconfluent Heun equation, confluent Heun equation, confluent Heun functions, confluent forms, doubly-confluent, doubly-confluent Heun equation, properties of solutions, relations to other functions, special cases, spheroidal wave functions, triconfluent, triconfluent Heun equation">
+</head>
+<body class="color_default textfont_default titlefont_default fontsize_default navbar_default">
+<div class="ltx_page_navbar">
+<div class="ltx_page_navlogo"><a href="./" title="Digital Library of Mathematical Functions"><span>DLMF</span></a></div>
+<div class="ltx_page_navitems">
+<form method="get" action="./search/search">
+<ul>
+<li><a href="./idx/">Index</a></li>
+<li><a href="./not/">Notations</a></li>
+<li><small><input type="text" name="q" value="" size="6" class="ltx_page_navitem_search"><button type="submit">Search</button></small></li>
+<li><a href="./help/" class="ltx_help">Help?</a></li>
+<li><a href="./help/cite">Citing</a></li>
+<li><a href="./help/customize" class="ltx_customize">Customize</a></li>
+<li id="showinfo"><a href="" onclick="showInfo(); return false;" title="Show Annotations">Annotate</a></li>
+<li id="hideinfo"><a href="" onclick="hideInfo(); return false;">UnAnnotate</a></li>
+</ul>
+</form>
+</div>
+<div class="ltx_page_navsponsors">
+<div><a href="./about/" class="ltx_page_navabout">About the Project</a></div>
+</div>
+</div>
+<div class="ltx_page_main">
+<div class="ltx_page_header">
+<a href="./31" title="" class="ltx_ref" rel="up up"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">31 </span>Heun Functions</span></a><a href="./31#PT2" title="In Chapter 31 Heun Functions" class="ltx_ref" rel="up"><span class="ltx_text ltx_ref_title">Properties</span></a><a href="./31.11" title="In Properties ‣ Chapter 31 Heun Functions" class="ltx_ref" rel="prev"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">31.11 </span>Expansions in Series of Hypergeometric Functions</span></a><a href="./31.13" title="In Properties ‣ Chapter 31 Heun Functions" class="ltx_ref" rel="next"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">31.13 </span>Asymptotic Approximations</span></a>
+</div>
+<div class="ltx_page_content">
+<section class="ltx_section ltx_leqno">
+<h1 class="ltx_title ltx_title_section">
+<span class="ltx_tag ltx_tag_section">§31.12 </span>Confluent Forms of Heun’s Equation</h1>
+<div id="info" class="ltx_metadata ltx_info">
+<span href="" class="ltx_infoicon ltx_icon" title="Show Annotations"><span class="ltx_font_bold">ⓘ</span></span>
+<div class="ltx_infocontent">
+<dl>
+<dt>Keywords:</dt>
+<dd>
+<a class="ltx_keyword" href="./search/search?q=Heun%20equation">Heun’s equation</a>, <a class="ltx_keyword" href="./search/search?q=confluent%20forms">confluent forms</a>
+</dd>
+<dt>Notes:</dt>
+<dd>The process of confluence is discussed in <cite class="ltx_cite ltx_citemacro_citet">Ince (<a href="./bib/I#bib1125" title="Ordinary Differential Equations" class="ltx_ref">1926</a>)</cite>. See
+<cite class="ltx_cite ltx_citemacro_citet">Decarreau<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="./bib/D#bib630" title="Formes canoniques des équations confluentes de l’équation de Heun" class="ltx_ref">1978a</a>, <a href="./bib/D#bib631" title="Sur les équations confluentes de l’équation de Heun" class="ltx_ref">b</a>)</cite> for the
+classification of confluent forms.</dd>
+<dt>Referenced by:</dt>
+<dd><a href="./31.10#Px5.p2" title="Transformation of Independent Variable ‣ §31.10(ii) Type II ‣ §31.10 Integral Equations and Representations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.10(ii)</span></a></dd>
+<dt>Permalink:</dt>
+<dd><a href="./31.12" title="" class="ltx_ref">http://dlmf.nist.gov/31.12</a></dd>
+<dt>See also:</dt>
+<dd>Annotations for <a href="./31#info" title="Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Ch.31</span></a>
+</dd>
+</dl>
+</div>
+</div>
+
+<div id="p1" class="ltx_para">
+<p class="ltx_p">Confluent forms of Heun’s differential equation (<a href="./31.2#E1" title="(31.2.1) ‣ §31.2(i) Heun’s Equation ‣ §31.2 Differential Equations ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">31.2.1</span></a>) arise when
+two or more of the regular singularities merge to form an irregular
+singularity. This is analogous to the derivation of the confluent
+hypergeometric equation from the hypergeometric equation in §<a href="./13.2#i" title="§13.2(i) Differential Equation ‣ §13.2 Definitions and Basic Properties ‣ Kummer Functions ‣ Chapter 13 Confluent Hypergeometric Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">13.2(i)</span></a>.
+There are four standard forms, as follows:</p>
+</div>
+<section id="Px1" class="ltx_paragraph">
+<h2 class="ltx_title ltx_title_paragraph">Confluent Heun Equation</h2>
+<div id="Px1.info" class="ltx_metadata ltx_info">
+<span href="" class="ltx_infoicon ltx_icon" title="Show Annotations"><span class="ltx_font_bold">ⓘ</span></span>
+<div class="ltx_infocontent">
+<dl>
+<dt>Keywords:</dt>
+<dd>
+<a class="ltx_keyword" href="./search/search?q=Coulomb%20spheroidal%20functions">Coulomb spheroidal functions</a>, <a class="ltx_keyword" href="./search/search?q=Heun%20equation">Heun’s equation</a>, <a class="ltx_keyword" href="./search/search?q=Mathieu%20functions">Mathieu functions</a>, <a class="ltx_keyword" href="./search/search?q=as%20confluent%20Heun%20functions">as confluent Heun functions</a>, <a class="ltx_keyword" href="./search/search?q=confluent%20Heun%20equation">confluent Heun equation</a>, <a class="ltx_keyword" href="./search/search?q=confluent%20Heun%20functions">confluent Heun functions</a>, <a class="ltx_keyword" href="./search/search?q=confluent%20forms">confluent forms</a>, <a class="ltx_keyword" href="./search/search?q=relations%20to%20other%20functions">relations to other functions</a>, <a class="ltx_keyword" href="./search/search?q=special%20cases">special cases</a>, <a class="ltx_keyword" href="./search/search?q=spheroidal%20wave%20functions">spheroidal wave functions</a>
+</dd>
+<dt>See also:</dt>
+<dd>Annotations for <a href="./31.12#info" title="§31.12 Confluent Forms of Heun’s Equation ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.12</span></a> and
+<a href="./31#info" title="Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Ch.31</span></a>
+</dd>
+</dl>
+</div>
+</div>
+
+<div id="Px1.p1" class="ltx_para">
+<table id="E1" class="ltx_equation ltx_eqn_table">
+
+<tbody>
+<tr class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td rowspan="1" class="ltx_eqn_cell ltx_eqn_eqno ltx_align_middle ltx_align_left"><span class="ltx_tag ltx_tag_equation ltx_align_left">31.12.1</span></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_eqn_cell ltx_align_center"><math class="ltx_Math" altimg="E1.png" altimg-height="63px" altimg-valign="-22px" altimg-width="814px" alttext="\frac{{\mathrm{d}}^{2}w}{{\mathrm{d}z}^{2}}+\left(\frac{\gamma}{z}+\frac{%
+\delta}{z-1}+\epsilon\right)\frac{\mathrm{d}w}{\mathrm{d}z}+\frac{\alpha z-q}{%
+z(z-1)}w=0." display="block"><mrow><mrow><mrow><mfrac><mrow><msup><mo href="./1.4#E4" title="derivative of 𝑓 with respect to 𝑥">d</mo><mn>2</mn></msup><mi>w</mi></mrow><msup><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi></mrow><mn href="./1.4#E4" title="derivative of 𝑓 with respect to 𝑥">2</mn></msup></mfrac><mo>+</mo><mrow><mrow><mo>(</mo><mrow><mfrac><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi><mi href="./31.1#t1.r2" title="complex variable">z</mi></mfrac><mo>+</mo><mfrac><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi><mrow><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>−</mo><mn>1</mn></mrow></mfrac><mo>+</mo><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi></mrow><mo>)</mo></mrow><mo>⁢</mo><mfrac><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi>w</mi></mrow><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi></mrow></mfrac></mrow><mo>+</mo><mrow><mfrac><mrow><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi><mo>⁢</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi></mrow><mo>−</mo><mi href="./31.1#t1.r5" title="real or complex parameter">q</mi></mrow><mrow><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>⁢</mo><mrow><mo stretchy="false">(</mo><mrow><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>−</mo><mn>1</mn></mrow><mo stretchy="false">)</mo></mrow></mrow></mfrac><mo>⁢</mo><mi>w</mi></mrow></mrow><mo>=</mo><mn>0</mn></mrow><mo lspace="0em">.</mo></mrow></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+</tr>
+<tr><td class="ltx_align_right" colspan="4">
+<div id="E1.info" class="ltx_metadata ltx_info">
+<span href="" class="ltx_infoicon ltx_icon" title="Show Annotations"><span class="ltx_font_bold">ⓘ</span></span>
+<div class="ltx_infocontent">
+<dl>
+<dt>Symbols:</dt>
+<dd>
+<a href="./1.4#E4" title="(1.4.4) ‣ §1.4(iii) Derivatives ‣ §1.4 Calculus of One Variable ‣ Topics of Discussion ‣ Chapter 1 Algebraic and Analytic Methods" class="ltx_ref"><math class="ltx_Math" altimg="m9.png" altimg-height="31px" altimg-valign="-9px" altimg-width="28px" alttext="\frac{\mathrm{d}\NVar{f}}{\mathrm{d}\NVar{x}}" display="inline"><mfrac><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi class="ltx_nvar">f</mi></mrow><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi class="ltx_nvar">x</mi></mrow></mfrac></math>: derivative of <math class="ltx_Math" altimg="m12.png" altimg-height="22px" altimg-valign="-6px" altimg-width="17px" alttext="f" display="inline"><mi>f</mi></math> with respect to <math class="ltx_Math" altimg="m14.png" altimg-height="13px" altimg-valign="-2px" altimg-width="16px" alttext="x" display="inline"><mi>x</mi></math></a>,
+<a href="./31.1#t1.r2" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m17.png" altimg-height="13px" altimg-valign="-2px" altimg-width="15px" alttext="z" display="inline"><mi href="./31.1#t1.r2" title="complex variable">z</mi></math>:  complex variable</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m10.png" altimg-height="17px" altimg-valign="-6px" altimg-width="16px" alttext="\gamma" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m7.png" altimg-height="18px" altimg-valign="-2px" altimg-width="14px" alttext="\delta" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m8.png" altimg-height="13px" altimg-valign="-2px" altimg-width="13px" alttext="\epsilon" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">ϵ</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m13.png" altimg-height="17px" altimg-valign="-6px" altimg-width="14px" alttext="q" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">q</mi></math>:  real or complex parameter</a> and
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m6.png" altimg-height="13px" altimg-valign="-2px" altimg-width="18px" alttext="\alpha" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi></math>:  real or complex parameter</a>
+</dd>
+<dt>Referenced by:</dt>
+<dd><a href="./31.12#Px4.p2" title="Triconfluent Heun Equation ‣ §31.12 Confluent Forms of Heun’s Equation ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.12</span></a></dd>
+<dt>Permalink:</dt>
+<dd><a href="./31.12.E1" title="" class="ltx_ref">http://dlmf.nist.gov/31.12.E1</a></dd>
+<dt>Encodings:</dt>
+<dd>
+<a href="./31.12.E1.tex">TeX</a>, <a href="./31.12.E1.pmml">pMML</a>, <a href="./31.12.E1.png">png</a>
+</dd>
+<dt>See also:</dt>
+<dd>Annotations for <a href="./31.12#Px1.info" title="Confluent Heun Equation ‣ §31.12 Confluent Forms of Heun’s Equation ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.12</span></a>,
+<a href="./31.12#info" title="§31.12 Confluent Forms of Heun’s Equation ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.12</span></a> and
+<a href="./31#info" title="Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Ch.31</span></a>
+</dd>
+</dl>
+</div>
+</div>
+</td></tr>
+</tbody>
+</table>
+<p class="ltx_p">This has regular singularities at <math class="ltx_Math" altimg="m15.png" altimg-height="17px" altimg-valign="-2px" altimg-width="53px" alttext="z=0" display="inline"><mrow><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>=</mo><mn>0</mn></mrow></math> and <math class="ltx_Math" altimg="m3.png" altimg-height="17px" altimg-valign="-2px" altimg-width="15px" alttext="1" display="inline"><mn>1</mn></math>, and an irregular singularity
+of rank 1 at <math class="ltx_Math" altimg="m16.png" altimg-height="13px" altimg-valign="-2px" altimg-width="63px" alttext="z=\infty" display="inline"><mrow><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>=</mo><mi mathvariant="normal">∞</mi></mrow></math>.</p>
+</div>
+<div id="Px1.p2" class="ltx_para">
+<p class="ltx_p">Mathieu functions (Chapter <a href="./28" title="Chapter 28 Mathieu Functions and Hill’s Equation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">28</span></a>), spheroidal wave functions
+(Chapter <a href="./30" title="Chapter 30 Spheroidal Wave Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">30</span></a>), and Coulomb spheroidal functions (§<a href="./30.12" title="§30.12 Generalized and Coulomb Spheroidal Functions ‣ Properties ‣ Chapter 30 Spheroidal Wave Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">30.12</span></a>) are
+special cases of solutions of the confluent Heun equation.</p>
+</div>
+</section>
+<section id="Px2" class="ltx_paragraph">
+<h2 class="ltx_title ltx_title_paragraph">Doubly-Confluent Heun Equation</h2>
+<div id="Px2.info" class="ltx_metadata ltx_info">
+<span href="" class="ltx_infoicon ltx_icon" title="Show Annotations"><span class="ltx_font_bold">ⓘ</span></span>
+<div class="ltx_infocontent">
+<dl>
+<dt>Keywords:</dt>
+<dd>
+<a class="ltx_keyword" href="./search/search?q=Heun%20equation">Heun’s equation</a>, <a class="ltx_keyword" href="./search/search?q=doubly-confluent">doubly-confluent</a>, <a class="ltx_keyword" href="./search/search?q=doubly-confluent%20Heun%20equation">doubly-confluent Heun equation</a>
+</dd>
+<dt>See also:</dt>
+<dd>Annotations for <a href="./31.12#info" title="§31.12 Confluent Forms of Heun’s Equation ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.12</span></a> and
+<a href="./31#info" title="Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Ch.31</span></a>
+</dd>
+</dl>
+</div>
+</div>
+
+<div id="Px2.p1" class="ltx_para">
+<table id="E2" class="ltx_equation ltx_eqn_table">
+
+<tbody>
+<tr class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td rowspan="1" class="ltx_eqn_cell ltx_eqn_eqno ltx_align_middle ltx_align_left"><span class="ltx_tag ltx_tag_equation ltx_align_left">31.12.2</span></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_eqn_cell ltx_align_center"><math class="ltx_Math" altimg="E2.png" altimg-height="63px" altimg-valign="-22px" altimg-width="737px" alttext="\frac{{\mathrm{d}}^{2}w}{{\mathrm{d}z}^{2}}+\left(\frac{\delta}{z^{2}}+\frac{%
+\gamma}{z}+1\right)\frac{\mathrm{d}w}{\mathrm{d}z}+\frac{\alpha z-q}{z^{2}}w=0." display="block"><mrow><mrow><mrow><mfrac><mrow><msup><mo href="./1.4#E4" title="derivative of 𝑓 with respect to 𝑥">d</mo><mn>2</mn></msup><mi>w</mi></mrow><msup><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi></mrow><mn href="./1.4#E4" title="derivative of 𝑓 with respect to 𝑥">2</mn></msup></mfrac><mo>+</mo><mrow><mrow><mo>(</mo><mrow><mfrac><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi><msup><mi href="./31.1#t1.r2" title="complex variable">z</mi><mn>2</mn></msup></mfrac><mo>+</mo><mfrac><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi><mi href="./31.1#t1.r2" title="complex variable">z</mi></mfrac><mo>+</mo><mn>1</mn></mrow><mo>)</mo></mrow><mo>⁢</mo><mfrac><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi>w</mi></mrow><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi></mrow></mfrac></mrow><mo>+</mo><mrow><mfrac><mrow><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi><mo>⁢</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi></mrow><mo>−</mo><mi href="./31.1#t1.r5" title="real or complex parameter">q</mi></mrow><msup><mi href="./31.1#t1.r2" title="complex variable">z</mi><mn>2</mn></msup></mfrac><mo>⁢</mo><mi>w</mi></mrow></mrow><mo>=</mo><mn>0</mn></mrow><mo lspace="0em">.</mo></mrow></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+</tr>
+<tr><td class="ltx_align_right" colspan="4">
+<div id="E2.info" class="ltx_metadata ltx_info">
+<span href="" class="ltx_infoicon ltx_icon" title="Show Annotations"><span class="ltx_font_bold">ⓘ</span></span>
+<div class="ltx_infocontent">
+<dl>
+<dt>Symbols:</dt>
+<dd>
+<a href="./1.4#E4" title="(1.4.4) ‣ §1.4(iii) Derivatives ‣ §1.4 Calculus of One Variable ‣ Topics of Discussion ‣ Chapter 1 Algebraic and Analytic Methods" class="ltx_ref"><math class="ltx_Math" altimg="m9.png" altimg-height="31px" altimg-valign="-9px" altimg-width="28px" alttext="\frac{\mathrm{d}\NVar{f}}{\mathrm{d}\NVar{x}}" display="inline"><mfrac><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi class="ltx_nvar">f</mi></mrow><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi class="ltx_nvar">x</mi></mrow></mfrac></math>: derivative of <math class="ltx_Math" altimg="m12.png" altimg-height="22px" altimg-valign="-6px" altimg-width="17px" alttext="f" display="inline"><mi>f</mi></math> with respect to <math class="ltx_Math" altimg="m14.png" altimg-height="13px" altimg-valign="-2px" altimg-width="16px" alttext="x" display="inline"><mi>x</mi></math></a>,
+<a href="./31.1#t1.r2" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m17.png" altimg-height="13px" altimg-valign="-2px" altimg-width="15px" alttext="z" display="inline"><mi href="./31.1#t1.r2" title="complex variable">z</mi></math>:  complex variable</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m10.png" altimg-height="17px" altimg-valign="-6px" altimg-width="16px" alttext="\gamma" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m7.png" altimg-height="18px" altimg-valign="-2px" altimg-width="14px" alttext="\delta" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m13.png" altimg-height="17px" altimg-valign="-6px" altimg-width="14px" alttext="q" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">q</mi></math>:  real or complex parameter</a> and
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m6.png" altimg-height="13px" altimg-valign="-2px" altimg-width="18px" alttext="\alpha" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi></math>:  real or complex parameter</a>
+</dd>
+<dt>Permalink:</dt>
+<dd><a href="./31.12.E2" title="" class="ltx_ref">http://dlmf.nist.gov/31.12.E2</a></dd>
+<dt>Encodings:</dt>
+<dd>
+<a href="./31.12.E2.tex">TeX</a>, <a href="./31.12.E2.pmml">pMML</a>, <a href="./31.12.E2.png">png</a>
+</dd>
+<dt>See also:</dt>
+<dd>Annotations for <a href="./31.12#Px2.info" title="Doubly-Confluent Heun Equation ‣ §31.12 Confluent Forms of Heun’s Equation ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.12</span></a>,
+<a href="./31.12#info" title="§31.12 Confluent Forms of Heun’s Equation ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.12</span></a> and
+<a href="./31#info" title="Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Ch.31</span></a>
+</dd>
+</dl>
+</div>
+</div>
+</td></tr>
+</tbody>
+</table>
+<p class="ltx_p">This has irregular singularities at <math class="ltx_Math" altimg="m15.png" altimg-height="17px" altimg-valign="-2px" altimg-width="53px" alttext="z=0" display="inline"><mrow><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>=</mo><mn>0</mn></mrow></math> and <math class="ltx_Math" altimg="m11.png" altimg-height="13px" altimg-valign="-2px" altimg-width="25px" alttext="\infty" display="inline"><mi mathvariant="normal">∞</mi></math>, each of rank <math class="ltx_Math" altimg="m3.png" altimg-height="17px" altimg-valign="-2px" altimg-width="15px" alttext="1" display="inline"><mn>1</mn></math>.</p>
+</div>
+</section>
+<section id="Px3" class="ltx_paragraph">
+<h2 class="ltx_title ltx_title_paragraph">Biconfluent Heun Equation</h2>
+<div id="Px3.info" class="ltx_metadata ltx_info">
+<span href="" class="ltx_infoicon ltx_icon" title="Show Annotations"><span class="ltx_font_bold">ⓘ</span></span>
+<div class="ltx_infocontent">
+<dl>
+<dt>Keywords:</dt>
+<dd>
+<a class="ltx_keyword" href="./search/search?q=Heun%20equation">Heun’s equation</a>, <a class="ltx_keyword" href="./search/search?q=biconfluent">biconfluent</a>, <a class="ltx_keyword" href="./search/search?q=biconfluent%20Heun%20equation">biconfluent Heun equation</a>
+</dd>
+<dt>See also:</dt>
+<dd>Annotations for <a href="./31.12#info" title="§31.12 Confluent Forms of Heun’s Equation ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.12</span></a> and
+<a href="./31#info" title="Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Ch.31</span></a>
+</dd>
+</dl>
+</div>
+</div>
+
+<div id="Px3.p1" class="ltx_para">
+<table id="E3" class="ltx_equation ltx_eqn_table">
+
+<tbody>
+<tr class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td rowspan="1" class="ltx_eqn_cell ltx_eqn_eqno ltx_align_middle ltx_align_left"><span class="ltx_tag ltx_tag_equation ltx_align_left">31.12.3</span></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_eqn_cell ltx_align_center"><math class="ltx_Math" altimg="E3.png" altimg-height="60px" altimg-valign="-18px" altimg-width="696px" alttext="\frac{{\mathrm{d}}^{2}w}{{\mathrm{d}z}^{2}}-\left(\frac{\gamma}{z}+\delta+z%
+\right)\frac{\mathrm{d}w}{\mathrm{d}z}+\frac{\alpha z-q}{z}w=0." display="block"><mrow><mrow><mrow><mrow><mfrac><mrow><msup><mo href="./1.4#E4" title="derivative of 𝑓 with respect to 𝑥">d</mo><mn>2</mn></msup><mi>w</mi></mrow><msup><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi></mrow><mn href="./1.4#E4" title="derivative of 𝑓 with respect to 𝑥">2</mn></msup></mfrac><mo>−</mo><mrow><mrow><mo>(</mo><mrow><mfrac><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi><mi href="./31.1#t1.r2" title="complex variable">z</mi></mfrac><mo>+</mo><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi><mo>+</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi></mrow><mo>)</mo></mrow><mo>⁢</mo><mfrac><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi>w</mi></mrow><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi></mrow></mfrac></mrow></mrow><mo>+</mo><mrow><mfrac><mrow><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi><mo>⁢</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi></mrow><mo>−</mo><mi href="./31.1#t1.r5" title="real or complex parameter">q</mi></mrow><mi href="./31.1#t1.r2" title="complex variable">z</mi></mfrac><mo>⁢</mo><mi>w</mi></mrow></mrow><mo>=</mo><mn>0</mn></mrow><mo lspace="0em">.</mo></mrow></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+</tr>
+<tr><td class="ltx_align_right" colspan="4">
+<div id="E3.info" class="ltx_metadata ltx_info">
+<span href="" class="ltx_infoicon ltx_icon" title="Show Annotations"><span class="ltx_font_bold">ⓘ</span></span>
+<div class="ltx_infocontent">
+<dl>
+<dt>Symbols:</dt>
+<dd>
+<a href="./1.4#E4" title="(1.4.4) ‣ §1.4(iii) Derivatives ‣ §1.4 Calculus of One Variable ‣ Topics of Discussion ‣ Chapter 1 Algebraic and Analytic Methods" class="ltx_ref"><math class="ltx_Math" altimg="m9.png" altimg-height="31px" altimg-valign="-9px" altimg-width="28px" alttext="\frac{\mathrm{d}\NVar{f}}{\mathrm{d}\NVar{x}}" display="inline"><mfrac><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi class="ltx_nvar">f</mi></mrow><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi class="ltx_nvar">x</mi></mrow></mfrac></math>: derivative of <math class="ltx_Math" altimg="m12.png" altimg-height="22px" altimg-valign="-6px" altimg-width="17px" alttext="f" display="inline"><mi>f</mi></math> with respect to <math class="ltx_Math" altimg="m14.png" altimg-height="13px" altimg-valign="-2px" altimg-width="16px" alttext="x" display="inline"><mi>x</mi></math></a>,
+<a href="./31.1#t1.r2" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m17.png" altimg-height="13px" altimg-valign="-2px" altimg-width="15px" alttext="z" display="inline"><mi href="./31.1#t1.r2" title="complex variable">z</mi></math>:  complex variable</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m10.png" altimg-height="17px" altimg-valign="-6px" altimg-width="16px" alttext="\gamma" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m7.png" altimg-height="18px" altimg-valign="-2px" altimg-width="14px" alttext="\delta" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">δ</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m13.png" altimg-height="17px" altimg-valign="-6px" altimg-width="14px" alttext="q" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">q</mi></math>:  real or complex parameter</a> and
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m6.png" altimg-height="13px" altimg-valign="-2px" altimg-width="18px" alttext="\alpha" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi></math>:  real or complex parameter</a>
+</dd>
+<dt>Referenced by:</dt>
+<dd><a href="./errata/#V1.0.7.I3.ix2" title="In Errata ‣ Version 1.0.7 (March 21, 2014) ‣ Errata" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Erratum (V1.0.7) for  Equation (<span class="ltx_text ltx_ref_tag">31.12.3</span>)</span></a></dd>
+<dt>Permalink:</dt>
+<dd><a href="./31.12.E3" title="" class="ltx_ref">http://dlmf.nist.gov/31.12.E3</a></dd>
+<dt>Encodings:</dt>
+<dd>
+<a href="./31.12.E3.tex">TeX</a>, <a href="./31.12.E3.pmml">pMML</a>, <a href="./31.12.E3.png">png</a>
+</dd>
+<dt>Errata (effective with 1.0.7):</dt>
+<dd>
+Originally the sign in front of the second term in this equation was <math class="ltx_Math" altimg="m1.png" altimg-height="18px" altimg-valign="-4px" altimg-width="20px" alttext="+" display="inline"><mo>+</mo></math>.
+The correct sign is <math class="ltx_Math" altimg="m2.png" altimg-height="18px" altimg-valign="-4px" altimg-width="20px" alttext="-" display="inline"><mo>−</mo></math>.
+
+<p><span class="ltx_font_italic">Reported 2013-10-31 by Henryk Witek</span></p>
+</dd>
+<dt>See also:</dt>
+<dd>Annotations for <a href="./31.12#Px3.info" title="Biconfluent Heun Equation ‣ §31.12 Confluent Forms of Heun’s Equation ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.12</span></a>,
+<a href="./31.12#info" title="§31.12 Confluent Forms of Heun’s Equation ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.12</span></a> and
+<a href="./31#info" title="Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Ch.31</span></a>
+</dd>
+</dl>
+</div>
+</div>
+</td></tr>
+</tbody>
+</table>
+<p class="ltx_p">This has a regular singularity at <math class="ltx_Math" altimg="m15.png" altimg-height="17px" altimg-valign="-2px" altimg-width="53px" alttext="z=0" display="inline"><mrow><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>=</mo><mn>0</mn></mrow></math>, and an irregular singularity at
+<math class="ltx_Math" altimg="m11.png" altimg-height="13px" altimg-valign="-2px" altimg-width="25px" alttext="\infty" display="inline"><mi mathvariant="normal">∞</mi></math> of rank <math class="ltx_Math" altimg="m4.png" altimg-height="17px" altimg-valign="-2px" altimg-width="15px" alttext="2" display="inline"><mn>2</mn></math>.</p>
+</div>
+</section>
+<section id="Px4" class="ltx_paragraph">
+<h2 class="ltx_title ltx_title_paragraph">Triconfluent Heun Equation</h2>
+<div id="Px4.info" class="ltx_metadata ltx_info">
+<span href="" class="ltx_infoicon ltx_icon" title="Show Annotations"><span class="ltx_font_bold">ⓘ</span></span>
+<div class="ltx_infocontent">
+<dl>
+<dt>Keywords:</dt>
+<dd>
+<a class="ltx_keyword" href="./search/search?q=Heun%20equation">Heun’s equation</a>, <a class="ltx_keyword" href="./search/search?q=applications">applications</a>, <a class="ltx_keyword" href="./search/search?q=confluent%20Heun%20equation">confluent Heun equation</a>, <a class="ltx_keyword" href="./search/search?q=confluent%20forms">confluent forms</a>, <a class="ltx_keyword" href="./search/search?q=properties%20of%20solutions">properties of solutions</a>, <a class="ltx_keyword" href="./search/search?q=triconfluent">triconfluent</a>, <a class="ltx_keyword" href="./search/search?q=triconfluent%20Heun%20equation">triconfluent Heun equation</a>
+</dd>
+<dt>See also:</dt>
+<dd>Annotations for <a href="./31.12#info" title="§31.12 Confluent Forms of Heun’s Equation ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.12</span></a> and
+<a href="./31#info" title="Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Ch.31</span></a>
+</dd>
+</dl>
+</div>
+</div>
+
+<div id="Px4.p1" class="ltx_para">
+<table id="E4" class="ltx_equation ltx_eqn_table">
+
+<tbody>
+<tr class="ltx_equation ltx_eqn_row ltx_align_baseline">
+<td rowspan="1" class="ltx_eqn_cell ltx_eqn_eqno ltx_align_middle ltx_align_left"><span class="ltx_tag ltx_tag_equation ltx_align_left">31.12.4</span></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padleft"></td>
+<td class="ltx_eqn_cell ltx_align_center"><math class="ltx_Math" altimg="E4.png" altimg-height="109px" altimg-valign="-18px" altimg-width="233px" alttext="\frac{{\mathrm{d}}^{2}w}{{\mathrm{d}z}^{2}}+\left(\gamma+z\right)z\frac{%
+\mathrm{d}w}{\mathrm{d}z}+\left(\alpha z-q\right)w=0." display="block"><mrow><mrow><mrow><mfrac><mrow><msup><mo href="./1.4#E4" title="derivative of 𝑓 with respect to 𝑥">d</mo><mn>2</mn></msup><mi>w</mi></mrow><msup><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi></mrow><mn href="./1.4#E4" title="derivative of 𝑓 with respect to 𝑥">2</mn></msup></mfrac><mo>+</mo><mrow><mrow><mo>(</mo><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi><mo>+</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi></mrow><mo>)</mo></mrow><mo>⁢</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>⁢</mo><mfrac><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi>w</mi></mrow><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi></mrow></mfrac></mrow><mo>+</mo><mrow><mrow><mo>(</mo><mrow><mrow><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi><mo>⁢</mo><mi href="./31.1#t1.r2" title="complex variable">z</mi></mrow><mo>−</mo><mi href="./31.1#t1.r5" title="real or complex parameter">q</mi></mrow><mo>)</mo></mrow><mo>⁢</mo><mi>w</mi></mrow></mrow><mo>=</mo><mn>0</mn></mrow><mo lspace="0em">.</mo></mrow></math></td>
+<td class="ltx_eqn_cell ltx_eqn_center_padright"></td>
+</tr>
+<tr><td class="ltx_align_right" colspan="4">
+<div id="E4.info" class="ltx_metadata ltx_info">
+<span href="" class="ltx_infoicon ltx_icon" title="Show Annotations"><span class="ltx_font_bold">ⓘ</span></span>
+<div class="ltx_infocontent">
+<dl>
+<dt>Symbols:</dt>
+<dd>
+<a href="./1.4#E4" title="(1.4.4) ‣ §1.4(iii) Derivatives ‣ §1.4 Calculus of One Variable ‣ Topics of Discussion ‣ Chapter 1 Algebraic and Analytic Methods" class="ltx_ref"><math class="ltx_Math" altimg="m9.png" altimg-height="31px" altimg-valign="-9px" altimg-width="28px" alttext="\frac{\mathrm{d}\NVar{f}}{\mathrm{d}\NVar{x}}" display="inline"><mfrac><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi class="ltx_nvar">f</mi></mrow><mrow><mo href="./1.4#E4" rspace="0em" title="derivative of 𝑓 with respect to 𝑥">d</mo><mi class="ltx_nvar">x</mi></mrow></mfrac></math>: derivative of <math class="ltx_Math" altimg="m12.png" altimg-height="22px" altimg-valign="-6px" altimg-width="17px" alttext="f" display="inline"><mi>f</mi></math> with respect to <math class="ltx_Math" altimg="m14.png" altimg-height="13px" altimg-valign="-2px" altimg-width="16px" alttext="x" display="inline"><mi>x</mi></math></a>,
+<a href="./31.1#t1.r2" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m17.png" altimg-height="13px" altimg-valign="-2px" altimg-width="15px" alttext="z" display="inline"><mi href="./31.1#t1.r2" title="complex variable">z</mi></math>:  complex variable</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m10.png" altimg-height="17px" altimg-valign="-6px" altimg-width="16px" alttext="\gamma" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">γ</mi></math>:  real or complex parameter</a>,
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m13.png" altimg-height="17px" altimg-valign="-6px" altimg-width="14px" alttext="q" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">q</mi></math>:  real or complex parameter</a> and
+<a href="./31.1#t1.r5" title="§31.1 Special Notation ‣ Notation ‣ Chapter 31 Heun Functions" class="ltx_ref"><math class="ltx_Math" altimg="m6.png" altimg-height="13px" altimg-valign="-2px" altimg-width="18px" alttext="\alpha" display="inline"><mi href="./31.1#t1.r5" title="real or complex parameter">α</mi></math>:  real or complex parameter</a>
+</dd>
+<dt>Referenced by:</dt>
+<dd><a href="./31.12#Px4.p2" title="Triconfluent Heun Equation ‣ §31.12 Confluent Forms of Heun’s Equation ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.12</span></a></dd>
+<dt>Permalink:</dt>
+<dd><a href="./31.12.E4" title="" class="ltx_ref">http://dlmf.nist.gov/31.12.E4</a></dd>
+<dt>Encodings:</dt>
+<dd>
+<a href="./31.12.E4.tex">TeX</a>, <a href="./31.12.E4.pmml">pMML</a>, <a href="./31.12.E4.png">png</a>
+</dd>
+<dt>See also:</dt>
+<dd>Annotations for <a href="./31.12#Px4.info" title="Triconfluent Heun Equation ‣ §31.12 Confluent Forms of Heun’s Equation ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.12</span></a>,
+<a href="./31.12#info" title="§31.12 Confluent Forms of Heun’s Equation ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">§31.12</span></a> and
+<a href="./31#info" title="Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">Ch.31</span></a>
+</dd>
+</dl>
+</div>
+</div>
+</td></tr>
+</tbody>
+</table>
+<p class="ltx_p">This has one singularity, an irregular singularity of rank <math class="ltx_Math" altimg="m5.png" altimg-height="17px" altimg-valign="-2px" altimg-width="15px" alttext="3" display="inline"><mn>3</mn></math> at <math class="ltx_Math" altimg="m16.png" altimg-height="13px" altimg-valign="-2px" altimg-width="63px" alttext="z=\infty" display="inline"><mrow><mi href="./31.1#t1.r2" title="complex variable">z</mi><mo>=</mo><mi mathvariant="normal">∞</mi></mrow></math>.</p>
+</div>
+<div id="Px4.p2" class="ltx_para">
+<p class="ltx_p">For properties of the solutions of (<a href="./31.12#E1" title="(31.12.1) ‣ Confluent Heun Equation ‣ §31.12 Confluent Forms of Heun’s Equation ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">31.12.1</span></a>)–(<a href="./31.12#E4" title="(31.12.4) ‣ Triconfluent Heun Equation ‣ §31.12 Confluent Forms of Heun’s Equation ‣ Properties ‣ Chapter 31 Heun Functions" class="ltx_ref"><span class="ltx_text ltx_ref_tag">31.12.4</span></a>),
+including connection formulas, see
+<cite class="ltx_cite ltx_citemacro_citet">Bühring (<a href="./bib/B#bib371" title="The double confluent Heun equation: Characteristic exponent and connection formulae" class="ltx_ref">1994</a>)</cite>, <cite class="ltx_cite ltx_citemacro_citet">Ronveaux (<a href="./bib/R#bib1965" title="Heun’s Differential Equations" class="ltx_ref">1995</a>, Parts B,C,D,E)</cite>,
+<cite class="ltx_cite ltx_citemacro_citet">Wolf (<a href="./bib/W#bib2427" title="On the central connection problem for the double confluent Heun equation" class="ltx_ref">1998</a>)</cite>, <cite class="ltx_cite ltx_citemacro_citet">Lay and Slavyanov (<a href="./bib/L#bib1388" title="The central two-point connection problem for the Heun class of ODEs" class="ltx_ref">1998</a>)</cite>, and <cite class="ltx_cite ltx_citemacro_citet">Slavyanov and Lay (<a href="./bib/S#bib2105" title="Special Functions: A Unified Theory Based on Singularities" class="ltx_ref">2000</a>)</cite>.
+</p>
+</div>
+</section>
+</section>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_siblings">
+<a href="./31.11" title="In Properties ‣ Chapter 31 Heun Functions" class="ltx_ref" rel="prev"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">31.11 </span>Expansions in Series of Hypergeometric Functions</span></a><a href="./31.13" title="In Properties ‣ Chapter 31 Heun Functions" class="ltx_ref" rel="next"><span class="ltx_text ltx_ref_title"><span class="ltx_tag ltx_tag_ref">31.13 </span>Asymptotic Approximations</span></a>
+</div>
+<div class="ltx_footer_links ltx_centering">
+<a href="./about/notices">© 2010–2026 NIST</a> / <a href="./about/notices#S2">Disclaimer</a> / <a href="/cdn-cgi/l/email-protection#ade9e1e0eb80cbc8c8c9cfcccec6edc3c4ded983cac2db">Feedback</a>;
+ Version 1.2.6;
+Release date 2026-03-15.</div>
+<span id="pagesettings"></span>
+<div class="ltx_nist_logo"><a href="http://www.nist.gov/"><img src="./style/nistidc.png" width="500" alt="NIST"></a></div>
+<div class="ltx_nist_links ltx_align_right">
+<a href="https://www.nist.gov/privacy-policy">Site Privacy</a> <a href="https://www.nist.gov/oism/accessibility">Accessibility</a> <a href="https://www.nist.gov/privacy">Privacy Program</a> <a href="https://www.nist.gov/oism/copyrights">Copyrights</a> <a href="https://www.commerce.gov/vulnerability-disclosure-policy">Vulnerability Disclosure</a> <a href="https://www.nist.gov/no-fear-act-policy">No Fear Act Policy</a> <a href="https://www.nist.gov/foia">FOIA</a> <a href="https://www.nist.gov/environmental-policy-statement">Environmental Policy</a> <a href="https://www.nist.gov/summary-report-scientific-integrity">Scientific Integrity</a> <a href="https://www.nist.gov/nist-information-quality-standards">Information Quality Standards</a> <a href="https://www.commerce.gov/">Commerce.gov</a> <a href="http://www.science.gov/">Science.gov</a> <a href="http://www.usa.gov/">USA.gov</a>
+</div>
+</div>
+</div>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9fdd59c23c4c6e08',t:'MTc3OTEzMzQwNA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

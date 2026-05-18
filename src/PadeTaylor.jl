@@ -97,6 +97,7 @@ include("LatticeDispatcher.jl")
 include("CoordTransforms.jl")
 include("Painleve.jl")
 include("IVPBVPHybrid.jl")
+include("Heun.jl")
 
 # Public API (re-exported from sub-modules).
 using .Problems:    PadeTaylorProblem, solve_pade, PadeTaylorSolution, taylor_eval
@@ -119,6 +120,7 @@ using .Painleve:        PainleveProblem, PainleveSolution,
                         poles, grid_values, equation, parameters, solutionname,
                         tritronquee, hastings_mcleod
 using .IVPBVPHybrid:    solve_pole_free_hybrid, IVPBVPSolution, pIII_asymptotic_ic
+using .Heun:            heun_g, heun_c
 
 # CommonSolve adapter: the algorithm struct is declared HERE in the main
 # module so users can construct it after `using PadeTaylor, CommonSolve`
@@ -176,6 +178,7 @@ export PainleveProblem, PainleveSolution
 export poles, grid_values, equation, parameters, solutionname
 export tritronquee, hastings_mcleod
 export solve_pole_free_hybrid, IVPBVPSolution, pIII_asymptotic_ic
+export heun_g, heun_c
 export PadeTaylorAlg
 export painleveplot
 

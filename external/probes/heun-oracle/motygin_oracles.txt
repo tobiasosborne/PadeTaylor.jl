@@ -1,0 +1,25 @@
+# motygin_capture output
+# Motygin HeunG convention: HeunL(a,q,alpha,beta,gamma,delta,z), normalised HeunG(0)=1
+# Motygin HeunC convention: HeunC(q,alpha,gamma,delta,epsilon,z), normalised HeunC(0)=1
+# Branch-cut offset eta=1e-10 applied to real z >= 1 for HeunG
+# Branch-cut offset eta=1e-10 applied to real z >= 1 for HeunC
+#
+# === Regime A: HeunG ===
+HeunG|func=HeunG|a=2|q=1|alpha=1|beta=2|gamma=3|delta=4|z=0.1|motygin_val=1.016981839745486e+00+0.000000000000000e+00i|motygin_err=0.000e+00|nterms=18|wrnmsg=
+HeunG|func=HeunG|a=2|q=1|alpha=1|beta=2|gamma=3|delta=4|z=0.5|motygin_val=1.090868341923566e+00+0.000000000000000e+00i|motygin_err=7.186e-15|nterms=69|wrnmsg=
+HeunG|func=HeunG|a=2|q=1|alpha=1|beta=2|gamma=3|delta=4|z=0.9|motygin_val=1.085012319048977e+00+0.000000000000000e+00i|motygin_err=2.132e-14|nterms=235|wrnmsg=
+HeunG|func=HeunG|a=2|q=1|alpha=1|beta=2|gamma=3|delta=4|z=1.5+1e-10i_offset|motygin_val=1.407663391739404e+00-2.052988953283050e-02i|motygin_err=5.746e-15|nterms=445|wrnmsg=
+HeunG|func=HeunG|a=2|q=1|alpha=1|beta=2|gamma=3|delta=4|z=1.9+1e-10i_offset|motygin_val=1.629383803890950e+00-2.376360546215021e-02i|motygin_err=6.503e-15|nterms=507|wrnmsg=
+HeunG|func=HeunG|a=2|q=1|alpha=1|beta=2|gamma=3|delta=4|z=2.5+1e-10i_offset|motygin_val=2.325932771899761e+00+2.791807427950136e-01i|motygin_err=1.147e-14|nterms=554|wrnmsg=
+HeunG|func=HeunG|a=2|q=1|alpha=1|beta=2|gamma=3|delta=4|z=3.0+1e-10i_offset|motygin_val=2.500485932428309e+00+1.130191510845415e+00i|motygin_err=1.346e-14|nterms=589|wrnmsg=
+#
+# === Regime A: HeunC ===
+HeunC|func=HeunC|q=1|alpha=1|gamma=2|delta=3|epsilon=-1|z=0.1|motygin_val=9.471955542198834e-01+0.000000000000000e+00i|motygin_err=2.454e-16|nterms=18|wrnmsg=
+HeunC|func=HeunC|q=1|alpha=1|gamma=2|delta=3|epsilon=-1|z=0.5|motygin_val=6.121246449119607e-01+0.000000000000000e+00i|motygin_err=7.340e-15|nterms=92|wrnmsg=
+HeunC|func=HeunC|q=1|alpha=1|gamma=2|delta=3|epsilon=-1|z=0.9|motygin_val=-3.944277646643116e+00+0.000000000000000e+00i|motygin_err=5.936e-14|nterms=262|wrnmsg=
+HeunC|func=HeunC|q=1|alpha=1|gamma=2|delta=3|epsilon=-1|z=1.5+1e-10i_offset|motygin_val=7.294463382457417e-01-4.084699402481319e-01i|motygin_err=1.429e-14|nterms=440|wrnmsg=
+HeunC|func=HeunC|q=1|alpha=1|gamma=2|delta=3|epsilon=-1|z=1.9+1e-10i_offset|motygin_val=7.733141754448798e-01-3.909613668201724e-01i|motygin_err=1.637e-14|nterms=430|wrnmsg=
+HeunC|func=HeunC|q=1|alpha=1|gamma=2|delta=3|epsilon=-1|z=2.5+1e-10i_offset|motygin_val=7.240816734461004e-01-3.552080691648419e-01i|motygin_err=3.238e-14|nterms=447|wrnmsg=
+HeunC|func=HeunC|q=1|alpha=1|gamma=2|delta=3|epsilon=-1|z=3.0+1e-10i_offset|motygin_val=6.572786600302549e-01-3.192520112212542e-01i|motygin_err=4.896e-14|nterms=470|wrnmsg=
+#
+# === capture complete ===
