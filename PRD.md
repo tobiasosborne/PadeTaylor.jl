@@ -413,6 +413,86 @@ geometry is currently unknown.
 - Bornemann, *On the numerical evaluation of Fredholm determinants*,
   `arXiv:0804.2543` — Tracy–Widom on real line, not a Painlevé pole-field tool.
 
+### PRD corrections (2026-05-19, worklog 052 + 053)
+
+Citation-verification during the Stage 0+ scoping pass (one Opus
+scout + acquisition fan-out; see `docs/v0p2_literature_scope.md` and
+`docs/v0p2_prior_art_sweep.md`) surfaced three misattributions in
+the survey sources above. Originals are preserved verbatim to keep
+the survey-provenance record honest; corrections are noted here:
+
+- Survey line "Mazzocco, *Garnier system in two variables*,
+  `arXiv:0704.2869`" → that arXiv ID is **Sasano**, *Studies on the
+  Garnier system in two variables* (2007). The Mazzocco Garnier
+  paper does exist and is `arXiv:math/0106208` (*The geometry of the
+  classical solutions of the Garnier systems*, IMRN 2002). Both
+  Sasano 2007 and Mazzocco 2002 are now in `references/garnier/`.
+- Survey line "Adler & Sokolov, matrix PII / PIV, `arXiv:2012.05639`,
+  `arXiv:2107.11680`" → `arXiv:2107.11680` is by **Bobrova &
+  Sokolov**, *On matrix Painlevé-4 equations. Part 1: Painlevé–
+  Kovalevskaya test* (2021). `arXiv:2012.05639` is correctly
+  attributed (Adler & Sokolov, matrix PII).
+- Survey line "Gavrylenko & Lisovyy, Fredholm/Nekrasov tau, Comm.
+  Math. Phys. 2018; `arXiv:1712.08546`" → that arXiv ID is the
+  **Cafasso–Gavrylenko–Lisovyy** *Tau functions as Widom constants*
+  paper (CMP 365, 2019). The correct Gavrylenko–Lisovyy CMP 363
+  (2018) ID is `arXiv:1608.00958`. Both are in
+  `references/rh_numerical/`.
+
+### Post-survey additions (2026-05-19, worklog 052 + 053)
+
+The Stage 0+ scoping pass surfaced two papers the original four-agent
+survey missed; appended here for completeness:
+
+- **Mano & Tsuda (2017)**, *Hermite–Padé approximation, isomonodromic
+  deformation and hypergeometric integral*, Math. Z. 285, 397–431;
+  `arXiv:1502.06695`. The single most load-bearing v0.2 paper for
+  Pillar A (Hermite–Padé): connects shared-denominator Hermite–Padé
+  to Schlesinger transformations and the P_VI / Garnier systems via
+  block-Toeplitz determinants. Now in `references/hermite_pade/`.
+- **Novokshenov (2014)**, *Distributions of Poles to Painlevé
+  Transcendents via Padé Approximations*, Constr. Approx. 39, 85–99;
+  DOI `10.1007/s00365-013-9190-6`. The most directly methodology-
+  adjacent paper to PadeTaylor's own scalar algorithm: Fair–Luke
+  Padé applied to PI/PII/PIV pole distributions. v0.1 RESEARCH.md
+  did not cite it; should be reproduced as a mutation-proof of v0.1's
+  PIV implementation before the v0.2 vector lift. Springer paywall;
+  metadata stub at `references/Novokshenov2014_pade_painleve_pole_distribution_ConstrApprox39_metadata.md`.
+
+The second-wave prior-art sweep (worklog 053; five gaps —
+Cuyt / Van Iseghem / Aptekarev–Stahl / Klein-Bothner-Lisovyy-Joshi
+2024–26 / GitHub code search) further surfaced:
+
+- **Adler & Sokolov (2025)**, *Vector systems of Painlevé type*,
+  J. Geom. Phys.; `arXiv:2512.18828`. 2025 classification of vector
+  Painlevé systems via group reduction of vector NLS / mKdV / KdV,
+  yielding ODE systems with isomonodromic Lax representations
+  generalising P_I, P_II, P_34, P_IV. Pure classification, no
+  numerics, no code — **independently reinforces the v0.2
+  motivation by confirming the target class is alive and
+  unaddressed.** Now in `references/rh_numerical/`.
+- **Amore (2021)**, *Padé–Taylor method for the van der Pol
+  oscillator*, Physica D; `arXiv:2111.12198`. Parallel scalar use
+  of the **exact name "Padé–Taylor method"** (PTM). Construction
+  is Taylor jet + diagonal Padé + residual step control on the
+  scalar van der Pol equation; no FW / GGT / Painlevé framing, no
+  shared-Q. Acknowledged in v0.1 README.md §Provenance as parallel
+  scalar prior art for the name. Now at top level
+  `references/Amore2021_pade_taylor_van_der_pol_PhysicaD_arXiv2111.12198.pdf`.
+
+Convergence-theorem references for the v0.2 shared-Q ADR (Pillar A
+analytic underpinning) are tracked in the prior-art sweep report:
+Aptekarev–Stahl 1992 (paywalled chapter, metadata-only),
+López Lagomasino 2019 (`arXiv:1910.08548`, open-access entry),
+Fidalgo–López Lagomasino–Medina 2013 (`arXiv:1310.7010`),
+López Lagomasino–Medina 2014 (`arXiv:1406.3737`),
+Ikonomov–Suetin 2026 (`arXiv:2605.14760`). All in
+`references/hermite_pade/`. Van Iseghem 1987 (algebraic foundation
+for shared-Q with denominator-recurrence of order `d + 1`) and
+Cabay–Jones–Labahn 1997 (Calgo 766; the FORTRAN shared-Q oracle
+v0.2 can mutation-prove against, analogous to v0.1's use of
+`padeapprox.m`) are metadata-only stubs in the same cluster.
+
 ### Out-of-scope, for the avoidance of doubt
 
 - v0.2 is **single-z, vector-y**. Multi-z (Garnier as PDE, Schlesinger

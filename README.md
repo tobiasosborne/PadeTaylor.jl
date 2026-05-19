@@ -215,6 +215,8 @@ PadeTaylor.jl is a faithful implementation of a lineage of ideas:
 - **Fasondini, Fornberg & Weideman (2017)** — the extension to the multivalued equations PIII, PV, PVI, via coordinate transforms and Riemann-sheet tracking.
 - **Jorba & Zou (2005)** — the canonical step-size formula for high-order Taylor integrators.
 
+The term *Padé–Taylor method* was independently used by P. Amore in 2021 (*Padé–Taylor method for the van der Pol oscillator*, Physica D; `arXiv:2111.12198`) for a scalar van der Pol integrator built from a Taylor jet, a diagonal Padé approximant, and a residual-based step. The name overlap is genuine; the construction is scalar and per-equation, without the FW path-network pole-bridging, the GGT robust-SVD reweighting, or the Painlevé-class application that distinguish this package. The PDF is in the repository at `references/Amore2021_pade_taylor_van_der_pol_PhysicaD_arXiv2111.12198.pdf` for citation traceability.
+
 ## References
 
 - B. Fornberg & J. A. C. Weideman, *A numerical methodology for the Painlevé equations*, J. Comput. Phys. **230** (2011), 5957–5973.
