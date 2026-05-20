@@ -90,6 +90,13 @@ include("PadeStepper.jl")
 # — no v0.1 module behaviour changes (bead padetaylor-0ln.8, V3a).
 include("VectorStepper.jl")
 include("Problems.jl")
+# VectorProblems is the top-level driver for first-order vector ODEs
+# y' = f(z, y), y ∈ ℂ^d: a problem container, a fixed-step loop over
+# VectorStepper, a per-segment shared-Q store, and a dense-output
+# callable.  It composes VectorStepper, so it loads after it.  Additive
+# — distinct from the v0.1 solve_pade; no v0.1 dispatch changes (bead
+# padetaylor-0ln.9, V3b).
+include("VectorProblems.jl")
 # SheetTracker is loaded before PathNetwork because BranchTracker (the
 # walker-side cut-respecting layer per ADR-0013) reuses SheetTracker's
 # `winding_delta` primitive, and PathNetwork in turn uses BranchTracker.
@@ -122,6 +129,8 @@ using .Coefficients: taylor_coefficients_1st, taylor_coefficients_2nd
 using .VectorCoefficients: vector_taylor_coefficients
 using .VectorStepper: VectorPadeStepperState, vector_pade_step!,
                       vector_pade_step_with_pade!
+using .VectorProblems: VectorPadeTaylorProblem, VectorPadeTaylorSolution,
+                       vector_solve_pade
 using .PathNetwork: path_network_solve, PathNetworkSolution, eval_at, eval_at_sheet
 using .Diagnostics: DiagnosticReport, EdgeReport, quality_diagnose
 using .PoleField:   extract_poles
@@ -183,6 +192,7 @@ export shared_denominator_pade
 export taylor_coefficients_1st, taylor_coefficients_2nd
 export vector_taylor_coefficients
 export VectorPadeStepperState, vector_pade_step!, vector_pade_step_with_pade!
+export VectorPadeTaylorProblem, VectorPadeTaylorSolution, vector_solve_pade
 export path_network_solve, PathNetworkSolution, eval_at, eval_at_sheet
 export DiagnosticReport, EdgeReport, quality_diagnose
 export extract_poles
