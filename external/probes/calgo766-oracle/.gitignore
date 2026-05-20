@@ -1,0 +1,10 @@
+# The Calgo 766 FORTRAN source is openly redistributable but is not
+# vendored here — fetch.sh reproduces it from the netlib TOMS mirror.
+src-0766/
+# Build artefacts.
+*.o
+*.mod
+*.so
+toms766.gz
+toms766.shar
+0766.zip

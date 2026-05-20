@@ -1,0 +1,18 @@
+# Calgo-766 type-II (simultaneous-Pade / shared-Q) oracle outputs.
+# Source: ACM TOMS Algorithm 766 (Cabay-Jones-Labahn 1997),
+#         DOI 10.1145/244768.244790, via libcalgo766.so.
+# Calgo Sp/ build uses single-precision `real`: accuracy floor ~1e-6.
+# Q, P_i coefficients low-to-high, renormalised so Q(0)=1.
+# Format: Julia-readable literals.
+
+# Case SP_1_1_d1_scalar — Calgo n = [1, 2], k = 1, flag = 0
+SP_1_1_d1_scalar_Q = [1.000000000000000000e+00, -5.000001192092895508e-01, 3.000002503395080566e-01]
+SP_1_1_d1_scalar_P1 = [1.000000000000000000e+00, 2.000000000000000000e+00]
+SP_1_1_d1_scalar_flag = 0
+
+# Case SP_1_2_d2_shared_Q — Calgo n = [2, 3, 2], k = 2, flag = 1
+SP_1_2_d2_shared_Q_Q = [1.000000000000000000e+00, -4.686715602874755859e-01, 5.098508596420288086e-01, -1.479250937700271606e-01, 6.497159600257873535e-02, -4.247574601322412491e-03]
+SP_1_2_d2_shared_Q_P1 = [1.000000000000000000e+00, 2.313284128904342651e-01, 2.617807686328887939e-01, 6.347678601741790771e-02, -6.371355615556240082e-03]
+SP_1_2_d2_shared_Q_P2 = [2.000000000000000000e+00, -8.373430371284484863e-01, 1.112834572792053223e+00, -2.744790613651275635e-01, 1.560576260089874268e-01, -1.061893813312053680e-02]
+SP_1_2_d2_shared_Q_flag = 1
+
