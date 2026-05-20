@@ -33,6 +33,7 @@ julia --project=figures figures/fw2011_fig_4_8.jl
 julia --project=figures figures/fw2011_fig_5_1.jl
 julia --project=figures figures/fw2011_fig_5_2.jl
 julia --project=figures figures/ffw2017_fig_6.jl
+julia --project=figures figures/noumi_yamada_a4_pole_field.jl
 ```
 
 Each script prints timing + a one-line acceptance note and writes its
@@ -59,6 +60,7 @@ a runnable script.
 | `fw2011_fig_5_1.jl` | FW 2011 Fig 5.1 (`...md:281-318`) | Weierstrass-℘ test problem: analytic ℘ pole lattice + the Padé-integrator path to `z=30` |
 | `fw2011_fig_5_2.jl` | FW 2011 Fig 5.2 (`...md:320-326`) | `log₁₀`(rel-err) surface + accuracy/time contours over the `(order,h)` plane — the `order=30, h=0.5` justification |
 | `ffw2017_fig_6.jl` | FFW 2017 Fig 6 (`references/markdown/FFW2017_painleve_riemann_surfaces_preprint/FFW2017_painleve_riemann_surfaces_preprint.md:295-297`) | generic `P_V` `(α,β,γ,δ)=(1,−1,1,−1/2)` on three Riemann sheets — nine panels (`|w(ζ)|`, `|u(z)|`, `arg u(z)` × sheets 0/1/2); the first FFW 2017 figure reproduced |
+| `noumi_yamada_a4_pole_field.jl` | v0.2 PRD `n ≥ 4` acceptance (`docs/v0p2_plan.md` row V8a; pillar B §1, §5.2) | A_4⁽¹⁾ Noumi–Yamada pole field — generic α, all-nonzero IC; three panels (shared-`Q` pole scatter, Stage-1 visited tree, `log₁₀‖f‖` node field); the first vector-stack higher-Painlevé pole-field figure |
 
 `...md` is `references/markdown/FW2011_painleve_methodology_JCP230/FW2011_painleve_methodology_JCP230.md`.
 
