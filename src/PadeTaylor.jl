@@ -121,6 +121,14 @@ include("NoumiYamada.jl")
 # self-test, so it loads after NoumiYamada.  Additive — no v0.1/v0.2
 # module behaviour changes (bead padetaylor-0ln.14, V5c).
 include("NoumiYamadaSymmetry.jl")
+# PainleveHierarchy is the problem-builder layer for the Painlevé-I
+# hierarchy: the painleve_hierarchy(:I, m) companion-form RHS factory
+# (m ∈ {1,2}; m=2 ⇒ the P_I^(2) 4-vector system), the
+# PainleveHierarchyProblem builder, and the pI2_tritronquee_ic seed.
+# It composes VectorProblems, so it loads after it.  Additive — no
+# v0.1/v0.2 module behaviour changes (bead padetaylor-0ln.15, V6,
+# ADR-0022).
+include("PainleveHierarchy.jl")
 # SheetTracker is loaded before PathNetwork because BranchTracker (the
 # walker-side cut-respecting layer per ADR-0013) reuses SheetTracker's
 # `winding_delta` primitive, and PathNetwork in turn uses BranchTracker.
@@ -159,6 +167,8 @@ using .VectorProblems: VectorPadeTaylorProblem, VectorPadeTaylorSolution,
 using .NoumiYamada: noumi_yamada_rhs, NoumiYamadaProblem
 using .NoumiYamadaSymmetry: noumi_yamada_rational, noumi_yamada_backlund,
                             noumi_yamada_rotation
+using .PainleveHierarchy: painleve_hierarchy, PainleveHierarchyProblem,
+                          pI2_tritronquee_ic
 using .PathNetwork: path_network_solve, PathNetworkSolution, eval_at, eval_at_sheet
 using .Diagnostics: DiagnosticReport, EdgeReport, quality_diagnose
 using .PoleField:   extract_poles
@@ -224,6 +234,7 @@ export vector_step_jorba_zou
 export VectorPadeTaylorProblem, VectorPadeTaylorSolution, vector_solve_pade
 export noumi_yamada_rhs, NoumiYamadaProblem
 export noumi_yamada_rational, noumi_yamada_backlund, noumi_yamada_rotation
+export painleve_hierarchy, PainleveHierarchyProblem, pI2_tritronquee_ic
 export path_network_solve, PathNetworkSolution, eval_at, eval_at_sheet
 export DiagnosticReport, EdgeReport, quality_diagnose
 export extract_poles

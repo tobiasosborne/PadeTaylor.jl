@@ -1,8 +1,9 @@
-# ADR-0022 — Vector problem types: the `NoumiYamadaProblem` builder
+# ADR-0022 — Vector problem types: the `NoumiYamadaProblem` and `PainleveHierarchyProblem` builders
 
-**Status**: Accepted (2026-05-20) | **Bead**: `padetaylor-0ln.12` (V5a —
-`NoumiYamadaProblem` builder + `A_n^(1)` RHS) | **Plan**:
-`docs/v0p2_plan.md` row V5a.
+**Status**: Accepted (2026-05-20) | **Beads**: `padetaylor-0ln.12` (V5a —
+`NoumiYamadaProblem` builder + `A_n^(1)` RHS), `padetaylor-0ln.15` (V6 —
+`PainleveHierarchyProblem` + `P_I^(2)` 4-vector RHS; sub-decision 4) |
+**Plan**: `docs/v0p2_plan.md` rows V5a, V6.
 
 ## Decision
 
@@ -104,6 +105,54 @@ exact forcing condition: *needed if a v0.2+ target requires a PV-family
 `A_{2n+1}` system*.  It would be implemented as an odd-parity branch of
 this same module.
 
+### 4 — `PainleveHierarchyProblem` — the second vector problem type (V6)
+
+The V6 bead `padetaylor-0ln.15` adds `PainleveHierarchy`, the second
+vector problem type, extending the pattern recorded above to the
+**Painlevé-I hierarchy**.  It exports:
+
+  - `painleve_hierarchy(:I, m; t)` — the companion-form RHS factory for
+    the `m`-th PI-hierarchy member.  `m = 1` returns the 2-vector PI
+    closure `y' = (y_2, 6 y_1² + x)`; `m = 2` returns the **4-vector
+    `P_I^(2)` closure** `y' = (y_2, y_3, y_4, −10 y_2² − 20 y_1 y_3 −
+    40(y_1³ − 6t y_1 + 6x))` — the genuine vector (4-component)
+    Painlevé-type system and a v0.2 north-star target (KKG 2015
+    eq. (p12), verified verbatim against the TeX source).
+  - `PainleveHierarchyProblem(m; y0, xspan, t, order)` — the wrapper
+    builder, carrying the `(m, t)` family metadata plus the underlying
+    `VectorPadeTaylorProblem`, with a forwarding `vector_solve_pade`
+    method.  Validates `length(y0) == 2m` and a non-degenerate `xspan`.
+  - `pI2_tritronquee_ic(x0; t, n_terms)` — the leading-order tritronquée
+    asymptotic-series seed for `P_I^(2)`.
+
+**Companion-form vectorisation of a high-order scalar ODE.** This is the
+structural distinction from `NoumiYamada`: a Noumi–Yamada system is
+*already* a first-order vector ODE, whereas a PI-hierarchy member
+`P_I^(m)` is a scalar ODE of order `2m`.  `painleve_hierarchy` reduces it
+to first order by the standard companion form — state vector `y =
+(u, u', …, u^{(2m-1)})`, the trivial chain `y_k' = y_{k+1}` for the first
+`2m−1` rows, and the ODE solved for the top derivative in the last row.
+The independent variable `x` is what the integrator steps in; the
+parameter `t` (which enters `P_I^(2)` parametrically) is *captured into
+the RHS closure*, not carried as a state component.  Otherwise the shape
+is identical to sub-decision 1: a per-family builder producing a
+`VectorPadeTaylorProblem`, a self-describing wrapper struct, and a
+forwarding `vector_solve_pade` method (a new dispatch, not an edit).
+
+**Scope — m ∈ {1, 2} explicit; m ≥ 3 deferred.** Members `m = 1` (PI, the
+v0.1 reduction/consistency anchor — the `m = 1` companion RHS uses the
+*same* `6u² + x` normalisation as v0.1 `PainleveProblem(:I)`, so no
+rescaling is needed and the trajectories coincide) and `m = 2`
+(`P_I^(2)`, the primary deliverable) are implemented **explicitly**, as
+verbatim transcriptions of the source equations.  The general-`m` member
+would require the Lenard–Gelfand–Dikii recursion to generate the
+order-`2m` ODE symbolically — not a v0.2 acceptance item.
+`painleve_hierarchy(:I, m)` throws for `m ≥ 3`; per Rule 9 the deferred
+corner is registered as bead `padetaylor-qi0` with the forcing
+condition recorded (*needed if a v0.2+ target requires a PI-hierarchy
+member of order ≥ 6*).  This mirrors sub-decision 3's even-parity-only
+scoping for `NoumiYamada` exactly.
+
 ## Context
 
 v0.2 lifts PadeTaylor from scalar Painlevé equations to vector /
@@ -163,9 +212,22 @@ V6 builds on it, keeps the two vector problem types consistent.
 
 ## References
 
-- `src/NoumiYamada.jl` — the implementation (literate, 87 LOC).
+- `src/NoumiYamada.jl` — the V5a implementation (literate, 87 LOC).
 - `test/noumi_yamada_test.jl` — the V5a suite (102 assertions, GREEN)
   + the NY.1.7 mutation-proof record (M1/M2/M3, all bit).
+- `src/PainleveHierarchy.jl` — the V6 implementation (literate, 79 LOC):
+  `painleve_hierarchy(:I, m)`, `PainleveHierarchyProblem`,
+  `pI2_tritronquee_ic` (sub-decision 4).
+- `test/painleve_hierarchy_test.jl` — the V6 suite (59 assertions,
+  GREEN) + the PH.1.6 mutation-proof record (M1/M2/M3, all bit).
+- `references/tex/painleve_hierarchy/KapaevKleinGrava2015_PI2_tritronquee_ConstrApprox41/tritronquee_coeff.tex`
+  lines 124-130 — PI and the `P_I^(2)` eq. (p12), the verbatim source of
+  the V6 companion RHSs.
+- `docs/v0p2_pillarC_painleve_hierarchy_findings.md` — §1 (the explicit
+  `P_I^(2)` equation), §2 (the 4-vector companion form), §3 (the PI
+  hierarchy / Lenard recursion), §4 (the tritronquée asymptotic IC).
+- Bead `padetaylor-qi0` — the deferred general-`m` (m ≥ 3) PI-hierarchy
+  member via the Lenard–Gelfand–Dikii recursion.
 - `references/tex/noumi_yamada/NoumiYamada1998_higher_painleve_A1l_FunkEkv41/main.tex`
   lines 85–88 — equation `\eqref{A2n}`, the verbatim source of the
   even-parity RHS; lines 92–102 — `\eqref{A2n+1}`, the deferred
