@@ -65,7 +65,22 @@ docs/design_section_6_path_network.md scope), are all shipped:
 
 **2508 + 32 + 61 = 2601 expected GREEN** (61 new LD.X.* assertions verified in single-file isolation `lattice_dispatcher_test.jl`, 23.4 s; 32 new DG.* assertions verified in single-file isolation `diagnose_test.jl`, 18 s; full `Pkg.test()` not yet re-run — OOM-friction ongoing, see worklogs 048–049; existing 2508 assertions unchanged by additive `strict` kwarg and `:bvp_fail` tag with back-compat `strict = true` default).  Previously: **2508 / 2508 tests passing** as of worklog 047 (`HEAD = 1331755`, all committed; push pending).  The API audit (commit 9296731, worklog 050) made no source changes and adds no new assertions; test count is unchanged at 2601 expected GREEN.  The 12 spawned beads from the audit constitute the v1.0 normalisation work backlog.
 
-**Next pickup (2026-05-19 second session close)**: **v0.2 literature acquisition is substantially complete** — 46 PDFs + 15 stubs across 7 cluster directories under `references/`, plus 5 reports + 2 worklogs under `docs/`. The next agent should move from acquisition to consumption, per `docs/worklog/053-v0p2-batch1-and-gap-sweep.md` §"Pickup point": (1) marker-convert the priority papers (Mano–Tsuda 2017, Kapaev–Klein–Grava 2015, Noumi–Yamada 1998, Cosgrove 2000-6, López Lagomasino 2019, Adler–Sokolov 2025, Amore 2021); (2) fix the 3 PRD citation errors (lines 402, 403, 405) via an append-note, and add the Adler–Sokolov 2025 + Amore 2021 acknowledgements; (3) create the v0.2 Stage 0+ epic bead before deep-dive work begins; (4) begin the `RESEARCH.md` v0.2 extension structured by the seven pillars, fanned out one-subagent-at-a-time per the user's preference established this session. **v1.0 normalisation beads still open**: `padetaylor-xds` (canonical `h` rename — top P2 from the API audit; rename `h_max` in `solve_pade`/`PadeTaylorAlg` and `h_path` in `lattice_dispatch_solve` to `h` with deprecation shims) is the top P2 audit-derived item.  Two more P2s follow: `padetaylor-0xn` (`max_iter` normalisation — rename `bvp_solve`'s `maxiter` + cascade through `dispatch_solve`) and `padetaylor-gvz` (one-line export addition for `pii_rational`, `pii_airy`, `piv_entire`).  Also open: `padetaylor-6pj` (FW 2011 Figs 4.1/4.7/5.1/5.2 empirical validation sweep with `diagnose=true`) and `padetaylor-8py` (multi-sheet diagnostics, sheets ±1).  **v0.1.0 tagged** (`38a49ae`, `CHANGELOG.md` ships); **Documenter site** generated (`30b3298`).  Since v0.1.0: classical-Padé F64 default (worklogs 020+021); **thirteen FW 2011 figures reproduced** in a new `figures/` project (Fig 3.1–3.3, 4.1, 4.2–4.4, 4.7, 4.8, 5.1, 5.2; worklogs 022–029); **ADR-0006 + `src/Painleve.jl`** — the `PainleveProblem` per-equation builder layer (worklog 026); `PoleField` (027), `EdgeGatedSolve` (028), the FW Fig 4.1 full composition (029), the `PainleveSolution` wrapper + Makie extension (ADR-0007, worklog 030), the `tritronquee` / `hastings_mcleod` named constructors (ADR-0008, worklog 031), the `EdgeDetector` h-aware level fix that unblocked the N=641 hero render (ADR-0009, worklog 032), and the closed-form Painlevé families `pii_rational` / `pii_airy` / `piv_entire` (ADR-0010, worklog 033).  See the "Session 2026-05-15" entry below for the worklog-032–033 rundown; older sessions live in `HANDOFF_ARCHIVE.md`.
+**Next pickup (2026-05-20 v0.2 vector-stack session close)**: **17 of 19
+v0.2-epic children are closed** — the entire vector ODE stack is built and
+validated. See `docs/worklog/055-v0p2-vector-stack-orchestration.md` for the
+full rundown. New `src/` modules: `SharedPade`, `VectorCoefficients`,
+`VectorStepper`, `VectorProblems`, `VectorStepControl`, `NoumiYamada`,
+`NoumiYamadaSymmetry`, `PainleveHierarchy`, `VectorPathNetwork`,
+`VectorPoleField`. ADRs 0019–0022 Accepted. PRD v0.2 acceptance is met
+except the last figure. **Immediate next steps**: (1) **V8b**
+(`padetaylor-0ln.18`, P_I^(2) tritronquée figure) was dispatched as a
+background subagent at session close — `git log` to see if it committed;
+if not, re-dispatch (brief reconstructable from worklog 055 + plan). V8b's
+known risk: the P_I^(2) tritronquée is a separatrix, forward IVP diverges,
+KKG used a BVP and v0.2 has none — see worklog 055 lesson 47. (2) **V9**
+(`padetaylor-0ln.19`) — v0.2 docs + release prep — is the last planned
+phase. **Older context below.** The prior pickup note: v0.2 literature
+acquisition is substantially complete — 46 PDFs + 15 stubs across 7 cluster directories under `references/`, plus 5 reports + 2 worklogs under `docs/`. The next agent should move from acquisition to consumption, per `docs/worklog/053-v0p2-batch1-and-gap-sweep.md` §"Pickup point": (1) marker-convert the priority papers (Mano–Tsuda 2017, Kapaev–Klein–Grava 2015, Noumi–Yamada 1998, Cosgrove 2000-6, López Lagomasino 2019, Adler–Sokolov 2025, Amore 2021); (2) fix the 3 PRD citation errors (lines 402, 403, 405) via an append-note, and add the Adler–Sokolov 2025 + Amore 2021 acknowledgements; (3) create the v0.2 Stage 0+ epic bead before deep-dive work begins; (4) begin the `RESEARCH.md` v0.2 extension structured by the seven pillars, fanned out one-subagent-at-a-time per the user's preference established this session. **v1.0 normalisation beads still open**: `padetaylor-xds` (canonical `h` rename — top P2 from the API audit; rename `h_max` in `solve_pade`/`PadeTaylorAlg` and `h_path` in `lattice_dispatch_solve` to `h` with deprecation shims) is the top P2 audit-derived item.  Two more P2s follow: `padetaylor-0xn` (`max_iter` normalisation — rename `bvp_solve`'s `maxiter` + cascade through `dispatch_solve`) and `padetaylor-gvz` (one-line export addition for `pii_rational`, `pii_airy`, `piv_entire`).  Also open: `padetaylor-6pj` (FW 2011 Figs 4.1/4.7/5.1/5.2 empirical validation sweep with `diagnose=true`) and `padetaylor-8py` (multi-sheet diagnostics, sheets ±1).  **v0.1.0 tagged** (`38a49ae`, `CHANGELOG.md` ships); **Documenter site** generated (`30b3298`).  Since v0.1.0: classical-Padé F64 default (worklogs 020+021); **thirteen FW 2011 figures reproduced** in a new `figures/` project (Fig 3.1–3.3, 4.1, 4.2–4.4, 4.7, 4.8, 5.1, 5.2; worklogs 022–029); **ADR-0006 + `src/Painleve.jl`** — the `PainleveProblem` per-equation builder layer (worklog 026); `PoleField` (027), `EdgeGatedSolve` (028), the FW Fig 4.1 full composition (029), the `PainleveSolution` wrapper + Makie extension (ADR-0007, worklog 030), the `tritronquee` / `hastings_mcleod` named constructors (ADR-0008, worklog 031), the `EdgeDetector` h-aware level fix that unblocked the N=641 hero render (ADR-0009, worklog 032), and the closed-form Painlevé families `pii_rational` / `pii_airy` / `piv_entire` (ADR-0010, worklog 033).  See the "Session 2026-05-15" entry below for the worklog-032–033 rundown; older sessions live in `HANDOFF_ARCHIVE.md`.
 
 **Phase 6 shipped 2026-05-09 on the pivoted scope** — the v1
 acceptance is a Padé-vs-Taylor pole-bridge demonstration (one stored
@@ -543,7 +558,60 @@ Quick summary:
 
 ## Last commit before this handoff
 
-`HEAD = 1331755` ("B5 Fig 7 SHIPPED — generic PVI in η + ζ + z planes (bead padetaylor-mgx)").  Two commits this session, closing the FFW 11-step arc at 11/11: B5 Fig 3 PVI phase portraits (`55fd533`, worklog 046, bead `padetaylor-a1l`) → B5 Fig 7 generic PVI three-frame (`1331755`, worklog 047, bead `padetaylor-mgx`).  Test suite **2467 → 2508 GREEN** (+61 assertions this session; +20 FF3.* + +41 FF7.*).  Both commits land on `main`; push pending.
+`HEAD = 8d179ac` ("v0.2 V8a: A_4^(1) Noumi–Yamada pole-field figure") plus
+this handoff/worklog commit on top.  All v0.2 work through V8a is committed
+and pushed to `main`.  **V8b was dispatched as a background subagent and may
+land a further commit after this handoff was written — `git log` to check.**
+
+### Session 2026-05-20 — v0.2 vector stack, orchestrated build V1–V8a (worklog 055)
+
+A long orchestrated session: parent Opus agent coordinated serial Opus
+coding subagents (one at a time, Rule 7), one red-green-mutation TDD bead
+each.  **17 of 19 v0.2-epic children closed.**  The v0.2 vector ODE stack
+is built and validated end-to-end: shared-denominator Padé → vector Taylor
+jets → vector stepper → vector driver → vector step control → vector
+path-network + pole extraction, with the Noumi–Yamada A_n^(1) and
+Painlevé-I-hierarchy P_I^(2) systems wired in.
+
+  - **V1 (keystone) — shared-denominator robust Padé.**  `src/SharedPade.jl`
+    (`b48c4c2`) — stacked `dm×(m+1)` block-Toeplitz SVD, `d=1` reduces to
+    GGT `:svd`.  Three independent oracles built: Calgo 766 FORTRAN via
+    `ccall` at double precision (`d8723da`,`54d0fcd`), an SVD-free
+    block-Toeplitz-determinant oracle exact on `Rational{BigInt}`
+    (`24a20ff`), and a self-contained AAA port (`d17581a`).  Triple-oracle
+    test suite + ADR-0019 (`1c4fcca`) — 108 GREEN, 4 mutations all caught
+    (one proved the QR-reweighting load-bearing).
+  - **V2/V3 — vector pipeline.**  `VectorCoefficients.jl` (`442c976`, ADR-0020),
+    `VectorStepper.jl` (`240a1d0`), `VectorProblems.jl` (`2a1f04a`),
+    `VectorStepControl.jl` (`34696b9`, ADR-0021).  V3a's pole-bridge demo:
+    Padé step beats Taylor truncation by ~14 orders of magnitude.
+  - **V4 — Calogero–Moser N=2 smoke test** (`63c72b6`) — the v0.2 stack
+    validated end-to-end vs an exact oracle (`x₁=√(1+t²/2)`,
+    cross-checked to 26–30 digits); F64 ~1e-10, BF ~2e-24.
+  - **V5 — Noumi–Yamada.**  `NoumiYamada.jl` (`768d4ad`, ADR-0022) — the
+    A_{2n}^(1) RHS + `NoumiYamadaProblem`; A_2^(1)⇒scalar-PIV
+    backward-compat self-validation (`5cb4de4`); `NoumiYamadaSymmetry.jl`
+    (`2d61345`) — W(A_{2n}^(1)) Bäcklund group + rational-solution oracles.
+  - **V6 — Painlevé-I hierarchy.**  `PainleveHierarchy.jl` (`d5e7ed2`) —
+    `painleve_hierarchy(:I,m)` for `m∈{1,2}`, the P_I^(2) 4-vector system.
+  - **V7 — vector path network.**  `VectorPathNetwork.jl` + `VectorPoleField.jl`
+    (`45d67fa`) — minimal Stage-1 walk + shared-Q pole extraction (poles =
+    roots of the one shared denominator).
+  - **V8a — figure** (`8d179ac`) — A_4^(1) Noumi–Yamada pole field (26 poles,
+    187 nodes); PRD `n≥4` acceptance met.
+
+  **Spec drift caught** (Rule 3): two arithmetic slips corrected in pillar
+  docs — the Calogero–Moser exact solution in pillar EF (`4e89216`) and the
+  P_I^(2) tritronquée IC sign in pillar C (`be9dc3c`).
+
+  **Open**: V8b (`padetaylor-0ln.18`, P_I^(2) tritronquée figure — in
+  progress, see worklog 055 "Pickup point") and V9 (`padetaylor-0ln.19`,
+  v0.2 docs + release prep).  Friction beads filed: `padetaylor-0ln.20`–`.23`
+  (V7 deferred sophistications), `padetaylor-tji` (odd-parity Noumi–Yamada),
+  `padetaylor-qi0` (general-`m` hierarchy), `padetaylor-wso`, the shared-Q
+  zero-component bug, and the P_I^(2)-needs-a-vector-BVP bead.  Memory
+  `full-pkg-test-got-sigterm-d-twice-on` corrected — `Pkg.test()` does not
+  OOM; it is just slow, so run single test files during TDD iteration.
 
 ### Session 2026-05-16 (continuation 2) — FFW B5 closeout: Figs 3 + 7 (worklogs 046–047)
 
