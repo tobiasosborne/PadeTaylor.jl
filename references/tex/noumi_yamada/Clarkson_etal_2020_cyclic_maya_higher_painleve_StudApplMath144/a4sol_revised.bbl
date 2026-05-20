@@ -1,0 +1,382 @@
+\providecommand{\bysame}{\leavevmode\hbox to3em{\hrulefill}\thinspace}
+\providecommand{\MR}{\relax\ifhmode\unskip\space\fi MR }
+% \MRhref is called by the amsart/book/proc definition of \MR.
+\providecommand{\MRhref}[2]{%
+  \href{http://www.ams.org/mathscinet-getitem?mr=#1}{#2}
+}
+\providecommand{\href}[2]{#2}
+\begin{thebibliography}{10}
+
+\bibitem{adler1978class}
+Mark Adler and J{\"u}rgen Moser, \emph{{On a class of polynomials connected
+  with the Korteweg-de Vries equation}}, Communications in Mathematical Physics
+  \textbf{61} (1978), no.~1, 1--30.
+
+\bibitem{adler1994modification}
+V.~\`E. Adler, \emph{{A modification of Crum's method}}, Theoret. and Math.
+  Phys. \textbf{101} (1994), no.~3, 1381--1386.
+
+\bibitem{adler1994nonlinear}
+\bysame, \emph{{Nonlinear chains and {P}ainlev{\'e} equations}}, Phys. D
+  \textbf{73} (1994), no.~4, 335--351.
+
+\bibitem{andrews1998theory}
+George~E. Andrews, \emph{The theory of partitions}, Cambridge University Press,
+  Cambridge, 1998. \MR{1634067}
+
+\bibitem{andrews2004integer}
+George~E. Andrews and Kimmo Eriksson, \emph{Integer partitions}, Cambridge
+  University Press, Cambridge, 2004. \MR{2122332}
+
+\bibitem{bagchi2015rational}
+B.~Bagchi, Y.~Grandati, and C.~Quesne, \emph{Rational extensions of the
+  trigonometric {D}arboux-{P}\"{o}schl-{T}eller potential based on
+  para-{J}acobi polynomials}, J. Math. Phys. \textbf{56} (2015), no.~6, 062103.
+
+\bibitem{refBP98}
+I.~V. Barashenkov and D.~E. Pelinovsky, \emph{Exact vortex solutions of the
+  complex sine-{G}ordon theory on the plane}, Phys. Lett. B \textbf{436}
+  (1998), no.~1-2, 117--124. \MR{1649103}
+
+\bibitem{refBNRS}
+L.~Bass, J.~J.~C. Nimmo, C.~Rogers, and W.~K. Schief, \emph{Electrical
+  structures of interfaces: a {P}ainlev\'{e} {II} model}, Proc. R. Soc. Lond.
+  Ser. A Math. Phys. Eng. Sci. \textbf{466} (2010), no.~2119, 2117--2136.
+  \MR{2652736}
+
+\bibitem{bermudez2012complex}
+D~Berm{\'u}dez and Fern{\'a}ndez~D J, \emph{{Complex solutions to the
+  {P}ainlev{\'e} IV equation through supersymmetric quantum mechanics}}, AIP
+  Conference Proceedings, vol. 1420, AIP, 2012, pp.~47--51.
+
+\bibitem{bermudez2012complexb}
+David Berm{\'u}dez, \emph{{Complex SUSY transformations and the {P}ainlev{\'e}
+  IV equation}}, SIGMA \textbf{8} (2012), 069.
+
+\bibitem{refBB15}
+Marco Bertola and Thomas Bothner, \emph{Zeros of large degree
+  {V}orob'ev-{Y}ablonski polynomials via a {H}ankel determinant identity}, Int.
+  Math. Res. Not. IMRN (2015), no.~19, 9330--9399. \MR{3431594}
+
+\bibitem{bonneux2019coefficients}
+Niels Bonneux, Clare Dunning, and Marco Stevens, \emph{{Coefficients of
+  Wronskian Hermite polynomials}}, arXiv preprint arXiv:1909.03874 (2019).
+
+\bibitem{refBuckPIV}
+Robert~J. Buckingham, \emph{Large-degree asymptotics of rational
+  {P}ainlev\'{e}-{IV} functions associated to generalized {H}ermite
+  polynomials}, Int. Math. Res. Not. IMRN, DOI: 10.1093/imrn/rny172.
+
+\bibitem{refBM12}
+Robert~J. Buckingham and Peter~D. Miller, \emph{The sine-{G}ordon equation in
+  the semiclassical limit: critical behavior near a separatrix}, J. Anal. Math.
+  \textbf{118} (2012), no.~2, 397--492. \MR{3000688}
+
+\bibitem{refBM15}
+\bysame, \emph{Large-degree asymptotics of rational {P}ainlev\'{e}-{II}
+  functions: noncritical behaviour}, Nonlinearity \textbf{27} (2014), no.~10,
+  2489--2578. \MR{3265723}
+
+\bibitem{refBM14}
+\bysame, \emph{Large-degree asymptotics of rational {P}ainlev\'{e}-{II}
+  functions: critical behaviour}, Nonlinearity \textbf{28} (2015), no.~6,
+  1539--1596. \MR{3350600}
+
+\bibitem{burchnall1930set}
+JL~Burchnall and TW~Chaundy, \emph{A set of differential equations which can be
+  solved by polynomials}, Proceedings of the London Mathematical Society
+  \textbf{2} (1930), no.~1, 401--414.
+
+\bibitem{refCCBC}
+Hongmei Chen, Min Chen, Gordon Blower, and Yang Chen, \emph{Single-user {MIMO}
+  system, {P}ainlev\'{e} transcendents, and double scaling}, J. Math. Phys.
+  \textbf{58} (2017), no.~12, 123502, 24. \MR{3734945}
+
+\bibitem{chen2006painleve}
+Yang Chen and M.~V. Feigin, \emph{Painlev\'{e} {IV} and degenerate {G}aussian
+  unitary ensembles}, J. Phys. A \textbf{39} (2006), no.~40, 12381--12393.
+
+\bibitem{clarkson2003painleve}
+Peter~A. Clarkson, \emph{{{P}ainlev{\'e} equations --- nonlinear special
+  functions}}, J. Comput. Appl. Math. \textbf{153} (2003), no.~1-2, 127--140.
+
+\bibitem{clarkson2003fourth}
+\bysame, \emph{{The fourth {P}ainlev{\'e} equation and associated special
+  polynomials}}, J. Math. Phys. \textbf{44} (2003), no.~11, 5350--5374.
+
+\bibitem{clarkson2006special}
+\bysame, \emph{{Special polynomials associated with rational solutions of the
+  defocusing nonlinear Schr{\"o}dinger equation and the fourth {P}ainlev{\'e}
+  equation}}, European J. Appl. Math. \textbf{17} (2006), no.~3, 293--322.
+
+\bibitem{refPAC06review}
+\bysame, \emph{Special polynomials associated with rational solutions of the
+  {P}ainlev\'{e} equations and applications to soliton equations}, Comput.
+  Methods Funct. Theory \textbf{6} (2006), no.~2, 329--401. \MR{2291140}
+
+\bibitem{Clarkson2009vortices}
+\bysame, \emph{Vortices and polynomials}, Stud. Appl. Math. \textbf{123}
+  (2009), no.~1, 37--62. \MR{2538285}
+
+\bibitem{clarkson2014relationship}
+Peter~A. Clarkson and Kerstin Jordaan, \emph{{The relationship between
+  semiclassical Laguerre polynomials and the fourth {P}ainlev{\'e} equation}},
+  Constr. Approx. \textbf{39} (2014), no.~1, 223--254.
+
+\bibitem{refCM03}
+Peter~A. Clarkson and Elizabeth~L. Mansfield, \emph{{The second {P}ainlev\'{e}
+  equation, its hierarchy and associated special polynomials}}, Nonlinearity
+  \textbf{16} (2003), no.~3, R1--R26. \MR{1975781}
+
+\bibitem{refDG86}
+J.~J. Duistermaat and F.~A. Gr\"{u}nbaum, \emph{Differential equations in the
+  spectral parameter}, Comm. Math. Phys. \textbf{103} (1986), no.~2, 177--240.
+  \MR{826863}
+
+\bibitem{FelderHemeryVeselov}
+G.~Felder, A.~D. Hemery, and A.~P. Veselov, \emph{Zeros of {W}ronskians of
+  {H}ermite polynomials and {Y}oung diagrams}, Phys. D \textbf{241} (2012),
+  no.~23-24, 2131--2137. \MR{2998116}
+
+\bibitem{filipuk2008symmetric}
+Galina Filipuk and Peter~A. Clarkson, \emph{{The symmetric fourth
+  {P}ainlev{\'e} hierarchy and associated special polynomials}}, Stud. Appl.
+  Math. \textbf{121} (2008), no.~2, 157--188.
+
+\bibitem{refFIKNbook}
+Athanassios~S. Fokas, Alexander~R. Its, Andrei~A. Kapaev, and Victor~Yu.
+  Novokshenov, \emph{{Painlev\'{e} transcendents. The Riemann-Hilbert
+  approach}}, Mathematical Surveys and Monographs, vol. 128, American
+  Mathematical Society, Providence, RI, 2006. \MR{2264522}
+
+\bibitem{refFW01}
+P.~J. Forrester and N.~S. Witte, \emph{Application of the {$\tau$}-function
+  theory of {P}ainlev\'{e} equations to random matrices: {PIV}, {PII} and the
+  {GUE}}, Comm. Math. Phys. \textbf{219} (2001), no.~2, 357--398. \MR{1833807}
+
+\bibitem{garcia2016bochner}
+Ma{\'A}ngeles Garc{\'\i}a-Ferrero, David G{\'o}mez-Ullate, and Robert Milson,
+  \emph{A bochner type characterization theorem for exceptional orthogonal
+  polynomials}, Journal of Mathematical Analysis and Applications \textbf{472}
+  (2019), no.~1, 584--626.
+
+\bibitem{garcia2015oscillation}
+M{\textordfeminine}{\'A}ngeles Garc{\'\i}a-Ferrero and David G\'{o}mez-Ullate,
+  \emph{{Oscillation theorems for the Wronskian of an arbitrary sequence of
+  eigenfunctions of Schr{\"o}dinger's equation}}, Lett. Math. Phys.
+  \textbf{105} (2015), no.~4, 551--573.
+
+\bibitem{gomez2013rational}
+David G\'{o}mez-Ullate, Yves Grandati, and Robert Milson, \emph{{Rational
+  extensions of the quantum harmonic oscillator and exceptional Hermite
+  polynomials}}, J. Phys. A \textbf{47} (2013), no.~1, 015203.
+
+\bibitem{gomez2016durfee}
+\bysame, \emph{{Durfee rectangles and pseudo-Wronskian equivalences for Hermite
+  polynomials}}, Stud. Appl. Math. \textbf{141} (2018), no.~4, 596--625.
+
+\bibitem{gomez2004supersymmetry}
+David G\'{o}mez-Ullate, Niky Kamran, and Robert Milson, \emph{{Supersymmetry
+  and algebraic Darboux transformations}}, J. Phys. A \textbf{37} (2004),
+  no.~43, 10065.
+
+\bibitem{gomez2004darboux}
+\bysame, \emph{{The Darboux transformation and algebraic deformations of
+  shape-invariant potentials}}, J. Phys. A \textbf{37} (2004), no.~5, 1789.
+
+\bibitem{gomez2009extended}
+\bysame, \emph{{An extended class of orthogonal polynomials defined by a
+  Sturm--Liouville problem}}, J. Math. Anal. Appl. \textbf{359} (2009), no.~1,
+  352--367.
+
+\bibitem{gomez2010extension}
+\bysame, \emph{{An extension of Bochner's problem: exceptional invariant
+  subspaces}}, J. Approx. Theory \textbf{162} (2010), no.~5, 987--1006.
+
+\bibitem{gomez2013conjecture}
+\bysame, \emph{A conjecture on exceptional orthogonal polynomials}, Found.
+  Comput. Math. \textbf{13} (2013), no.~4, 615--666.
+
+\bibitem{grandati2011solvable}
+Yves Grandati, \emph{Solvable rational extensions of the isotonic oscillator},
+  Ann. Physics \textbf{326} (2011), no.~8, 2074--2090.
+
+\bibitem{grandati2012multistep}
+\bysame, \emph{{Multistep DBT and regular rational extensions of the isotonic
+  oscillator}}, Ann. Physics \textbf{327} (2012), no.~10, 2411--2431.
+
+\bibitem{gromak2008painleve}
+Valerii~I Gromak, Ilpo Laine, and Shun Shimomura, \emph{{P}ainlev{\'e}
+  differential equations in the complex plane}, vol.~28, Walter de Gruyter,
+  2008.
+
+\bibitem{kajiwara1996determinant}
+Kenji Kajiwara and Yasuhiro Ohta, \emph{{Determinant structure of the rational
+  solutions for the {P}ainlev{\'e} II equation}}, J. Math. Phys. \textbf{37}
+  (1996), no.~9, 4693--4704.
+
+\bibitem{kajiwara1998determinant}
+\bysame, \emph{{Determinant structure of the rational solutions for the
+  {P}ainlev{\'e} IV equation}}, J. Phys. A \textbf{31} (1998), no.~10, 2431.
+
+\bibitem{krein1957continuous}
+M.~G. Krein, \emph{On a continual analogue of a {C}hristoffel formula from the
+  theory of orthogonal polynomials}, Dokl. Akad. Nauk SSSR (N.S.) \textbf{113}
+  (1957), 970--973. \MR{0091396}
+
+\bibitem{marquette2013one}
+Ian Marquette and Christiane Quesne, \emph{New ladder operators for a rational
+  extension of the harmonic oscillator and superintegrability of some
+  two-dimensional systems}, J. Math. Phys. \textbf{54} (2013), no.~10, 102102,
+  12. \MR{3134580}
+
+\bibitem{marquette2013two}
+\bysame, \emph{Two-step rational extensions of the harmonic oscillator:
+  exceptional orthogonal polynomials and ladder operators}, J. Phys. A
+  \textbf{46} (2013), no.~15, 155201.
+
+\bibitem{marquette2016}
+\bysame, \emph{Connection between quantum systems involving the fourth
+  {P}ainlev\'{e} transcendent and {$k$}-step rational extensions of the
+  harmonic oscillator related to {H}ermite exceptional orthogonal polynomial},
+  J. Math. Phys. \textbf{57} (2016), no.~5, 052101, 15. \MR{3501792}
+
+\bibitem{refMR18}
+Davide Masoero and Pieter Roffelsen, \emph{Poles of {P}ainlev\'{e} {IV}
+  rationals and their distribution}, SIGMA \textbf{14} (2018), Paper No. 002,
+  49. \MR{3742702}
+
+\bibitem{masoero2019roots}
+\bysame, \emph{{Roots of generalised Hermite polynomials when both parameters
+  are large}}, arXiv preprint arXiv:1907.08552 (2019).
+
+\bibitem{MateoNegro}
+J.~Mateo and J.~Negro, \emph{Third-order differential ladder operators and
+  supersymmetric quantum mechanics}, J. Phys. A \textbf{41} (2008), no.~4,
+  045204, 28. \MR{2451071}
+
+\bibitem{matsuda2012rational}
+Kazuhide Matsuda, \emph{{Rational solutions of the Noumi and Yamada system of
+  type $A_4^{(1)}$}}, J. Math. Phys. \textbf{53} (2012), no.~2, 023504.
+
+\bibitem{noumi2004painleve}
+Masatoshi Noumi, \emph{{P}ainlev{\'e} equations through symmetry}, vol. 223,
+  Springer Science \& Business, 2004.
+
+\bibitem{noumi1999symmetries}
+Masatoshi Noumi and Yasuhiko Yamada, \emph{{Symmetries in the fourth
+  {P}ainlev{\'e} equation and Okamoto polynomials}}, Nagoya Math. J.
+  \textbf{153} (1999), 53--86.
+
+\bibitem{NovokShchel14}
+V.~Yu. Novokshenov and A.~A. Shchelkonogov, \emph{Double scaling limit in the
+  {P}ainlev\'{e} {IV} equation and asymptotics of the {O}kamoto polynomials},
+  Spectral theory and differential equations, Amer. Math. Soc. Transl. Ser. 2,
+  vol. 233, Amer. Math. Soc., Providence, RI, 2014, pp.~199--210. \MR{3307781}
+
+\bibitem{Novokshenov18}
+Victor~Yu. Novokshenov, \emph{Generalized {H}ermite polynomials and
+  monodromy-free {S}chr\"{o}dinger operators}, SIGMA \textbf{14} (2018), 106,
+  13 pages. \MR{3859422}
+
+\bibitem{oblomkov1999monodromy}
+A.~A. Oblomkov, \emph{{Monodromy-free Schr{\"o}dinger operators with
+  quadratically increasing potentials}}, Theoret. and Math. Phys. \textbf{121}
+  (1999), no.~3, 1574--1584.
+
+\bibitem{odake2011exactly}
+Satoru Odake and Ryu Sasaki, \emph{Exactly solvable quantum mechanics and
+  infinite families of multi-indexed orthogonal polynomials}, Phys. Lett. B
+  \textbf{702} (2011), no.~2-3, 164--170.
+
+\bibitem{odake2013extensions}
+\bysame, \emph{Extensions of solvable potentials with finitely many discrete
+  eigenstates}, J. Phys. A \textbf{46} (2013), no.~23, 235205.
+
+\bibitem{odake2013krein}
+\bysame, \emph{{Krein--Adler transformations for shape-invariant potentials and
+  pseudo virtual states}}, J. Phys. A \textbf{46} (2013), no.~24, 245201.
+
+\bibitem{okamoto1987studies3}
+Kazuo Okamoto, \emph{Studies on the {P}ainlev\'{e} equations. {III}. {S}econd
+  and fourth {P}ainlev\'{e} equations, {$P_{{\rm II}}$} and {$P_{{\rm IV}}$}},
+  Math. Ann. \textbf{275} (1986), no.~2, 221--255. \MR{854008}
+
+\bibitem{olsson1994combinatorics}
+J{\o}rn~B{\o}rling Olsson, \emph{Combinatorics and representations of finite
+  groups}, Fachbereich Mathematik [Lecture Notes in Mathematics], vol.~20,
+  Universit{\"a}t Essen, 1994.
+
+\bibitem{refOB05}
+N.~Olver and I.~V. Barashenkov, \emph{The complex sine-{G}ordon-2 equation: a
+  new algorithm for obtaining multivortex solution on the plane}, Theoret. and
+  Math. Phys. \textbf{144} (2005), no.~2, 1223--1226.
+
+\bibitem{refRogers15}
+Colin Rogers, \emph{Moving boundary problems for the {H}arry {D}ym equation and
+  its reciprocal associates}, Z. Angew. Math. Phys. \textbf{66} (2015), no.~6,
+  3205--3220. \MR{3428461}
+
+\bibitem{refRogers16}
+\bysame, \emph{On a class of moving boundary problems for the potential mkd{V}
+  equation: conjugation of {B}\"{a}cklund and reciprocal transformations}, Ric.
+  Mat. \textbf{65} (2016), no.~2, 563--577. \MR{3572529}
+
+\bibitem{refRogers17}
+\bysame, \emph{Moving boundary problems for an extended {D}ym equation.
+  {R}eciprocal connection}, Meccanica \textbf{52} (2017), no.~15, 3531--3540.
+  \MR{3719648}
+
+\bibitem{refRC17}
+Colin Rogers and Peter~A. Clarkson, \emph{Ermakov-{P}ainlev\'{e} {II} symmetry
+  reduction of a {K}orteweg capillarity system}, SIGMA \textbf{13} (2017),
+  Paper No. 018, 20. \MR{3626297}
+
+\bibitem{refRC18}
+\bysame, \emph{Ermakov-{P}ainlev\'{e} {II} reduction in cold plasma physics.
+  {A}pplication of a {B}\"{a}cklund transformation}, J. Nonlinear Math. Phys.
+  \textbf{25} (2018), no.~2, 247--261. \MR{3776560}
+
+\bibitem{sen2005darboux}
+Amit Sen, Andrew N.~W. Hone, and Peter~A. Clarkson, \emph{{Darboux
+  transformations and the symmetric fourth {P}ainlev{\'e} equation}}, J. Phys.
+  A \textbf{38} (2005), no.~45, 9751--9764.
+
+\bibitem{takasaki2003spectral}
+Kanehisa Takasaki, \emph{{Spectral curve, Darboux coordinates and Hamiltonian
+  structure of periodic dressing chains}}, Comm. Math. Phys. \textbf{241}
+  (2003), no.~1, 111--142.
+
+\bibitem{tsuda2005universal}
+Teruhisa Tsuda, \emph{{Universal characters, integrable chains and the
+  {P}ainlev{\'e} equations}}, Adv. Math. \textbf{197} (2005), no.~2, 587--606.
+
+\bibitem{refUmemura01}
+Hiroshi Umemura, \emph{{P}ainlev\'{e} equations in the past 100 years}, A.M.S.
+  Translations \textbf{204} (2001), 81--110.
+
+\bibitem{refWVAbook}
+Walter Van~Assche, \emph{Orthogonal polynomials and {P}ainlev\'{e} equations},
+  Australian Mathematical Society Lecture Series, vol.~27, Cambridge University
+  Press, Cambridge, 2018. \MR{3729446}
+
+\bibitem{veselov1993dressing}
+A.~P. Veselov and A.~B. Shabat, \emph{{Dressing chains and the spectral theory
+  of the Schr{\"o}dinger operator}}, Funct. Anal. Appl. \textbf{27} (1993),
+  no.~2, 81--96.
+
+\bibitem{vorob1965rational}
+A.~P. Vorob'ev, \emph{{On the rational solutions of the second {P}ainlev{\'e}
+  equation}}, Diff. Eqns. \textbf{1} (1965), no.~1, 58--59.
+
+\bibitem{WilloxHietarinta}
+Ralph Willox and Jarmo Hietarinta, \emph{Painlev\'{e} equations from {D}arboux
+  chains. {I}. {$P_{\rm III}$}--{$P_{\rm V}$}}, J. Phys. A \textbf{36} (2003),
+  no.~42, 10615--10635. \MR{2024916}
+
+\bibitem{yablonskii1959rational}
+A.~I. Yablonskii, \emph{{On rational solutions of the second {P}ainlev{\'e}
+  equation}}, Vesti Akad. Navuk. BSSR Ser. Fiz. Tkh. Nauk. \textbf{3} (1959),
+  30--35.
+
+\end{thebibliography}

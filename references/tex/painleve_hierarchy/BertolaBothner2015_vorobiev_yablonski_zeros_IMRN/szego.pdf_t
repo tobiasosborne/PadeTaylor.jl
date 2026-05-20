@@ -1,0 +1,35 @@
+\begin{picture}(0,0)%
+\includegraphics{szego.pdf}%
+\end{picture}%
+\setlength{\unitlength}{3947sp}%
+%
+\begingroup\makeatletter\ifx\SetFigFont\undefined%
+\gdef\SetFigFont#1#2#3#4#5{%
+  \reset@font\fontsize{#1}{#2pt}%
+  \fontfamily{#3}\fontseries{#4}\fontshape{#5}%
+  \selectfont}%
+\fi\endgroup%
+\begin{picture}(3255,2445)(1411,-3646)
+\put(2026,-1336){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{1,0,0}$a_1$}%
+}}}}
+\put(3751,-1711){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{1,0,0}$a_2$}%
+}}}}
+\put(4651,-2536){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{1,0,0}$a_3$}%
+}}}}
+\put(4126,-3586){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{1,0,0}$a_4$}%
+}}}}
+\put(2551,-3361){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{1,0,0}$a_5$}%
+}}}}
+\put(1501,-2536){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{1,0,0}$a_6$}%
+}}}}
+\put(2926,-1486){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{1,0,0}$i\sigma_1$}%
+}}}}
+\put(4201,-2011){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}$e^{i\pi(n\Omega_1+\delta_1)\sigma_3}$}%
+}}}}
+\put(3076,-3136){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}$e^{i\pi(n\Omega_2+\delta_2)\sigma_3}$}%
+}}}}
+\put(4426,-3136){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{1,0,0}$e^{in\alpha_1\sigma_3}i\sigma_1$}%
+}}}}
+\put(1426,-2986){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{1,0,0}$e^{in\alpha_2\sigma_3}i\sigma_1$}%
+}}}}
+\end{picture}%

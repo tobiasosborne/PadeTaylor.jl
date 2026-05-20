@@ -1,0 +1,48 @@
+\begin{thebibliography}{1}
+
+\bibitem{adler2020}
+V.~E. Adler.
+\newblock Painlev{\'e} type reductions for the non-{A}belian {V}olterra
+  lattices.
+\newblock {\em Journal of Physics A: Mathematical and Theoretical},
+  54(3):\href{https://doi.org/10.1088/1751--8121/abd21f}{035204}, 2021.
+\newblock \href{https://arxiv.org/abs/2010.09021}{arXiv:2010.09021}.
+
+\bibitem{Adler_Sokolov_2020_1}
+V.~E. Adler and V.~V. Sokolov.
+\newblock On matrix {P}ainlev{\'e} {II} equations.
+\newblock {\em Theoret. and Math. Phys.},
+  207(2):\href{https://doi.org/10.4213/tmf10027}{188--201}, 2021.
+\newblock \href{https://arxiv.org/abs/2012.05639}{arXiv:2012.05639}.
+
+\bibitem{Balandin_Sokolov_1998}
+S.~P. Balandin and V.~V. Sokolov.
+\newblock On the {P}ainlev{\'e} test for non-{A}belian equations.
+\newblock {\em Physics letters A},
+  246(3-4):\href{https://www.sciencedirect.com/science/article/abs/pii/S0375960198003363?via\%3Dihub}{267--272},
+  1998.
+
+\bibitem{Retakh_Rubtsov_2010}
+V.~S. Retakh and V.~V. Rubtsov.
+\newblock Noncommutative {T}oda {C}hains, {H}ankel {Q}uasideterminants and
+  {P}ainlev{\'e} {II} {E}quation.
+\newblock {\em Journal of Physics. A, Mathematical and Theoretical},
+  43(50):\href{https://iopscience.iop.org/article/10.1088/1751--8113/43/50/505204}{505204},
+  2010.
+\newblock \href{https://arxiv.org/abs/1007.4168}{arXiv:1007.4168}.
+
+\bibitem{SW2}
+V.~V. Sokolov and T.~Wolf.
+\newblock Non-commutative generalization of integrable quadratic {ODE} systems.
+\newblock {\em Letters in Mathematical Physics},
+  110(3):\href{https://link.springer.com/article/10.1007\%2Fs11005--019--01229--0}{533--553},
+  2020.
+
+\bibitem{veselov1993}
+A.~P. Veselov and A.~B. Shabat.
+\newblock Dressing chains and the spectral theory of the {S}chr{\"o}dinger
+  operator.
+\newblock {\em Functional Analysis and Its Applications},
+  27(2):\href{https://doi.org/10.1007/BF01085979}{81--96}, 1993.
+
+\end{thebibliography}

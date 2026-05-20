@@ -1,0 +1,79 @@
+\begin{tikzpicture}
+[vertex/.style={circle,minimum size=1.5mm,inner sep=0pt,fill=black},
+edge/.style={thick},
+splitVertex/.style={fill=red},
+splitLabel/.style={red},
+highlightLabel/.style={blue},
+defaultLabel/.style={black},
+newEdge/.style={red},
+changedEdge/.style={red},
+leftEnd/.style={<-,>=latex'},
+rightEnd/.style={->,>=latex'},
+hightlightPath/.style={blue},
+path1/.style={blue,line width=1mm},
+path2/.style={green,line width=0.4mm}]
+\node[vertex,label={[defaultLabel]below left:1}] (1) at (1. , 1.) {}; 
+\node[vertex,label={[defaultLabel]below left:2}] (2) at (1. , 2.) {}; 
+\node[vertex,label={[defaultLabel]below left:3}] (3) at (1. , 3.) {}; 
+\node[vertex,label={[defaultLabel]below left:4}] (4) at (1. , 4.) {}; 
+\node[vertex,label={[defaultLabel]below left:5}] (5) at (2. , 1.) {}; 
+\node[vertex,label={[defaultLabel]below left:6}] (6) at (2. , 2.) {}; 
+\node[vertex,label={[defaultLabel]below left:7}] (7) at (2. , 3.) {}; 
+\node[vertex,label={[defaultLabel]below left:8}] (8) at (2. , 4.) {}; 
+\node[vertex,label={[defaultLabel]below left:9}] (9) at (3. , 1.) {}; 
+\node[vertex,label={[defaultLabel]below left:10}] (10) at (3. , 2.) {}; 
+\node[vertex,label={[defaultLabel]below left:11}] (11) at (3. , 3.) {}; 
+\node[vertex,label={[defaultLabel]below left:12}] (12) at (3. , 4.) {}; 
+\node[vertex,label={[defaultLabel]below left:13}] (13) at (4. , 1.) {}; 
+\node[vertex,label={[defaultLabel]below left:14}] (14) at (4. , 2.) {}; 
+\node[vertex,label={[defaultLabel]below left:15}] (15) at (4. , 3.) {}; 
+\node[vertex,label={[defaultLabel]below left:16}] (16) at (4. , 4.) {}; 
+\node[vertex,label={[defaultLabel]below left:17}] (17) at (5. , 1.) {}; 
+\node[vertex,label={[defaultLabel]below left:18}] (18) at (5. , 2.) {}; 
+\node[vertex,label={[defaultLabel]below left:19}] (19) at (5. , 3.) {}; 
+\node[vertex,label={[defaultLabel]below left:20}] (20) at (5. , 4.) {}; 
+\draw[edge,](1) -- (2); 
+\draw[edge,](1) -- (5); 
+\draw[edge,](2) -- (3); 
+\draw[edge,](2) -- (6); 
+\draw[edge,](3) -- (4); 
+\draw[edge,](3) -- (7); 
+\draw[edge,](4) -- (8); 
+\draw[edge,](5) -- (6); 
+\draw[edge,](5) -- (9); 
+\draw[edge,](6) -- (7); 
+\draw[edge,](6) -- (10); 
+\draw[edge,](7) -- (8); 
+\draw[edge,](7) -- (11); 
+\draw[edge,](8) -- (12); 
+\draw[edge,](9) -- (10); 
+\draw[edge,](9) -- (13); 
+\draw[edge,](10) -- (11); 
+\draw[edge,](10) -- (14); 
+\draw[edge,](11) -- (12); 
+\draw[edge,](11) -- (15); 
+\draw[edge,](12) -- (16); 
+\draw[edge,](13) -- (14); 
+\draw[edge,](13) -- (17); 
+\draw[edge,](14) -- (15); 
+\draw[edge,](14) -- (18); 
+\draw[edge,](15) -- (16); 
+\draw[edge,](15) -- (19); 
+\draw[edge,](16) -- (20); 
+\draw[edge,](17) -- (18); 
+\draw[edge,](18) -- (19); 
+\draw[edge,](19) -- (20); 
+
+\draw[edge,path1] (1) -- (5);
+\draw[edge,path1] (5) -- (6);
+\draw[edge,path1] (6) -- (7);
+\draw[edge,path1] (6) -- (10);
+\draw[edge,path1] (10) -- (14);
+\draw[edge,path1] (14) -- (15);
+
+\draw[edge,path2] (3) -- (7);
+\draw[edge,path2] (7) -- (6);
+\draw[edge,path2] (6) -- (10);
+\draw[edge,path2] (10) -- (14);
+\draw[edge,path2] (14) -- (15);
+\end{tikzpicture}

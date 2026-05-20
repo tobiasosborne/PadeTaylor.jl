@@ -1,0 +1,43 @@
+\begin{picture}(0,0)%
+\includegraphics{model2.pdf}%
+\end{picture}%
+\setlength{\unitlength}{3947sp}%
+%
+\begingroup\makeatletter\ifx\SetFigFont\undefined%
+\gdef\SetFigFont#1#2#3#4#5{%
+  \reset@font\fontsize{#1}{#2pt}%
+  \fontfamily{#3}\fontseries{#4}\fontshape{#5}%
+  \selectfont}%
+\fi\endgroup%
+\begin{picture}(10031,2832)(61,-3871)
+\put(2026,-1336){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{1,0,0}$a_1$}%
+}}}}
+\put(3751,-1711){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{1,0,0}$a_2$}%
+}}}}
+\put(4651,-2536){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{1,0,0}$a_3$}%
+}}}}
+\put(4126,-3586){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{1,0,0}$a_4$}%
+}}}}
+\put(2551,-3361){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{1,0,0}$a_5$}%
+}}}}
+\put(1501,-2536){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{1,0,0}$a_6$}%
+}}}}
+\put(2776,-1186){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{1,0,0}$\begin{bmatrix}0 & (2\pi iz)^{-1}\\-2\pi iz & 0\\ \end{bmatrix}$}%
+}}}}
+\put(4201,-2011){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}$e^{i\pi n\Omega_1\sigma_3}$}%
+}}}}
+\put(4501,-3061){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{1,0,0}$e^{in\alpha_1\sigma_3}\begin{bmatrix} 0& (2\pi iz)^{-1}\\ -2\pi iz &0\\ \end{bmatrix}$}%
+}}}}
+\put(3226,-3211){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}$e^{i\pi n\Omega_2\sigma_3}$}%
+}}}}
+\put( 76,-3136){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{1,0,0}$e^{in\alpha_2\sigma_3}\begin{bmatrix} 0&(2\pi iz)^{-1}\\ -2\pi iz &0\\ \end{bmatrix}$}%
+}}}}
+\put(9826,-1861){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}$\mathcal{B}_1$}%
+}}}}
+\put(8251,-1186){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}$\mathcal{A}_1$}%
+}}}}
+\put(8401,-3811){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}$\mathcal{A}_2$}%
+}}}}
+\put(6526,-2311){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}$\mathcal{B}_2$}%
+}}}}
+\end{picture}%

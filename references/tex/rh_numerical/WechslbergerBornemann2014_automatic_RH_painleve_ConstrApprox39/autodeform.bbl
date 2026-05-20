@@ -1,0 +1,49 @@
+\begin{thebibliography}{1}
+
+\bibitem{1107.0498v2}
+Folkmar Bornemann and Georg Wechslberger.
+\newblock Optimal contours for high-order derivatives.
+\newblock {\em IMA J. Numer. Anal.}, \textrm{(to appear)}, 2012.
+\newblock e-print: {\tt arXiv:1107.0498v2}.
+
+\bibitem{MR1207209}
+P.~Deift and X.~Zhou.
+\newblock A steepest descent method for oscillatory {R}iemann--{H}ilbert
+  problems: {A}symptotics for the {MK}d{V} equation.
+\newblock {\em Ann. of Math.}, 137:295--368, 1993.
+
+\bibitem{MR1677884}
+P.~A. Deift.
+\newblock {\em Orthogonal polynomials and random matrices: a
+  {R}iemann-{H}ilbert approach}.
+\newblock American Mathematical Society, Providence, RI, 1999.
+
+\bibitem{fokas:2006:ptr}
+Athanassios~S. Fokas, Alexander~R. Its, Andrei~A. Kapaev, and Victor~Yu.
+  Novokshenov.
+\newblock {\em {Painlev\'e Transcendents: The Riemann-Hilbert Approach}}.
+\newblock American Mathematical Society, Providence, RI, 2006.
+
+\bibitem{MR2011605}
+Alexander~R. Its.
+\newblock The {R}iemann--{H}ilbert problem and integrable systems.
+\newblock {\em Notices Amer. Math. Soc.}, 50:1389--1400, 2003.
+
+\bibitem{Olver:2011:NSR:1967343.1967345}
+Sheehan Olver.
+\newblock Numerical solution of {R}iemann-{H}ilbert problems: {P}ainlev\'e
+  {II}.
+\newblock {\em Found. Comput. Math.}, 11:153--179, 2011.
+
+\bibitem{1205.5604}
+Sheehan Olver and Thomas Trogdon.
+\newblock Nonlinear steepest descent and the numerical solution of
+  {Riemann--Hilbert} problems, 2012.
+\newblock e-print: {\tt arXiv:1205.5604}.
+
+\bibitem{provan89}
+J.~Scott Provan.
+\newblock Shortest enclosing walks and cycles in embedded graphs.
+\newblock {\em Inform. Process. Lett.}, 30:119--125, 1989.
+
+\end{thebibliography}

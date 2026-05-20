@@ -1,0 +1,126 @@
+\begin{thebibliography}{10}
+
+\bibitem{BJL}
+W.~Balser, W.B. Jurkat, and D.A. Lutz.
+\newblock Birkhoff invariants and stokes multipliers for meromorphic linear
+  differential equations.
+\newblock {\em J. Math. Anal. Appl.}, 71:48--94, 1979.
+
+\bibitem{Dub7}
+B.~Dubrovin.
+\newblock {\em Geometry of 2D topological field theories}, volume 1620 of {\em
+  Springer Lecture Notes in Math.}
+\newblock Integrable Systems and Quantum Groups, M.Francaviglia, S.Greco
+  editors, 1996.
+
+\bibitem{Dub1}
+B.~Dubrovin.
+\newblock \text{Painlev\'e} transcendents in \text{Two-Dimensional}
+  \text{Topological} \text{Field Theory}.
+\newblock {\em The Painlev\'e property One Century Later}, pages 287--412,
+  1999.
+
+\bibitem{DM}
+B.~Dubrovin and M.~Mazzocco.
+\newblock \text{Monodromy of certain Painlev\'e-VI} transcendents and
+  reflection groups.
+\newblock {\em Invent. Math.}, 141:55--147, 2000.
+
+\bibitem{DM1}
+B.~Dubrovin and M.~Mazzocco.
+\newblock Canonical structures for the \text{Schlesinger} systems.
+\newblock {\em preprint}, 2003.
+
+\bibitem{Gar1}
+R.~Garnier.
+\newblock Sur des \'equations diff\'erentielles du troisi\`eme ordre dont
+  l'int\'egrale g\'en\'erale est uniforme et sur une classe d'\'equations
+  nouvelles d'ordre sup\'erieur dont l'int\'egrale g\'en\'erale a ses points
+  critiques fixes.
+\newblock {\em Ann. Sci. \'Ecole Norm. Sup.}, 29:no. 3, 1--126, 1912.
+
+\bibitem{Gar2}
+R.~Garnier.
+\newblock Solution du probleme de \text{Riemann} pour les systemes
+  diff\'erentielles lin\'eaires du second ordre.
+\newblock {\em Ann. Sci. \'Ecole Norm.. Sup.}, 43:239--352, 1926.
+
+\bibitem{Hr}
+J.~Harnad.
+\newblock Dual isomonodromic deformations and moment maps to loop algebras.
+\newblock {\em Commun. Math. Phys.}, 166:337--365, 1994.
+
+\bibitem{Hit}
+N.~Hitchin.
+\newblock \text{Algebraic solutions of the Painlev\'e VI} equation.
+\newblock {\em talk at Edinburgh, work in progress}, 1998.
+
+\bibitem{Hit3}
+N.~Hitchin.
+\newblock A lecture on the octahedron.
+\newblock {\em preprint}, 2002.
+
+\bibitem{IKSY}
+K.~Iwasaki, H.~Kimura, S.~Shimomura, and M.~Yoshida.
+\newblock {\em From Gauss to Painlev\'e, a Modern Theory of Special Functions},
+  volume E 16.
+\newblock Aspects of Mathematics, 1991.
+
+\bibitem{MJ1}
+M.~Jimbo and T.~Miwa.
+\newblock Monodromy preserving deformations of linear ordinary differential
+  equations with rational coefficients \text{I}.
+\newblock {\em Physica 2D}, 2 no. 2:306--352, 1981.
+
+\bibitem{Mj2}
+M.~Jimbo and T.~Miwa.
+\newblock Monodromy preserving deformations of linear ordinary differential
+  equations with rational coefficients \text{II}.
+\newblock {\em Physica 2D}, 4 no.1:407--448, 1981.
+
+\bibitem{MJU}
+M.~Jimbo, T.~Miwa, and K.~Ueno.
+\newblock Monodromy preserving deformations of linear ordinary differential
+  equations with rational coefficients iii.
+\newblock {\em Physica 2D}, 4 no.1:26--46, 1982.
+
+\bibitem{M}
+M.~Mazzocco.
+\newblock Picard and \text{C}hazy solutions to the \text{PVI} equation.
+\newblock {\em Math. Ann.}, 321:no. 1:131--169, 2001.
+
+\bibitem{M3}
+M.~Mazzocco.
+\newblock Painlev\'e sixth equation as isomonodromic deformations equation of
+  an irregular system.
+\newblock {\em The Kowalevski property (Leeds, 2000), CRM Proc. Lecture
+  Notes,}, 32:219--238, 2002.
+
+\bibitem{Ok1}
+K.~Okamoto.
+\newblock \text{Isomonodromic deformations, Painlev\'e} equations, and the
+  \text{Garnier} system.
+\newblock {\em J. Fac. Sci. Univ. Tokyo, Sect. 1A, Math.}, 33:576--618, 1986.
+
+\bibitem{Ok2}
+K.~Okamoto.
+\newblock \text{Studies on the Painlev\'e equations I,} \text{sixth}
+  \text{Painlev\'e} \text{equation}.
+\newblock {\em Ann. Mat. Pura Appl.}, 146:337--381, 1987.
+
+\bibitem{ST}
+H.~Sakai and T.~Tsuda.
+\newblock {\em private communication}, 2002.
+
+\bibitem{Sch}
+L.~Schlesinger.
+\newblock \text{Uber eine Klasse von Differentsial System Beliebliger}
+  \text{Ordnung} mit \text{Festen Kritischer Punkten}.
+\newblock {\em J. fur Math.}, 141:96--145, 1912.
+
+\bibitem{Ts}
+T.~Tsuda.
+\newblock Universal characters and integrable systems.
+\newblock {\em PhD thesis, Tokyo Graduate School of Mathematics}, 2003.
+
+\end{thebibliography}

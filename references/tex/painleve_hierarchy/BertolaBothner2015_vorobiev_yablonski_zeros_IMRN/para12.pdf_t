@@ -1,0 +1,23 @@
+\begin{picture}(0,0)%
+\includegraphics{para12.pdf}%
+\end{picture}%
+\setlength{\unitlength}{3947sp}%
+%
+\begingroup\makeatletter\ifx\SetFigFont\undefined%
+\gdef\SetFigFont#1#2#3#4#5{%
+  \reset@font\fontsize{#1}{#2pt}%
+  \fontfamily{#3}\fontseries{#4}\fontshape{#5}%
+  \selectfont}%
+\fi\endgroup%
+\begin{picture}(4155,2820)(811,-2221)
+\put(2551,464){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}$\begin{bmatrix}1& 0\\ 2\pi iz e^{n\varphi(z)}&1\\ \end{bmatrix}$}%
+}}}}
+\put(4951,-1711){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}$\begin{bmatrix} 1& (2\pi iz)^{-1} e^{-n\varphi(z)}\\ 0 & 1\\ \end{bmatrix}$}%
+}}}}
+\put(4201,-1036){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{1,0,0}$-ia(x)$}%
+}}}}
+\put(826,-1036){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}$\begin{bmatrix} 0 & (2\pi iz)^{-1}\\ -2\pi iz & 0\\ \end{bmatrix}$}%
+}}}}
+\put(2776,-2161){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}$\begin{bmatrix}1& 0\\ 2\pi iz e^{n\varphi(z)}&1\\ \end{bmatrix}$}%
+}}}}
+\end{picture}%

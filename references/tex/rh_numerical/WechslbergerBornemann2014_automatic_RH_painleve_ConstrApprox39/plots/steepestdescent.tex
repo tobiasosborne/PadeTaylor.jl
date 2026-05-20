@@ -1,0 +1,55 @@
+\begin{tikzpicture}
+	[rhcontour/.style={->,>=latex',thick},
+	 solution/.style={black!60!white}]
+	% points on the original contour Gamma
+	\coordinate (A) at (0,0);
+	\node (D) at (4,2) {$\Gamma$};
+	\coordinate (B) at ($(A)!0.2!(D)$);
+	\coordinate (C) at ($(A)!0.7!(D)$);
+	% points on the deformed contour
+	\path let \p1=(5,0) in
+		coordinate (A') at ($(A)+(\p1)$)
+		coordinate (B') at ($(B)+(\p1)$)
+		coordinate (C') at ($(C)+(\p1)$)
+		node (D') at ($(D)+(\p1)$) {$\tilde{\Gamma}$};
+
+	\node[anchor=south east,minimum width=4cm] (L) at (D) {undeformed};
+	%
+	% undeformed contour
+	%
+
+	% labels
+	\node[solution] (PP) at ($(A)!0.25!(D)!0.2!90:(D)$) {$\Phi$};
+	\node[solution] (PM) at ($(A)!0.25!(D)!0.2!-90:(D)$) {$\Phi$};
+
+	% contour parts
+	\draw[rhcontour] (A) -- (D) 
+		node[midway,below,anchor=west,inner xsep=10] {$G$}
+		node[very near start,above,anchor=south east] {$+$}
+		node[very near start,below,anchor=north west] {$-$};
+	\draw[rhcontour] (A) -- (B);
+	\draw[rhcontour] (B) -- (C);
+	\draw[rhcontour] (C) -- (D);
+
+	% \cong
+	%\node (eq) at ($(D)!0.5!(A')$) {$\cong$};
+
+	%
+	% deformed contour
+	%
+	% labels
+	\node[solution] (PP') at ($(A')!0.2!(D')!0.2!90:(D')$) {$\Phi$};
+	\node[solution] (PM') at ($(A')!0.2!(D')!0.2!-90:(D')$) {$\Phi$};
+
+	\node[anchor=south east,minimum width=4cm] (L) at (D') {deformed};
+
+	% contour parts
+	% background between both pathes
+	\draw[fill=red,opacity=0.9] (B') .. controls ($(B')!1!-45:(C')$) and ($(C')!1!90:(B')$) .. (C') -- (B') node[midway,above,red,opacity=0.9] {$\Omega$};
+	\draw[rhcontour] (A') -- (B');
+	\draw[rhcontour] (C') -- (D')
+	  node[midway,above,anchor=east,inner xsep=10] {$G$};
+	\draw[rhcontour,out=0,in=-90] (B') .. controls ($(B')!1!-45:(C')$) and ($(C')!1!90:(B')$) .. (C');
+	\draw[dotted,thick] (B') -- (C')
+	  node[solution,black,midway,below,anchor=north west,inner xsep=10] {$\Phi G$};
+\end{tikzpicture}

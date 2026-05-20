@@ -1,0 +1,201 @@
+\begin{thebibliography}{10}
+
+\bibitem{AB}
+D.V. Anosov and A.A. Bolibruch.
+\newblock {\em The Riemann-Hilbert Problem}, volume E 22.
+\newblock Aspects of Mathematics, 1994.
+
+\bibitem{Bol}
+A.A. Bolibruch.
+\newblock \text{On isomonodromic deformations of Fuchsian systems}.
+\newblock {\em J. Dynam. Control Systems}, 3:no. 4, 589--604, 1997.
+
+\bibitem{Con}
+R.~Conte.
+\newblock \text{The Painlev\'e} approach to nonlinear ordinary differential
+  equations.
+\newblock {\em CRM Ser. Math. Phys.}, pages 77--180, 1999.
+
+\bibitem{DIKZ}
+P.~Deift, A.~Its, A.~Kapaev, and X.~Zhou.
+\newblock On the algebro-geometric integration of the \text{Schlesinger}
+  equations.
+\newblock {\em Commun. Math. Phys.}, 203:613--633, 1999.
+
+\bibitem{Dek}
+W.~Dekkers.
+\newblock The matrix of a connection having regular singularities on a vector
+  bundle of rank $2$ on \text{$P^1(\complessi)$}.
+\newblock {\em Springer Lect. Notes Math.}, 712:33--43, 1979.
+
+\bibitem{Dub1}
+B.~Dubrovin.
+\newblock \text{Painlev\'e} transcendents in \text{Two-Dimensional}
+  \text{Topological} \text{Field Theory}.
+\newblock {\em The Painlev\'e property One Century Later}, pages 287--412,
+  1999.
+
+\bibitem{DM}
+B.~Dubrovin and M.~Mazzocco.
+\newblock \text{Monodromy of certain Painlev\'e-VI} transcendents and
+  reflection groups.
+\newblock {\em Invent. Math.}, 141:55--147, 2000.
+
+\bibitem{DM1}
+B.~Dubrovin and M.~Mazzocco.
+\newblock \text{Schlesinger} systems, their reductions and classical solutions.
+\newblock {\em In preparation}, 2001.
+
+\bibitem{DZ2}
+B.~Dubrovin and Y.~Zhang.
+\newblock Bihamiltonian hierarchies in 2d topological field theory at one-loop
+  approximation.
+\newblock {\em Comm. Math. Phys.}, 198 no. 2:311--361, 1998.
+
+\bibitem{FN}
+H.~Flaschka and A.C. Newell.
+\newblock Monodromy and spectrum preserving deformations, \text{I}.
+\newblock {\em Comm. Math. Phys.}, 76:no. 1, 65--116, 1980.
+
+\bibitem{Gar1}
+R.~Garnier.
+\newblock Sur des \'equations diff\'erentielles du troisi\`eme ordre dont
+  l'int\'egrale g\'en\'erale est uniforme et sur une classe d'\'equations
+  nouvelles d'ordre sup\'erieur dont l'int\'egrale g\'en\'erale a ses points
+  critiques fixes.
+\newblock {\em Ann. Sci. \'Ecole Norm. Sup.}, 29:no. 3, 1--126, 1912.
+
+\bibitem{Gar2}
+R.~Garnier.
+\newblock Solution du probleme de \text{Riemann} pour les systemes
+  diff\'erentielles lin\'eaires du second ordre.
+\newblock {\em Ann. Sci. \'Ecole Norm.. Sup.}, 43:239--352, 1926.
+
+\bibitem{Hit1}
+N.~Hitchin.
+\newblock Twistor spaces, einstein metrics and isomonodromic deformations.
+\newblock {\em J. Differential Geom.}, 42:no. 1, 30--112, 1995.
+
+\bibitem{Hit}
+N.~Hitchin.
+\newblock \text{Algebraic solutions of the Painlev\'e VI} equation.
+\newblock {\em talk at Edinburgh, work in progress}, 1998.
+
+\bibitem{IKSY}
+K.~Iwasaki, H.~Kimura, S.~Shimomura, and M.~Yoshida.
+\newblock {\em From Gauss to Painlev\'e, a Modern Theory of Special Functions},
+  volume E 16.
+\newblock Aspects of Mathematics, 1991.
+
+\bibitem{JMU}
+M.~Jimbo, T.~Miwa, and K.~Ueno.
+\newblock Monodromy preserving deformation of the linear ordinary differential
+  equations with rational coefficients \text{I, II}.
+\newblock {\em Publ. RIMS}, 14, 15:223--267, 201--278, 1978, 1979.
+
+\bibitem{KO}
+H.~Kimura and K.~Okamoto.
+\newblock \text{On the polynomial Hamiltonian} structure of the \text{Garnier}
+  system.
+\newblock {\em J. Math. pures et Appl.}, 63:no. 1, 129--146, 1984.
+
+\bibitem{KK}
+A.V. Kitaev and D.A. Korotkin.
+\newblock On solutions of the \text{Schlesinger} equations in terms of
+  \text{$\Theta$}-functions.
+\newblock {\em Internat. Math. Res. Notices}, 17:877--905, 1998.
+
+\bibitem{Mal}
+B.~Malgrange.
+\newblock {\em Equations Differentielles a Coefficients Polynomiaux}.
+\newblock Birkhauser, 1991.
+
+\bibitem{MW}
+L.J. Mason and N.M.J. Woodhouse.
+\newblock {\em Integrability, self-duality, and twistor theory}.
+\newblock London Mathematical Society Monographs, 1996.
+
+\bibitem{M}
+M.~Mazzocco.
+\newblock \text{Picard and Chazy Solutions to PVI Equation}.
+\newblock {\em Math. Ann.}, 2001.
+
+\bibitem{Mi}
+T.~Miwa.
+\newblock Painlev\'e property of monodromy presereving equations and the
+  analyticity of $\tau$-functions.
+\newblock {\em Publ. RIMS}, 17:703--721, 1981.
+
+\bibitem{Ok1}
+K.~Okamoto.
+\newblock \text{Isomonodromic Deformation and Painlev\'e} equations, and the
+  \text{Garnier Syestem}.
+\newblock {\em J. Fac. Sci. Univ. Tokyo, Sect. 1A, Math.}, 33:576--618, 1986.
+
+\bibitem{Ok2}
+K.~Okamoto.
+\newblock \text{Studies on the Painlev\'e Equations I,} \text{Sixth}
+  \text{Painlev\'e} \text{Equation}.
+\newblock {\em Ann. Mat. Pura Appl.}, 146:337--381, 1987.
+
+\bibitem{OK}
+K.~Okamoto and H.~Kimura.
+\newblock \text{On Particular Solutions} of the \text{Garnier} \text{System}
+  and the \text{Hypergeometric} \text{Functions} of \text{Several Variables}.
+\newblock {\em Quart. J. Math. Oxford}, 37:61--80, 1986.
+
+\bibitem{Pain}
+P.~Painlev\'e.
+\newblock \text{Sur les Equations Differentielles du Second Ordre et d'Ordre}
+  \text{Superieur}, dont \text{l'Interable Generale est Uniforme}.
+\newblock {\em Acta Math.}, 25:1--86, 1902.
+
+\bibitem{Pic}
+E.~Picard.
+\newblock M\'emoire sur la th\'eorie des functions alg\'ebriques de deux
+  varables.
+\newblock {\em Journal de Liouville}, 5:135--319, 1889.
+
+\bibitem{Res}
+N.~Reshetikhin.
+\newblock \text{The Knizhnik--Zamolodchikov System} as a \text{Deformation} of
+  the \text{Isomonodromy Problem}.
+\newblock {\em Lett. Math. Phys.}, 26:167--177, 1992.
+
+\bibitem{Sch}
+L.~Schlesinger.
+\newblock \text{Uber eine Klasse von Differentsial System Beliebliger}
+  \text{Ordnung} mit \text{Festen Kritischer Punkten}.
+\newblock {\em J. fur Math.}, 141:96--145, 1912.
+
+\bibitem{Sib}
+Y.~Sibuya.
+\newblock {\em Linear Differential Equations in the Complex Domain: Problems of
+  Analytic Continuation}, volume~82.
+\newblock AMS TMM, 1990.
+
+\bibitem{Um}
+H.~Umemura.
+\newblock \text{Birational Automorphism Groups} and \text{Differential}
+  \text{Equations}.
+\newblock {\em Nagoya Math. J.}, 119:1--80, 1990.
+
+\bibitem{Um1}
+H.~Umemura.
+\newblock \text{Irreducebility of the First Differential Equation of
+  Painlev\'e}.
+\newblock {\em Nagoya Math. J.}, 117:231--252, 1990.
+
+\bibitem{Um2}
+H.~Umemura.
+\newblock \text{Second proof of the Irreducebility} of the \text{First}
+  \text{Differential} \text{Equation of Painlev\'e}.
+\newblock {\em Nagoya Math. J.}, 117:125--171, 1990.
+
+\bibitem{Wat}
+H.~Watanabe.
+\newblock \text{Birational Canonical Transformations and Classical}
+  \text{Solutions} of the \text{Sixth Painlev\'e Equation}.
+\newblock {\em Ann. Scuola Norm. Sup. Pisa Cl. Sci.}, 27:379--425, 1999.
+
+\end{thebibliography}

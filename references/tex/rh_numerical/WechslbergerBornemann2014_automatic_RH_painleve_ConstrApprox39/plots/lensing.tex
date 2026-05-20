@@ -1,0 +1,56 @@
+\begin{tikzpicture}
+	[rhcontour/.style={->,>=latex',thick},
+	 solution/.style={black!60!white}]
+	% points on the original contour Gamma
+	\coordinate (A) at (0,0);
+	\node (D) at (3,3) {$\Gamma$};
+	\coordinate (B) at ($(A)!0.2!(D)$);
+	\coordinate (C) at ($(A)!0.8!(D)$);
+	% points on the deformed contour
+	\path let \p1=(5,0) in
+		coordinate (A') at ($(A)+(\p1)$)
+		coordinate (B') at ($(B)+(\p1)$)
+		coordinate (C') at ($(C)+(\p1)$)
+		node (D') at ($(D)+(\p1)$) {$\tilde\Gamma$};
+	%
+	% undeformed contour
+	%
+	\node[anchor=south east,minimum width=3cm] (L) at (D) {undeformed};
+ 
+	% labels
+	\node[solution] (PP) at ($(A)!0.25!(D)!0.2!90:(D)$) {$\Phi$};
+	\node[solution] (PM) at ($(A)!0.25!(D)!0.2!-90:(D)$) {$\Phi$};
+
+	% contour parts
+	\draw[rhcontour] (A) -- (D) 
+		node[midway,below,anchor=west,inner xsep=10] {$G = LDU$}
+		node[very near start,above,anchor=south east] {$+$}
+		node[very near start,below,anchor=north west] {$-$};
+	\draw[rhcontour] (A) -- (B);
+	\draw[rhcontour] (B) -- (C);
+	\draw[rhcontour] (C) -- (D);
+
+	%
+	% lensing deformation
+	%
+	
+	% labels
+	\node[solution] (PP') at ($(A')!0.2!(D')!0.2!90:(D')$) {$\Phi$};
+	\node[solution] (PM') at ($(A')!0.2!(D')!0.2!-90:(D')$) {$\Phi$};
+
+	\node[anchor=south east,minimum width=3cm] (L) at (D') {lensing};
+
+	% contour parts
+	\draw[rhcontour] (A') -- (B');
+	\draw[rhcontour] (C') -- (D')
+		node[near end,above,anchor=east] {$G$};
+	\draw[rhcontour,blue] (B') -- (C')
+		node[near start,above] {$D$}
+		node[solution,near end,above,anchor=east,inner xsep=10] {$\Phi LD$}
+		node[solution,near start,below,anchor=west,inner xsep=15] {$\Phi L$};
+	\draw[rhcontour,out=90,in=180,red] (B') .. controls ($(B')!0.9!60:(C')$) .. (C')
+		node[near start,above,anchor=east] {$U$};
+	\draw[rhcontour,out=0,in=-90,green!50!black] (B') .. controls ($(B')!1!-45:(C')$) .. (C')
+		node[midway,below] {$L$};
+
+\end{tikzpicture}

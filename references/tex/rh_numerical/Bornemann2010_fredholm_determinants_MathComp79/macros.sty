@@ -1,0 +1,67 @@
+%\definecolor{gray}{rgb}{0.8,0.8,0.8}
+
+\makeatletter
+\renewcommand{\leq}{\leqslant}
+\renewcommand{\geq}{\geqslant}
+\renewcommand{\Re}{{\operator@font Re}}
+\renewcommand{\Im}{{\operator@font Im}}
+\newcommand{\tr}{{\operator@font tr}}
+\newcommand{\range}{{\operator@font ran}}
+\newcommand{\spn}{{\operator@font span}}
+\newcommand{\erf}{{\operator@font erf}}
+\newcommand{\Ai}{{\operator@font Ai}}
+\newcommand{\cov}{{\operator@font cov}}
+\newcommand{\var}{{\operator@font var}}
+\makeatother
+\newcommand{\A}{{\mathbb  A}}
+\newcommand{\B}{{\mathbb  B}}
+\newcommand{\C}{{\mathbb  C}}
+\newcommand{\Q}{{\mathbb  Q}}
+\newcommand{\R}{{\mathbb  R}}
+\newcommand{\K}{{\mathbb  K}}
+\newcommand{\Z}{{\mathbb  Z}}
+\newcommand{\N}{{\mathbb  N}}
+\newcommand{\projected}[1]{\negthickspace\upharpoonright_{#1}}
+
+% begin Christian Ludwig's pretty table command
+
+\newdimen\ZmgZKommaWD
+\newdimen\ZmgZZifferWD
+
+\newcount\ZmgZCounter
+
+\def\ZmgZ#1#2{%
+  %% mit akutellem Font Ziffernbreite und Kommabreite (fett) ausmessen
+  {\setbox0\hbox{$\mathbf{\mathord,}$}\global\ZmgZKommaWD=\wd0
+   \setbox0\hbox{$\mathbf{0}$}\global\ZmgZZifferWD=\wd0 }%
+  %% Z‰hler initialisieren
+  \ZmgZCounter=#2 \advance\ZmgZCounter -1\relax
+  %% Und los ...
+  \ZmgZimpl#1\ZmgZimpl
+}
+
+%% So sieht ein Komma aus (oder ein Punkt?)
+\let\ZmgZKomma=.
+
+\def\ZmgZimpl#1{%
+  \let\ZmgZimplTest=#1\relax
+  \ifx\ZmgZimplTest\ZmgZimpl % Wir haben
+    \let\next\relax % unsere Abschluﬂmarkierung, dann fertig
+  \else % etwas anderes (hoffentlich eine Zahl oder ein Komma; wird nicht getestet!)
+    \ifx\ZmgZimplTest\ZmgZKomma % Ist es ein Komma
+      \ifnum\the\ZmgZCounter<0\relax % G¸ltig oder nichtg¸ltig ?
+        \hbox to\ZmgZKommaWD{\hfil$\mathord\ZmgZKomma$\hfil}% dann normal
+      \else
+        \mathbf{\mathord\ZmgZKomma}% dann fett
+      \fi
+    \else % jetzt muss es eine Ziffer sein (hoffentlich)
+      \ifnum\the\ZmgZCounter<0\relax % g¸ltig oder nicht ?
+        \hbox to\ZmgZZifferWD{\hfil$#1$\hfil}% dann normal
+      \else\mathbf{#1}%  sonst fett
+      \advance\ZmgZCounter -1\relax %eine weniger
+      \fi
+    \fi
+    \let\next\ZmgZimpl
+  \fi
+  \next
+}

@@ -1,0 +1,375 @@
+\begin{thebibliography}{xx}
+
+\harvarditem{Ablowitz and Fokas}{2003}{MR1989049}
+Ablowitz, M.~J. and Fokas, A.~S.: 2003, {\em Complex variables: introduction
+  and applications}, 2nd edn, Cambridge University Press, Cambridge.
+
+\harvarditem{Adler and van Moerbeke}{2005}{MR2150191}
+Adler, M. and van Moerbeke, P.: 2005, P{DE}s for the joint distributions of the
+  {D}yson, {A}iry and sine processes, {\em Ann. Probab.} {\bf 33},~1326--1361.
+
+\harvarditem{Albeverio and H{\o}egh-Krohn}{1977}{MR0474436}
+Albeverio, S. and H{\o}egh-Krohn, R.: 1977, Oscillatory integrals and the
+  method of stationary phase in infinitely many dimensions, with applications
+  to the classical limit of quantum mechanics. {I}, {\em Invent. Math.} {\bf
+  40},~59--106.
+
+\harvarditem{Axler}{1995}{Axler95}
+Axler, S.: 1995, Down with determinants!, {\em Amer. Math. Monthly} {\bf
+  102},~139--154.
+
+\harvarditem{Axler}{1997}{Axler97}
+Axler, S.: 1997, {\em Linear algebra done right}, 2nd edn, Springer-Verlag, New
+  York.
+
+\harvarditem{Baker}{1977}{MR467215}
+Baker, C. T.~H.: 1977, {\em The numerical treatment of integral equations},
+  Clarendon Press, Oxford.
+
+\harvarditem{Birkhoff}{1973}{MR0469612}
+Birkhoff, G. (ed.): 1973, {\em A source book in classical analysis}, Harvard
+  University Press, Cambridge.
+
+\harvarditem[Bornemann et~al.]{Bornemann, Ferrari and
+  Prähofer}{2008}{0806:3410}
+Bornemann, F., Ferrari, P.~L. and Prähofer, M.: 2008, The $\text{Airy}_1$
+  process is not the limit of the largest eigenvalue in {GOE} matrix diffusion,
+  {\tt arXiv:0806.3410}.
+
+\harvarditem[Borodin et~al.]{Borodin, Ferrari, Pr{\"a}hofer and
+  Sasamoto}{2007}{MR2363389}
+Borodin, A., Ferrari, P.~L., Pr{\"a}hofer, M. and Sasamoto, T.: 2007,
+  Fluctuation properties of the {TASEP} with periodic initial configuration,
+  {\em J. Stat. Phys.} {\bf 129},~1055--1080.
+
+\harvarditem{Carleman}{1918}{Carleman18}
+Carleman, T.: 1918, {Über die Fourierkoeffizienten einer stetigen Function},
+  {\em Acta Math.} {\bf 41},~377--384.
+
+\harvarditem{Carleman}{1921}{Carleman}
+Carleman, T.: 1921, {Zur Theorie der linearen Integralgleichungen}, {\em Math.
+  Zeitschr.} {\bf 9},~196--217.
+
+\harvarditem{Cheney}{1998}{MR1656150}
+Cheney, E.~W.: 1998, {\em Introduction to approximation theory}, reprint of the
+  2nd (1982) edn, AMS Chelsea Publishing, Providence.
+
+\harvarditem{Courant and Hilbert}{1953}{MR0065391}
+Courant, R. and Hilbert, D.: 1953, {\em Methods of mathematical physics. {V}ol.
+  {I}}, Interscience Publishers, Inc., New York.
+
+\harvarditem{Davis and Rabinowitz}{1984}{MR760629}
+Davis, P.~J. and Rabinowitz, P.: 1984, {\em Methods of numerical integration},
+  2nd edn, Academic Press, Orlando.
+
+\harvarditem{Deift}{1999}{MR1677884}
+Deift, P.~A.: 1999, {\em Orthogonal polynomials and random matrices: a
+  {R}iemann-{H}ilbert approach}, American Mathematical Society, Providence.
+
+\harvarditem[Deift et~al.]{Deift, Its and Zhou}{1997}{MR1469319}
+Deift, P.~A., Its, A.~R. and Zhou, X.: 1997, A {R}iemann-{H}ilbert approach to
+  asymptotic problems arising in the theory of random matrix models, and also
+  in the theory of integrable statistical mechanics, {\em Ann. of Math.} {\bf
+  146},~149--235.
+
+\harvarditem[Deift et~al.]{Deift, Its and Krasovsky}{2008}{MR2373439}
+Deift, P., Its, A. and Krasovsky, I.: 2008, Asymptotics of the {A}iry-kernel
+  determinant, {\em Comm. Math. Phys.} {\bf 278},~643--678.
+
+\harvarditem{Delves and Mohamed}{1985}{MR837187}
+Delves, L.~M. and Mohamed, J.~L.: 1985, {\em Computational methods for integral
+  equations}, Cambridge University Press, Cambridge.
+
+\harvarditem{DeVore and Lorentz}{1993}{MR1261635}
+DeVore, R.~A. and Lorentz, G.~G.: 1993, {\em Constructive approximation},
+  Springer-Verlag, Berlin.
+
+\harvarditem{Dieng}{2005}{Dieng05}
+Dieng, M.: 2005, {\em Distribution Functions for Edge Eigenvalues in Orthogonal
+  and Symplectic Ensembles: Painlevé Representations}, PhD thesis, University
+  of Davis.
+\newblock {\tt arXiv:math/0506586v2}.
+
+\harvarditem{Dieudonn{\'e}}{1981}{MR605488}
+Dieudonn{\'e}, J.: 1981, {\em History of functional analysis}, North-Holland
+  Publishing Co., Amsterdam.
+
+\harvarditem{Dunford and Schwartz}{1963}{MR188745}
+Dunford, N. and Schwartz, J.~T.: 1963, {\em Linear operators. {P}art {II}:
+  {S}pectral theory}, John Wiley \& Sons.
+
+\harvarditem{Dyson}{1976}{MR0406201}
+Dyson, F.~J.: 1976, Fredholm determinants and inverse scattering problems, {\em
+  Comm. Math. Phys.} {\bf 47},~171--183.
+
+\harvarditem{Eastham}{1973}{0287.34016}
+Eastham, M.: 1973, {\em {The spectral theory of periodic differential
+  equations}}, {Scottish Academic Press}, Edinburgh.
+
+\harvarditem[Falloon et~al.]{Falloon, Abbott and Wang}{2003}{MR1985521}
+Falloon, P.~E., Abbott, P.~C. and Wang, J.~B.: 2003, Theory and computation of
+  spheroidal wavefunctions, {\em J. Phys. A} {\bf 36},~5477--5495.
+
+\harvarditem{Feny{\H{o}} and Stolle}{1982--1984}{Fenyo}
+Feny{\H{o}}, S. and Stolle, H.-W.: 1982--1984, {\em Theorie und {P}raxis der
+  linearen {I}ntegralgleichungen. Vol. I--IV}, Birkhäuser, Basel.
+
+\harvarditem{Fredholm}{1900}{Fred00}
+Fredholm, I.: 1900, {Sur une nouvelle méthode pour la résolution du problème de
+  {Dirichlet}}, {\em Öfversigt Kongl. Vetenskaps-Akad. Förhandlingar} {\bf
+  57},~39--46.
+
+\harvarditem{Fredholm}{1903}{34.0422.02}
+Fredholm, I.: 1903, {Sur une classe d'\'equations fonctionnelles}, {\em Acta
+  Math.} {\bf 27},~365--390.
+
+\harvarditem{Fredholm}{1909}{Fred09}
+Fredholm, I.: 1909, Les équations intégrales linéaires, {\em C.~R. Congrés des
+  Math. tenu à Stockholm 1909}.
+
+\harvarditem{Gaudin}{1961}{Gau61}
+Gaudin, M.: 1961, Sur la loi limite de l'espacement des valeurs propres d'une
+  matrice aléatoire, {\em Nucl. Phys.} {\bf 25},~447--458.
+
+\harvarditem{Gautschi}{2002}{MR1896388}
+Gautschi, W.: 2002, Computation of {B}essel and {A}iry functions and of related
+  {G}aussian quadrature formulae, {\em BIT} {\bf 42},~110--118.
+
+\harvarditem{Gohberg and Kre{\u\i}n}{1969}{MR0246142}
+Gohberg, I.~C. and Kre{\u\i}n, M.~G.: 1969, {\em Introduction to the theory of
+  linear nonselfadjoint operators}, American Mathematical Society, Providence.
+
+\harvarditem[Gohberg et~al.]{Gohberg, Goldberg and Kaashoek}{1990}{MR1130394}
+Gohberg, I., Goldberg, S. and Kaashoek, M.~A.: 1990, {\em Classes of linear
+  operators. {V}ol. {I}}, Birkh\"auser Verlag, Basel.
+
+\harvarditem[Gohberg et~al.]{Gohberg, Goldberg and Krupnik}{2000}{MR1744872}
+Gohberg, I., Goldberg, S. and Krupnik, N.: 2000, {\em Traces and determinants
+  of linear operators}, Birkh\"auser Verlag, Basel.
+
+\harvarditem{Golub and Van~Loan}{1996}{MR1417720}
+Golub, G.~H. and Van~Loan, C.~F.: 1996, {\em Matrix computations}, 3rd edn,
+  Johns Hopkins University Press, Baltimore.
+
+\harvarditem{Greub}{1967}{MR0224623}
+Greub, W.~H.: 1967, {\em Multilinear algebra}, Springer-Verlag, New York.
+
+\harvarditem{Grothendieck}{1956}{MR0088665}
+Grothendieck, A.: 1956, La th\'eorie de {F}redholm, {\em Bull. Soc. Math.
+  France} {\bf 84},~319--384.
+
+\harvarditem{Hackbusch}{1995}{MR1350296}
+Hackbusch, W.: 1995, {\em Integral equations: Theory and numerical treatment},
+  Birkh\"auser Verlag, Basel.
+
+\harvarditem{Hadamard}{1893}{Hada93}
+Hadamard, J.: 1893, Résolution d'une question relative aux dérminants, {\em
+  Bull. Sci. Math.} {\bf 17},~240--246.
+
+\harvarditem{Hastings and McLeod}{1980}{MR555581}
+Hastings, S.~P. and McLeod, J.~B.: 1980, A boundary value problem associated
+  with the second {P}ainlev\'e transcendent and the {K}orteweg-de\thinspace
+  {V}ries equation, {\em Arch. Rational Mech. Anal.} {\bf 73},~31--51.
+
+\harvarditem{Hägg}{2007}{Hagg07}
+Hägg, J.: 2007, Local {G}aussian fluctuations in the {A}iry and discrete {PNG}
+  processes, {\tt arXiv:math/0701880}.
+
+\harvarditem{Higham}{2002}{MR1927606}
+Higham, N.~J.: 2002, {\em Accuracy and stability of numerical algorithms}, 2nd
+  edn, Society for Industrial and Applied Mathematics, Philadelphia.
+
+\harvarditem{Hilbert}{1904}{35.0378.02}
+Hilbert, D.: 1904, {{Grundz\"uge einer allgemeinen Theorie der linearen
+  Integralgleichungen. (Erste Mitteilung)}}, {\em Nachr. Ges. Wiss. Göttingen}
+  {\bf 1904},~49--91.
+
+\harvarditem{Hilbert}{1912}{43.0423.01}
+Hilbert, D.: 1912, {\em {Grundz\"uge einer allgemeinen Theorie der linearen
+  Integralgleichungen}}, {Teubner}, Leipzig, Berlin.
+
+\harvarditem{Hille and Tamarkin}{1931}{Hille31}
+Hille, E. and Tamarkin, J.~D.: 1931, On the characteristic values of linear
+  integral equations, {\em Acta Math.} {\bf 57},~1--76.
+
+\harvarditem{Hochstadt}{1973}{MR0390680}
+Hochstadt, H.: 1973, {\em Integral equations}, John Wiley \& Sons, New York.
+
+\harvarditem[Jimbo et~al.]{Jimbo, Miwa, M{\^o}ri and Sato}{1980}{MR573370}
+Jimbo, M., Miwa, T., M{\^o}ri, Y. and Sato, M.: 1980, Density matrix of an
+  impenetrable {B}ose gas and the fifth {P}ainlev\'e transcendent, {\em Phys.
+  D} {\bf 1},~80--158.
+
+\harvarditem{Johansson}{2000}{Johan00}
+Johansson, K.: 2000, Shape fluctuations and random matrices, {\em Comm. Math.
+  Phys.} {\bf 209},~437--476.
+
+\harvarditem{Johansson}{2003}{MR2018275}
+Johansson, K.: 2003, Discrete polynuclear growth and determinantal processes,
+  {\em Comm. Math. Phys.} {\bf 242},~277--329.
+
+\harvarditem{Jost and Pais}{1951}{MR0044404}
+Jost, R. and Pais, A.: 1951, On the scattering of a particle by a static
+  potential, {\em Physical Rev.} {\bf 82},~840--851.
+
+\harvarditem{Katz and Sarnak}{1999}{MR1659828}
+Katz, N.~M. and Sarnak, P.: 1999, {\em Random matrices, {F}robenius
+  eigenvalues, and monodromy}, American Mathematical Society, Providence.
+
+\harvarditem{Kline}{1972}{MR0472307}
+Kline, M.: 1972, {\em Mathematical thought from ancient to modern times},
+  Oxford University Press, New York.
+
+\harvarditem{Knopp}{1964}{MR0183997}
+Knopp, K.: 1964, {\em Theorie and {A}nwendung der unendlichen {R}eihen}, 5th
+  edn, Springer-Verlag, Berlin.
+
+\harvarditem{Kress}{1999}{MR1723850}
+Kress, R.: 1999, {\em Linear integral equations}, 2nd edn, Springer-Verlag, New
+  York.
+
+\harvarditem{Laurie}{2001}{MR1808574}
+Laurie, D.~P.: 2001, Computation of {G}auss-type quadrature formulas, {\em J.
+  Comput. Appl. Math.} {\bf 127},~201--217.
+
+\harvarditem{Lax}{2002}{MR1892228}
+Lax, P.~D.: 2002, {\em Functional analysis}, John Wiley \& Sons, New York.
+
+\harvarditem{Mehta}{2004}{MR2129906}
+Mehta, M.~L.: 2004, {\em Random matrices}, 3rd edn, Elsevier/Academic Press,
+  Amsterdam.
+
+\harvarditem{Meyer}{2000}{MR17382}
+Meyer, C.: 2000, {\em Matrix analysis and applied linear algebra}, Society for
+  Industrial and Applied Mathematics, Philadelphia.
+
+\harvarditem{Moiseiwitsch}{1977}{Moi77}
+Moiseiwitsch, B.: 1977, Recent progress in atomic collisions theory, {\em Rep.
+  Prog. Phys.} {\bf 40},~843--904.
+
+\harvarditem{Nyström}{1930}{Ny30}
+Nyström, E.: 1930, {{Über die praktische Auflösung von Integralgleichungen mit
+  Anwendungen auf Rand\-wert\-aufgaben}}, {\em Acta Math.} {\bf 54},~185--204.
+
+\harvarditem{Pietsch}{2007}{MR2300779}
+Pietsch, A.: 2007, {\em History of {B}anach spaces and linear operators},
+  Birkh\"auser, Boston.
+
+\harvarditem{Plemelj}{1904}{Plemelj}
+Plemelj, J.: 1904, {Zur Theorie der Fredholmschen Funktionalgleichung}, {\em
+  Monatsh. f. Math.} {\bf 15},~93--128.
+
+\harvarditem{Porter and Stirling}{1990}{MR1111247}
+Porter, D. and Stirling, D. S.~G.: 1990, {\em Integral equations}, Cambridge
+  University Press, Cambridge.
+
+\harvarditem{Pr{\"a}hofer and Spohn}{2002}{MR1933446}
+Pr{\"a}hofer, M. and Spohn, H.: 2002, Scale invariance of the {PNG} droplet and
+  the {A}iry process, {\em J. Statist. Phys.} {\bf 108},~1071--1106.
+
+\harvarditem{Pr{\"a}hofer and Spohn}{2004}{MR2070096}
+Pr{\"a}hofer, M. and Spohn, H.: 2004, Exact scaling functions for
+  one-dimensional stationary {KPZ} growth, {\em J. Statist. Phys.} {\bf
+  115},~255--279.
+
+\harvarditem{Pr{\"o}ssdorf and Silbermann}{1991}{MR1193030}
+Pr{\"o}ssdorf, S. and Silbermann, B.: 1991, {\em Numerical analysis for
+  integral and related operator equations}, Birkh\"auser Verlag, Basel.
+
+\harvarditem{Reinhardt and Szabo}{1970}{MR0266459}
+Reinhardt, W.~P. and Szabo, A.: 1970, Fredholm method. {I}. {A} numerical
+  procedure for elastic scattering, {\em Phys. Rev. A} {\bf 1},~1162--1169.
+
+\harvarditem{Rezende}{1994}{MR1284645}
+Rezende, J.: 1994, Feynman integrals and {F}redholm determinants, {\em J. Math.
+  Phys.} {\bf 35},~4357--4371.
+
+\harvarditem{Riess and Johnson}{1972}{MR0305555}
+Riess, R.~D. and Johnson, L.~W.: 1972, Error estimates for {C}lenshaw-{C}urtis
+  quadrature, {\em Proc.} {\bf 18},~345--353.
+
+\harvarditem{Sasamoto}{2005}{Sasa05}
+Sasamoto, T.: 2005, Spatial correlations of the {1D} {KPZ} surface on a flat
+  substrate, {\em J. Phys. A} {\bf 38},~L549--L556.
+
+\harvarditem{Simon}{1977}{MR0482328}
+Simon, B.: 1977, Notes on infinite determinants of {H}ilbert space operators,
+  {\em Advances in Math.} {\bf 24},~244--273.
+
+\harvarditem{Simon}{2005}{MR2154153}
+Simon, B.: 2005, {\em Trace ideals and their applications}, 2nd edn, American
+  Mathematical Society, Providence.
+
+\harvarditem{Smithies}{1937}{Smithies37}
+Smithies, F.: 1937, The eigen-values and singular values of integral equations,
+  {\em Proc. London Math. Soc.} {\bf 43},~255--279.
+
+\harvarditem{Smithies}{1958}{MR0104991}
+Smithies, F.: 1958, {\em Integral equations}, Cambridge University Press,
+  Cambridge.
+
+\harvarditem{Spohn}{2008}{Spohn1}
+Spohn, H.: 2008, Personal communication.
+
+\harvarditem{Stewart}{1998}{MR1653546}
+Stewart, G.~W.: 1998, {\em Matrix algorithms. {V}ol. {I}: Basic
+  decompositions}, Society for Industrial and Applied Mathematics,
+  Philadelphia.
+
+\harvarditem[Stratton et~al.]{Stratton, Morse, Chu, Little and
+  Corbat{\'o}}{1956}{MR0074130}
+Stratton, J.~A., Morse, P.~M., Chu, L.~J., Little, J. D.~C. and Corbat{\'o},
+  F.~J.: 1956, {\em Spheroidal wave functions, including tables of separation
+  constants and coefficients}, John Wiley \& Sons, New York.
+
+\harvarditem{Swarztrauber}{2002}{MR1950519}
+Swarztrauber, P.~N.: 2002, On computing the points and weights for
+  {G}auss-{L}egendre quadrature, {\em SIAM J. Sci. Comput.} {\bf 24},~945--954.
+
+\harvarditem{Tracy and Widom}{1994}{MR1257246}
+Tracy, C.~A. and Widom, H.: 1994, Level-spacing distributions and the {A}iry
+  kernel, {\em Comm. Math. Phys.} {\bf 159},~151--174.
+
+\harvarditem{Tracy and Widom}{2000}{MR1791893}
+Tracy, C.~A. and Widom, H.: 2000, Universality of the distribution functions of
+  random matrix theory, {\em Integrable systems: from classical to quantum
+  (Montr\'eal, QC, 1999)}, Vol.~26 of {\em CRM Proc. Lecture Notes}, Amer.
+  Math. Soc., Providence, pp.~251--264.
+
+\harvarditem{Trefethen}{2008}{Tref08}
+Trefethen, L.~N.: 2008, Is {Gauss} quadrature better than {Clenshaw--Curtis}?,
+  {\em SIAM Rev.} {\bf 50},~67--87.
+
+\harvarditem{Tricomi}{1957}{MR0094665}
+Tricomi, F.~G.: 1957, {\em Integral equations}, Interscience Publishers, Inc.,
+  New York.
+
+\harvarditem{Vall{\'e}e and Soares}{2004}{MR2114198}
+Vall{\'e}e, O. and Soares, M.: 2004, {\em Airy functions and applications to
+  physics}, Imperial College Press, London.
+
+\harvarditem{von Koch}{1892}{vonKoch}
+von Koch, H.: 1892, {Sur les déterminants infinis et les équations
+  différentielles linéaires}, {\em Acta Math.} {\bf 16},~217--295.
+
+\harvarditem{Waldvogel}{2006}{MR2214855}
+Waldvogel, J.: 2006, Fast construction of the {F}ej\'er and {C}lenshaw-{C}urtis
+  quadrature rules, {\em BIT} {\bf 46},~195--202.
+
+\harvarditem{Webster}{1927}{53.0453.01}
+Webster, A.~G.: 1927, {\em {Partial differential equations of mathematical
+  physics}}, {G. E. Stechert \& Co.}, New York.
+
+\harvarditem{Whittaker and Watson}{1927}{53.0180.04}
+Whittaker, E.~T. and Watson, G.~N.: 1927, {\em {A course of modern analysis}},
+  4th edn, {Cambridge University Press}, Cambridge.
+
+\harvarditem{Widom}{2004}{MR2054175}
+Widom, H.: 2004, On asymptotics for the {A}iry process, {\em J. Statist. Phys.}
+  {\bf 115},~1129--1134.
+
+\harvarditem{Wilkinson}{1978}{Wilk78}
+Wilkinson, D.: 1978, Continuum derivation of the {Ising} model two-point
+  function, {\em Phys. Rev. D} {\bf 17},~1629--1636.
+
+\end{thebibliography}
