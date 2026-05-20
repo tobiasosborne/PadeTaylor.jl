@@ -129,6 +129,19 @@ include("NoumiYamadaSymmetry.jl")
 # v0.1/v0.2 module behaviour changes (bead padetaylor-0ln.15, V6,
 # ADR-0022).
 include("PainleveHierarchy.jl")
+# VectorPathNetwork is the minimal Stage-1 vector path-network walk: a
+# ‖y‖-steered 5-direction wedge that builds a visited tree of shared-Q
+# approximants over a region of the complex plane.  It composes
+# VectorProblems + VectorStepper, so it loads after both.  Additive —
+# the substrate the v0.2 A_4^(1)/P_I^(2) pole-field figures stand on
+# (bead padetaylor-0ln.16, V7).
+include("VectorPathNetwork.jl")
+# VectorPoleField extracts the system's poles from each visited node's
+# shared denominator Q (one Q per node — every component's poles are
+# its roots).  It consumes VectorPathNetworkSolution, so it loads after
+# VectorPathNetwork.  Additive — the shared-Q analogue of v0.1's
+# PoleField (bead padetaylor-0ln.16, V7, ADR-0019).
+include("VectorPoleField.jl")
 # SheetTracker is loaded before PathNetwork because BranchTracker (the
 # walker-side cut-respecting layer per ADR-0013) reuses SheetTracker's
 # `winding_delta` primitive, and PathNetwork in turn uses BranchTracker.
@@ -169,6 +182,8 @@ using .NoumiYamadaSymmetry: noumi_yamada_rational, noumi_yamada_backlund,
                             noumi_yamada_rotation
 using .PainleveHierarchy: painleve_hierarchy, PainleveHierarchyProblem,
                           pI2_tritronquee_ic
+using .VectorPathNetwork: vector_path_network_solve, VectorPathNetworkSolution
+using .VectorPoleField:   extract_poles_shared_q
 using .PathNetwork: path_network_solve, PathNetworkSolution, eval_at, eval_at_sheet
 using .Diagnostics: DiagnosticReport, EdgeReport, quality_diagnose
 using .PoleField:   extract_poles
@@ -235,6 +250,8 @@ export VectorPadeTaylorProblem, VectorPadeTaylorSolution, vector_solve_pade
 export noumi_yamada_rhs, NoumiYamadaProblem
 export noumi_yamada_rational, noumi_yamada_backlund, noumi_yamada_rotation
 export painleve_hierarchy, PainleveHierarchyProblem, pI2_tritronquee_ic
+export vector_path_network_solve, VectorPathNetworkSolution
+export extract_poles_shared_q
 export path_network_solve, PathNetworkSolution, eval_at, eval_at_sheet
 export DiagnosticReport, EdgeReport, quality_diagnose
 export extract_poles
