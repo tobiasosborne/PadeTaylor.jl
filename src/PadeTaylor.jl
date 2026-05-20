@@ -113,6 +113,14 @@ include("VectorProblems.jl")
 # after it.  Additive — no v0.1 module behaviour changes (bead
 # padetaylor-0ln.12, V5a, ADR-0022).
 include("NoumiYamada.jl")
+# NoumiYamadaSymmetry is the affine-Weyl-group W(A_{2n}^(1)) symmetry layer
+# for the Noumi–Yamada systems: the exact rational-solution oracles
+# (noumi_yamada_rational) and the Bäcklund transformations
+# (noumi_yamada_backlund = reflection s_i, noumi_yamada_rotation = diagram
+# rotation π).  It uses NoumiYamada's RHS for its solution-preservation
+# self-test, so it loads after NoumiYamada.  Additive — no v0.1/v0.2
+# module behaviour changes (bead padetaylor-0ln.14, V5c).
+include("NoumiYamadaSymmetry.jl")
 # SheetTracker is loaded before PathNetwork because BranchTracker (the
 # walker-side cut-respecting layer per ADR-0013) reuses SheetTracker's
 # `winding_delta` primitive, and PathNetwork in turn uses BranchTracker.
@@ -149,6 +157,8 @@ using .VectorStepControl: vector_step_jorba_zou
 using .VectorProblems: VectorPadeTaylorProblem, VectorPadeTaylorSolution,
                        vector_solve_pade
 using .NoumiYamada: noumi_yamada_rhs, NoumiYamadaProblem
+using .NoumiYamadaSymmetry: noumi_yamada_rational, noumi_yamada_backlund,
+                            noumi_yamada_rotation
 using .PathNetwork: path_network_solve, PathNetworkSolution, eval_at, eval_at_sheet
 using .Diagnostics: DiagnosticReport, EdgeReport, quality_diagnose
 using .PoleField:   extract_poles
@@ -213,6 +223,7 @@ export VectorPadeStepperState, vector_pade_step!, vector_pade_step_with_pade!
 export vector_step_jorba_zou
 export VectorPadeTaylorProblem, VectorPadeTaylorSolution, vector_solve_pade
 export noumi_yamada_rhs, NoumiYamadaProblem
+export noumi_yamada_rational, noumi_yamada_backlund, noumi_yamada_rotation
 export path_network_solve, PathNetworkSolution, eval_at, eval_at_sheet
 export DiagnosticReport, EdgeReport, quality_diagnose
 export extract_poles
