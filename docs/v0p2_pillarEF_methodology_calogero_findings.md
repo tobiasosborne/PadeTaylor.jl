@@ -535,27 +535,39 @@ x₁(0) = +r₀,   x₂(0) = −r₀,   ẋ₁(0) = 0,   ẋ₂(0) = 0.
 
 **Exact solution:**
 
+> **Correction (2026-05-20, worklog/bead `padetaylor-0ln.11` V4).** The
+> derivation in this block as originally written contained two
+> arithmetic slips: the first integral was written `ṙ² = C − 4/r²`
+> (the coefficient is **8**, since `r̈ = 8/r³ = −d/dr(4/r²)`) and the
+> constant as `C = 4/r₀²` (it is `C = 4/r(0)² = 4/(2r₀)² = 1/r₀²`).
+> The block below is the corrected derivation; it was re-derived and
+> cross-checked against a from-scratch 256-bit RK4 integration to
+> 26–30 significant digits in `test/calogero_moser_test.jl`.
+
 With symmetric initial conditions, x₁(t) = −x₂(t) ≡ r(t)/2 where
 r(t) = x₁(t) − x₂(t) satisfies the single equation:
 ```
 r̈ = 8/r³,   r(0) = 2r₀,   ṙ(0) = 0.
 ```
-This has the exact first integral ṙ² = C − 4/r², with
-C = 4/r₀² (from ṙ(0) = 0).  Then:
+This has the exact first integral ½ṙ² + 4/r² = E (since
+r̈ = 8/r³ = −d/dr(4/r²)), with E = 4/r(0)² = 1/r₀² from ṙ(0) = 0.
+Then:
 ```
-ṙ² = 4/r₀² − 4/r² = 4(r² − r₀²) / (r₀²r²).
+ṙ² = 2E − 8/r² = 2/r₀² − 8/r² = 2(r² − 4r₀²) / (r₀²r²).
 ```
 Separating:
 ```
-r dr / √(r² − r₀²) = (2/r₀) dt,
-√(r(t)² − r₀²) = (2/r₀) t,
-r(t) = √(r₀² + 4t²/r₀²).
+r dr / √(r² − 4r₀²) = (√2/r₀) dt,
+√(r(t)² − 4r₀²) = (√2/r₀) t,
+r(t) = √(4r₀² + 2t²/r₀²).
 ```
 Hence the **exact pole trajectories** are:
 ```
-x₁(t) = +½ √(r₀² + 4t²/r₀²),
-x₂(t) = −½ √(r₀² + 4t²/r₀²).
+x₁(t) = +½ √(4r₀² + 2t²/r₀²),
+x₂(t) = −½ √(4r₀² + 2t²/r₀²).
 ```
+For r₀ = 1 this is x₁(t) = √(1 + t²/2), x₂(t) = −√(1 + t²/2), with
+x₁(0) = 1 = r₀ consistent with the stated initial condition.
 The poles repel each other along the real axis (or complex axis
 depending on initial geometry), tracing a hyperbola.  For purely
 imaginary initial conditions x₁(0) = +ir₀, x₂(0) = −ir₀, the poles
@@ -589,7 +601,9 @@ formula above.  Concretely:
    with r₀ = 1 (say).
 3. Step with the v0.2 vector stepper (Taylor→vector-Padé) from t=0
    to t=0.4 (well before any collision at t* = r₀²/2 = 0.5 for r₀=1).
-4. Compare x₁(t), x₂(t) against the exact formula x(t) = ±½√(1 + 4t²).
+4. Compare x₁(t), x₂(t) against the exact formula
+   x(t) = ±½√(4r₀² + 2t²/r₀²) = ±√(1 + t²/2) for r₀ = 1 (see the
+   corrected "Exact solution" block above).
 5. Assert |numerical − exact| < ε for some tolerance ε = 10⁻¹⁰ or
    similar.
 
