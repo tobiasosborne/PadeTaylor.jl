@@ -271,7 +271,10 @@ b_{n+1} = -Σ_{m=0}^{n-1} (1/3) b_0^{-1} b_{n-m} b_{m+1}
 ```
 y_1 = -∛6 · |x_0|^{1/3}  (+ correction b_1 · |x_0|^{-2} + ...)
 y_2 = (1/3) · ∛6 · |x_0|^{-2/3}  (+ ...)
-y_3 = -(2/9) · ∛6 · |x_0|^{-5/3}  (+ ...)
+y_3 = +(2/9) · ∛6 · |x_0|^{-5/3}  (+ ...)   [corrected 2026-05-20, bead padetaylor-0ln.15:
+                                              differentiating u=-∛6·|x|^{1/3} twice for x<0
+                                              gives a POSITIVE u'' — the original "-(2/9)"
+                                              was a transcription sign-slip]
 y_4 = (10/27) · ∛6 · |x_0|^{-8/3}  (+ ...)
 ```
 
