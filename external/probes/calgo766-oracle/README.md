@@ -20,17 +20,17 @@ a published, weakly stable FORTRAN routine for the exact problem
 | File           | Role |
 |----------------|------|
 | `fetch.sh`     | Downloads + extracts the Calgo 766 FORTRAN from the netlib TOMS mirror into `src-0766/` (gitignored). |
-| `build.sh`     | Compiles `src-0766/` + `wrapper.f90` with `gfortran` into `libcalgo766.so`. |
+| `build.sh`     | Compiles `src-0766/` + `wrapper.f90` with `gfortran` into `libcalgo766_dp.so` (double precision) and `libcalgo766.so` (single precision). |
 | `wrapper.f90`  | The `working_area_VECTOR_PADE` module Calgo needs, plus a `bind(C)` shim `vpade_type2` with a flat, `ccall`-friendly ABI. **Committed.** |
-| `capture.jl`   | `ccall`s `vpade_type2` on the SharedPade test inputs, pins outputs, sanity-checks vs `shared_denominator_pade`. **Committed.** |
+| `capture.jl`   | `ccall`s `vpade_type2` (from `libcalgo766_dp.so`) on the SharedPade test inputs, pins outputs, sanity-checks vs `shared_denominator_pade`. **Committed.** |
 | `oracles.txt`  | Pinned Calgo-766 type-II outputs (shared `Q`, numerators `P_i`). **Committed.** |
-| `src-0766/`, `libcalgo766.so`, `*.o`, `*.mod` | Gitignored — reproducible via `fetch.sh` + `build.sh`. |
+| `src-0766/`, `libcalgo766*.so`, `*.o`, `*.mod` | Gitignored — reproducible via `fetch.sh` + `build.sh`. |
 
 ## Reproduce
 
 ```sh
 ./fetch.sh        # netlib -> src-0766/
-./build.sh        # src-0766/ + wrapper.f90 -> libcalgo766.so
+./build.sh        # src-0766/ + wrapper.f90 -> libcalgo766_dp.so + libcalgo766.so
 julia --project=../../.. capture.jl    # ccall, pin oracles.txt, sanity-check
 ```
 
@@ -51,7 +51,12 @@ genuinely independent of `SharedPade`.
 `bind(C, name="vpade_type2")` fixes the symbol name (no gfortran `_`
 mangling); all scalars are `Ref{Cint}` / `Ref{Float64}`, all arrays
 `Ptr{...}` passed column-major; `wrapper.f90` marshals the caller's
-`Float64` data into Calgo's default `real` and back.
+`Float64` data into Calgo's `real` arrays and back. In the
+double-precision build those marshalling conversions are double→double
+no-ops, and the `ccall` ABI is unchanged because the `bind(C)` interface
+is written with `iso_c_binding`'s `c_double` / `c_int` named constants —
+which always denote the C `double` / `int` kinds and are *not* affected
+by `gfortran`'s `-fdefault-real-8` (see "Accuracy floor" below).
 
 ## Convention mapping: Calgo 766 type-II ↔ `SharedPade`
 
@@ -119,31 +124,62 @@ sanity check follows this rule.
 
 ## Accuracy floor
 
-The Calgo `Sp/` build uses default `real` = **single precision**. The
-oracle is therefore good to ~`1e-6`–`1e-7`, not to `1e-12`. The sanity
-check in `capture.jl` uses a `1e-5` tolerance; V1e assertions against this
-oracle must use a comparably loose tolerance. (A `Dp/` double-precision
-build is not in the netlib archive; if V1e needs tighter agreement, the
-block-Toeplitz determinant oracle V1c or the AAA oracle V1d are the
-higher-precision routes — see findings §6.)
+The netlib TOMS mirror (`https://www.netlib.org/toms/766`) ships **only**
+a single-precision `Sp/` source tree — there is no `Dp/` double-precision
+variant. But the Calgo 766 FORTRAN is **fully precision-agnostic**: every
+floating declaration in `vector_pade.f90`, `linpack.f`, `blas1.f` and
+`wrapper.f90` is a bare `real` (no `kind` parameter, no
+`selected_real_kind`, no `real*8`), and the only numeric literal of any
+note — `-1.0e0` in `linpack.f` — is a default-`real`-kind literal.
+Compiling with
+
+```
+gfortran -fdefault-real-8 -fdefault-double-8 ...
+```
+
+therefore promotes the entire algorithm to **IEEE double precision** with
+no source edits. `build.sh` produces both builds:
+
+| Library             | Precision | Oracle accuracy floor |
+|---------------------|-----------|-----------------------|
+| `libcalgo766_dp.so` | double (`-fdefault-real-8`) | ~`1e-15` (machine epsilon) |
+| `libcalgo766.so`    | single (default `real`)     | ~`1e-6`–`1e-7` |
+
+`capture.jl` loads `libcalgo766_dp.so`. The single-precision library is
+kept only for comparison. The `ccall` ABI is identical for both: the
+`bind(C)` interface in `wrapper.f90` uses `iso_c_binding`'s `c_double` /
+`c_int`, which are unaffected by `-fdefault-real-8`, so `capture.jl`'s
+`ccall` signature stays `Float64` / `Cint`.
+
+V1e may therefore assert agreement against this oracle at **`1e-12`** —
+on par with the block-Toeplitz determinant oracle V1c and the AAA oracle
+V1d, rather than the loose `1e-5` a single-precision build would force.
 
 ## Sanity-check result
 
-`capture.jl` run 2026-05-20, gfortran 13.3.0, Julia 1.10:
+`capture.jl` run 2026-05-20, gfortran 13.3.0, Julia 1.10, double-precision
+build (`libcalgo766_dp.so`):
 
 ```
-SP_1_1_d1_scalar     flag = 0   max |Calgo - SharedPade| & |Calgo - truth| = 2.73e-08   AGREE
-SP_1_2_d2_shared_Q   flag = 1   max |Calgo - SharedPade| & |Calgo - truth| = 2.69e-08   AGREE
+SP_1_1_d1_scalar     flag = 0   max |Calgo - SharedPade| & |Calgo - truth| = 2.48e-16   AGREE
+SP_1_2_d2_shared_Q   flag = 2   max |Calgo - SharedPade| & |Calgo - truth| = 8.94e-16   AGREE
 ```
 
-Calgo 766 and `SharedPade.shared_denominator_pade` agree to **~3e-8** on
-both the SP.1.1 scalar rational jet and the SP.1.2 `d=2` shared-`Q` jets —
-at the single-precision floor of the Calgo build. The oracle is sound.
+Calgo 766 and `SharedPade.shared_denominator_pade` agree to **~1e-15** —
+machine epsilon — on both the SP.1.1 scalar rational jet and the SP.1.2
+`d=2` shared-`Q` jets. The sanity check asserts `< 1e-12`. The oracle is
+sound.
 
-`flag = 1` on SP.1.2 is **not** a failure: it reports that an *intermediate*
-striped-Sylvester matrix along the diagonal is ill-conditioned (expected —
-embedding an exact low-degree rational in a high-degree type makes those
-matrices near-singular). The Calgo header (`vector_pade.f90` lines ~152–171)
-guarantees the **row-0 type-II approximant is still valid** in that case;
-the value-agreement above confirms it. `flag = 2` (singular) or `flag = 3`
-(bad input) *would* be failures — `capture.jl` errors on `flag = 3`.
+`flag = 2` on SP.1.2 is **not** a failure. The Calgo header
+(`vector_pade.f90` lines 158–172) defines `flag = 2` as "the Sylvester
+matrix at the point `n` is numerically singular", but explicitly adds:
+"the first row of `S_star` still yields a simultaneous Padé approximant
+of type `n`; the remaining rows and columns are meaningless." The wrapper
+extracts **exactly** row 0 of `S_star` — the type-II result — so `flag = 2`
+is benign for this oracle. The singularity is genuine: embedding an exact
+degree-2 rational at the high degree vector `n = [2,3,2]` makes the
+Sylvester matrix rank-deficient by construction. At single precision the
+old `Sp/` build masked this as mere ill-conditioning (`flag = 1`); double
+precision detects the true singularity. The row-0 approximant is
+unaffected — the ~`1e-15` value-agreement above confirms it. Only
+`flag = 3` (bad input) is a genuine error; `capture.jl` errors on it.

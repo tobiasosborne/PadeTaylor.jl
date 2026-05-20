@@ -9,6 +9,16 @@
 # code.  capture.jl computes nothing itself — it marshals inputs to FORTRAN
 # and marshals the answer back.
 #
+# PRECISION.  capture.jl loads libcalgo766_dp.so, the DOUBLE-precision Calgo
+# build.  The netlib TOMS mirror ships only a single-precision (`Sp/`) source
+# tree, but the Calgo 766 FORTRAN is fully precision-agnostic (every floating
+# declaration is a bare `real`), so build.sh compiles it with
+# -fdefault-real-8 -fdefault-double-8 to obtain IEEE double precision with no
+# source edits.  The oracle's accuracy floor is therefore ~1e-15 (machine
+# epsilon), not the ~1e-6 single-precision floor of libcalgo766.so.  The
+# `ccall` ABI is unchanged: wrapper.f90's bind(C) interface uses iso_c_binding
+# `c_double` / `c_int`, which are unaffected by -fdefault-real-8.
+#
 # Run (one Julia process — CLAUDE.md Rule 7):
 #   julia --project=../../.. external/probes/calgo766-oracle/capture.jl
 # (build.sh must have produced libcalgo766.so first.)
@@ -25,7 +35,7 @@ using LinearAlgebra
 using Printf
 using PadeTaylor: shared_denominator_pade
 
-const LIB = joinpath(@__DIR__, "libcalgo766.so")
+const LIB = joinpath(@__DIR__, "libcalgo766_dp.so")
 isfile(LIB) || error("capture.jl: $LIB missing — run ./build.sh first.")
 
 # --- ccall shim --------------------------------------------------------------
@@ -150,8 +160,9 @@ function run_capture(cases)
 io = open(joinpath(@__DIR__, "oracles.txt"), "w")
 println(io, "# Calgo-766 type-II (simultaneous-Pade / shared-Q) oracle outputs.")
 println(io, "# Source: ACM TOMS Algorithm 766 (Cabay-Jones-Labahn 1997),")
-println(io, "#         DOI 10.1145/244768.244790, via libcalgo766.so.")
-println(io, "# Calgo Sp/ build uses single-precision `real`: accuracy floor ~1e-6.")
+println(io, "#         DOI 10.1145/244768.244790, via libcalgo766_dp.so.")
+println(io, "# Double-precision build (libcalgo766_dp.so, -fdefault-real-8):")
+println(io, "#   accuracy floor ~1e-15 (machine epsilon).")
 println(io, "# Q, P_i coefficients low-to-high, renormalised so Q(0)=1.")
 println(io, "# Format: Julia-readable literals.\n")
 
@@ -161,9 +172,21 @@ all_ok = true
 for c in cases
     res = calgo766_type2(c.series, c.nvec)
     @printf("%-22s  Calgo flag = %d\n", c.name, res.flag)
-    # flag 1 = ill-conditioned (kappa >= tau) is acceptable here: the row-0
-    # type-II approximant is still valid per the Calgo header.  flag 3 = bad
-    # input, flag 2 = singular Sylvester matrix would be a real problem.
+    # Calgo flag semantics (vector_pade.f90 header, lines 158-172):
+    #   0  no errors
+    #   1  Sylvester matrix ill-conditioned (kappa >= tau)
+    #   2  Sylvester matrix numerically singular — BUT the header explicitly
+    #      states "the first row of S_star still yields a simultaneous Pade'
+    #      approximant of type n"; only "the remaining rows and columns are
+    #      meaningless".  We extract exactly row 0 of S_star (the type-II
+    #      result), so flag=2 is benign for this oracle.
+    #   3  input variables incorrect — a genuine error.
+    # flag=2 arises here because the test cases embed an exact LOW-degree
+    # rational at a HIGH degree vector n (see DEGREE CHOICE below): the
+    # Sylvester matrix is then genuinely rank-deficient.  At single precision
+    # roundoff masked this as mere ill-conditioning (flag=1); double precision
+    # detects the true singularity.  The row-0 approximant is unaffected — the
+    # sanity check below confirms agreement to ~1e-15.
     res.flag == 3 && error("capture.jl: Calgo flag=3 (bad input) for $(c.name).")
 
     Pn, Qn = normalise(res.Q, res.P)
@@ -210,7 +233,11 @@ for c in cases
         rootcmp = @sprintf(" | SharedPade pole-root err vs truth = %.2e", rooterr)
     end
 
-    ok = casemax < 1e-5
+    # Double-precision Calgo agrees with SharedPade to machine epsilon
+    # (~1e-15 observed); 1e-12 is the asserted floor, leaving headroom for
+    # the long-division jet build and the differing internal degree
+    # conventions.  bead V1e mutation-proves against this same tolerance.
+    ok = casemax < 1e-12
     all_ok &= ok
     @printf("  max |Calgo - SharedPade| & |Calgo - truth| over sample pts = %.3e  [%s]%s\n",
             casemax, ok ? "AGREE" : "DISAGREE", rootcmp)
@@ -219,7 +246,7 @@ end
 close(io)
 println("=" ^ 72)
 println(all_ok ?
-    "SANITY CHECK PASSED: Calgo 766 agrees with SharedPade to < 1e-5 (single-precision floor)." :
+    "SANITY CHECK PASSED: Calgo 766 (double precision) agrees with SharedPade to < 1e-12." :
     "SANITY CHECK FAILED: investigate convention mismatch vs genuine bug (CLAUDE.md Rule 2).")
 println("Wrote ", joinpath(@__DIR__, "oracles.txt"))
 return all_ok
