@@ -100,7 +100,9 @@ dispatch is untouched, so the v0.1 test corpus stays bit-identical.
 """
 module VectorProblems
 
-using ..VectorStepper: VectorPadeStepperState, vector_pade_step_with_pade!
+using ..VectorStepper:     VectorPadeStepperState, vector_pade_step_with_pade!
+using ..VectorCoefficients: vector_taylor_coefficients
+using ..VectorStepControl:  vector_step_jorba_zou
 
 export VectorPadeTaylorProblem, VectorPadeTaylorSolution, vector_solve_pade
 
@@ -206,26 +208,46 @@ end
 # -----------------------------------------------------------------------------
 
 """
-    vector_solve_pade(prob::VectorPadeTaylorProblem; h, max_steps = 100_000)
+    vector_solve_pade(prob::VectorPadeTaylorProblem; h, max_steps = 100_000,
+                      step_policy::Symbol = :fixed)
         -> VectorPadeTaylorSolution
 
-Take fixed-step Padé–Taylor steps of the first-order vector ODE until
-the integration window `zspan` is exhausted, storing each segment's
+Take Padé–Taylor steps of the first-order vector ODE until the
+integration window `zspan` is exhausted, storing each segment's
 shared-`Q` approximant for later dense evaluation via the callable
 interface.  The final partial step is clamped so the trajectory lands
 *exactly* on `z_end`.
 
-Throws `ArgumentError` for non-positive `h`, and `ErrorException` if the
-integration does not reach `z_end` within `max_steps` steps (Rule 1).
-Numerical breakdowns inside the stepper propagate unchanged.
+`step_policy` selects how the step length is chosen each iteration:
+
+  - `:fixed` (default) — every step is the supplied `h` (the final
+    partial step clamped to `z_end`).  Byte-identical to the V3b
+    fixed-step behaviour.
+  - `:jorba_zou` — at each step the `d` Taylor jets are formed at the
+    current state and `VectorStepControl.vector_step_jorba_zou` chooses
+    a norm-based truncation-honouring step `h_jz`.  The supplied `h`
+    acts as a **ceiling**: the actual step is
+    `min(h_jz, h, z_end − z)` — never larger than the user's `h`, and
+    never overshooting `z_end`.  `h` is thus the largest step the
+    integrator is *allowed* to take; the adaptive policy may take a
+    smaller one when the local jet demands it.
+
+Throws `ArgumentError` for non-positive `h` or an unknown `step_policy`,
+and `ErrorException` if the integration does not reach `z_end` within
+`max_steps` steps (Rule 1).  Numerical breakdowns inside the stepper
+propagate unchanged.
 """
 function vector_solve_pade(prob::VectorPadeTaylorProblem{F, T};
                            h::Number,
-                           max_steps::Integer = 100_000) where {F, T}
+                           max_steps::Integer = 100_000,
+                           step_policy::Symbol = :fixed) where {F, T}
     real(h) > 0 && imag(h) == 0 || throw(ArgumentError(
         "vector_solve_pade: h must be a strictly-positive real step " *
         "length (got $h). " *
         "Suggestion: pass a positive real `h`."))
+    step_policy in (:fixed, :jorba_zou) || throw(ArgumentError(
+        "vector_solve_pade: unknown step_policy = :$step_policy. " *
+        "Suggestion: pass `:fixed` (default) or `:jorba_zou`."))
 
     z_start, z_end = prob.zspan
     h_T   = T(h)
@@ -245,9 +267,21 @@ function vector_solve_pade(prob::VectorPadeTaylorProblem{F, T};
             "z_end=$z_end). " *
             "Suggestion: increase max_steps, or shorten the integration " *
             "window.")
-        # Clamp the final partial step so the trajectory lands exactly
-        # on z_end rather than overshooting it.
-        h_step = min(h_T, z_end - state.z)
+        # Choose the step length.  Under :fixed it is the supplied h
+        # (clamped to z_end on the final partial step).  Under
+        # :jorba_zou the norm-based Jorba–Zou selector proposes h_jz
+        # from the d local Taylor jets, and the supplied h is a ceiling:
+        # h_step = min(h_jz, h, z_end − z) — never exceeds the user's h,
+        # never overshoots z_end.
+        h_ceiling = min(h_T, z_end - state.z)
+        if step_policy === :jorba_zou
+            jets = vector_taylor_coefficients(prob.f, state.z, state.y,
+                                              prob.order)
+            h_jz = T(vector_step_jorba_zou(jets, eps(real(T))))
+            h_step = min(h_jz, h_ceiling)
+        else
+            h_step = h_ceiling
+        end
         _, numerators, denominator =
             vector_pade_step_with_pade!(state, prob.f, prob.order, h_step)
         push!(z_vec, state.z)

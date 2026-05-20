@@ -89,6 +89,15 @@ include("PadeStepper.jl")
 # SharedPade (shared-Q Hermite–Padé), so it loads after both.  Additive
 # — no v0.1 module behaviour changes (bead padetaylor-0ln.8, V3a).
 include("VectorStepper.jl")
+# VectorStepControl is the norm-based Jorba–Zou step selector for the
+# vector pipeline: it generalises StepControl.step_jorba_zou from one
+# scalar jet to d jets, replacing |c_k| with a vector norm of the k-th
+# coefficient vector.  At d=1 it reduces bit-identically to the scalar
+# selector.  It depends only on LinearAlgebra, and VectorProblems uses
+# it for the opt-in :jorba_zou adaptive policy, so it loads before
+# VectorProblems.  Additive — no v0.1 module behaviour changes (bead
+# padetaylor-0ln.10, V3c, ADR-0021).
+include("VectorStepControl.jl")
 include("Problems.jl")
 # VectorProblems is the top-level driver for first-order vector ODEs
 # y' = f(z, y), y ∈ ℂ^d: a problem container, a fixed-step loop over
@@ -129,6 +138,7 @@ using .Coefficients: taylor_coefficients_1st, taylor_coefficients_2nd
 using .VectorCoefficients: vector_taylor_coefficients
 using .VectorStepper: VectorPadeStepperState, vector_pade_step!,
                       vector_pade_step_with_pade!
+using .VectorStepControl: vector_step_jorba_zou
 using .VectorProblems: VectorPadeTaylorProblem, VectorPadeTaylorSolution,
                        vector_solve_pade
 using .PathNetwork: path_network_solve, PathNetworkSolution, eval_at, eval_at_sheet
@@ -192,6 +202,7 @@ export shared_denominator_pade
 export taylor_coefficients_1st, taylor_coefficients_2nd
 export vector_taylor_coefficients
 export VectorPadeStepperState, vector_pade_step!, vector_pade_step_with_pade!
+export vector_step_jorba_zou
 export VectorPadeTaylorProblem, VectorPadeTaylorSolution, vector_solve_pade
 export path_network_solve, PathNetworkSolution, eval_at, eval_at_sheet
 export DiagnosticReport, EdgeReport, quality_diagnose
