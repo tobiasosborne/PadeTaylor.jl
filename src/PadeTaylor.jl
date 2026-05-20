@@ -71,6 +71,10 @@ module PadeTaylor
 # Internal modules — these compose into the public API; not re-exported.
 include("LinAlg.jl")
 include("RobustPade.jl")
+# SharedPade lifts Padé from scalar to vector (type-II Hermite–Padé);
+# it reuses LinAlg.pade_svd and RobustPade.default_tol, so it loads after
+# both.  Additive — no v0.1 module behaviour changes (bead padetaylor-0ln.2).
+include("SharedPade.jl")
 include("Coefficients.jl")
 include("StepControl.jl")
 include("PadeStepper.jl")
@@ -102,6 +106,7 @@ include("Heun.jl")
 # Public API (re-exported from sub-modules).
 using .Problems:    PadeTaylorProblem, solve_pade, PadeTaylorSolution, taylor_eval
 using .RobustPade:  robust_pade, PadeApproximant
+using .SharedPade:  shared_denominator_pade
 using .Coefficients: taylor_coefficients_1st, taylor_coefficients_2nd
 using .PathNetwork: path_network_solve, PathNetworkSolution, eval_at, eval_at_sheet
 using .Diagnostics: DiagnosticReport, EdgeReport, quality_diagnose
@@ -160,6 +165,7 @@ function painleveplot end
 
 export PadeTaylorProblem, solve_pade, PadeTaylorSolution, taylor_eval
 export robust_pade, PadeApproximant
+export shared_denominator_pade
 export taylor_coefficients_1st, taylor_coefficients_2nd
 export path_network_solve, PathNetworkSolution, eval_at, eval_at_sheet
 export DiagnosticReport, EdgeReport, quality_diagnose

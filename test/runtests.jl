@@ -6,6 +6,7 @@ using PadeTaylor
         # Confirms the umbrella module + its 8 sub-modules load cleanly.
         @test isdefined(PadeTaylor, :LinAlg)
         @test isdefined(PadeTaylor, :RobustPade)
+        @test isdefined(PadeTaylor, :SharedPade)
         @test isdefined(PadeTaylor, :Coefficients)
         @test isdefined(PadeTaylor, :StepControl)
         @test isdefined(PadeTaylor, :PadeStepper)
@@ -27,6 +28,7 @@ using PadeTaylor
     # Dispatcher fill in these.
     include("linalg_test.jl")
     include("robustpade_test.jl")
+    include("shared_pade_test.jl")
     include("classical_pade_test.jl")
     include("coefficients_test.jl")
     include("stepcontrol_test.jl")
