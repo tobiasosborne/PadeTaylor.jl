@@ -76,6 +76,11 @@ include("RobustPade.jl")
 # both.  Additive — no v0.1 module behaviour changes (bead padetaylor-0ln.2).
 include("SharedPade.jl")
 include("Coefficients.jl")
+# VectorCoefficients lifts the Taylor-jet layer from scalar to vector
+# ODEs (y' = f(z, y), y ∈ ℂ^d); a d=1 jet reduces bit-identically to
+# Coefficients.taylor_coefficients_1st.  Additive — no v0.1 module
+# behaviour changes (bead padetaylor-0ln.7, ADR-0020).
+include("VectorCoefficients.jl")
 include("StepControl.jl")
 include("PadeStepper.jl")
 include("Problems.jl")
@@ -108,6 +113,7 @@ using .Problems:    PadeTaylorProblem, solve_pade, PadeTaylorSolution, taylor_ev
 using .RobustPade:  robust_pade, PadeApproximant
 using .SharedPade:  shared_denominator_pade
 using .Coefficients: taylor_coefficients_1st, taylor_coefficients_2nd
+using .VectorCoefficients: vector_taylor_coefficients
 using .PathNetwork: path_network_solve, PathNetworkSolution, eval_at, eval_at_sheet
 using .Diagnostics: DiagnosticReport, EdgeReport, quality_diagnose
 using .PoleField:   extract_poles
@@ -167,6 +173,7 @@ export PadeTaylorProblem, solve_pade, PadeTaylorSolution, taylor_eval
 export robust_pade, PadeApproximant
 export shared_denominator_pade
 export taylor_coefficients_1st, taylor_coefficients_2nd
+export vector_taylor_coefficients
 export path_network_solve, PathNetworkSolution, eval_at, eval_at_sheet
 export DiagnosticReport, EdgeReport, quality_diagnose
 export extract_poles
