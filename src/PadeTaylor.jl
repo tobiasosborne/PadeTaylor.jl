@@ -106,6 +106,13 @@ include("Problems.jl")
 # — distinct from the v0.1 solve_pade; no v0.1 dispatch changes (bead
 # padetaylor-0ln.9, V3b).
 include("VectorProblems.jl")
+# NoumiYamada is the problem-builder layer for the even-parity
+# Noumi–Yamada A_{2n}^(1) higher-order Painlevé systems: the A_{2n}^(1)
+# RHS factory and the NoumiYamadaProblem builder that assembles a
+# VectorPadeTaylorProblem.  It composes VectorProblems, so it loads
+# after it.  Additive — no v0.1 module behaviour changes (bead
+# padetaylor-0ln.12, V5a, ADR-0022).
+include("NoumiYamada.jl")
 # SheetTracker is loaded before PathNetwork because BranchTracker (the
 # walker-side cut-respecting layer per ADR-0013) reuses SheetTracker's
 # `winding_delta` primitive, and PathNetwork in turn uses BranchTracker.
@@ -141,6 +148,7 @@ using .VectorStepper: VectorPadeStepperState, vector_pade_step!,
 using .VectorStepControl: vector_step_jorba_zou
 using .VectorProblems: VectorPadeTaylorProblem, VectorPadeTaylorSolution,
                        vector_solve_pade
+using .NoumiYamada: noumi_yamada_rhs, NoumiYamadaProblem
 using .PathNetwork: path_network_solve, PathNetworkSolution, eval_at, eval_at_sheet
 using .Diagnostics: DiagnosticReport, EdgeReport, quality_diagnose
 using .PoleField:   extract_poles
@@ -204,6 +212,7 @@ export vector_taylor_coefficients
 export VectorPadeStepperState, vector_pade_step!, vector_pade_step_with_pade!
 export vector_step_jorba_zou
 export VectorPadeTaylorProblem, VectorPadeTaylorSolution, vector_solve_pade
+export noumi_yamada_rhs, NoumiYamadaProblem
 export path_network_solve, PathNetworkSolution, eval_at, eval_at_sheet
 export DiagnosticReport, EdgeReport, quality_diagnose
 export extract_poles
