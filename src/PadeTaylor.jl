@@ -83,6 +83,12 @@ include("Coefficients.jl")
 include("VectorCoefficients.jl")
 include("StepControl.jl")
 include("PadeStepper.jl")
+# VectorStepper takes one Padé–Taylor step of a first-order vector ODE
+# y' = f(z, y), y ∈ ℂ^d, via a shared-denominator Padé (all d components
+# over one Q).  It composes VectorCoefficients (vector Taylor jet) with
+# SharedPade (shared-Q Hermite–Padé), so it loads after both.  Additive
+# — no v0.1 module behaviour changes (bead padetaylor-0ln.8, V3a).
+include("VectorStepper.jl")
 include("Problems.jl")
 # SheetTracker is loaded before PathNetwork because BranchTracker (the
 # walker-side cut-respecting layer per ADR-0013) reuses SheetTracker's
@@ -114,6 +120,8 @@ using .RobustPade:  robust_pade, PadeApproximant
 using .SharedPade:  shared_denominator_pade
 using .Coefficients: taylor_coefficients_1st, taylor_coefficients_2nd
 using .VectorCoefficients: vector_taylor_coefficients
+using .VectorStepper: VectorPadeStepperState, vector_pade_step!,
+                      vector_pade_step_with_pade!
 using .PathNetwork: path_network_solve, PathNetworkSolution, eval_at, eval_at_sheet
 using .Diagnostics: DiagnosticReport, EdgeReport, quality_diagnose
 using .PoleField:   extract_poles
@@ -174,6 +182,7 @@ export robust_pade, PadeApproximant
 export shared_denominator_pade
 export taylor_coefficients_1st, taylor_coefficients_2nd
 export vector_taylor_coefficients
+export VectorPadeStepperState, vector_pade_step!, vector_pade_step_with_pade!
 export path_network_solve, PathNetworkSolution, eval_at, eval_at_sheet
 export DiagnosticReport, EdgeReport, quality_diagnose
 export extract_poles
