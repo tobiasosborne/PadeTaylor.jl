@@ -41,6 +41,7 @@ using PadeTaylor
     include("vector_stepper_test.jl")
     include("vector_step_control_test.jl")
     include("vector_problems_test.jl")
+    include("calogero_moser_test.jl")
     include("problems_test.jl")
     include("pathnetwork_test.jl")
     include("branch_tracker_test.jl")
