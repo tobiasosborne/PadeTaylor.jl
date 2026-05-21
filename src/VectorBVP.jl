@@ -104,7 +104,7 @@ non-convergent Newton; a singular Jacobian; out-of-segment evaluation.
 """
 module VectorBVP
 
-using LinearAlgebra: I, kron, Diagonal
+using LinearAlgebra: I, kron
 using GenericLinearAlgebra: GenericLinearAlgebra  # extends `\` for BigFloat
 using TaylorSeries: Taylor1
 

@@ -127,8 +127,19 @@ honest answer.
   maxiter, initial_guess, jacobian) -> VectorBVPSolution` is the stable
   surface that VB2/VB3/V8b will depend on; `d` is inferred from
   `length(g)`.
-- Wiring `VectorBVP` into the `PadeTaylor` umbrella module is deferred to
-  VB3 — the VB1 test file `include`s `src/VectorBVP.jl` directly.
+- Wiring `VectorBVP` into the `PadeTaylor` umbrella module was deferred to
+  VB3 — the VB1 test file `include`s `src/VectorBVP.jl` directly.  **Done
+  in VB3** (bead `padetaylor-0ln.26`): `VectorBVP` is `include`d in
+  `src/PadeTaylor.jl` immediately before `PainleveHierarchy` (so the latter
+  can add a `PainleveHierarchyProblem` method of `vector_bvp_solve`), and
+  `vector_bvp_solve` / `VectorBVPSolution` are re-exported.  VB3 also adds
+  `PainleveHierarchy.painleve_hierarchy_jacobian(:I, m; t)` — the exact
+  analytic companion-form Jacobian `∂f/∂y` of the `P_I^(m)` RHS — and a
+  `vector_bvp_solve(php::PainleveHierarchyProblem, B_a, B_b, g; …)`
+  convenience that boundary-value-solves a hierarchy member, defaulting
+  `jacobian` to that analytic helper.  The helper is cross-validated
+  against the `Taylor1` autodiff Jacobian and a finite-difference
+  Jacobian (test `VW.2`).
 - Fail-loud (Rule 1): `N < 4`, `maxiter < 1`, `tol < 0`, `B_a`/`B_b`/`g`/
   RHS dimension mismatches, Newton non-convergence, a singular Jacobian,
   and out-of-segment evaluation all throw with a `suggestion`/`detail`.

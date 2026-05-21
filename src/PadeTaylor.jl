@@ -98,6 +98,16 @@ include("VectorStepper.jl")
 # VectorProblems.  Additive — no v0.1 module behaviour changes (bead
 # padetaylor-0ln.10, V3c, ADR-0021).
 include("VectorStepControl.jl")
+# VectorBVP is the Chebyshev spectral-collocation Newton boundary-value
+# solver for first-order vector ODE systems y' = f(z, y), y ∈ ℂ^d, under
+# a general linear two-point boundary condition B_a·y(z_a) + B_b·y(z_b) =
+# g.  It depends only on the standard external deps (TaylorSeries,
+# LinearAlgebra, GenericLinearAlgebra) — on no sibling src/ module — so it
+# could load early; it is placed BEFORE PainleveHierarchy because that
+# module adds a PainleveHierarchyProblem method of vector_bvp_solve.
+# Additive — the global-collocation substrate the v0.2 P_I^(2)
+# tritronquée figure stands on (bead padetaylor-0ln.26, VB3, ADR-0023).
+include("VectorBVP.jl")
 include("Problems.jl")
 # VectorProblems is the top-level driver for first-order vector ODEs
 # y' = f(z, y), y ∈ ℂ^d: a problem container, a fixed-step loop over
@@ -177,11 +187,15 @@ using .VectorStepper: VectorPadeStepperState, vector_pade_step!,
 using .VectorStepControl: vector_step_jorba_zou
 using .VectorProblems: VectorPadeTaylorProblem, VectorPadeTaylorSolution,
                        vector_solve_pade
+# VectorBVP — the first-order vector-system Chebyshev-collocation BVP
+# solver; the global-collocation counterpart to the IVP vector_solve_pade
+# (ADR-0023).
+using .VectorBVP:   vector_bvp_solve, VectorBVPSolution
 using .NoumiYamada: noumi_yamada_rhs, NoumiYamadaProblem
 using .NoumiYamadaSymmetry: noumi_yamada_rational, noumi_yamada_backlund,
                             noumi_yamada_rotation
-using .PainleveHierarchy: painleve_hierarchy, PainleveHierarchyProblem,
-                          pI2_tritronquee_ic
+using .PainleveHierarchy: painleve_hierarchy, painleve_hierarchy_jacobian,
+                          PainleveHierarchyProblem, pI2_tritronquee_ic
 using .VectorPathNetwork: vector_path_network_solve, VectorPathNetworkSolution
 using .VectorPoleField:   extract_poles_shared_q
 using .PathNetwork: path_network_solve, PathNetworkSolution, eval_at, eval_at_sheet
@@ -247,9 +261,11 @@ export vector_taylor_coefficients
 export VectorPadeStepperState, vector_pade_step!, vector_pade_step_with_pade!
 export vector_step_jorba_zou
 export VectorPadeTaylorProblem, VectorPadeTaylorSolution, vector_solve_pade
+export vector_bvp_solve, VectorBVPSolution
 export noumi_yamada_rhs, NoumiYamadaProblem
 export noumi_yamada_rational, noumi_yamada_backlund, noumi_yamada_rotation
-export painleve_hierarchy, PainleveHierarchyProblem, pI2_tritronquee_ic
+export painleve_hierarchy, painleve_hierarchy_jacobian,
+       PainleveHierarchyProblem, pI2_tritronquee_ic
 export vector_path_network_solve, VectorPathNetworkSolution
 export extract_poles_shared_q
 export path_network_solve, PathNetworkSolution, eval_at, eval_at_sheet

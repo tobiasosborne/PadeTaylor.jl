@@ -121,8 +121,10 @@ module PainleveHierarchy
 using ..VectorProblems: VectorPadeTaylorProblem
 
 import ..VectorProblems: vector_solve_pade
+import ..VectorBVP: vector_bvp_solve
 
-export painleve_hierarchy, PainleveHierarchyProblem, pI2_tritronquee_ic
+export painleve_hierarchy, painleve_hierarchy_jacobian,
+       PainleveHierarchyProblem, pI2_tritronquee_ic
 
 # -----------------------------------------------------------------------------
 # Companion-form RHS closures (m ∈ {1, 2}).
@@ -189,6 +191,88 @@ function painleve_hierarchy(equation::Symbol, m::Integer; t = 0)
         "Dikii recursion to generate the order-2m ODE symbolically — that " *
         "is a deferred follow-up bead, not a v0.2 acceptance item. " *
         "Suggestion: use m = 1 (PI) or m = 2 (P_I^(2))."))
+end
+
+# -----------------------------------------------------------------------------
+# Analytic companion-form Jacobian ∂f/∂y.
+# -----------------------------------------------------------------------------
+
+"""
+    painleve_hierarchy_jacobian(equation::Symbol, m::Integer; t = 0) -> Jf
+
+Build the closure `Jf(x, y) -> d×d matrix` returning the **exact analytic
+Jacobian** `∂f/∂y` of the `P_I^(m)` companion-form RHS — the hand-derived
+counterpart to the `Taylor1` autodiff Jacobian `VectorBVP.vector_bvp_solve`
+computes internally.  Supplying it via `jacobian = …` lets the BVP Newton
+solve skip the per-node autodiff evaluations.
+
+The companion form makes the first `2m-1` rows the trivial chain
+`y_k' = y_{k+1}`; their Jacobian rows are the constant identity shift
+(a single `1` on the super-diagonal).  Only the last row carries the ODE.
+
+  - **m = 1** (`d = 2`).  `f = (y₂, 6y₁² + x)`, so
+
+        Jf = [ 0     1 ;
+              12y₁   0 ].
+
+  - **m = 2** (`d = 4`).  Row 4 of the RHS is
+    `-10y₂² - 20y₁y₃ - 40(y₁³ - 6t·y₁ + 6x)`; differentiating,
+    `∂/∂y₁ = -20y₃ - 120y₁² + 240t`, `∂/∂y₂ = -20y₂`, `∂/∂y₃ = -20y₁`,
+    `∂/∂y₄ = 0`, so
+
+        Jf = [ 0                       1       0      0 ;
+               0                       0       1      0 ;
+               0                       0       0      1 ;
+              -20y₃-120y₁²+240t      -20y₂   -20y₁    0 ].
+
+The returned matrix follows the element type of `y` (a `Taylor1` or
+`BigFloat` state yields a matrix of that element type) — it is built with
+`zero(eltype(y))` / `one(eltype(y))` so it composes with the generic-`T`
+Newton solve.
+
+Throws `ArgumentError` (Rule 1) for an `equation` other than `:I` and for
+`m ≥ 3` / `m < 1`, mirroring `painleve_hierarchy` (the general-`m` member
+needs the deferred Lenard recursion — see the module docstring).
+"""
+function painleve_hierarchy_jacobian(equation::Symbol, m::Integer; t = 0)
+    equation === :I || throw(ArgumentError(
+        "painleve_hierarchy_jacobian: unknown equation $(repr(equation)); " *
+        "only the Painlevé-I hierarchy (:I) is implemented for v0.2. " *
+        "Suggestion: pass :I."))
+    m ≥ 1 || throw(ArgumentError(
+        "painleve_hierarchy_jacobian(:I, m): m must be ≥ 1 (got $m). " *
+        "Suggestion: pass m ≥ 1."))
+    if m == 1
+        return (x, y) -> begin
+            length(y) == 2 || throw(ArgumentError(
+                "painleve_hierarchy_jacobian(:I, 1): state vector has " *
+                "length $(length(y)) but the m=1 companion system has 2 " *
+                "components. Suggestion: pass a 2-vector state."))
+            y1 = y[1]
+            z = zero(y1); o = one(y1)
+            return [z  o;
+                    12 * y1  z]
+        end
+    end
+    if m == 2
+        return (x, y) -> begin
+            length(y) == 4 || throw(ArgumentError(
+                "painleve_hierarchy_jacobian(:I, 2): state vector has " *
+                "length $(length(y)) but the P_I^(2) companion system has " *
+                "4 components. Suggestion: pass a 4-vector state."))
+            y1, y2, y3, _ = y
+            z = zero(y1); o = one(y1)
+            return [z  o  z  z;
+                    z  z  o  z;
+                    z  z  z  o;
+                    (-20*y3 - 120*y1^2 + 240*t)  (-20*y2)  (-20*y1)  z]
+        end
+    end
+    throw(ArgumentError(
+        "painleve_hierarchy_jacobian(:I, $m): only m ∈ {1, 2} are " *
+        "implemented explicitly for v0.2.  m ≥ 3 requires the general " *
+        "Lenard–Gelfand–Dikii recursion — a deferred follow-up bead, not " *
+        "a v0.2 acceptance item.  Suggestion: use m = 1 or m = 2."))
 end
 
 # -----------------------------------------------------------------------------
@@ -273,6 +357,47 @@ hierarchy member is integrated in its natural `x`-frame, so the returned
 """
 vector_solve_pade(prob::PainleveHierarchyProblem; kwargs...) =
     vector_solve_pade(prob.problem; kwargs...)
+
+"""
+    vector_bvp_solve(php::PainleveHierarchyProblem, B_a, B_b, g;
+                     z_a = nothing, z_b = nothing, jacobian = nothing,
+                     kwargs...)
+        -> VectorBVPSolution
+
+Boundary-value-solve a Painlevé-I hierarchy member with the
+Chebyshev-collocation Newton solver `VectorBVP.vector_bvp_solve`.  A thin
+forwarding convenience — the global-collocation analogue of the
+`vector_solve_pade(php; …)` IVP forwarding above.
+
+The companion-form RHS and the integration segment are taken from the
+wrapped `PainleveHierarchyProblem`: the RHS is `php.problem.f` (the
+`painleve_hierarchy(:I, php.m; t = php.t)` closure baked in at
+construction), and the segment defaults to the problem's `zspan` —
+`z_a = php.problem.zspan[1]`, `z_b = php.problem.zspan[2]`.  Either
+endpoint may be overridden via the `z_a` / `z_b` keywords (the v0.2
+`P_I^(2)` tritronquée figure pins the BVP on a sub-segment of the IVP
+window).
+
+The boundary condition is the general linear two-point form
+`B_a·y(z_a) + B_b·y(z_b) = g` (`B_a, B_b` are `2m×2m`, `g` length `2m`).
+
+By default `jacobian` is the **exact analytic companion-form Jacobian**
+`painleve_hierarchy_jacobian(:I, php.m; t = php.t)` — the hand-derived
+override path, which spares the Newton solve its per-node `Taylor1`
+autodiff.  Pass `jacobian = nothing` to force the autodiff path, or any
+other `(z, y) -> matrix` closure.  All remaining keywords (`N`, `tol`,
+`maxiter`, `initial_guess`) pass straight through to the core solver.
+"""
+function vector_bvp_solve(php::PainleveHierarchyProblem, B_a, B_b, g;
+                          z_a = nothing, z_b = nothing,
+                          jacobian = nothing, kwargs...)
+    za = z_a === nothing ? php.problem.zspan[1] : z_a
+    zb = z_b === nothing ? php.problem.zspan[2] : z_b
+    Jf = jacobian === nothing ?
+         painleve_hierarchy_jacobian(:I, php.m; t = php.t) : jacobian
+    return vector_bvp_solve(php.problem.f, za, zb, B_a, B_b, g;
+                            jacobian = Jf, kwargs...)
+end
 
 # -----------------------------------------------------------------------------
 # Tritronquée asymptotic initial condition for P_I^(2).

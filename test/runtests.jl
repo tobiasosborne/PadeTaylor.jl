@@ -14,6 +14,7 @@ using PadeTaylor
         @test isdefined(PadeTaylor, :VectorStepper)
         @test isdefined(PadeTaylor, :VectorStepControl)
         @test isdefined(PadeTaylor, :VectorProblems)
+        @test isdefined(PadeTaylor, :VectorBVP)
         @test isdefined(PadeTaylor, :NoumiYamada)
         @test isdefined(PadeTaylor, :NoumiYamadaSymmetry)
         @test isdefined(PadeTaylor, :PainleveHierarchy)
@@ -89,5 +90,6 @@ using PadeTaylor
     include("ffw_fig_7_test.jl")
     include("noumi_yamada_a4_figure_test.jl")
     include("vector_bvp_test.jl")
+    include("vector_bvp_wirein_test.jl")
     include("heun_test.jl")
 end
