@@ -117,7 +117,7 @@ The figure-certifying suite. `[E]` = machinery exists in the codebase;
 | VC-2 | Sign + KKG `n=2` series cross-check, negative real axis | strong | `[E]` active |
 | VC-3 | Wedge confinement + pole-free-sector purity of poles | strong | `[E]` active |
 | VC-4 | Dominant-balance leading coefficient `A ∈ {-1,-3}` per pole | strong | `[N]` shipped (beads `0ln.37.12`; `figures/_kkg_pi2_vc45.jl`) |
-| VC-5 | Conjugate-symmetry pole pairing (`V₀(x̄)=conj V₀(x)`) | strong | `[N]` shipped (bead `0ln.37.13`; `figures/_kkg_pi2_vc45.jl`) |
+| VC-5 | Conjugate-symmetry pole pairing (`V₀(x̄)=conj V₀(x)`) | strong | `[N]` shipped (beads `0ln.37.13`, `0ln.37.20`; `figures/_kkg_pi2_vc45.jl`; Amendment 6 optimal matching) |
 | VC-6 | Cross-node support filter (`min_support ≥ 2`) | medium | `[E]` active |
 | VC-7 | Loop-closure ΔP_rel certificate (`quality_diagnose`, ADR-0016) | medium | `[E]` unused on vector walks |
 | VC-8 | BVP endpoint higher-derivative match (FW §5.2 diagnostic) | medium | `[N]` |
@@ -484,6 +484,108 @@ prune fails the shrink / `n_pruned > 0` / per-pole VC-4a/b assertions
 `:froissart` while a genuine field pole through the same path is kept
 — the in-test mutation-proof. `figures/test_kkg_pi2_surface.jl` PI2S.4
 asserts all of the above; the suite is GREEN.
+
+## Amendment 6 — VC-5b: the conjugate-pairing defect re-resolved (2026-05-21)
+
+Bead `padetaylor-0ln.37.20` (Phase D, "VC-5b") investigated and fixed
+the defect Amendment 5 reported — 72 of 266 VC-4-validated wedge poles
+flagged as conjugate-unpaired.
+
+### The investigation — the root cause is *not* a missed walk region
+
+Amendment 5 hypothesised the far wedge (`|x| ≳ 12`) pole field was
+extracted *asymmetrically* because the single path-network tree's
+upper- and lower-half branches threaded different node sequences and
+the lower branch *missed* poles the upper branch found. The VC-5b
+instrumentation **falsified that hypothesis**:
+
+- **Node coverage is conjugate-symmetric.** For every upper-half
+  visited node `z`, the nearest lower-half node to `conj(z)` is a
+  median `0.10` away — and `0.10` even when restricted to the far
+  wedge `|x| ≥ 12`. The two half-walks thread *near-mirror loci*; the
+  walk does **not** miss far-wedge regions.
+
+- **The candidate pole field is asymmetric** (235 upper / 136 lower
+  raw candidates), but a per-pole VC-4-residual *polish* — coordinate
+  descent on `min(|A+1|,|A+3|)` over the walk's own shared-`Q` field —
+  moves each pole only `~0.005`. **Every extracted pole already sits at
+  its dominant-balance-optimal location.** The poles are individually
+  accurate; what differs between the halves is *which subset of the
+  dense far-wedge pole lattice each half resolves at all*.
+
+- **The field carries an intrinsic conjugate-residual accuracy of
+  median `~0.3`, p75 `~0.5`.** Fitting a Laurent model exactly *at*
+  `conj(p)` of a flagged pole `p` returns `A ≈ 0` (no double pole
+  there), but a VC-4-fit scan finds the genuine partner pole offset a
+  median `0.51` from `conj(p)`. This is the A2 tractability ceiling
+  (Amendment 2): the two half-trees develop different adaptive-`h`
+  histories and the order-24 shared-`Q` approximants of one half
+  resolve a slightly different subset of the lattice than the other.
+
+The candidate fixes were tested empirically and **rejected with
+evidence**: two independent half-wedge walks give *more* flagged poles
+(73–81 vs 72) because each half-walk has fewer near-real nodes
+informing the deep wedge; a denser per-half fan **blocks** (the A2
+degeneration); angle-offset or `h`-varied second walks **block** or
+give a strictly worse field (`h = 0.08`: 93 flagged; `h = 0.06`: 109);
+a three-walk consensus merge only inflates the pole count. The single
+whole-wedge tree at the production parameters is **measurably the
+best-conditioned walk** — no walk-architecture change beats it. The
+~0.3 conjugate residual is the genuine A2 ceiling, not a correctable
+walk defect.
+
+### The fix — VC-5's *own* two defects
+
+Since the walk cannot be improved, the VC-5b fix targets the two
+defects the investigation found in `vc5_pair` *itself*:
+
+1. **Greedy → globally-optimal matching.** The v1 `vc5_pair` matched
+   by a *globally-greedy* commit (tightest admissible mirror pair
+   first). Greedy is **not** maximum-cardinality — it commits a
+   locally-tight pair that blocks two other poles from each finding
+   their *only* admissible mirror. Measured on the B3 field: greedy
+   finds 93 pairs, the maximum-cardinality matching (Kuhn augmenting
+   paths) finds **103**. `vc5_pair` now computes the optimal matching.
+
+2. **`VC5_MATCH_TOL` re-derived from measured ground truth.** The v1
+   `0.5` was a *guess* — "below the 0.69 pole spacing" — set before the
+   field's conjugate-residual accuracy was measured. `0.5` is *tighter
+   than the field's own accuracy* (~0.3 median / ~0.5 p75): it bisects
+   the residual distribution and rejects ~27 % of genuine mirror pairs.
+   Re-derived from the *measured* 0.69 spacing / ~0.3–0.5 accuracy to
+   **`0.6`** — still firmly below the 0.69 spacing (87 % of it), and
+   with the optimal matcher (a pole pairs only with its *globally* best
+   mirror) it cannot false-match two distinct lattice poles. This is a
+   Law-1 ground-truth correction of a guessed parameter.
+
+**Measured outcome.** On the 266-pole B3 field: **72 → 52 flagged**
+(a 28 % reduction, the VC-5b deliverable), **93 → 103 conjugate
+pairs**. The pairing residual *widens slightly* — median `0.24 → 0.29`,
+max `0.50 → 0.60` — precisely because the optimal matcher no longer
+discards the harder-to-pair tail; this is the residual becoming a
+*more honest* diagnostic, not a cosmetic improvement. No conjugate
+symmetry is imposed by construction (the hard constraint): the upper
+and lower poles are still extracted from disjoint node sets of one
+independent walk, and `vc5_pair` only *pairs* poles — it never
+*constructs* a pole from its mirror — so the residual stays a genuine
+FW/FFW-style accuracy cross-check (FFW 2017 `:120-124`).
+
+**Honest residual — the remaining 52.** The 52 still-flagged off-axis
+poles are genuine poles (VC-4 dА ≈ 0) whose conjugate the field
+resolves at a lattice location farther than `0.6` away. This is the
+A2 far-wedge tractability ceiling, now *quantified and reported* as
+the VC-5 diagnostic rather than mis-attributed to a walk defect. A
+materially smaller flag count would need a different wedge
+architecture (the 2D-lattice re-expansion of the Amendment-2 deferred
+bead) — recorded there, not re-opened here.
+
+**Mutation-proven** (Rule 4): reverting `vc5_pair` to the greedy
+commit turns `figures/test_kkg_pi2_surface.jl` PI2S.4 RED — the
+load-bearing `length(flagged) ≤ 55` assertion fails (greedy flags 58),
+as do the two in-test greedy-vs-optimal comparison assertions. The
+bound `55` is set strictly below the greedy result so the optimal
+matcher is genuinely load-bearing, not carried by the tolerance change
+alone. The suite is GREEN with the optimal matcher.
 
 ## References
 

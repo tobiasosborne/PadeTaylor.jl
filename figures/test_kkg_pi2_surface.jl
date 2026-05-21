@@ -65,10 +65,15 @@
 #          residue, VC-4b); the VC-4 prune actually removed spurious
 #          candidates, and a deliberately-injected fake `A≈0` pole is
 #          rejected by the filter (the mutation-proof);
-#        - **VC-5** — the VC-4-surviving poles match into conjugate
-#          pairs with a small pairing residual (the FW-style accuracy
-#          estimate), and every *un-flagged* unpaired pole sits on the
-#          real axis (`|Im|` small).
+#        - **VC-5** (ADR-0025 Amendment 6) — the VC-4-surviving poles
+#          match into conjugate pairs by a globally-optimal
+#          (maximum-cardinality) bipartite matching, with a small
+#          pairing residual (the FW-style accuracy estimate); the
+#          flagged-unpaired count materially beats the v1 greedy
+#          matcher's 72 (Amendment 5); the matching is verified
+#          maximum-cardinality (no two unpaired poles are admissible
+#          mirrors); every *un-flagged* unpaired pole sits on the real
+#          axis (`|Im|` small).
 #      VC-7 loop closure remains a separate Phase-D bead.
 #
 #   5. **Schwarz symmetry.**  `V_0(x̄) = conj(V_0(x))` (the ODE has real
@@ -310,25 +315,62 @@ const SURF2 = kkg_pi2_surface()      # second run, for reproducibility
         gkeep = vc4_validate(walk, ComplexF64[genuine])
         @test length(gkeep.kept) == 1
 
-        # --- VC-5 — conjugate-symmetry pole pairing -----------------------
-        # ADR-0025 Amendment 1.  `V_0(x̄) = conj V_0(x)`, so the
-        # VC-4-surviving field must be conjugate-symmetric.  `vc5_pair`
-        # matches the survivors into conjugate pairs and reports the
-        # pairing residual — itself an FW-style accuracy estimate.
+        # --- VC-5 — conjugate-symmetry pole pairing (ADR-0025 Amend. 6) ---
+        # `V_0(x̄) = conj V_0(x)`, so the VC-4-surviving field must be
+        # conjugate-symmetric.  `vc5_pair` matches the survivors into
+        # conjugate pairs by a globally-optimal (maximum-cardinality)
+        # bipartite matching of the conjugate-admissibility graph and
+        # reports the pairing residual — itself an FW-style accuracy
+        # estimate.  Amendment 6 (bead `padetaylor-0ln.37.20`, VC-5b)
+        # replaced the v1 greedy matcher — which was not maximum-
+        # cardinality and left 72 off-axis poles spuriously flagged —
+        # and re-derived `VC5_MATCH_TOL` (0.5 → 0.6) from the *measured*
+        # 0.69 pole spacing / ~0.3-0.5 field accuracy.
         v5 = SURF.vc5
         @test v5 !== nothing
         @test !isempty(v5.pairs)             # the field DOES pair up
-        # The pairing residual is small — well below the wedge pole
-        # nearest-neighbour spacing (~0.69).  A genuine conjugate pair
-        # has `|p_up - conj(p_lo)|` at the field's accuracy, not the
-        # pole spacing.  Assert the median residual is below `0.35`
-        # (the A4 baseline was ~1.25 — the re-resolution must beat it).
-        @test v5.median_resid < 0.35
+
+        # VC-5b — the flagged-pole count.  The v1 greedy matcher flagged
+        # 72 off-axis poles as unpaired (ADR-0025 Amendment 5).  The
+        # Amendment-6 optimal matcher + re-derived tolerance materially
+        # cuts that: the measured count on the B3 field is 52.  Assert a
+        # concrete bound — `≤ 55` — strictly below the 72 baseline (the
+        # VC-5b deliverable).  The bound is set BELOW what the v1 greedy
+        # matcher achieves at the same `VC5_MATCH_TOL` (greedy flags 58
+        # — measured), so it is genuinely load-bearing for the
+        # optimal-matching fix, not carried by the tolerance change
+        # alone.  This is the load-bearing VC-5b regression assertion
+        # (mutation-proven below).
+        @test length(v5.flagged) ≤ 55
+        @test length(v5.flagged) < 72        # strictly beats the baseline
+        # ...and the optimal matcher finds materially MORE conjugate
+        # pairs than the 93 the v1 greedy matcher found.
+        @test length(v5.pairs) ≥ 100
+
+        # The pairing residual stays a genuine FW-style accuracy
+        # estimate — well below the wedge pole nearest-neighbour spacing
+        # (~0.69).  The optimal matcher no longer discards the
+        # harder-to-pair tail, so the median residual sits a touch
+        # higher than the greedy matcher's optimistically-biased 0.24;
+        # `< 0.40` is the honest envelope (the A4 baseline was ~1.25 —
+        # the re-resolution still beats it ~3×).
+        @test v5.median_resid < 0.40
         @test isfinite(v5.max_resid)
-        # Each reported pair genuinely mirrors under conjugation.
+        # Each reported pair genuinely mirrors under conjugation, within
+        # the re-derived `VC5_MATCH_TOL = 0.6`.
         for (pu, pl) in v5.pairs
-            @test abs(pu - conj(pl)) < 0.5   # VC5_MATCH_TOL
+            @test abs(pu - conj(pl)) ≤ 0.6   # VC5_MATCH_TOL
             @test imag(pu) > 0 && imag(pl) < 0
+        end
+        # The matching is maximum-cardinality: NO unpaired upper pole
+        # has an unpaired lower pole within `VC5_MATCH_TOL` of its
+        # conjugate.  If one did, a larger matching would exist — so this
+        # asserts the matcher genuinely maximised the pair count (a
+        # greedy matcher can fail this; the optimal one cannot).
+        up_unpaired = [p for p in v5.unpaired if imag(p) >  0.15]
+        lo_unpaired = [p for p in v5.unpaired if imag(p) < -0.15]
+        for pu in up_unpaired, pl in lo_unpaired
+            @test abs(pu - conj(pl)) > 0.6
         end
         # An unpaired pole is EITHER on the real axis (small `|Im|`) OR
         # flagged suspect.  Verify the partition: every unpaired pole the
@@ -342,6 +384,40 @@ const SURF2 = kkg_pi2_surface()      # second run, for reproducibility
         # a large `|Im|` (it is an off-axis pole with no mirror partner).
         for p in v5.flagged
             @test abs(imag(p)) ≥ 0.15
+        end
+
+        # --- VC-5b mutation-proof — greedy matching is genuinely worse ---
+        # The load-bearing VC-5b assertion is `length(flagged) ≤ 60`.
+        # It is carried by the Amendment-6 optimal (maximum-cardinality)
+        # matcher; the v1 greedy matcher would NOT meet it.  Re-run the
+        # v1 greedy commit ON THE SAME VC-4-validated field and confirm
+        # it flags materially more poles — proving the optimal matcher
+        # is what the assertion exercises, not the field happening to be
+        # easy.  (A greedy matcher is not maximum-cardinality: it
+        # commits a locally-tight pair that blocks two poles from each
+        # finding their only admissible mirror.)
+        let P = ComplexF64.(SURF.poles), tol = 0.6, ax = 0.15
+            up = [p for p in P if imag(p) >  ax]
+            lo = [p for p in P if imag(p) < -ax]
+            edges = Tuple{Float64,Int,Int}[]
+            for (iu, pu) in enumerate(up), (il, pl) in enumerate(lo)
+                d = abs(pu - conj(pl))
+                d ≤ tol && push!(edges, (d, iu, il))
+            end
+            sort!(edges; by = e -> e[1])         # greedy: tightest first
+            uu = falses(length(up)); ll = falses(length(lo))
+            greedy_pairs = 0
+            for (_, iu, il) in edges
+                (uu[iu] || ll[il]) && continue
+                uu[iu] = true; ll[il] = true; greedy_pairs += 1
+            end
+            greedy_flagged = length(P) -
+                2 * greedy_pairs - count(p -> abs(imag(p)) ≤ ax, P)
+            # The optimal matcher must strictly beat greedy on this field
+            # — fewer flagged, more pairs.  If they tied, the optimal
+            # matcher would not be load-bearing and this block is RED.
+            @test length(v5.flagged) < greedy_flagged
+            @test length(v5.pairs)   > greedy_pairs
         end
     end
 

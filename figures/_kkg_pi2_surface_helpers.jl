@@ -667,10 +667,14 @@ field is then passed through the **Phase-D per-pole validation**:
     **and** `|B| < 0.10·|A|` (VC-4b, the zero residue).  A candidate
     failing either is spurious and **pruned** — `poles` is the
     VC-4-surviving field, the field the figure renders.
-  * **VC-5** (`vc5_pair`) — match the VC-4-surviving poles into
-    conjugate pairs (`V₀(x̄)=conj V₀(x)`); the pairing residual is an
-    FW-style accuracy estimate, a flagged off-axis unpaired pole is
-    suspect.  VC-5 is a diagnostic — it *reports*, it does not prune.
+  * **VC-5** (`vc5_pair`, ADR-0025 Amendment 6) — match the
+    VC-4-surviving poles into conjugate pairs (`V₀(x̄)=conj V₀(x)`) by a
+    globally-optimal (maximum-cardinality) bipartite matching of the
+    conjugate-admissibility graph; the pairing residual is an FW-style
+    accuracy estimate, a flagged off-axis unpaired pole is suspect.
+    VC-5 is a diagnostic — it *reports*, it does not prune, and it
+    never *constructs* a pole from its mirror, so the residual stays a
+    genuine accuracy cross-check (FFW 2017 `:120-124`).
 
 Returns `(walk, poles, u, covered, vc4, vc5, message)`:
   - `walk`     : the `VectorPathNetworkSolution`;

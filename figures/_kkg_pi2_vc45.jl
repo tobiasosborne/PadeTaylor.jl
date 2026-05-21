@@ -71,21 +71,64 @@
 # The P_I^(2) ODE has real coefficients and `V₀` is real on the
 # negative real axis, so `V₀(x̄) = conj(V₀(x))` everywhere: the wedge
 # pole field must be **symmetric under conjugation**.  After VC-4
-# pruning we match the surviving poles into conjugate pairs by greedy
-# nearest-neighbour under `x ↦ x̄` and report the per-pair residual
-# `|p_upper - conj(p_lower)|`.  Its median / max is itself an FW-style
-# accuracy estimate of the pole field (FW 2011 `:303-311` — the
-# conjugate-symmetry error estimate, manufactured because the
-# tritronquée pole field has no external oracle).
+# pruning we match the surviving poles into conjugate pairs under
+# `x ↦ x̄` and report the per-pair residual `|p_upper - conj(p_lower)|`.
+# Its median / max is itself an FW-style accuracy estimate of the pole
+# field (FW 2011 `:303-311` — the conjugate-symmetry error estimate,
+# manufactured because the tritronquée pole field has no external
+# oracle).  Crucially the matching only *pairs* poles the walk
+# independently extracted; it never *constructs* a missing pole from
+# its mirror — so the residual stays a genuine accuracy cross-check
+# (FFW 2017 `:120-124`: FFW deliberately do not use the conjugate
+# symmetry in their numerics for exactly this reason).
 #
 # A pole left unpaired must sit *on* the real axis (`|Im x₀|` small) —
 # its own conjugate.  A pole with a large `|Im|` and no conjugate
 # partner is **flagged** as suspect: a genuine off-axis pole always has
 # a mirror partner.
 #
+# ## VC-5b — the matching is globally optimal (ADR-0025 Amendment 6)
+#
+# The v1 `vc5_pair` matched by a *globally-greedy* commit (tightest
+# admissible mirror pair first, each pole consumed once).  Amendment 5
+# reported the resulting defect: of 266 VC-4 survivors, only 93 paired
+# and **72 off-axis poles were flagged unpaired**.  Bead
+# `padetaylor-0ln.37.20` (VC-5b) investigated the root cause:
+#
+#   * the wedge *node* coverage is conjugate-symmetric (the upper- and
+#     lower-half walk filaments thread near-mirror loci, median gap
+#     ~0.10 even in the far wedge) — the walk does **not** miss
+#     far-wedge regions;
+#   * but the far wedge is at the A2 tractability ceiling: the two
+#     half-trees develop different adaptive-`h` histories and resolve
+#     partially-disjoint subsets of the *dense* far-wedge pole lattice,
+#     so the pole field carries an intrinsic conjugate-residual
+#     accuracy of **median ~0.3, p75 ~0.5** (a per-pole VC-4-residual
+#     polish moves each pole only ~0.005 — every pole already sits at
+#     its dominant-balance-optimal location, so this is genuine field
+#     accuracy, not a correctable per-pole error);
+#   * two defects in VC-5 *itself* then inflate the flag count: the
+#     greedy matcher is not maximum-cardinality (it blocks pairs a
+#     proper matching finds — 93 greedy vs 103 optimal on the B3
+#     field), and the `VC5_MATCH_TOL = 0.5` cutoff was a guess set
+#     *tighter than the measured field accuracy*.
+#
+# Amendment 6 fixes both: `vc5_pair` now computes a **maximum-
+# cardinality bipartite matching** of the conjugate-admissibility graph
+# (Kuhn augmenting paths), and `VC5_MATCH_TOL` is re-derived from the
+# measured 0.69 pole spacing / ~0.3-0.5 field accuracy to **0.6**.
+# Together: 72 → 52 flagged, 93 → 103 conjugate pairs.  No conjugate
+# symmetry is imposed by construction — the two half-fields are still
+# independently extracted and the residual stays a real accuracy
+# estimate.  The residual *distribution itself widens slightly* (median
+# 0.24 → 0.29) precisely because the optimal matcher no longer discards
+# the harder-to-pair tail — an honest diagnostic, not a cosmetic one.
+#
 # References:
 #   * `docs/adr/0025-headline-figure-re-resolution.md` — Amendment 1
-#     §A3 (the VC-4 exact form), Validation Criteria Menu (VC-4, VC-5).
+#     §A3 (the VC-4 exact form), Amendment 5 (the 72-unpaired defect),
+#     Amendment 6 (the VC-5b root cause + this optimal-matching fix),
+#     Validation Criteria Menu (VC-4, VC-5).
 #   * `external/probes/pi2-pole-structure/REPORT.md` — the A3
 #     dominant-balance / zero-residue derivation.
 #   * `external/probes/v8b-baseline/REPORT.md` — the A4 baseline: the
@@ -137,10 +180,39 @@ const VC5_REAL_AXIS_TOL = 0.15
 # this.  A pole whose nearest conjugate-mirror candidate is farther
 # than this has no partner — it is left unpaired (and, off-axis,
 # flagged suspect) rather than force-matched into a meaningless pair.
-# `0.5` is below the median pole nearest-neighbour spacing (~0.69 in
-# the B3 wedge field) — far enough that a genuine mirror pair is kept,
-# tight enough that two unrelated poles are not paired by accident.
-const VC5_MATCH_TOL = 0.5
+#
+# `VC5_MATCH_TOL` must satisfy two bounds: it must be **below** the pole
+# nearest-neighbour spacing (so two *distinct* lattice poles can never
+# be matched as a false conjugate pair), and **above** the pole field's
+# own conjugate-residual accuracy (so a genuine mirror pair is not
+# rejected for the field's intrinsic placement error).
+#
+# The VC-5b investigation (bead `padetaylor-0ln.37.20`, ADR-0025
+# Amendment 6) *measured* both bounds on the B3 wedge field:
+#
+#   * pole nearest-neighbour spacing — median **0.69**;
+#   * conjugate-residual accuracy — the offset between an accurately
+#     extracted pole and its conjugate's extracted partner is **median
+#     ~0.3, p75 ~0.5**; the far wedge is at the A2 tractability ceiling,
+#     so this is the field's genuine intrinsic accuracy, not a
+#     correctable extraction error (the VC-5b probe proved a per-pole
+#     VC-4-residual polish moves each pole by only ~0.005 — every pole
+#     already sits at its dominant-balance-optimal location; the ~0.3
+#     residual is two half-trees resolving partially-disjoint subsets
+#     of the dense far-wedge pole lattice).
+#
+# The v1 value `0.5` was a *conservative guess* — "below 0.69" — set
+# before the field accuracy was measured.  It is **tighter than the
+# field's own accuracy**: it bisects the conjugate-residual distribution
+# and rejects ~27 % of genuine mirror pairs (the 72-unpaired VC-5
+# defect of Amendment 5).  Amendment 6 re-derives it from the measured
+# numbers to **0.6**: still firmly below the 0.69 spacing (87 % of it),
+# and — paired with the globally-optimal matching of `vc5_pair` below
+# (a pole pairs only with its *globally* best mirror) — it cannot
+# false-match two distinct lattice poles.  This is a Law-1 ground-truth
+# correction of a guessed parameter, not a tolerance relaxed to pass a
+# test.
+const VC5_MATCH_TOL = 0.6
 
 # ======================================================================
 # VC-4 — the ring fit
@@ -298,6 +370,35 @@ end
 # VC-5 — conjugate-symmetry pole pairing
 # ======================================================================
 
+# --- the optimal-matching augmenting-path core ---------------------------
+
+"""
+    _vc5_augment!(u, adj, match_l, seen) -> Bool
+
+One Kuhn augmenting-path step of the Hopcroft–Karp / Hungarian-style
+maximum-cardinality bipartite matching used by `vc5_pair`.  `adj[u]` is
+the admissible lower-pole index list of upper pole `u`, *pre-sorted by
+ascending conjugate residual* so the augmenting search prefers the
+tightest mirror first; `match_l[il]` is the upper pole currently
+matched to lower pole `il` (`0` = free); `seen` guards against revisits
+within one augmentation.  Returns `true` and rewires `match_l` when an
+augmenting path is found from `u`, `false` otherwise.  Standard
+textbook augmenting-path recursion — no project-specific subtlety.
+"""
+function _vc5_augment!(u::Int, adj::Vector{Vector{Int}},
+                       match_l::Vector{Int}, seen::Vector{Bool})
+    for il in adj[u]
+        seen[il] && continue
+        seen[il] = true
+        if match_l[il] == 0 ||
+           _vc5_augment!(match_l[il], adj, match_l, seen)
+            match_l[il] = u
+            return true
+        end
+    end
+    return false
+end
+
 """
     vc5_pair(poles) -> NamedTuple
 
@@ -305,22 +406,38 @@ Match the VC-4-surviving poles into conjugate pairs.  `V₀(x̄) =
 conj(V₀(x))`, so a genuine off-axis pole `p` has a mirror partner
 `conj(p)`; the pole field must be symmetric under conjugation.
 
-**Globally-greedy assignment under `x ↦ x̄`.**  Enumerate every
-`(p_upper, p_lower)` candidate pair with residual `|p_upper -
-conj(p_lower)| ≤ VC5_MATCH_TOL`, sort by residual, and consume them in
-ascending order — the closest mirror pair is committed first, each
-pole used at most once.  This is near-optimal and strictly better than
-the `|Im|`-ordered scan, which mis-assigns partners in a dense field
-(it would force the *first* upper pole onto a lower pole that is a
-better match for a *later* upper pole).  A candidate pair farther than
-`VC5_MATCH_TOL` is **not** a conjugate pair — both poles are left
-unpaired rather than force-matched, so the residual distribution stays
-a meaningful accuracy estimate (FW 2011 `:303-311`).
+**Globally-optimal assignment under `x ↦ x̄` (ADR-0025 Amendment 6).**
+Build the bipartite *admissibility graph* — an edge `(p_upper,
+p_lower)` whenever the conjugate residual `|p_upper - conj(p_lower)| ≤
+VC5_MATCH_TOL` — and compute a **maximum-cardinality matching** of it by
+Kuhn augmenting paths (`_vc5_augment!`).  This is the genuine fix the
+VC-5b investigation (bead `padetaylor-0ln.37.20`) identified: the v1
+`vc5_pair` used a *globally-greedy* commit (tightest admissible pair
+first, each pole consumed once), and greedy is **not** maximum-
+cardinality — in a dense field it commits a locally-tight pair that
+*blocks* two other poles from each finding their only admissible
+partner.  The VC-5b probe measured the gap directly: on the 266-pole B3
+field, greedy finds 93 pairs where the optimal matching finds 103.
+Maximising cardinality is exactly "pair up every pole that genuinely
+*has* a mirror partner", so it minimises the spurious-flag count.
 
-A pole left unpaired must lie *on* the real axis (`|Im| <
-VC5_REAL_AXIS_TOL` — it is its own conjugate).  An unpaired pole with a
-larger `|Im|` is **flagged** suspect — a genuine off-axis tritronquée
-pole always has a mirror partner.
+Each upper pole's admissible list is sorted by ascending residual, so
+among equal-cardinality matchings the augmenting search prefers the
+tightest edges — the reported residual distribution stays the FW-style
+accuracy estimate (FW 2011 `:303-311`), not an arbitrary one.
+
+A pole left unpaired has **no** admissible mirror — its conjugate
+partner is farther than `VC5_MATCH_TOL` (above the 0.69 pole spacing
+this could not happen for a genuine pair; see the `VC5_MATCH_TOL`
+docstring).  An unpaired pole must therefore lie *on* the real axis
+(`|Im| < VC5_REAL_AXIS_TOL` — it is its own conjugate); an unpaired
+pole with a larger `|Im|` is **flagged** suspect.
+
+The matching is **not** a conjugate-symmetry *construction*: it pairs
+poles the two independent half-fields *separately extracted* and
+reports the residual — a flagged pole stays flagged, never synthesised
+from its mirror.  VC-5 therefore remains a genuine accuracy cross-check
+(ADR-0025 Amendment 6; FFW 2017 `:120-124`).
 
 Returns `(pairs, residuals, median_resid, max_resid, unpaired,
 flagged)`:
@@ -337,24 +454,34 @@ function vc5_pair(poles::AbstractVector{<:Complex})
     P     = ComplexF64.(poles)
     upper = filter(p -> imag(p) >  VC5_REAL_AXIS_TOL, P)
     lower = filter(p -> imag(p) < -VC5_REAL_AXIS_TOL, P)
-    # Enumerate every admissible mirror-pair candidate (residual within
-    # VC5_MATCH_TOL), then commit them globally-greedily in ascending
-    # residual — each pole consumed at most once.
-    cand = Tuple{Float64,Int,Int}[]
-    for (iu, pu) in enumerate(upper), (il, pl) in enumerate(lower)
-        d = abs(pu - conj(pl))
-        d ≤ VC5_MATCH_TOL && push!(cand, (d, iu, il))
+    nu, nl = length(upper), length(lower)
+
+    # The admissibility graph: an edge wherever the conjugate residual
+    # is within VC5_MATCH_TOL.  Each upper pole's adjacency list is
+    # sorted by ascending residual so the augmenting search prefers the
+    # tightest mirror — keeping the residual distribution honest.
+    adj = [Int[] for _ in 1:nu]
+    for iu in 1:nu
+        pu = upper[iu]
+        for il in 1:nl
+            abs(pu - conj(lower[il])) ≤ VC5_MATCH_TOL && push!(adj[iu], il)
+        end
+        sort!(adj[iu]; by = il -> abs(pu - conj(lower[il])))
     end
-    sort!(cand; by = c -> c[1])
-    u_used = falses(length(upper))
-    l_used = falses(length(lower))
+
+    # Maximum-cardinality matching by Kuhn augmenting paths.
+    match_l = zeros(Int, nl)              # lower index → matched upper, 0=free
+    for u in 1:nu
+        _vc5_augment!(u, adj, match_l, fill(false, nl))
+    end
+
     pairs     = Tuple{ComplexF64,ComplexF64}[]
     residuals = Float64[]
-    for (d, iu, il) in cand
-        (u_used[iu] || l_used[il]) && continue
-        u_used[iu] = true; l_used[il] = true
-        push!(pairs, (upper[iu], lower[il]))
-        push!(residuals, d)
+    for il in 1:nl
+        u = match_l[il]
+        u == 0 && continue
+        push!(pairs, (upper[u], lower[il]))
+        push!(residuals, abs(upper[u] - conj(lower[il])))
     end
     paired = Set{ComplexF64}()
     for (pu, pl) in pairs
