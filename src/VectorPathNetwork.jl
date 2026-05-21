@@ -144,9 +144,10 @@ it could not.
 """
 module VectorPathNetwork
 
-using LinearAlgebra:    norm
-using ..VectorProblems: VectorPadeTaylorProblem
-using ..VectorStepper:  VectorPadeStepperState, vector_pade_step_with_pade!
+using LinearAlgebra:        norm
+using ..VectorProblems:     VectorPadeTaylorProblem
+using ..VectorCoefficients: vector_taylor_coefficients
+using ..VectorStepper:      VectorPadeStepperState, vector_pade_step_with_pade!
 using ..VectorPathNetworkStage2: _stage2_fill
 
 export VectorPathNetworkSolution, vector_path_network_solve
@@ -181,12 +182,35 @@ The Stage-1 visited tree of a vector path-network walk.  For a tree of
                                                  extractor roots this);
   - `visited_parent::Vector{Int}`              — the index of the node
                                                  each was reached from;
-                                                 the root has parent 0.
+                                                 the root has parent 0;
+  - `visited_jets::Vector{Vector{Vector{Complex{T}}}}` — the *raw*
+                                                 (un-rescaled) order-`order`
+                                                 vector Taylor jet at each
+                                                 node: `d` coefficient
+                                                 vectors `[c₀,…,c_order]`
+                                                 in the `h'`-variable.
+                                                 This is the **exact jet
+                                                 the canonical shared-`Q`
+                                                 Padé was built from**
+                                                 (`_canonical_pade` already
+                                                 computes it via
+                                                 `vector_taylor_coefficients`);
+                                                 caching it makes the B1
+                                                 true-radius Stage-2 gate
+                                                 cost nothing extra
+                                                 (ADR-0025 Amendment 1 §A1,
+                                                 "cache the order-24 jet").
 
 The edge set `{(visited_parent[k], k) : k ≥ 2}` is the Stage-1 path
 tree.  Element type is `Complex{T}` throughout — path-network steps
 are complex-valued by construction even when the underlying problem is
 real.
+
+`visited_jets` is *additive* (ADR-0001): every v0.1 + v0.2 scalar test
+is bit-identical, and the two pre-Stage-2 backward-compat constructors
+(6-arg, 8-arg) default it to an empty vector.  When it is empty the
+Stage-2 true-radius gate falls back to recomputing the jet from the
+node `(z, y)` state — see `VectorPathNetworkStage2._stage2_fill`.
 
 The two Stage-2 fields carry the fine-grid fill (bead `padetaylor-0ln.20`):
 
@@ -205,8 +229,8 @@ The two Stage-2 fields carry the fine-grid fill (bead `padetaylor-0ln.20`):
 
 When `vector_path_network_solve` is called without a `fine_grid`, both
 Stage-2 fields are empty — the V7 scatter-figure call sites are
-byte-unaffected.  A 6-arg backward-compat constructor (Stage-1 fields
-only) defaults `grid_z`/`grid_y` to empty vectors.
+byte-unaffected.  Two backward-compat constructors (6-arg Stage-1-only,
+8-arg Stage-1+Stage-2) default the trailing fields to empty vectors.
 """
 struct VectorPathNetworkSolution{T <: AbstractFloat}
     visited_z           :: Vector{Complex{T}}
@@ -217,15 +241,27 @@ struct VectorPathNetworkSolution{T <: AbstractFloat}
     visited_parent      :: Vector{Int}
     grid_z              :: Vector{Complex{T}}
     grid_y              :: Vector{Vector{Complex{T}}}
+    visited_jets        :: Vector{Vector{Vector{Complex{T}}}}
 end
 
 # Backward-compat 6-arg constructor: a Stage-1-only solution (no
-# fine-grid fill).  Defaults `grid_z`/`grid_y` to empty vectors so the
-# V7 scatter-figure call sites and the hand-built test fixtures that
-# predate Stage 2 (bead padetaylor-0ln.20) keep their exact shape.
+# fine-grid fill, no cached jets).  Defaults `grid_z`/`grid_y`/
+# `visited_jets` to empty vectors so the V7 scatter-figure call sites
+# and the hand-built test fixtures that predate Stage 2 (bead
+# padetaylor-0ln.20) keep their exact shape.
 VectorPathNetworkSolution{T}(vz, vy, vh, vnum, vden, vpar) where {T} =
     VectorPathNetworkSolution{T}(vz, vy, vh, vnum, vden, vpar,
-                                 Complex{T}[], Vector{Complex{T}}[])
+                                 Complex{T}[], Vector{Complex{T}}[],
+                                 Vector{Vector{Complex{T}}}[])
+
+# Backward-compat 8-arg constructor: a Stage-1+Stage-2 solution built
+# before the B1 jet cache (ADR-0025 Amendment 1) added `visited_jets`.
+# Defaults `visited_jets` to empty — the Stage-2 true-radius gate then
+# recomputes each node's jet from its `(z, y)` state (the documented
+# fallback path in `VectorPathNetworkStage2._stage2_fill`).
+VectorPathNetworkSolution{T}(vz, vy, vh, vnum, vden, vpar, gz, gy) where {T} =
+    VectorPathNetworkSolution{T}(vz, vy, vh, vnum, vden, vpar, gz, gy,
+                                 Vector{Vector{Complex{T}}}[])
 
 # -----------------------------------------------------------------------------
 # Public driver
@@ -238,7 +274,8 @@ VectorPathNetworkSolution{T}(vz, vy, vh, vnum, vden, vpar) where {T} =
                               step_policy = :min_y,
                               max_steps_per_target = 1000,
                               fine_grid = nothing,
-                              extrapolate = false)
+                              extrapolate = false,
+                              tol = 1e-8)
         -> VectorPathNetworkSolution
 
 Build the minimal Stage-1 vector path-network covering `targets` — a
@@ -273,15 +310,25 @@ Kwargs:
                          Stage-2 fields stay empty (V7 scatter-figure
                          behaviour, byte-unaffected).
   - `extrapolate`      — `Bool` (default `false`, ADR-0015).  Gates the
-                         Stage-2 disc-radius check.  When `false`, a
-                         grid point more than `real(visited_h[idx])`
-                         from its nearest visited node receives a
-                         `d`-vector of `NaN + NaN·im` (fail-soft per
-                         Rule 1).  When `true`, the check is skipped and
-                         the nearest-node Padé is evaluated regardless
-                         of `|t|` vs 1 — gap-free figure panels at the
-                         cost of degraded accuracy past `|t| = 1`.
-                         Unused when `fine_grid === nothing`.
+                         Stage-2 validity check.  When `false`, a grid
+                         point outside the nearest visited node's
+                         **true validity disc** `R_gate` (the B1
+                         true-radius gate, ADR-0025 Amendment 1)
+                         receives a `d`-vector of `NaN + NaN·im`
+                         (fail-soft per Rule 1).  When `true`, the check
+                         is skipped and the nearest-node Padé is
+                         evaluated regardless — gap-free figure panels
+                         at the cost of evaluating outside the verified
+                         disc.  Unused when `fine_grid === nothing`.
+  - `tol`              — `Real` (default `1e-8`).  The truncation
+                         tolerance the B1 true-radius gate (ADR-0025
+                         Amendment 1) honours: the per-node honest
+                         validity radius is the Jorba–Zou step at this
+                         `tol`.  The calibrated safety factor `s(tol)`
+                         is `0.34 / 0.36 / 0.30` for `tol = 1e-6 /
+                         1e-8 / 1e-10`; values between the calibration
+                         points clamp to the nearest.  Unused when
+                         `fine_grid === nothing` or `extrapolate=true`.
 
 Throws `ArgumentError` (Rule 1) for empty `targets`, non-positive `h`,
 a `wedge_angles` not of length 5, an unknown `step_policy`, or an empty
@@ -301,7 +348,8 @@ function vector_path_network_solve(prob::VectorPadeTaylorProblem{F, CT},
                                    max_steps_per_target::Integer = 1000,
                                    fine_grid::Union{Nothing, AbstractVector} =
                                        nothing,
-                                   extrapolate::Bool = false
+                                   extrapolate::Bool = false,
+                                   tol::Real = 1e-8
                                    ) where {F, CT}
     isempty(targets) && throw(ArgumentError(
         "vector_path_network_solve: targets is empty — there is nothing " *
@@ -334,7 +382,7 @@ function vector_path_network_solve(prob::VectorPadeTaylorProblem{F, CT},
     # so the pole extractor treats every node uniformly.
     z0 = C(prob.zspan[1])
     y0 = Vector{C}(prob.y0)
-    num0, den0 = _canonical_pade(prob.f, z0, y0, Int(order), h_mag, C)
+    num0, den0, jet0 = _canonical_pade(prob.f, z0, y0, Int(order), h_mag, C)
 
     visited_z           = C[z0]
     visited_y           = Vector{C}[y0]
@@ -342,6 +390,7 @@ function vector_path_network_solve(prob::VectorPadeTaylorProblem{F, CT},
     visited_numerators  = Vector{Vector{C}}[num0]
     visited_denominator = Vector{C}[den0]
     visited_parent      = Int[0]
+    visited_jets        = Vector{Vector{C}}[jet0]
 
     for target in collect(C, targets)
         # Skip a target we already sit on.
@@ -370,8 +419,8 @@ function vector_path_network_solve(prob::VectorPadeTaylorProblem{F, CT},
             # z_new, real step h_mag.  The wedge-step approximant is
             # centred at the parent in a complex-h variable and would
             # mis-map its roots (see the module docstring).
-            num, den = _canonical_pade(prob.f, z_new, y_new, Int(order),
-                                       h_mag, C)
+            num, den, jet = _canonical_pade(prob.f, z_new, y_new, Int(order),
+                                            h_mag, C)
 
             push!(visited_z, z_new)
             push!(visited_y, y_new)
@@ -379,6 +428,7 @@ function vector_path_network_solve(prob::VectorPadeTaylorProblem{F, CT},
             push!(visited_numerators, num)
             push!(visited_denominator, den)
             push!(visited_parent, parent)
+            push!(visited_jets, jet)
 
             parent = length(visited_z)     # next step chains off this node
             z_cur, y_cur = z_new, y_new
@@ -386,25 +436,29 @@ function vector_path_network_solve(prob::VectorPadeTaylorProblem{F, CT},
     end
 
     # Stage 2 — the fine-grid fill (bead padetaylor-0ln.20).  When no
-    # `fine_grid` is supplied the two Stage-2 fields stay empty (the V7
-    # scatter-figure behaviour).  Otherwise every grid point is
-    # evaluated against its nearest visited node's shared-Q Padé.
+    # `fine_grid` is supplied the two Stage-2 grid fields stay empty (the
+    # V7 scatter-figure behaviour).  `visited_jets` is populated either
+    # way — it is the cached order-`order` jet of the Stage-1 walk, and
+    # carrying it costs nothing (it was computed by `_canonical_pade`).
     if fine_grid === nothing
         return VectorPathNetworkSolution{T}(visited_z, visited_y, visited_h,
                                             visited_numerators,
                                             visited_denominator,
-                                            visited_parent)
+                                            visited_parent,
+                                            Complex{T}[], Vector{Complex{T}}[],
+                                            visited_jets)
     end
 
     grid_z = collect(C, fine_grid)
     grid_y = _stage2_fill(grid_z, visited_z, visited_h, visited_numerators,
-                          visited_denominator, extrapolate, C,
+                          visited_denominator, visited_jets, extrapolate,
+                          real(tol), prob.f, visited_y, Int(order), C,
                           _nearest_visited)
 
     return VectorPathNetworkSolution{T}(visited_z, visited_y, visited_h,
                                         visited_numerators,
                                         visited_denominator, visited_parent,
-                                        grid_z, grid_y)
+                                        grid_z, grid_y, visited_jets)
 end
 
 # -----------------------------------------------------------------------------
@@ -484,13 +538,23 @@ end
 # discard the landed state — exactly v0.1's `_local_pade` design.  A
 # `DomainError` (the canonical step lands on a pole at t = 1) propagates
 # unchanged: a node sitting on a pole is a fail-loud condition (Rule 1).
+#
+# It also returns the *raw* order-`order` vector Taylor jet — the exact
+# jet the canonical Padé was built from.  `vector_pade_step_with_pade!`
+# already computes this internally (its step 1) but discards it; rather
+# than reach into its internals we recompute it here with one extra
+# `vector_taylor_coefficients` call.  Caching this jet in the visited
+# tree makes the B1 true-radius Stage-2 gate (ADR-0025 Amendment 1 §A1)
+# cost nothing extra at fill time — the Jorba–Zou estimator reads each
+# node's coefficient decay straight off the cached jet.
 function _canonical_pade(f, z::Complex{T}, y::Vector{Complex{T}},
                          order::Int, h_mag::T,
                          ::Type{C}) where {T, C}
     state = VectorPadeStepperState{C}(z, y)
     _, numerators, denominator =
         vector_pade_step_with_pade!(state, f, order, C(h_mag))
-    return numerators, denominator
+    jets = vector_taylor_coefficients(f, C(z), Vector{C}(y), order)
+    return numerators, denominator, jets
 end
 
 # The Stage-2 fine-grid fill (`_stage2_fill`) and its Horner evaluator

@@ -1,6 +1,7 @@
 """
 F2 tests for `PadeTaylor.VectorPathNetwork`'s **Stage-2 fine-grid fill**
-(bead `padetaylor-0ln.20`; v0.2 plan row F2).
+(bead `padetaylor-0ln.20`; v0.2 plan row F2) and the **B1 true-radius
+validity gate** (bead `padetaylor-0ln.37.5`; ADR-0025 Amendment 1).
 
 V7 (`vector_path_network_test.jl`) covers the Stage-1 visited-tree
 walk.  This file covers the Stage-2 fine-grid fill: when
@@ -9,11 +10,29 @@ solve evaluates each node's stored shared-`Q` Padé densely over that
 grid, producing the `grid_z`/`grid_y` solution fields — a filled
 heatmap of `y(z)`, the substrate for the `P_I⁽²⁾` tritronquée surface
 figure.  Stage 2 is the direct vector lift of v0.1's
-`PathNetwork.path_network_solve` Stage-2 loop (`src/PathNetwork.jl:669-693`);
-the disc-radius `extrapolate` gate has the ADR-0015 semantics verbatim.
+`PathNetwork.path_network_solve` Stage-2 loop (`src/PathNetwork.jl:669-693`).
 
-These tests (`VPN.2.*`) are written RED-first per CLAUDE.md Rule 4;
-each asserts an invariant against a known-correct value (Rule 5):
+## The B1 true-radius gate (ADR-0025 Amendment 1)
+
+Through V0.1 the Stage-2 fill gated each visited node's validity at the
+*step size* `h_v` (`abs(z_f−z_v) > h_v ⇒ NaN`).  The Phase-A1 spike
+(`external/probes/pade-validity-radius/REPORT.md`) measured that `h_v`
+is **not** an honesty guarantee — it over-estimates the true validity
+radius for 36 % of nodes.  ADR-0025 Lever 1 replaces it with the
+per-node **true validity radius**:
+
+    R_gate = min( s(tol)·h_JZ·h_v ,  0.5·h_v·min|t*| )
+
+where `h_JZ = vector_step_jorba_zou(rescaled order-`order` jet, tol)` is
+the project's own per-node Jorba–Zou truncation-radius estimator and
+`min|t*|` is the smallest-magnitude root of the node's shared `Q`.  The
+gate semantics in `VPN.2.*` below have been **updated** from the old
+`h_v` gate to this true-radius gate — legitimate semantic evolution per
+ADR-0025, not tolerance-relaxation; the new assertions test against
+*computed* reference radii.
+
+These tests (`VPN.2.*`) assert an invariant against a known-correct
+value (Rule 5):
 
     VPN.2.1  closed-form oracle  — the d=3 Riccati system y_i' = -y_i²/c_i
                                    has the EXACT solution y_i(z) = c_i/(z−p).
@@ -24,8 +43,7 @@ each asserts an invariant against a known-correct value (Rule 5):
                                    with IC (0,1) has the exact solution
                                    (sin z, cos z).  Stage-2-fill a real
                                    sub-interval; assert the fill matches
-                                   (sin, cos).  A pole-free cross-check —
-                                   no disc-coverage gaps to reason around.
+                                   (sin, cos).
     VPN.2.3  fail-soft / extrapolate — a grid point far from every visited
                                    node returns a d-vector of NaN (no
                                    throw); with extrapolate=true the same
@@ -35,6 +53,13 @@ each asserts an invariant against a known-correct value (Rule 5):
                                    `visited_y` (t = 0 ⇒ Pᵢ(0)/Q(0)).
     VPN.2.5  fail-fast / empties — empty `fine_grid` throws; no `fine_grid`
                                    leaves the Stage-2 fields empty.
+    VPN.2.6  B1 true-radius gate — the per-node `R_gate` is honoured: a
+                                   query just inside vs just outside
+                                   `R_gate` is finite vs NaN; the
+                                   pole-adjacency clamp binds when a
+                                   Q-root is near; the cached `visited_jets`
+                                   match the no-cache fallback; degenerate
+                                   inputs throw (Rule 1).
 
 Self-contained: `using Test, PadeTaylor` only — runnable standalone
 (`julia --project=. test/vector_path_network_stage2_test.jl`) and under
@@ -45,6 +70,8 @@ using Test
 using PadeTaylor
 using PadeTaylor.VectorPathNetwork: vector_path_network_solve,
                                     VectorPathNetworkSolution
+using PadeTaylor.VectorPathNetworkStage2: _validity_radius, _safety_factor
+using PadeTaylor.VectorCoefficients: vector_taylor_coefficients
 
 # -----------------------------------------------------------------------------
 # Oracle A — the d-component Riccati pole system (the V7 oracle, reused).
@@ -176,8 +203,9 @@ harmonic_exact(z) = ComplexF64[sin(z), cos(z)]
         @test all(z -> isnan(real(z)) && isnan(imag(z)), sol.grid_y[2])
         @test length(sol.grid_y[2]) == 2               # still a d-vector
 
-        # extrapolate=true: the disc-radius check is skipped, so the far
-        # cell now evaluates to a finite (if inaccurate) vector.
+        # extrapolate=true: the B1 true-radius gate is skipped entirely,
+        # so the far cell now evaluates to a finite (if inaccurate)
+        # vector — the ADR-0015 escape hatch, retained by ADR-0025 B1.
         sol_x = vector_path_network_solve(prob, targets; order = 24, h = 0.3,
                                           fine_grid = fine, extrapolate = true)
         @test all(isfinite, sol_x.grid_y[2])
@@ -236,12 +264,114 @@ harmonic_exact(z) = ComplexF64[sin(z), cos(z)]
         @test sol.grid_y == Vector{ComplexF64}[]
 
         # The 6-arg backward-compat constructor also yields empty Stage-2
-        # fields (the hand-built-fixture path).
+        # fields (the hand-built-fixture path) AND an empty `visited_jets`
+        # (the pre-B1 jet cache — ADR-0025 Amendment 1).
         sol6 = VectorPathNetworkSolution{Float64}(
             ComplexF64[1.0], [ComplexF64[1.0]], ComplexF64[0.5],
             [[ComplexF64[1.0]]], [ComplexF64[1.0]], [0])
         @test isempty(sol6.grid_z)
         @test isempty(sol6.grid_y)
+        @test isempty(sol6.visited_jets)
+    end
+
+    # -------------------------------------------------------------------------
+    # VPN.2.6 — the B1 true-radius validity gate (ADR-0025 Amendment 1).
+    #
+    # The gate `R_gate = min(s(tol)·h_JZ·h_v, 0.5·h_v·min|t*|)` replaces
+    # the old `h_v` step gate.  These assertions test the gate against
+    # computed reference radii: an in-disc vs out-of-disc query (finite
+    # vs NaN), the pole-adjacency clamp, the jet-cache / fallback match,
+    # and the Rule-1 degenerate-input throws.
+    # -------------------------------------------------------------------------
+    @testset "VPN.2.6 B1 true-radius gate" begin
+
+        # --- the safety factor s(tol) — calibrated, ADR-0025 Amendment 1 ---
+        @test _safety_factor(1.0e-6)  == 0.34
+        @test _safety_factor(1.0e-8)  == 0.36          # production default
+        @test _safety_factor(1.0e-10) == 0.30
+
+        # --- the jet cache is populated and matches the no-cache fallback ---
+        # The Stage-1 walk caches each node's order-`order` Taylor jet in
+        # `visited_jets`; recomputing it from the node `(z,y)` state via
+        # `vector_taylor_coefficients` must give the bit-identical jet —
+        # the cache is a pure speed-up, not a different computation.
+        prob_h  = harmonic_problem(0.0 + 0.0im, 2.0 + 0.0im; order = 24)
+        tgts_h  = ComplexF64[x + 0.0im for x in 0.3:0.3:1.8]
+        sol_h   = vector_path_network_solve(prob_h, tgts_h; order = 24, h = 0.3)
+        @test !isempty(sol_h.visited_jets)
+        @test length(sol_h.visited_jets) == length(sol_h.visited_z)
+        for k in eachindex(sol_h.visited_z)
+            recomputed = vector_taylor_coefficients(
+                prob_h.f, sol_h.visited_z[k], sol_h.visited_y[k], 24)
+            @test sol_h.visited_jets[k] == recomputed
+        end
+
+        # --- in-disc vs out-of-disc: a query just inside R_gate is finite,
+        #     just outside is NaN.  R_gate is computed directly from the
+        #     gate helper, so the boundary is a known reference value.
+        #     The probe points are planted along the IMAGINARY axis: the
+        #     harmonic walk's nodes lie on the real axis, so a point
+        #     i·r is closest to node 1 (z = 0) for r up to ≈ R_g1 — node
+        #     1 is unambiguously the gating node for both probes. ---
+        h_v1   = real(sol_h.visited_h[1])
+        R_g1   = _validity_radius(sol_h.visited_jets[1],
+                                  sol_h.visited_denominator[1], h_v1, 1.0e-8)
+        @test R_g1 > 0
+        z_in   = (0.97 * R_g1) * im                 # just inside the disc
+        z_out  = (1.03 * R_g1) * im                 # just outside the disc
+        sol_io = vector_path_network_solve(prob_h, tgts_h; order = 24,
+                                           h = 0.3, tol = 1.0e-8,
+                                           fine_grid = ComplexF64[z_in, z_out])
+        @test all(isfinite, sol_io.grid_y[1])        # inside  ⇒ finite
+        @test all(z -> isnan(real(z)) && isnan(imag(z)), sol_io.grid_y[2])
+        # extrapolate=true bypasses the gate even for the out-of-disc cell.
+        sol_iox = vector_path_network_solve(prob_h, tgts_h; order = 24,
+                                            h = 0.3, extrapolate = true,
+                                            fine_grid = ComplexF64[z_out])
+        @test all(isfinite, sol_iox.grid_y[1])
+
+        # --- the gate is tol-dependent: a stricter tol shrinks R_gate ---
+        # h_JZ = (ε/‖c_k‖)^(1/k) is increasing in ε, and s(1e-10) < s(1e-8),
+        # so the 1e-10 truncation radius is strictly the smaller of the two.
+        R_strict = _validity_radius(sol_h.visited_jets[1],
+                                    sol_h.visited_denominator[1], h_v1, 1.0e-10)
+        @test R_strict < R_g1
+
+        # --- the pole-adjacency clamp.  Build a synthetic node by hand: a
+        #     fast-decaying jet (the exp jet — huge truncation radius) over
+        #     a shared Q with a root planted very close in the t-variable.
+        #     Q = [1, -1/t0] has its single root at t = t0; with t0 small
+        #     the clamp 0.5·h_v·t0 must bind below the (huge) truncation
+        #     radius.  This is the deep-wedge pole-adjacent regime. ---
+        exp_jet = [ComplexF64[1 / factorial(big(k)) for k in 0:24]]
+        h_v     = 0.3
+        t0      = 0.05                              # Q-root very close
+        Q_near  = ComplexF64[1.0, -1.0 / t0]        # root at t = t0
+        R_clamped = _validity_radius(exp_jet, Q_near, h_v, 1.0e-8)
+        @test R_clamped ≈ 0.5 * h_v * t0  rtol=1.0e-10   # clamp binds exactly
+        # Same jet, a Q with its root far away ⇒ the clamp is inert and the
+        # truncation term (much larger than the clamp above) governs.
+        Q_far   = ComplexF64[1.0, -1.0 / 50.0]      # root at t = 50
+        R_trunc = _validity_radius(exp_jet, Q_far, h_v, 1.0e-8)
+        @test R_trunc > R_clamped                   # truncation term binds
+        @test R_trunc < 0.5 * h_v * 50.0            # ... below the far clamp
+
+        # --- a constant Q (no roots) ⇒ the clamp is simply absent; the
+        #     radius is the pure truncation term, not an error. ---
+        R_noclamp = _validity_radius(exp_jet, ComplexF64[1.0], h_v, 1.0e-8)
+        @test R_noclamp == R_trunc                  # Q_far root was inert too
+        @test isfinite(R_noclamp) && R_noclamp > 0
+
+        # --- Rule 1: degenerate inputs throw with a suggestion/detail ---
+        # Empty shared-Q denominator — a malformed node.
+        @test_throws ArgumentError _validity_radius(
+            exp_jet, ComplexF64[], h_v, 1.0e-8)
+        # Empty jet — no component series to estimate a radius from.
+        @test_throws ArgumentError _validity_radius(
+            Vector{ComplexF64}[], ComplexF64[1.0], h_v, 1.0e-8)
+        # A component jet too short for the two-coefficient JZ formula.
+        @test_throws ArgumentError _validity_radius(
+            [ComplexF64[1.0]], ComplexF64[1.0], h_v, 1.0e-8)
     end
 
 end
@@ -250,7 +380,7 @@ end
 # Mutation-proof record (CLAUDE.md Rule 4).
 #
 # Procedure: perturb `src/VectorPathNetworkStage2.jl`, rerun this file,
-# confirm RED, restore.  2 mutations bit; 1 false-trail mutation is
+# confirm RED, restore.  Four mutations bit; 1 false-trail mutation is
 # recorded because the "why it doesn't bite" is itself instructive.
 #
 #   M1 — drop the 1/h_v rescale.  In `_stage2_fill`, change
@@ -274,15 +404,11 @@ end
 #          s = s * t + c[k]
 #        to
 #          s = s * t + 2 * c[k]
-#        Expected (naïvely): the polynomial value is wrong, so the
-#        shared-Q evaluation Pᵢ(t)/Q(t) is wrong.
 #        Result: GREEN — NO test bit.  Doubling every coefficient
 #        computes 2·Pᵢ(t) for the numerator AND 2·Q(t) for the
 #        denominator; the factor of 2 cancels exactly in the ratio
 #        2·Pᵢ(t)/(2·Q(t)) = Pᵢ(t)/Q(t).  A scalar multiple of `_eval_poly`
-#        is invisible to a shared-Q quotient.  Recorded as a false trail:
-#        a Horner mutation only bites if it changes the polynomial
-#        non-multiplicatively — see M2 below.
+#        is invisible to a shared-Q quotient.  Recorded as a false trail.
 #
 #   M2 — reverse the Horner loop direction.  In `_eval_poly`, change
 #          for k in length(c):-1:1
@@ -290,15 +416,67 @@ end
 #          for k in 1:length(c)
 #        (Horner requires high-to-low coefficient order; iterating
 #        low-to-high evaluates the *reversed* polynomial tⁿ·P(1/t)).
-#        Expected: numerator and denominator are reversed polynomials of
-#        different degrees, so the factor does NOT cancel in the ratio —
-#        the shared-Q evaluation is genuinely wrong.
-#        Result: RED — 99 of 118 assertions bit: VPN.2.1, VPN.2.2 and
-#        VPN.2.4 all failed (the reversed evaluation breaks the oracle
-#        match AND Pᵢ(0)/Q(0) = yᵢ at the node).  Restored to GREEN.
+#        Result: RED — VPN.2.1, VPN.2.2 and VPN.2.4 all failed (the
+#        reversed evaluation breaks the oracle match AND Pᵢ(0)/Q(0)=yᵢ
+#        at the node).  Restored to GREEN.
 #
-# Certified bites: M1 → VPN.2.1 + VPN.2.2 RED (VPN.2.4 correctly
-# unaffected — it probes t = 0 only, where the missing 1/h_v is moot);
-# M2 → VPN.2.1 + VPN.2.2 + VPN.2.4 RED (99 assertions).  Restored to
-# GREEN after each mutation.
+# -- B1 true-radius gate mutations (bead padetaylor-0ln.37.5) --
+#
+#   M3 — neuter the gate to the old `h_v` step gate.  In
+#        `_validity_radius`, replace the whole body's return with
+#          return float(real(C))(h_v)
+#        (the pre-B1 behaviour: gate at the bare step size).
+#        Expected: the in-disc/out-of-disc boundary moves from the
+#        computed true radius `R_gate` to `h_v`.  For the harmonic walk
+#        `R_g1 ≈ 1.52 ≫ h_v = 0.3`, so the VPN.2.6 `z_in`/`z_out` cells
+#        (both at ~`R_g1`, hence both > h_v) flip: `z_in` becomes NaN.
+#        Result: RED — VPN.2.6 `@test all(isfinite, sol_io.grid_y[1])`
+#        bit (z_in, an honest in-disc point, wrongly NaN-masked).  The
+#        tol-dependence `R_strict < R_g1` also bit (the mutant returns a
+#        tol-independent `h_v`).  Restored to GREEN.
+#
+#   M4 — drop the pole-adjacency clamp.  In `_validity_radius`, delete
+#        the `if length(denominator) ≥ 2 … end` clamp block, returning
+#        `R_trunc` unconditionally.
+#        Expected: the clamp no longer binds for a near Q-root, so the
+#        synthetic clamp node's radius jumps from `0.5·h_v·t0 = 0.0075`
+#        to the huge exp-jet truncation radius.
+#        Result: RED — VPN.2.6 `R_clamped ≈ 0.5·h_v·t0` bit (the mutant
+#        returns the truncation radius instead of the clamp).  Restored
+#        to GREEN.
+#
+#   M5 — corrupt the safety factor.  In `_safety_factor`, change the
+#        `tol = 1e-8` branch `return 0.36` to `return 1.20` (s > 1, a
+#        dishonest over-cover that evaluates Padé well outside its
+#        verified disc).
+#        Result: RED — VPN.2.6 `_safety_factor(1e-8) == 0.36` bit
+#        directly (1 assertion).  Note the in/out-of-disc cells did NOT
+#        flip: VPN.2.6 computes its `R_g1` reference through the *same*
+#        mutated `_validity_radius`, so `z_in`/`z_out` track the
+#        inflated radius and the in/out test stays self-consistent.
+#        The direct `_safety_factor` assertion is the load-bearing
+#        catch — it pins the calibrated constant against drift.
+#        Restored to GREEN.
+#
+#   M6 — drop the h_v rescale of the jet inside the gate.  In
+#        `_validity_radius`, change
+#          rescaled = [_rescale_by_powers(j, C(h_v)) for j in jet]
+#        to
+#          rescaled = jet
+#        (feed `vector_step_jorba_zou` the raw, un-rescaled jet — h_JZ
+#        is then a step in the wrong variable, not the t-variable the
+#        canonical Padé lives in).
+#        Result: RED — VPN.2.1 closed-form Riccati oracle bit (the
+#        un-rescaled jet of the slowly-decaying 1/(z−p) tail yields a
+#        too-large h_JZ, so the gate OVER-covers; a near-pole cell that
+#        should be NaN-masked is instead evaluated and its `err < 1e-6`
+#        assertion fails).  This is the honesty failure the rescale
+#        prevents — caught by the oracle, not just a gate unit test.
+#        Restored to GREEN.
+#
+# Certified bites: M1 → VPN.2.1+2.2 RED; M2 → VPN.2.1+2.2+2.4 RED;
+# M3 → VPN.2.6 (3 assertions: tol-dependence + clamp regime) RED;
+# M4 → VPN.2.6 (2 assertions: clamp + no-clamp consistency) RED;
+# M5 → VPN.2.6 s-factor RED; M6 → VPN.2.1 oracle RED.  M2-false is a
+# recorded non-bite.  Restored to GREEN after each mutation.
 # =============================================================================
