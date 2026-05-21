@@ -23,17 +23,26 @@
 #      `~1e-3`; `5e-3` is a generous but honest envelope around all
 #      three.
 #
-#   2. **Three-method agreement.**  Over the bulk of the pole-free
-#      sector the max pairwise disagreement among Methods 1/2/3 (the
-#      `spread` map) must be small.  Tolerance `1e-2`: the FEM voter is
-#      `O(h²) ≈ 5e-5` on a smooth field but the inner-arc asymptotic
-#      seed (v1 corner 1) injects an `O(10⁻²)` Dirichlet error at
-#      `|x| ≈ 2` that the harmonic solve damps but does not erase, so
+#   2. **Three-method agreement + the C1 lifted resolution.**  Over the
+#      bulk of the pole-free sector the max pairwise disagreement among
+#      Methods 1/2/3 (the `spread` map) must be small.  Tolerance `1e-2`:
+#      the FEM voter is `O(h²) ≈ 5e-5` on a smooth field but the
+#      asymptotic-seed truncation floor (`n_terms = 2`,
+#      `O(|x|^{-7/3})`) leaves an `O(10⁻³)` boundary-layer error near
+#      the inner arc `|x| ≈ 2` that no harmonic-solve `N` can erase, so
 #      the worst-case spread sits near the inner arc.  We assert the
 #      *median* spread is `< 3e-3` (the bulk concurs tightly) and the
 #      *max* spread is `< 1e-2` (even the inner-arc corner stays
 #      bounded).  The voted surface is verified to equal the
-#      per-component median of the three voters.
+#      per-component median of the three voters.  PI2S.2 also pins the
+#      ADR-0025 **Amendment 11** C1 sector re-resolution (bead
+#      `padetaylor-0ln.37.9`, retiring v1 corner C6): the `401²` render
+#      grid + `2°` ray fan, and the inner-arc *max* spread is asserted
+#      against the measured asymptotic-seed truncation floor (~6.7·10⁻³
+#      — Amendment 11 found the inner-arc spread is NOT a Laplace
+#      under-resolution, contra Amendment 10; the C1 convergence probe
+#      falsified that, see `_kkg_pi2_surface_helpers.jl` `SURF_BVP_N` /
+#      `SURF_LAP_NX`) and verified r-localised to the inner annulus.
 #
 #   3. **Sector coverage.**  ≥ 80% of the pole-free-sector grid cells
 #      (inside the `|x| ≤ 20` disc) must carry a non-`NaN` value.
@@ -157,6 +166,23 @@ const SURF2 = kkg_pi2_surface()      # second run, for reproducibility
     end
 
     @testset "PI2S.2 — three-method agreement / the majority vote" begin
+        # --- C1 — the lifted render resolution (ADR-0025 Amendment 11) ----
+        # Bead `padetaylor-0ln.37.9` retires v1 corner C6 — the
+        # resolution-limited `121²` grid / `6°` ray fan.  Assert the
+        # figure is rendered at the lifted resolution: a `401²` Cartesian
+        # raster and a `2°` ray fan.  A regression to the old coarse
+        # parameters (re-introducing C6) is RED here.
+        @test SURF_GRID_N == 401
+        @test SURF_RAY_DPHI_DEG == 2.0
+        @test n == 401
+        @test length(SURF.xs) == 401 && length(SURF.ys) == 401
+        @test size(SURF.Re_u) == (401, 401)
+        # The `401` raster still lands a node exactly on `x = 0` and on
+        # `x = -15` (the PI2S.1 pin) — the C6 retirement keeps the
+        # odd-grid invariant.
+        @test minimum(abs.(SURF.xs)) < 1e-9
+        @test minimum(abs.(SURF.xs .+ 15.0)) < 1e-9
+
         # Gather the sector spread map (the agreement diagnostic).
         sp = Float64[]
         for j in 1:n, i in 1:n
@@ -172,30 +198,46 @@ const SURF2 = kkg_pi2_surface()      # second run, for reproducibility
         # ...and even the inner-arc v1 corner stays bounded.
         @test mx < 1e-2
 
-        # --- C2 — the inner-arc vote spread (ADR-0025 Amendment 10) -------
+        # --- C1 — the inner-arc vote spread (ADR-0025 Amendment 11) -------
         # v1 corner C1: voters 2/3's inner-arc (`|x| ≈ 2`) Dirichlet datum
         # was the KKG `n_terms = 2` asymptotic series, and worklog 057
         # measured the inner-arc triple-method spread at a coarse
-        # ~2.9·10⁻³ median.  C2 retires C1 — each ray BVP extends inward
-        # to `SURF_R_INNER_BC < SURF_R_MIN`, so the inner arc is a
-        # BVP-*interior* datum (`~1·10⁻⁴`), and voters 2/3 source the
-        # arc from the ray fan.  The inner-arc spread MEDIAN must now sit
-        # materially below the worklog ~2.9·10⁻³ baseline (`< 5·10⁻⁴`).
+        # ~2.9·10⁻³ median.  C2 (Amendment 10) retired C1 — each ray BVP
+        # extends inward to `SURF_R_INNER_BC < SURF_R_MIN`, so the inner
+        # arc is a BVP-*interior* datum and voters 2/3 source the arc
+        # from the ray fan.  The inner-arc spread MEDIAN sits materially
+        # below the worklog ~2.9·10⁻³ baseline (`< 5·10⁻⁴`).
         #
-        # NOTE — this spread assertion *reports the C2 gain* but is NOT
-        # the load-bearing C2 proof: spread alone is gameable — a fan
-        # whose inner endpoint is the pinned seed makes all three voters
-        # agree on the SAME wrong value, collapsing the spread without
-        # improving accuracy (the C2-exploration probe's central
-        # finding).  The genuine, mutation-proven C2 invariant is
-        # PI2S.11's *oracle* comparison (`err_fan < err_seed` against a
-        # high-`N` dedicated BVP).  This block is the figure-level
-        # symptom; PI2S.11 is the certificate.  (The inner-arc *max*
-        # spread is left to `mx < 1e-2`: C2/C3 make voter 1 accurate,
-        # which honestly *un-masks* a pre-existing voter-2 Laplace-
-        # rectangle under-resolution near the negative-real-axis inner
-        # arc — bead `0ln.37.9`, the higher-Laplace-N sector refinement,
-        # not C2/C3.  ADR-0025 Amendment 10 records this in full.)
+        # THE INNER-ARC *MAX* SPREAD — ADR-0025 Amendment 11, bead
+        # `padetaylor-0ln.37.9` (the C1 sector re-resolution).  Amendment
+        # 10 hypothesised the inner-arc *max* spread (~3.9·10⁻³ on the
+        # old `121²` grid) was a voter-2/3 Laplace *under-resolution* and
+        # assigned a higher-Laplace-`N` fix to bead `0ln.37.9`.  The C1
+        # convergence probe **falsified that hypothesis** (CLAUDE.md
+        # Rule 2): both Laplace voters converge geometrically and a
+        # higher `N` does NOT move the inner-arc error — solving the
+        # spectral problem even with *perfect* dedicated-BVP edge traces
+        # leaves the same ~4.8·10⁻³ interior error, `N`-independent.  The
+        # genuine root cause is the **asymptotic-seed truncation floor**:
+        # each ray BVP pins `(u,u')` at `R_INNER_BC` to the KKG
+        # `n_terms = 2` series, whose `O(|x|^{-7/3})` error propagates
+        # inward; solving the same ray at several `r_in` gives interior
+        # values disagreeing by ~5·10⁻³ at `|x| = 2`.  This floor is
+        # irreducible by any `N` / fan density.  Moving `R_INNER_BC`
+        # *does* shrink the v1–v2 spread — but only by making the two
+        # voters agree on the SAME seed-floored value (the gameable-
+        # spread anti-pattern this very testset warns of, below), NOT by
+        # improving accuracy: `R_INNER_BC` is therefore left at the
+        # Amendment-10 / PI2S.11-certified `1.05`.  The `401²` grid
+        # genuinely SHARPENS the figure (retiring v1 corner C6) and, in
+        # doing so, samples grid points closer to the worst seed-floor
+        # zone at `|x| = 2` — so the honest inner-arc *max* spread is
+        # ~6.7·10⁻³ (the seed floor fully exposed; the old `121²`
+        # 3.9·10⁻³ was a coarse-sampling artefact, never a real lower
+        # floor).  The bound below (`< 8·10⁻³`) is the measured seed
+        # floor plus headroom — an HONEST exposure, not a regression.
+        # Closing it needs a `n_terms ≥ 3` seed (KKG eq. 7.2 `c₇…`),
+        # unimplemented — a deferred bead in Amendment 11.
         inner_sp = Float64[]
         for j in 1:n, i in 1:n
             s = SURF.spread[i, j]
@@ -206,10 +248,40 @@ const SURF2 = kkg_pi2_surface()      # second run, for reproducibility
         @test !isempty(inner_sp)
         sort!(inner_sp)
         inner_med = inner_sp[cld(length(inner_sp), 2)]
+        inner_max = inner_sp[end]
         @test inner_med < 5e-4               # C2 — well below worklog ~2.9e-3
-        @info "PI2S.2 — C2 inner-arc spread (|x| ≤ 3)" *
+        # The inner-arc MAX is the asymptotic-seed truncation floor
+        # (Amendment 11) — honestly bounded by the measured ~6.7·10⁻³
+        # plus headroom.  This is NOT the < 3.9·10⁻³ Amendment 10
+        # anticipated: the C1 probe proved that target rested on a
+        # falsified premise (a Laplace under-resolution); the genuine
+        # floor is the seed and the `401²` grid exposes it honestly.
+        @test inner_max < 8e-3
+
+        # The seed floor is r-LOCALISED — a boundary layer at the inner
+        # arc that decays steeply outward.  Verify the spread genuinely
+        # belongs to the inner annulus, not a global defect: the spread
+        # in the outer half of the inner band (`2.6 ≤ |x| ≤ 3`) is
+        # materially smaller than at the arc itself.  If the inner-arc
+        # max were a global Laplace bug it would not decay with radius —
+        # this assertion is what distinguishes the seed-floor diagnosis
+        # from the (falsified) under-resolution one.
+        outer_band = Float64[]
+        for j in 1:n, i in 1:n
+            s = SURF.spread[i, j]
+            isnan(s) && continue
+            r = abs(ComplexF64(SURF.xs[i], SURF.ys[j]))
+            (2.6 ≤ r ≤ 3.0) && push!(outer_band, s)
+        end
+        @test !isempty(outer_band)
+        @test maximum(outer_band) < inner_max   # the floor decays outward
+        @info "PI2S.2 — C1 inner-arc spread (|x| ≤ 3, ADR-0025 Amend. 11)" *
               "\n  inner-arc spread median = $(round(inner_med; sigdigits = 4))" *
               " (worklog-057 baseline ≈ 2.9e-3)" *
+              "\n  inner-arc spread MAX    = $(round(inner_max; sigdigits = 4))" *
+              " (asymptotic-seed truncation floor — Amendment 11)" *
+              "\n  |x|∈[2.6,3.0] max       = $(round(maximum(outer_band); sigdigits = 4))" *
+              " (the floor decays outward — it is a seed boundary layer)" *
               "\n  whole-sector spread median = $(round(med; sigdigits = 4))"
 
         # The voted surface IS the per-component median of the three

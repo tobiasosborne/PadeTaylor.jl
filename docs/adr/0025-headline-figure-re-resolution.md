@@ -138,7 +138,7 @@ condition rather than scheduled.)
 | C3 hand-tuned `h=0.1` | **Retired** — Lever-2 adaptive / shared-Q-root step | B2 |
 | C4 `±3°` Stokes mask | **Audition** (Phase E) — fill via overlap, or justify as masked with a forcing condition | E1 |
 | C5 bilinear ray-fan voter | **Retired** (Amendment 10) — audition outcome: a harmonic voter 1 `≡ voter 2` (rejected — collapses ADR-0024 independence), plain bilinear materially too lossy (rejected); voter 1 reconstructed exact-radius (barycentric) + cubic-angular (Catmull-Rom), keeping it a direct ODE solve | C3 (`0ln.37.11`) |
-| C6 `121²` grid / `6°` rays | **Retired** — Lever-3 refinement | C1 |
+| C6 `121²` grid / `6°` rays | **Retired** (Amendment 11) — C1 (`0ln.37.9`) lifts the Cartesian raster `121² → 401²` and the ray fan `6° → 2°` (≈ 141 rays); both inside the Phase-F runtime gate (figure test `2m22s`). The coupled "raise the Laplace `N` too" instruction was *not* taken speculatively — the C1 convergence probe falsified the Amendment-10 under-resolution hypothesis (the inner-arc spread is the asymptotic-seed truncation floor, irreducible by any `N`); `SURF_LAP_NX/NY` set to the measured `48/64` spectral knee | C1 (`0ln.37.9`) |
 
 ## The phased child-bead plan
 
@@ -1066,6 +1066,144 @@ C2 and C3 are shipped. Phase C's remaining bead is `0ln.37.9` (C1 — the
 high-resolution sector: finer grid, denser rays, higher Laplace `N`),
 which will additionally close the residual voter-2/3 inner-arc
 under-resolution this amendment's measurement surfaced.
+
+## Amendment 11 — C1 sector re-resolution: the lift ships, the inner-arc hypothesis is falsified (2026-05-22)
+
+Bead `padetaylor-0ln.37.9` (C1 — the high-resolution sector) retires
+v1 corner **C6** (`121²` grid / `6°` ray fan). The bead carried *two*
+coupled mandates: (a) genuinely sharpen the headline figure raster,
+and (b) "additionally close the residual voter-2/3 inner-arc
+under-resolution" that Amendment 10 §"Measured before/after" attributed
+to the `w`-rectangle Laplace resolution. Mandate (a) ships clean.
+Mandate (b)'s **premise was falsified** — CLAUDE.md Rule 2, root cause
+over band-aid — and that falsification is the substantive content of
+this amendment.
+
+### The lift — C6 retired
+
+`SURF_GRID_N` `121 → 401` (Cartesian raster) and `SURF_RAY_DPHI_DEG`
+`6° → 2°` (≈ 141 fan rays). Both stay odd / node-aligned: the `401`
+raster lands a node exactly on `x = 0` and on `x = -15` (the PI2S.1
+pin). The lift is mostly cheap: voters 2/3 are spectrally callable at
+any point, and post-C3 voter 1 is exact-in-radius (barycentric) +
+cubic-angular, so the finer raster is `O(N²)` interpolant evaluation,
+not `O(N²)` ODE solves. The `2°` fan was measured the runtime knee:
+the cubic-angular `surf_ray_eval` inner-arc reconstruction error falls
+`~5·10⁻⁴` (`6°`) → `~2·10⁻⁸` (`2°`); a `1°` fan was probed and
+**rejected** — ~8 s extra (one BVP per ray) for *zero* measurable gain,
+because the residual error is the seed floor below, not the fan.
+
+### The falsification — the inner-arc spread is NOT a Laplace under-resolution
+
+Amendment 10 hypothesised the inner-arc *max* spread (`3.9·10⁻³` on the
+`121²` grid) was a voter-2/3 `w`-rectangle Laplace **under-resolution**
+near the steep negative-real-axis inner arc, and scheduled the fix to
+this bead ("higher Laplace `N`"). The C1 convergence probe **falsified
+that hypothesis** on three independent measurements:
+
+1. **The spectral voter does not converge toward the truth with `N`.**
+   Sweeping `SURF_LAP_NX` `40 → 120` does not move the inner-arc
+   interior value — it stays pinned `~4.8·10⁻³` off a dedicated-BVP
+   oracle. A genuine under-resolution would shrink geometrically.
+
+2. **Perfect edge data leaves the same error.** Re-solving the
+   spectral `w`-rectangle problem with *exact* dedicated-BVP edge
+   traces (eliminating any ray-fan edge-data error) leaves the same
+   `~4.8·10⁻³` interior error — `N`-independent. The defect is not in
+   the harmonic solve.
+
+3. **Raising `N` past the knee makes the spectral solve *worse*.** The
+   seed-floored edge data is *slightly non-harmonic* (the asymptotic
+   seed does not satisfy Laplace's equation exactly); a higher-`N`
+   spectral solve *over-resolves* that non-harmonic contamination —
+   spectral self-error rises `2.2·10⁻⁵` (`Nx = 48`) → `3.1·10⁻⁴`
+   (`Nx = 64`). So a speculative `N` raise is not merely useless, it is
+   actively counter-productive. `SURF_LAP_NX/NY` are therefore set to
+   the measured spectral *convergence knee* `48/64` (cleanest), not
+   raised; `SURF_FEM_NX/NY` stay `64/88` (the FEM voter has plateaued
+   by `n_x = 64`).
+
+### The genuine root cause — the asymptotic-seed truncation floor
+
+Each sector ray BVP pins `(u, u')` at the inner endpoint
+`R_INNER_BC = 1.05` to the KKG `n_terms = 2` asymptotic series, whose
+`O(|x|^{-7/3})` truncation error at `|x| ≈ 1` propagates inward as a
+boundary layer. Solving the *same* ray at several legitimate
+seed-pinned inner radii `r_in ∈ [1.05, 1.8]` gives interior values
+that disagree by:
+
+| `|x|` | `r_in`-spread (the seed floor) |
+|-------|-------------------------------|
+| 2.0   | `~5·10⁻³` |
+| 2.5   | `~4·10⁻³` |
+| 5.0   | `~7·10⁻⁴` |
+| 10.0  | `~1.7·10⁻⁵` |
+
+This `r_in`-spread *is* the irreducible floor — it is `N`-independent
+and fan-density-independent. `pI2_tritronquee_ic` implements only
+`n_terms ∈ {1, 2}`; the seed cannot be sharpened in-place. Moving
+`R_INNER_BC` *does* shrink the v1–v2 spread, but only by making the
+voters agree on the *same* seed-floored value (the gameable-spread
+anti-pattern C2's probe already identified) — not by improving
+accuracy. `R_INNER_BC` is therefore left at the Amendment-10 /
+PI2S.11-certified `1.05`.
+
+### Measured inner-arc spread — before / after
+
+| grid | inner-arc (`|x| ≤ 3`) median | inner-arc *max* | note |
+|------|------------------------------:|----------------:|------|
+| `121²` (Amendment 10) | `1.4·10⁻⁴` | `3.9·10⁻³` | coarse sampling — the worst seed-floor zone at `|x| = 2` was under-sampled |
+| **`401²` (C1, this amendment)** | **`1.6·10⁻⁴`** | **`6.7·10⁻³`** | the seed floor fully exposed — the `401²` raster samples grid points right at the worst `|x| = 2` zone |
+
+The `121²` `3.9·10⁻³` was never a real lower floor — it was a
+coarse-sampling artefact. The `401²` grid does not *worsen* the
+figure; it *honestly exposes* the pre-existing seed floor. The
+`|x| ∈ [2.6, 3.0]` band max is `5.9·10⁻³ < 6.7·10⁻³` — the floor
+**decays outward**, confirming it is a seed boundary layer and not a
+global Laplace defect (a global defect would not decay with radius).
+The whole-sector spread median is `8.1·10⁻⁵` — the bulk concurs
+tightly. Closing the inner-arc floor needs an `n_terms ≥ 3` seed
+(KKG 2015 eq. 7.2 `c₇…`), unimplemented — recorded as the deferred
+bead below.
+
+### Chosen resolutions + runtime
+
+`SURF_GRID_N = 401`, `SURF_RAY_DPHI_DEG = 2.0`, `SURF_LAP_NX = 48`,
+`SURF_LAP_NY = 64`, `SURF_FEM_NX = 64`, `SURF_FEM_NY = 88`,
+`SURF_BVP_N = 128` (already converged — `N = 128` agrees with an
+`N = 320` ray solve to `~10⁻¹²`). The full `figures/test_kkg_pi2_surface.jl`
+suite is **GREEN at 243738 / 243738**, figure testset wall time
+**`2m22s`** — comfortably inside the Phase-F runtime gate (well under
+`~10 min`).
+
+### Mutation-proven (Rule 4)
+
+PI2S.2's C1 block pins `SURF_GRID_N == 401`, `SURF_RAY_DPHI_DEG == 2.0`,
+the `401²` raster sizes + the odd-grid node-alignment invariant, and —
+the load-bearing assertion — the inner-arc *max* spread bound
+`inner_max < 8e-3` (the measured `6.7·10⁻³` seed floor + headroom) plus
+the outward-decay check `maximum(outer_band) < inner_max`. Tightening
+`inner_max`'s bound to the *falsified* Amendment-10 target (`3.9·10⁻³`)
+turns **exactly one assertion RED** (line 259, the `inner_max` bound;
+`243737 / 243738`) — the measured `6.7·10⁻³` genuinely binds the
+assertion; it is not slack. The bound was restored and the suite is
+GREEN at `243738 / 243738`.
+
+### Deferred — the `n_terms ≥ 3` seed
+
+The inner-arc seed-floor is closed only by an `n_terms ≥ 3` KKG
+asymptotic seed (eq. 7.2 `c₇…` and beyond). `pI2_tritronquee_ic`
+implements `n_terms ∈ {1, 2}` only. **Deferred bead** (forcing
+condition): file/raise the `n_terms = 3` seed work *if and only if* a
+downstream consumer needs inner-arc surface accuracy below the
+`~5·10⁻³` seed floor at `|x| ≈ 2`. For the headline figure (KKG
+Figs 7.4/7.5, "for visualization") the floor is sub-visible and
+in-scope; the figure does not force the v2 seed.
+
+### Phase C complete
+
+C2, C3, C1 are all shipped; v1 corners C1 (Amendment 10), C5
+(Amendment 10), C6 (this amendment) retired. Phase C is closed.
 
 ## References
 

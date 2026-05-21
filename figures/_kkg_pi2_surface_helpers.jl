@@ -192,6 +192,17 @@
 #      the audition — it would be `≡ voter 2` and collapse the ADR-0024
 #      triple-method independence.
 #
+#   6. **RETIRED — the `121²` grid / `6°` ray fan (C6).**  ADR-0025
+#      Amendment 11's C1 (bead `padetaylor-0ln.37.9`) lifts the
+#      Cartesian raster to `SURF_GRID_N = 401` and the ray fan to
+#      `SURF_RAY_DPHI_DEG = 2°` (≈ 141 rays) — a genuinely sharp
+#      headline figure, still inside the Phase-F runtime gate.  The
+#      coupled inner-arc-spread job assigned to the same bead found
+#      (CLAUDE.md Rule 2) that the inner-arc spread is *not* a Laplace
+#      under-resolution: it is the asymptotic-seed truncation floor
+#      (~5·10⁻³ at `|x| = 2`), irreducible by any `N` — see the
+#      `SURF_BVP_N` / `SURF_LAP_NX` comments and ADR-0025 Amendment 11.
+#
 #   The wedge panel itself is no longer a v1 corner: ADR-0025
 #   Amendment 2 rescopes it to the achievable senior-grade deliverable
 #   — the validated pole field + honest partial underlay — and the A2
@@ -276,8 +287,18 @@ const SURF_T = 0.0
 const SURF_D = 4
 
 # The Cartesian render grid: [-20,20]² (KKG Figs 7.4/7.5).
+#
+# C1 (ADR-0025 Amendment 11, bead `padetaylor-0ln.37.9`) — retires v1
+# corner C6.  The shipped figure rendered a `121²` raster; that was
+# resolution-limited (worklog 057).  `401` lifts it to a genuinely sharp
+# raster — odd so a node still sits on `x = 0` and on `x = -15` (the
+# PI2S.1 pin).  Voters 2/3 are spectrally callable at any point and
+# voter 1 (post-C3) is exact-in-radius + cubic-angular, so the finer
+# raster is mostly cheap `O(N²)` evaluation; the C1 runtime probe
+# (`bead 0ln.37.9`) measured the full `kkg_pi2_surface()` comfortably
+# inside the Phase-F runtime gate at `401²`.
 const SURF_XY_LIM = 20.0
-const SURF_GRID_N = 121          # 121×121 — odd so a node sits on 0.
+const SURF_GRID_N = 401          # 401×401 — odd so a node sits on 0.
 
 # --- Region 1: the pole-free sector --------------------------------------
 # Pole-free sector half-width 6π/7 − (3/7)arctan(1/√5) ≈ 144°, centred on
@@ -308,14 +329,40 @@ const SURF_R_MAX = 20.0
 # `[SURF_R_INNER_BC, SURF_R_MIN]`, below the rendered window.
 const SURF_R_INNER_BC = 1.05
 
-# Angular step of the ray fan (≈ 6°).  The sector spans ≈ 280° usable.
-const SURF_RAY_DPHI_DEG = 6.0
+# Angular step of the ray fan.  The sector spans ≈ 280° usable.
+#
+# C1 (ADR-0025 Amendment 11, bead `padetaylor-0ln.37.9`) — retires v1
+# corner C6's `6°` fan.  `2°` (≈ 141 rays) is the runtime knee: the C1
+# boundary-data probe (`bead 0ln.37.9`) measured the cubic-angular
+# `surf_ray_eval` inner-arc reconstruction error fall from `~5·10⁻⁴` at
+# `6°` to `~2·10⁻⁸` at `2°` — far below the asymptotic-seed accuracy
+# floor (see `SURF_BVP_N` below), so the ray fan ceases to be an
+# accuracy contributor at `2°`.  A still-finer `1°` fan was probed and
+# rejected: it costs ~8 s more (one BVP per ray) for *zero* measurable
+# gain — the residual error is the seed floor, not the fan.
+const SURF_RAY_DPHI_DEG = 2.0
 
 # BVP discretisation per ray.  N+1 Chebyshev nodes.  C2 widened the ray
 # segment to `[SURF_R_MAX, SURF_R_INNER_BC]` (ADR-0025 Amendment 10);
 # the wider segment has more curvature near its inner end, so `N = 128`
 # (the C2 probe: companion-consistency `~1·10⁻¹¹` at `N = 128` for
 # `[20, 1.05]`, vs a marginal `~1·10⁻⁷` at `N = 96`).
+#
+# C1 (ADR-0025 Amendment 11) — `N = 128` is *already converged*: the C1
+# probe measured the ray BVP interior value at `N = 128` agrees with an
+# `N = 320` solve to `~1·10⁻¹²`.  The residual inner-arc error is NOT
+# an `N` deficit.  It is the **asymptotic-seed truncation floor**: each
+# ray BVP pins `(u, u')` at the inner endpoint `R_INNER_BC = 1.05` to
+# the KKG `n_terms = 2` series, whose `O(|x|^{-7/3})` truncation error
+# at `|x| ≈ 1` propagates inward as a boundary layer.  Solving the same
+# ray at several `r_in ∈ [1.05, 1.8]` (each a legitimate seed-pinned
+# BVP) gives interior values that disagree by **~5·10⁻³ at `|x| = 2`,
+# ~4·10⁻³ at 2.5, ~7·10⁻⁴ at 5, ~1.7·10⁻⁵ at 10** — this `r_in`-spread
+# *is* the seed floor, and it is the irreducible source of the
+# inner-arc vote spread.  `pI2_tritronquee_ic` implements only
+# `n_terms ∈ {1, 2}`, so the seed cannot be sharpened here; closing the
+# inner-arc floor needs `n_terms ≥ 3` (KKG 2015 eq. 7.2 `c₇…`),
+# recorded as a deferred bead in Amendment 11.
 const SURF_BVP_N       = 128
 const SURF_BVP_TOL     = 1.0e-9
 const SURF_BVP_MAXITER = 40
@@ -323,8 +370,29 @@ const SURF_BVP_MAXITER = 40
 # The two Laplace voters' rectangle resolution (in conformal w = log x
 # coordinates).  Spectral (Method 2): a handful of nodes suffice.  FEM
 # (Method 3): O(h²), needs a finer mesh.
-const SURF_LAP_NX = 40           # radial (s = log|x|) Chebyshev nodes
-const SURF_LAP_NY = 56           # angular (θ) Chebyshev nodes
+#
+# C1 (ADR-0025 Amendment 11, bead `padetaylor-0ln.37.9`) — the deep
+# finding.  ADR-0025 Amendment 10 hypothesised the inner-arc vote spread
+# (~3.9·10⁻³) was a voter-2/3 Laplace *under-resolution* and assigned a
+# higher-`N` fix to this bead.  The C1 convergence probe **falsified
+# that hypothesis** (CLAUDE.md Rule 2 — root cause, not band-aid): both
+# Laplace voters *already converge geometrically* — the spectral solve
+# does not move from `Nx = 40` to `Nx = 120` (it stays pinned ~4.8·10⁻³
+# off a dedicated-BVP oracle), and the FEM voter plateaus by
+# `n_x = 64`.  Solving the spectral problem with *perfect*
+# dedicated-BVP edge traces leaves the same ~4.8·10⁻³ interior error,
+# N-independent.  The genuine root cause is the **asymptotic-seed
+# truncation floor** (see `SURF_BVP_N`): the inner-arc vote spread is
+# irreducible by *any* Laplace `N`.  So these constants are set to the
+# measured spectral/FEM *convergence knee*, NOT raised speculatively —
+# raising `SURF_LAP_NX` past ~48 in fact makes the spectral solve
+# *noisier* (it over-resolves the seed-floored, slightly-non-harmonic
+# edge data: self-error 2.2·10⁻⁵ at Nx=48, rising to 3.1·10⁻⁴ at
+# Nx=64).  `48/64` is the cleanest spectral knee; `64/88` is where the
+# FEM voter has plateaued.  Amendment 11 records the falsification and
+# the quantified floor in full.
+const SURF_LAP_NX = 48           # radial (s = log|x|) Chebyshev nodes
+const SURF_LAP_NY = 64           # angular (θ) Chebyshev nodes
 const SURF_FEM_NX = 64           # FEM mesh subdivisions, radial
 const SURF_FEM_NY = 88           # FEM mesh subdivisions, angular
 
