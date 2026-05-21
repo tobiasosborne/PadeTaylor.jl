@@ -270,6 +270,78 @@ VC-4 acceptance form (final): per extracted pole `x₀`, fit
 Both are mutation-proof and independent of the path-network extraction
 algorithm under test.
 
+## Amendment 2 — A2 wedge-tractability outcome: the wedge panel is rescoped (2026-05-21)
+
+### A2 — wedge tractability (bead `0ln.37.2`) — RESOLVED, with a scope consequence
+
+The A2 spike (`external/probes/wedge-tractability/`) measured the honest
+union coverage achievable by the path-network walk + per-node A1-gated
+disc, extending the target fan toward `|x|=20`:
+
+- solver tolerance (`1e-8`): honest union coverage of the `|x|≤20`
+  wedge **saturates at ~8.6 %**;
+- display tolerance (`1e-3`, legitimate for a clamped heatmap/3D
+  surface — the colour channel resolves no finer): **~13.5 %**;
+- display tol **and** Taylor order doubled to 48: **~18 %** — the
+  ceiling.
+
+Two independent obstructions bind: (i) the densest *completing*
+path-network fan tops out at ~6850 visited nodes while ~13–23k honest
+discs are needed to tile the area-251 wedge, and denser fans **block**
+(a bridging walk lands on a pole, degenerating the shared-Q jet);
+(ii) an order-48 *walk* degenerates the shared-Q Padé linear solve
+outright. **A filled honest wedge surface is not viable** with the
+local-Padé-tiling architecture — across three orders of tolerance and a
+doubled order, coverage moves only 8.6 % → 18 %.
+
+### Decision — the wedge panel is the validated pole FIELD
+
+The headline figure's wedge panel is **rescoped** to its honest,
+achievable, senior-grade form:
+
+- **The wedge deliverable is the extracted, FW-validated pole field —
+  the pole *locations*** — rendered in the FW 2011 Fig 4.7 idiom (a
+  scatter, `figutil.jl` `pole_scatter_axis`). This is not a lesser
+  deliverable: FW's own "pole-field" figures *are* pole-location plots,
+  and "the pole field as good as FW managed" denotes exactly this. The
+  pole field is the scientifically meaningful content of the pole-rich
+  wedge — and it *is* achievable: a walk filament reaches `|x|=20` at
+  any step size, so poles can be extracted (each validated by
+  VC-4/VC-5/VC-6) across the whole window.
+- **An honest `|u|` surface underlay** is rendered only where the
+  A1-gated node discs genuinely cover (~13–18 % of the wedge); the
+  remainder is `NaN`/grey. No Padé is evaluated outside its disc — the
+  partial surface is honest, the gaps explicit.
+- The smooth ~270° **sector** panel is unaffected — it remains the
+  fully-resolved, 100 %-covered triple-method-voted harmonic surface
+  (Phase C).
+
+### Bead-scope consequences
+
+- **B3** (`0ln.37.7`) rescopes from "tile the wedge area" to "thread
+  the walk through the wedge to **extract the pole field** densely and
+  accurately to `|x|=20`" — pole extraction in the FW Fig 5.1 threading
+  idiom, not area tiling. Pole-field completeness/accuracy is a
+  first-class deliverable.
+- **B4** (`0ln.37.8`) narrows to the honest-surface *underlay* blend
+  over the ~13–18 % covered region.
+- **B1, B2** stand: B1 (true-radius gate) governs both the honest
+  surface underlay and honest pole extraction; B2 (adaptive walk)
+  threads the walk to `|x|=20` without degenerate steps.
+- Bead `0ln.37` acceptance criterion (3) is finalised: *honest* wedge
+  coverage = a complete validated pole field to `|x|=20` + an honest
+  partial `|u|` surface underlay; no extrapolation anywhere.
+
+### Deferred — a fully-filled honest wedge surface
+
+A genuinely filled honest wedge surface would need a different
+architecture — a 2D lattice of locally re-expanded Padé patches
+(~13–23k of them) rather than walk filaments. Its error-compounding
+behaviour under repeated lateral re-expansion is unproven and not
+senior-grade-certain. Recorded as a deferred bead under the v0.2 epic;
+forcing condition: a figure requirement for a filled wedge surface
+beyond the pole field.
+
 ## References
 
 - KKG 2015 TeX `references/tex/painleve_hierarchy/KapaevKleinGrava2015_PI2_tritronquee_ConstrApprox41/tritronquee_coeff.tex`
