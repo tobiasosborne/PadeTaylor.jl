@@ -88,5 +88,6 @@ using PadeTaylor
     include("ffw_fig_3_test.jl")
     include("ffw_fig_7_test.jl")
     include("noumi_yamada_a4_figure_test.jl")
+    include("vector_bvp_test.jl")
     include("heun_test.jl")
 end
