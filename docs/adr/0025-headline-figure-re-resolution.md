@@ -342,6 +342,48 @@ senior-grade-certain. Recorded as a deferred bead under the v0.2 epic;
 forcing condition: a figure requirement for a filled wedge surface
 beyond the pole field.
 
+## Amendment 3 — A4 baseline; Phase A complete (2026-05-21)
+
+### A4 — V8b baseline-quality probe (bead `0ln.37.4`) — RESOLVED
+
+Baseline metrics of the *current shipped* V8b wedge walk (389 nodes,
+21 poles) — the before-picture the re-resolution must beat (Phase F):
+
+- **Loop-closure ΔP_rel** (767 non-tree Delaunay edges): median
+  `9.9e-4` but p90 `0.996`, p99 `1.00`; categories well_closed 5.2 % /
+  noisy 24.8 % / extrap_driven 65.6 % / depth_driven 4.4 % — **~70 % of
+  loop closures catastrophic** (vs the FFW Fig 1 scalar baseline of
+  6.3 %). Worst edges `extrap_max` up to 53 — midpoints 50× outside the
+  canonical disc, the direct signature of the ungated `extrapolate=
+  true` walk (corner C2). `bad_centroid ≈ 4.82−0.24im`.
+- **Conjugate symmetry badly violated**: the 21 poles split 15 upper /
+  6 lower; only 6 forced pairs, residual median ≈ `1.25` — no pole has
+  a genuine conjugate partner. The VC-5 defect, confirmed.
+- **A spurious pole**: VC-4 spot-check — 5 of 6 sampled poles fit
+  `A=−1` to `<1.1e-5` (confirming the A3 generic family), but the pole
+  at `+5.44+2.40im` fits `A≈0` — not a double pole. At least one of the
+  21 V8b poles is spurious.
+
+The shipped figure thus has three genuine, now-quantified defects;
+the re-resolution is well-motivated.
+
+### D-VC7 scope — `quality_diagnose` needs a vector adapter
+
+`quality_diagnose` is typed for the scalar `PathNetworkSolution`; the
+vector walk produces `VectorPathNetworkSolution`. Bead D-VC7
+(`0ln.37.14`) must add an additive `quality_diagnose(::VectorPath
+NetworkSolution)` method in `ext/PadeTaylorDiagnosticsExt.jl`: shared-Q
+`Pᵢ(t)/Q(t)` Horner eval instead of `_evaluate_pade`; ΔP_rel as the
+vector 2-norm; drop the sheet-0 mask (the P_I⁽²⁾ companion is
+single-sheeted). The Delaunay/tree/LCA/categorise machinery ports
+verbatim; the A4 probe `§2b` is a working reference implementation.
+
+### Phase A complete
+
+A1–A4 done; the architecture is fully determined. Phase B: B1
+true-radius gate (gate v-b), B2 adaptive walk, B3 pole-field extraction
+to `|x|=20`, B4 honest-underlay blend.
+
 ## References
 
 - KKG 2015 TeX `references/tex/painleve_hierarchy/KapaevKleinGrava2015_PI2_tritronquee_ConstrApprox41/tritronquee_coeff.tex`
