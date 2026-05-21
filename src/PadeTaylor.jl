@@ -148,6 +148,17 @@ include("PainleveHierarchy.jl")
 # so it loads BEFORE VectorPathNetwork, which then `using`s it (bead
 # padetaylor-0ln.20, F2, ADR-0015).
 include("VectorPathNetworkStage2.jl")
+# VectorWedgeStep is the principled wedge-step machinery of the vector
+# path-network walk: the shared-Q-root-distance direction selector
+# (:max_q_root) and the pole-capped adaptive step-size controller.  It
+# composes StepControl (the FW 2011 §3.1 step_pade_root pole-distance
+# heuristic, reused unchanged on the shared Q per ADR-0021) and
+# VectorStepper, so it loads after both; VectorPathNetwork `using`s it,
+# so it loads before that module.  It is split out of VectorPathNetwork
+# purely for the CLAUDE.md Rule 6 200-LOC cap.  Additive — the v0.2
+# B2 dense-wedge walk (bead padetaylor-0ln.37.6, absorbs 0ln.23,
+# ADR-0025 Lever 2).
+include("VectorWedgeStep.jl")
 # VectorPathNetwork is the minimal Stage-1 vector path-network walk: a
 # ‖y‖-steered 5-direction wedge that builds a visited tree of shared-Q
 # approximants over a region of the complex plane.  It composes

@@ -40,6 +40,29 @@ asserts an invariant against a known-correct value (Rule 5):
     VPN.1.5  failure modes       — empty targets, degenerate prob;
                                    mutation-proof recorded at end.
 
+## The B2 dense-wedge walk tests (`VPN.3.*`)
+
+B2 (`padetaylor-0ln.37.6`, ADR-0025 Lever 2; absorbs bead `0ln.23`)
+replaces the V7 min-‖y‖ wedge selector with the principled
+`:max_q_root` shared-`Q`-root-distance criterion and makes the step `h`
+adaptive.  The `VPN.3.*` testset asserts the real B2 wins:
+
+    VPN.3.1  threads the wedge   — the P_I⁽²⁾ tritronquée pole-rich
+                                   wedge: a target fan reaching
+                                   |x| ≳ 15 that the fixed-h walk
+                                   BLOCKS on (the A2-probe failure) is
+                                   threaded by the B2 adaptive walk.
+    VPN.3.2  selector picks the  — `_select_wedge(:max_q_root)` chooses
+             pole-free disc        the candidate with the larger
+                                   shared-Q-root distance, demonstrably.
+    VPN.3.3  no pole overshoot   — every adaptive-walk node sits a
+                                   safe margin from the known pole; the
+                                   adaptive cap never overshoots.
+    VPN.3.4  fail-loud           — unknown step_policy throws; the
+                                   wedged-walk h-floor throws (Rule 1).
+    VPN.3.5  fixed-walk fallback — adaptive=false + :min_y reproduces
+                                   the verified V7 fixed-step walk.
+
 Self-contained: `using Test, PadeTaylor` only — runnable standalone
 (`julia --project=. test/vector_path_network_test.jl`) and under
 `runtests.jl`.
@@ -50,6 +73,12 @@ using PadeTaylor
 using PadeTaylor.VectorPathNetwork: vector_path_network_solve,
                                     VectorPathNetworkSolution
 using PadeTaylor.VectorPoleField: extract_poles_shared_q
+using PadeTaylor.VectorWedgeStep: _select_wedge, _adaptive_h, H_MIN_RATIO
+using PadeTaylor.PainleveHierarchy: painleve_hierarchy, pI2_tritronquee_ic
+using PadeTaylor.VectorProblems: VectorPadeTaylorProblem
+using PadeTaylor.VectorStepper: VectorPadeStepperState,
+                                vector_pade_step_with_pade!
+using Polynomials: Polynomial, roots
 
 # -----------------------------------------------------------------------------
 # Oracle 1 — the d-component Riccati pole system.
@@ -80,9 +109,16 @@ end
         cs  = ComplexF64[1.0, 0.7, -1.3]        # per-component constants
         prob = riccati_pole_problem(p, z0, cs; order = 24)
 
-        # Targets: a small grid in the complex plane containing p.
+        # Targets: a grid BRACKETING p without sitting on it.  The B2
+        # adaptive walk caps `h` toward zero as it nears a pole — it
+        # cannot honestly walk *onto* a pole (a target equal to `p`
+        # would collapse `h` below `h_min` and fail loud, Rule 1).  The
+        # offset grid `{0.0,…,1.6} × {-0.4,…,1.2}` surrounds p so the
+        # walk still builds nodes whose shared-Q captures it, but no
+        # target coincides with `p` itself — the principled walk's
+        # correct semantics (legitimate evolution per ADR-0025 B2).
         targets = ComplexF64[x + y * im
-                             for x in 0.2:0.4:1.8 for y in -0.2:0.4:1.4]
+                             for x in 0.0:0.4:1.6 for y in -0.4:0.4:1.2]
 
         sol = vector_path_network_solve(prob, targets; order = 24, h = 0.25)
         @test sol isa VectorPathNetworkSolution
@@ -194,10 +230,12 @@ end
         cs  = ComplexF64[1.0, 0.7, -1.3]
         prob = riccati_pole_problem(p, z0, cs; order = 24)
         targets = ComplexF64[x + y * im
-                             for x in 0.2:0.4:1.8 for y in -0.2:0.4:1.4]
+                             for x in 0.0:0.4:1.6 for y in -0.4:0.4:1.2]
         sol = vector_path_network_solve(prob, targets; order = 24, h = 0.25)
         # No visited node lands inside a small disc of the pole — the
-        # min-‖y‖ wedge selection avoids the singularity.
+        # B2 :max_q_root wedge selection picks the candidate with the
+        # largest shared-Q-root distance, so the walk steers around the
+        # singularity (and adaptive `h` never overshoots onto it).
         min_dist = minimum(abs(z - p) for z in sol.visited_z)
         @test min_dist > 1.0e-3
     end
@@ -231,13 +269,262 @@ end
         @test isempty(extract_poles_shared_q(empty_sol))
     end
 
+    # =========================================================================
+    # VPN.3.* — the B2 dense-wedge walk (bead padetaylor-0ln.37.6, ADR-0025
+    # Lever 2; discharges bead 0ln.23).  See the file docstring.
+    # =========================================================================
+
+    # -------------------------------------------------------------------------
+    # VPN.3.1 — the B2 headline win.  The P_I⁽²⁾ tritronquée carries a
+    # *dense* pole field in the wedge straddling the positive real axis
+    # (KKG Fig 7.4; ADR-0025).  The A2 probe
+    # (external/probes/wedge-tractability/REPORT.md §3.1) measured the
+    # fixed-h=0.1 walk BLOCKING past |x|≈8 on an extended target fan: a
+    # bridging walk crosses the pole field on a chord and a fixed-h chord
+    # step lands on a pole, degenerating the shared-Q linear solve
+    # (`shared_denominator_pade: every singular value is below τ`).  B2's
+    # adaptive walk threads that same fan to |x| ≳ 15.  This is the exact
+    # failure B2 exists to fix — and the test that proves it.
+    # -------------------------------------------------------------------------
+    @testset "VPN.3.1 B2 adaptive walk threads the P_I^(2) wedge" begin
+        # The P_I⁽²⁾ companion RHS and an asymptotic tritronquée seed at
+        # x = -3 (the KKG n_terms=2 series — accurate on the negative
+        # axis; the figure pipeline's Stage-A BVP refines it, but the
+        # series seed suffices to march the wedge here, keeping the test
+        # self-contained and fast).
+        f      = painleve_hierarchy(:I, 2; t = 0.0)
+        y_seed = ComplexF64.(pI2_tritronquee_ic(-3.0 + 0.0im;
+                                                t = 0.0, n_terms = 2))
+        prob   = VectorPadeTaylorProblem(f, y_seed, (-3.0 + 0im, 20.0 + 0im);
+                                         order = 24)
+
+        # The A2 extended fan: radii 2..18, five angles spanning ±0.4 rad
+        # — straddling the positive-real wedge, reaching |x| = 18.
+        fan = ComplexF64[r * cis(a)
+                         for r in 2.0:2.0:18.0
+                         for a in range(-0.4, 0.4; length = 5)]
+
+        # The fixed-h walk BLOCKS — the A2 failure mode.  It throws the
+        # shared-Q degeneration (a chord step landed on a pole).
+        @test_throws Exception vector_path_network_solve(
+            prob, fan; order = 24, h = 0.1,
+            adaptive = false, step_policy = :min_y)
+
+        # The B2 adaptive :max_q_root walk threads the same fan.
+        sol = vector_path_network_solve(prob, fan; order = 24, h = 0.3,
+                                        adaptive = true,
+                                        step_policy = :max_q_root)
+        @test sol isa VectorPathNetworkSolution
+        # It reaches the outer wedge — a node at |x| ≳ 15 (the brief's
+        # bar), in fact essentially the full |x| = 18 fan.
+        reach = maximum(abs, sol.visited_z)
+        @info "VPN.3.1 B2 walk: $(length(sol.visited_z)) nodes, " *
+              "reached |x| = $(round(reach; digits = 2))"
+        @test reach ≥ 15.0
+        # The threaded walk carries a non-trivial pole field — the
+        # scientific deliverable (ADR-0025 Amendment 2).
+        poles = extract_poles_shared_q(sol)
+        @test all(isfinite, poles)
+        @test !isempty(poles)
+        # Every visited node carries a 4-vector state + shared-Q store
+        # (P_I⁽²⁾ companion form is d = 4).
+        for num in sol.visited_numerators
+            @test length(num) == 4
+        end
+        # `visited_h` records the *adaptive* per-node step — with a
+        # genuine adaptive walk they are not all equal (the fixed-h
+        # walk would have a constant column).
+        steps = unique(round.(real.(sol.visited_h); digits = 6))
+        @test length(steps) ≥ 2
+    end
+
+    # -------------------------------------------------------------------------
+    # VPN.3.2 — the :max_q_root selector demonstrably picks the more
+    # pole-free candidate.  This is the *contract* of the principled
+    # criterion: of the five wedge candidates, choose the one whose
+    # landed node has the largest shared-Q-root distance (= pole-free
+    # disc).  A single-pole toy cannot show this — there min-‖y‖ and
+    # max-disc coincide.  The P_I⁽²⁾ tritronquée wedge is a genuine
+    # *multi*-pole field: there the two selectors make different choices,
+    # and at every node where they differ `:max_q_root`'s pick is the
+    # candidate with the (weakly) larger shared-Q-root disc, and at some
+    # node a STRICTLY larger one — the win min-‖y‖ cannot make.
+    # -------------------------------------------------------------------------
+    @testset "VPN.3.2 :max_q_root picks the pole-free candidate" begin
+        f      = painleve_hierarchy(:I, 2; t = 0.0)
+        y_seed = ComplexF64.(pI2_tritronquee_ic(-3.0 + 0.0im;
+                                                t = 0.0, n_terms = 2))
+        prob   = VectorPadeTaylorProblem(f, y_seed, (-3.0 + 0im, 20.0 + 0im);
+                                         order = 24)
+        # A short walk into the wedge to harvest realistic mid-walk
+        # states; then probe the selector at each.
+        walk = vector_path_network_solve(prob, ComplexF64[8.0 + 2.0im];
+                                         order = 24, h = 0.3,
+                                         adaptive = true,
+                                         step_policy = :max_q_root)
+        wedge = [-π/4, -π/8, 0.0, π/8, π/4]
+        h     = 0.3
+
+        # The shared-Q-root distance (= pole-free disc) of the node a
+        # wedge candidate lands on — the very quantity :max_q_root
+        # maximises.  Mirrors `VectorWedgeStep._candidate_pole_disc`.
+        function cand_disc(zc, yc, θ)
+            hs = ComplexF64(h * cos(θ), h * sin(θ))
+            st = VectorPadeStepperState{ComplexF64}(zc, yc)
+            try
+                vector_pade_step_with_pade!(st, f, 24, hs)
+                st2 = VectorPadeStepperState{ComplexF64}(st.z, st.y)
+                _, _, den = vector_pade_step_with_pade!(st2, f, 24,
+                                                        ComplexF64(h))
+                length(den) < 2 && return 10.0 * h
+                rs = roots(Polynomial(collect(den)))
+                isempty(rs) ? 10.0 * h :
+                    min(10.0 * h, h * minimum(abs, rs))
+            catch
+                -Inf
+            end
+        end
+
+        n_differ, n_strict = 0, 0
+        for k in 2:min(40, length(walk.visited_z))
+            z_cur = walk.visited_z[k]
+            y_cur = walk.visited_y[k]
+            goal  = angle((15.0 + 3.0im) - z_cur)
+            discs = Float64[cand_disc(z_cur, y_cur, goal + a) for a in wedge]
+            picks = ComplexF64[z_cur + ComplexF64(h*cos(goal+a),
+                                                  h*sin(goal+a)) for a in wedge]
+            zq, _ = _select_wedge(f, z_cur, y_cur, 24, h, goal,
+                                  wedge, :max_q_root)
+            zy, _ = _select_wedge(f, z_cur, y_cur, 24, h, goal,
+                                  wedge, :min_y)
+            kq = argmin(abs.(picks .- zq))
+            ky = argmin(abs.(picks .- zy))
+            # The :max_q_root pick has the MAXIMAL pole-disc among the
+            # candidates (the contract — true at every node).
+            @test discs[kq] ≥ maximum(discs) - 1.0e-9
+            if abs(zq - zy) > 1.0e-6
+                n_differ += 1
+                # Where the selectors differ, :max_q_root's pick is at
+                # least as pole-free as min-‖y‖'s — never worse.
+                @test discs[kq] ≥ discs[ky] - 1.0e-9
+                discs[kq] > discs[ky] + 1.0e-3 && (n_strict += 1)
+            end
+        end
+        @info "VPN.3.2 selectors differed at $n_differ nodes; " *
+              ":max_q_root strictly more pole-free at $n_strict"
+        # The two selectors are genuinely different criteria — they
+        # differ at several wedge nodes ...
+        @test n_differ ≥ 3
+        # ... and at some of those :max_q_root's disc is STRICTLY larger:
+        # the principled win min-‖y‖ structurally cannot make.
+        @test n_strict ≥ 1
+    end
+
+    # -------------------------------------------------------------------------
+    # VPN.3.3 — the adaptive step never overshoots a pole.  The pole cap
+    # `POLE_SAFETY·h_prev·min|t*|` (POLE_SAFETY = 1/2) caps each step at
+    # half the nearest-pole distance, so a step always lands short.  This
+    # asserts the cap's *quantitative* contract directly on `_adaptive_h`
+    # (a known shared-Q with a root at a chosen t-distance), and the
+    # walk-level consequence (no node overshoots a known pole).
+    # -------------------------------------------------------------------------
+    @testset "VPN.3.3 adaptive step never overshoots a pole" begin
+        # The cap's exact value.  A shared-Q `Q(t) = 1 - t/t0` has its
+        # single root at `t = t0`; with `t0` placed so the cap
+        # `0.5·h_prev·t0` binds below the grow ceiling `min(h_max,
+        # GROW·h_prev)`, `_adaptive_h` must return exactly that cap.
+        h_prev, h_max, h_min = 0.3, 0.6, 1.0e-4
+        t0   = 0.5                                   # mid-range Q-root
+        Q    = ComplexF64[1.0, -1.0 / t0]            # root at t = t0
+        h_ad = _adaptive_h(Q, h_prev, h_max, h_min)
+        # Grow ceiling here is min(0.6, 1.5·0.3) = 0.45; the cap
+        # 0.5·0.3·0.5 = 0.075 binds well below it.
+        @test h_ad ≈ 0.5 * h_prev * t0  rtol = 1.0e-12
+        @test h_ad < min(h_max, 1.5 * h_prev)        # the cap genuinely bound
+        # The capped step is strictly short of the pole: a step of
+        # length `h_ad` from the parent reaches `h_ad/(h_prev·t0) = 0.5`
+        # of the way to the pole — never onto it.
+        @test h_ad / (h_prev * t0) ≈ 0.5  rtol = 1.0e-12
+
+        # The walk-level consequence: a B2 adaptive walk threading around
+        # the Riccati pole never lands a node on it.
+        p   = 1.0 + 0.6im
+        z0  = -0.4 + 0.0im
+        cs  = ComplexF64[1.0, 0.7, -1.3]
+        prob = riccati_pole_problem(p, z0, cs; order = 24)
+        targets = ComplexF64[x + y * im
+                             for x in 0.0:0.4:1.6 for y in -0.4:0.4:1.2]
+        sol = vector_path_network_solve(prob, targets; order = 24, h = 0.5,
+                                        adaptive = true,
+                                        step_policy = :max_q_root)
+        min_dist = minimum(abs(z - p) for z in sol.visited_z)
+        @info "VPN.3.3 adaptive walk min |z - p| = $(round(min_dist;digits=4))"
+        @test min_dist > 1.0e-2
+        # Every recorded step lies in [h_min, h_max]: h_max = 0.5,
+        # h_min = H_MIN_RATIO·0.5.
+        h_lo = H_MIN_RATIO * 0.5
+        @test all(s -> h_lo ≤ real(s) ≤ 0.5 + 1.0e-12, sol.visited_h)
+    end
+
+    # -------------------------------------------------------------------------
+    # VPN.3.4 — fail-loud (Rule 1).  An unknown step_policy throws; the
+    # adaptive h-floor throws when the pole field wedges the walk.
+    # -------------------------------------------------------------------------
+    @testset "VPN.3.4 fail-loud" begin
+        p   = 1.0 + 0.6im
+        z0  = -0.4 + 0.0im
+        cs  = ComplexF64[1.0, 0.7, -1.3]
+        prob = riccati_pole_problem(p, z0, cs; order = 24)
+
+        # An unknown step_policy is a caller mistake — throw, never
+        # silently fall back.
+        @test_throws ArgumentError vector_path_network_solve(
+            prob, ComplexF64[0.5 + 0.0im]; order = 24, h = 0.25,
+            step_policy = :min_u)
+
+        # `_adaptive_h` throws when the pole cap forces h below h_min.
+        # A shared-Q with a root very close in the t-variable (Q = 1 - t/t0,
+        # root at t = t0) drives the cap 0.5·h_prev·t0 below h_min.
+        h_prev = 0.5; h_max = 0.5; h_min = 0.1
+        t0     = 1.0e-4                              # pole right next door
+        Q_near = ComplexF64[1.0, -1.0 / t0]          # root at t = t0
+        @test_throws ErrorException _adaptive_h(Q_near, h_prev, h_max, h_min)
+        # A Q whose root is far leaves the cap inert — h grows, no throw.
+        Q_far  = ComplexF64[1.0, -1.0 / 50.0]        # root at t = 50
+        h_ok   = _adaptive_h(Q_far, h_prev, h_max, h_min)
+        @test h_min ≤ h_ok ≤ h_max
+    end
+
+    # -------------------------------------------------------------------------
+    # VPN.3.5 — the fixed-walk fallback.  `adaptive = false` + `:min_y`
+    # reproduces the verified V7 fixed-step walk: every step is exactly
+    # the requested `h`, and the walk reaches its targets.
+    # -------------------------------------------------------------------------
+    @testset "VPN.3.5 fixed-walk fallback (adaptive = false)" begin
+        p   = 1.0 + 0.6im
+        z0  = -0.4 + 0.0im
+        cs  = ComplexF64[1.0, 0.7, -1.3]
+        prob = riccati_pole_problem(p, z0, cs; order = 24)
+        targets = ComplexF64[x + y * im
+                             for x in 0.0:0.4:1.6 for y in -0.4:0.4:1.2]
+        sol = vector_path_network_solve(prob, targets; order = 24, h = 0.25,
+                                        adaptive = false, step_policy = :min_y)
+        @test sol isa VectorPathNetworkSolution
+        @test length(sol.visited_z) ≥ 2
+        # adaptive = false ⇒ every recorded step is exactly h = 0.25
+        # (the root carries the nominal h too).
+        @test all(s -> real(s) ≈ 0.25, sol.visited_h)
+        @test all(s -> imag(s) == 0.0, sol.visited_h)
+    end
+
 end
 
 # =============================================================================
 # Mutation-proof record (CLAUDE.md Rule 4).
 #
-# Procedure: perturb `src/VectorPathNetwork.jl` / `src/VectorPoleField.jl`,
-# rerun this file, confirm RED, restore.  3 meaningful mutations applied.
+# Procedure: perturb `src/VectorPathNetwork.jl` / `src/VectorPoleField.jl`
+# / `src/VectorWedgeStep.jl`, rerun this file, confirm RED, restore.
+# V7 mutations M1/M3 + B2 mutations M4/M5/M6 below; M2 superseded.
 #
 #   M1 — VectorPoleField: wrong z-plane root mapping.  Change
 #        `C(z_node + h_node * t_C)`  →  `C(z_node + t_C)`  (drop the
@@ -250,16 +537,11 @@ end
 #        location + the three-node filtered/unfiltered locations.
 #        Restored to GREEN.
 #
-#   M2 — VectorPathNetwork: ignore the min-‖y‖ wedge criterion.  Replace
-#        the `_wedge_step` selection loop with a fixed pick of wedge
-#        index 3 (straight at the goal direction — no pole avoidance).
-#        Expected: the walk drives straight into the shared movable
-#        pole instead of steering around it.
-#        Result: RED — 2 errors (VPN.1.1 and VPN.1.4): the straight-line
-#        walk steps onto the pole, `vector_pade_step_with_pade!` throws
-#        `DomainError` (Q(1) ≈ 0), the walk fails loud (Rule 1).  This
-#        is exactly the failure the min-‖y‖ criterion exists to prevent.
-#        Restored to GREEN.
+#   M2 — SUPERSEDED by B2.  The V7 `_wedge_step` this mutation perturbed
+#        no longer exists — B2 (bead padetaylor-0ln.37.6) extracted the
+#        wedge selector into `VectorWedgeStep._select_wedge`.  Its V7
+#        intent (the wedge criterion is load-bearing) is carried by B2's
+#        M4 below (`:max_q_root` → min-‖y‖) on the new selector.
 #
 #   M3 — VectorPoleField: drop the cross-node cluster support filter.
 #        Change the final comprehension guard
@@ -274,6 +556,51 @@ end
 #        leaks through, so the pole count is 2 not 1).  Restored to
 #        GREEN.
 #
-# Certified bites: M1 → 6 RED, M2 → 2 RED, M3 → 1 RED.  Restored to
-# GREEN after each mutation.
+# -- B2 dense-wedge walk mutations (bead padetaylor-0ln.37.6) --
+#
+#   M4 — VectorWedgeStep: revert the :max_q_root selector to min-‖y‖.
+#        In `_select_wedge`, replace
+#          primary = step_policy === :max_q_root ?
+#              _candidate_pole_disc(f, cand_z[k], cand_y[k], order, h_mag, C) :
+#              -norm(cand_y[k])
+#        with the unconditional proxy
+#          primary = -norm(cand_y[k])
+#        (the V7 min-‖y‖ heuristic — discard the principled
+#        shared-Q-root-distance criterion).
+#        Expected: VPN.3.2's contract `discs[kq] ≥ maximum(discs)` — the
+#        :max_q_root pick is the maximal-pole-disc candidate — bites at
+#        the multi-pole P_I⁽²⁾ wedge nodes where min-‖y‖ picks a
+#        different (smaller-disc) candidate; and VPN.3.1's adaptive walk
+#        loses the principled steering and BLOCKS.
+#        Result: RED — 16 VPN.3.2 assertions failed (the min-‖y‖ pick is
+#        not the max-disc candidate) + VPN.3.1 errored (the min-‖y‖
+#        adaptive walk hit `all 5 wedge candidates failed` at |x| ≈ 12.5,
+#        the A2 block).  Restored to GREEN.
+#
+#   M5 — VectorWedgeStep: freeze the adaptive step.  In `_adaptive_h`,
+#        prepend `return h_max` (the V1 fixed-step behaviour — `h` never
+#        adapts, never caps, never throws).
+#        Expected: the frozen-h walk re-introduces the A2 failure (a
+#        fixed chord step lands on a pole), so VPN.3.1's adaptive wedge
+#        walk BLOCKS; VPN.3.4's wedged-walk throw never fires.
+#        Result: RED — VPN.3.1 + VPN.3.2 errored (the frozen-h walks
+#        block on the P_I⁽²⁾ wedge fan) + VPN.3.4 failed (`_adaptive_h`
+#        no longer throws on the near-pole `Q_near`).  Restored to GREEN.
+#
+#   M6 — VectorWedgeStep: drop the pole cap.  In `_adaptive_h`, replace
+#        the `if length(denominator) > 1 … end` cap block with the
+#        unconditional `h = h_grow` (the geometric grow with no
+#        pole-distance ceiling).
+#        Expected: without the cap `h` grows to `h_max` regardless of
+#        pole proximity — the walk overshoots poles; `_adaptive_h`
+#        returns the grow value, not `POLE_SAFETY·h_prev·min|t*|`.
+#        Result: RED — VPN.3.3 failed (the cap-value assertions
+#        `h_ad ≈ 0.5·h_prev·t0` and the "lands at 0.5 of the way"
+#        check bit — the mutant returns `h_grow`), VPN.3.1 + VPN.3.2
+#        errored (the uncapped walk blocks), VPN.3.4 failed (no throw on
+#        `Q_near`).  Restored to GREEN.
+#
+# Certified bites: M1 → 6 RED, M3 → 1 RED, M4 → 17 RED (16 fail +
+# 1 error), M5 → 3 RED (1 fail + 2 error), M6 → 6 RED (4 fail +
+# 2 error).  M2 superseded.  Restored to GREEN after each mutation.
 # =============================================================================

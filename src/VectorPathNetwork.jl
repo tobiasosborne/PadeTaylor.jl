@@ -41,23 +41,45 @@ each `target` in `targets`, find the nearest already-visited node
 until within `h` of `target`.  Each landed point becomes a new visited
 node.
 
-The one essential change from the scalar v0.1 walk is the
-**wedge-selection criterion**.  v0.1 picks the wedge direction that
-minimises `|u|` — a heuristic for "step away from the next pole",
-since a scalar meromorphic solution's `|u|` grows toward a pole.  The
-vector analogue minimises the **norm** `‖y‖` of the vector state: a
-vector meromorphic solution's components all blow up together at a
-shared movable pole (ADR-0019), so `‖y‖` is the natural scalar proxy
-for "distance to the next pole".  We mirror v0.1's `:min_u` as
-`:min_y` here.
+## The wedge-selection criterion — principled `:max_q_root` (B2)
 
-A more principled refinement — picking the wedge candidate that
-*maximises the distance from the nearest root of the local shared-`Q`
-denominator* — is deferred as bead `padetaylor-0ln.23`; it would be
-forced if the `min-‖y‖` heuristic is observed to step a vector walk
-onto a pole in a production figure.  `min-‖y‖` is the V7 default
-because it is the direct, verified vector lift of the v0.1 criterion
-the figure pipeline already trusts.
+v0.1 picks the wedge direction that minimises `|u|` — a heuristic for
+"step away from the next pole", since a scalar meromorphic solution's
+`|u|` grows toward a pole.  V7 lifted that to **min-‖y‖**: a vector
+meromorphic solution's components all blow up together at a shared
+movable pole (ADR-0019), so `‖y‖` is a *proxy* for "distance to the
+next pole".
+
+But ‖y‖ is only a proxy, and ADR-0025's Phase-A4 baseline measured the
+proxy failing — the shipped min-‖y‖ V8b wedge walk has ~70 %
+catastrophic loop closures.  Bead `padetaylor-0ln.23` proposed the
+principled refinement; B2 (`padetaylor-0ln.37.6`) discharges it: the
+default wedge criterion is now **`:max_q_root`** — choose the candidate
+whose landed node has the **largest distance to its nearest shared-`Q`
+denominator root**, the most pole-free disc of validity.  This is exact,
+not a proxy: the shared-`Q` roots ARE the system's local poles.  The
+machinery lives in the sibling module `VectorWedgeStep` (split out for
+the CLAUDE.md Rule 6 LOC cap; read its docstring for the full
+rationale).  `:min_y` is kept as an opt-in — the verified V7 behaviour
+— but `:max_q_root` is the default for vector walks.
+
+## Adaptive step size — `adaptive = true` (B2)
+
+The v1 walk used a single fixed `h`.  ADR-0025's Phase-A2 probe
+(`external/probes/wedge-tractability/REPORT.md`) measured the fixed-`h`
+walk **blocking past `|x| ≈ 8`**: a bridging walk between targets
+crosses the pole field on a chord and a fixed-`h` chord step lands on a
+pole, degenerating the shared-`Q` linear solve.  B2 makes `h` adaptive
+(the default): each step is capped by the parent node's shared-`Q`
+pole distance (reusing `StepControl.step_pade_root` per ADR-0021) so a
+step never overshoots a pole, and `h` grows toward a maximum where the
+pole field is sparse and shrinks where it is dense.  The controller is
+`VectorWedgeStep._adaptive_h`; pass `adaptive = false` for the verified
+V7 fixed-`h` behaviour.  The `h` kwarg is then the *maximum* step
+(`h_max`); the walk floors `h` at `H_MIN_RATIO·h` (`h_min`) and throws
+if the pole field forces a step below that (Rule 1 — an honest
+wedged-walk signal).  C3 of ADR-0025 — the hand-tuned figure `h = 0.1`
+— is retired by this adaptivity.
 
 ## The per-node *canonical* shared-`Q` store — why pole extraction is *cleaner*
 
@@ -144,11 +166,12 @@ it could not.
 """
 module VectorPathNetwork
 
-using LinearAlgebra:        norm
 using ..VectorProblems:     VectorPadeTaylorProblem
 using ..VectorCoefficients: vector_taylor_coefficients
 using ..VectorStepper:      VectorPadeStepperState, vector_pade_step_with_pade!
 using ..VectorPathNetworkStage2: _stage2_fill
+using ..VectorWedgeStep:    _select_wedge, _adaptive_h, WEDGE_STEP_POLICIES,
+                            H_MIN_RATIO
 
 export VectorPathNetworkSolution, vector_path_network_solve
 
@@ -271,7 +294,8 @@ VectorPathNetworkSolution{T}(vz, vy, vh, vnum, vden, vpar, gz, gy) where {T} =
     vector_path_network_solve(prob::VectorPadeTaylorProblem, targets;
                               order = prob.order, h = 0.5,
                               wedge_angles = DEFAULT_WEDGE,
-                              step_policy = :min_y,
+                              step_policy = :max_q_root,
+                              adaptive = true,
                               max_steps_per_target = 1000,
                               fine_grid = nothing,
                               extrapolate = false,
@@ -286,19 +310,35 @@ fine-grid fill.
 The walk seeds `visited = {z_0}` at `prob.zspan[1]` with the IC `y0`.
 For each `target`, it locates the nearest already-visited node and
 walks toward `target` via a 5-direction wedge, choosing the wedge
-direction by the pole-avoidance criterion `step_policy` (only `:min_y`
-— minimise the new state's norm `‖y‖` — is supported at V7; see the
-module docstring).  Each landed point becomes a visited node storing
-the shared-`Q` approximant `(numerators, denominator)` from
+direction by the pole-avoidance criterion `step_policy` (the principled
+`:max_q_root` — maximise the landed node's distance to its nearest
+shared-`Q` root — by default; `:min_y` for the V7 proxy; see the module
+docstring and `VectorWedgeStep`).  Each landed point becomes a visited
+node storing the shared-`Q` approximant `(numerators, denominator)` from
 `VectorStepper.vector_pade_step_with_pade!`.
 
 Kwargs:
   - `order::Integer`   — Taylor truncation degree (defaults to
                          `prob.order`).
-  - `h::Number`        — wedge step magnitude (FW 2011 default 0.5).
+  - `h::Number`        — the wedge step magnitude.  With `adaptive =
+                         true` (the default) it is the *maximum* step
+                         `h_max`; the walk floors at `h_min =
+                         H_MIN_RATIO·h` (`VectorWedgeStep.H_MIN_RATIO =
+                         1e-3`) and adapts in between (see `adaptive`
+                         below).  With `adaptive = false` it is the
+                         single fixed step (the V7 behaviour).
   - `wedge_angles`     — five angle offsets relative to the goal
                          direction; must have exactly 5 entries.
-  - `step_policy`      — `:min_y` (the only V7 value).
+  - `step_policy`      — `:max_q_root` (default — the principled
+                         shared-`Q`-root-distance selector, ADR-0025 B2)
+                         or `:min_y` (the V7 min-‖y‖ proxy).
+  - `adaptive`         — `Bool` (default `true`).  When `true`, the step
+                         magnitude is capped per-step by the parent
+                         node's shared-`Q` pole distance and grows
+                         toward `h_max = h` where the pole field is
+                         sparse (`VectorWedgeStep._adaptive_h`); a step
+                         never overshoots a pole.  When `false`, the
+                         single fixed step `h` is used (V7 behaviour).
   - `max_steps_per_target` — cap on per-target walk length.
   - `fine_grid`        — `Union{Nothing, AbstractVector}` (default
                          `nothing`).  When a vector of complex points,
@@ -334,7 +374,8 @@ Throws `ArgumentError` (Rule 1) for empty `targets`, non-positive `h`,
 a `wedge_angles` not of length 5, an unknown `step_policy`, or an empty
 `fine_grid` (an empty fine grid is a caller mistake — pass `nothing` to
 skip Stage 2); `ErrorException` if a target is unreachable in
-`max_steps_per_target` steps or all five wedge candidates fail.  A
+`max_steps_per_target` steps, all five wedge candidates fail, or (with
+`adaptive = true`) the pole field forces the step below `h_min`.  A
 numerical breakdown inside the stepper (step landed on a pole)
 propagates unchanged.
 """
@@ -344,7 +385,8 @@ function vector_path_network_solve(prob::VectorPadeTaylorProblem{F, CT},
                                    h::Number = 0.5,
                                    wedge_angles::AbstractVector{<:Real} =
                                        DEFAULT_WEDGE,
-                                   step_policy::Symbol = :min_y,
+                                   step_policy::Symbol = :max_q_root,
+                                   adaptive::Bool = true,
                                    max_steps_per_target::Integer = 1000,
                                    fine_grid::Union{Nothing, AbstractVector} =
                                        nothing,
@@ -366,27 +408,33 @@ function vector_path_network_solve(prob::VectorPadeTaylorProblem{F, CT},
         "vector_path_network_solve: wedge_angles must have exactly 5 " *
         "entries (got $(length(wedge_angles))); FW 2011 §3.1 fixes the " *
         "5-direction wedge.  Suggestion: pass the default ±22.5°/±45°."))
-    step_policy === :min_y || throw(ArgumentError(
-        "vector_path_network_solve: step_policy must be :min_y (got " *
-        ":$step_policy); V7 supports only the min-‖y‖ wedge criterion.  " *
-        "The shared-Q root-distance refinement is deferred — bead " *
-        "padetaylor-0ln.23."))
+    step_policy in WEDGE_STEP_POLICIES || throw(ArgumentError(
+        "vector_path_network_solve: step_policy must be one of " *
+        "$(WEDGE_STEP_POLICIES) (got :$step_policy).  :max_q_root is the " *
+        "principled shared-Q-root-distance selector (ADR-0025 B2); :min_y " *
+        "is the V7 min-‖y‖ proxy."))
 
     # Working float type: real part of the problem's element type.
     T  = float(real(CT))
     C  = Complex{T}
-    h_mag = T(abs(h))
+    h_max = T(abs(h))
+    # Adaptive walk: `h` is the ceiling, the floor is H_MIN_RATIO·h_max.
+    # Fixed walk: h_min = h_max so `_adaptive_h` is never consulted.
+    h_min = adaptive ? T(H_MIN_RATIO) * h_max : h_max
 
     # Seed the visited tree at the IC.  The root carries its own
-    # canonical shared-Q approximant — centred at z0, real step h_mag —
-    # so the pole extractor treats every node uniformly.
+    # canonical shared-Q approximant — centred at z0, real step h_max —
+    # so the pole extractor treats every node uniformly.  The root's
+    # `visited_h` records `h_max`: with adaptive `h` each node's step
+    # may differ, so `visited_h` is the per-node canonical step the
+    # pole extractor and the Stage-2 gate map roots through.
     z0 = C(prob.zspan[1])
     y0 = Vector{C}(prob.y0)
-    num0, den0, jet0 = _canonical_pade(prob.f, z0, y0, Int(order), h_mag, C)
+    num0, den0, jet0 = _canonical_pade(prob.f, z0, y0, Int(order), h_max, C)
 
     visited_z           = C[z0]
     visited_y           = Vector{C}[y0]
-    visited_h           = C[C(h_mag)]
+    visited_h           = C[C(h_max)]
     visited_numerators  = Vector{Vector{C}}[num0]
     visited_denominator = Vector{C}[den0]
     visited_parent      = Int[0]
@@ -402,7 +450,9 @@ function vector_path_network_solve(prob::VectorPadeTaylorProblem{F, CT},
         parent = idx_v
         n_steps = 0
 
-        while abs(z_cur - target) > h_mag
+        # Loop guard re-reads the *current* step magnitude each
+        # iteration — with adaptive `h` it shrinks/grows per step.
+        while abs(z_cur - target) > real(visited_h[parent])
             n_steps += 1
             n_steps > max_steps_per_target && throw(ErrorException(
                 "vector_path_network_solve: target $target unreachable in " *
@@ -411,20 +461,26 @@ function vector_path_network_solve(prob::VectorPadeTaylorProblem{F, CT},
                 "max_steps_per_target, shorten h, or widen the wedge."))
 
             goal_dir = angle(target - z_cur)
-            z_new, y_new =
-                _wedge_step(prob.f, z_cur, y_cur, Int(order), h_mag,
-                            goal_dir, wedge_angles, step_policy)
 
-            # Recompute the node's CANONICAL shared-Q store: centred at
-            # z_new, real step h_mag.  The wedge-step approximant is
-            # centred at the parent in a complex-h variable and would
-            # mis-map its roots (see the module docstring).
+            # Adaptive step (B2): the parent's shared-Q caps `h` to the
+            # nearest-pole distance; `adaptive=false` pins it at h_max.
+            h_cur = adaptive ?
+                _adaptive_h(visited_denominator[parent],
+                            real(visited_h[parent]), h_max, h_min) :
+                h_max
+
+            z_new, y_new =
+                _select_wedge(prob.f, z_cur, y_cur, Int(order), h_cur,
+                              goal_dir, wedge_angles, step_policy)
+
+            # The node's CANONICAL shared-Q store: centred at z_new, real
+            # step h_cur, so its roots map to the z-plane correctly.
             num, den, jet = _canonical_pade(prob.f, z_new, y_new, Int(order),
-                                            h_mag, C)
+                                            h_cur, C)
 
             push!(visited_z, z_new)
             push!(visited_y, y_new)
-            push!(visited_h, C(h_mag))
+            push!(visited_h, C(h_cur))
             push!(visited_numerators, num)
             push!(visited_denominator, den)
             push!(visited_parent, parent)
@@ -483,53 +539,12 @@ function _nearest_visited(visited_z::Vector{Complex{T}},
     return idx
 end
 
-# Take one wedge step: evaluate the 5 candidate directions, pick the one
-# that minimises ‖y_new‖ (the vector lift of v0.1's min-|u| criterion),
-# and return (z_new, y_new).  A candidate whose stepper call throws is
-# sentinelled (skipped) so it loses the min-‖y‖ selection — the same
-# shape as v0.1's failed-candidate handling.
-function _wedge_step(f, z_cur::Complex{T}, y_cur::Vector{Complex{T}},
-                     order::Int, h_mag::T, goal_dir,
-                     wedge_angles::AbstractVector{<:Real},
-                     step_policy::Symbol) where {T}
-    C   = Complex{T}
-    n_w = length(wedge_angles)
-    cand_z  = Vector{C}(undef, n_w)
-    cand_y  = Vector{Vector{C}}(undef, n_w)
-    cand_ok = falses(n_w)
-
-    for k in 1:n_w
-        θ = T(goal_dir) + T(wedge_angles[k])
-        h_step = C(h_mag * cos(θ), h_mag * sin(θ))
-        state  = VectorPadeStepperState{C}(z_cur, y_cur)
-        try
-            vector_pade_step_with_pade!(state, f, order, h_step)
-            cand_z[k]  = state.z
-            cand_y[k]  = state.y
-            cand_ok[k] = true
-        catch
-            cand_ok[k] = false
-        end
-    end
-
-    # min-‖y‖ wedge selection: the candidate with the smallest new-state
-    # norm is the one stepping furthest from the (shared) movable pole.
-    best_k, best_val = 0, T(Inf)
-    for k in 1:n_w
-        cand_ok[k] || continue
-        v = norm(cand_y[k])
-        if v < best_val
-            best_k, best_val = k, v
-        end
-    end
-    best_k == 0 && throw(ErrorException(
-        "vector_path_network_solve: all 5 wedge candidates failed at " *
-        "z = $z_cur; every candidate step threw (e.g. landed on a pole " *
-        "of the local shared-Q approximant).  Suggestion: shorten h or " *
-        "widen the wedge."))
-
-    return cand_z[best_k], cand_y[best_k]
-end
+# The wedge-direction selector (`_select_wedge`) and the adaptive
+# step-size controller (`_adaptive_h`) live in the sibling module
+# `VectorWedgeStep` — split out for the CLAUDE.md Rule 6 200-LOC cap
+# (B2 — bead `padetaylor-0ln.37.6`).  That module holds the principled
+# `:max_q_root` shared-Q-root-distance criterion and the pole-capped
+# adaptive `h`; read its literate docstring for the full design.
 
 # Build the canonical shared-Q approximant for a node: `d` numerator
 # polynomials over one denominator `Q`, centred at `(z, y)` and in the
@@ -538,15 +553,9 @@ end
 # discard the landed state — exactly v0.1's `_local_pade` design.  A
 # `DomainError` (the canonical step lands on a pole at t = 1) propagates
 # unchanged: a node sitting on a pole is a fail-loud condition (Rule 1).
-#
-# It also returns the *raw* order-`order` vector Taylor jet — the exact
-# jet the canonical Padé was built from.  `vector_pade_step_with_pade!`
-# already computes this internally (its step 1) but discards it; rather
-# than reach into its internals we recompute it here with one extra
-# `vector_taylor_coefficients` call.  Caching this jet in the visited
-# tree makes the B1 true-radius Stage-2 gate (ADR-0025 Amendment 1 §A1)
-# cost nothing extra at fill time — the Jorba–Zou estimator reads each
-# node's coefficient decay straight off the cached jet.
+# It also returns the raw order-`order` vector Taylor jet — the jet the
+# canonical Padé was built from — for the B1 jet cache (see the
+# `visited_jets` field docstring on `VectorPathNetworkSolution`).
 function _canonical_pade(f, z::Complex{T}, y::Vector{Complex{T}},
                          order::Int, h_mag::T,
                          ::Type{C}) where {T, C}
@@ -557,13 +566,11 @@ function _canonical_pade(f, z::Complex{T}, y::Vector{Complex{T}},
     return numerators, denominator, jets
 end
 
-# The Stage-2 fine-grid fill (`_stage2_fill`) and its Horner evaluator
-# (`_eval_poly`) live in the sibling module `VectorPathNetworkStage2`,
-# `include`d *before* this file (see `src/PadeTaylor.jl`) and pulled in
-# via the `using` at the top.  Splitting them out keeps this file under
-# the CLAUDE.md Rule 6 200 effective-LOC cap.  Stage 2 has no reverse
-# dependency on this module — the nearest-visited scan it needs is
-# passed to `_stage2_fill` as a function argument — so the include
-# order is Stage 2 first, then this Stage-1 driver.
+# The Stage-2 fine-grid fill (`_stage2_fill`), the wedge-step selector
+# (`_select_wedge`) and the adaptive-h controller (`_adaptive_h`) live
+# in the sibling modules `VectorPathNetworkStage2` / `VectorWedgeStep`,
+# `include`d before this file (CLAUDE.md Rule 6 200-LOC split) and
+# pulled in via the `using`s at the top; neither has a reverse
+# dependency on this module.
 
 end # module VectorPathNetwork

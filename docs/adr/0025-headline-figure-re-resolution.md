@@ -384,6 +384,57 @@ A1–A4 done; the architecture is fully determined. Phase B: B1
 true-radius gate (gate v-b), B2 adaptive walk, B3 pole-field extraction
 to `|x|=20`, B4 honest-underlay blend.
 
+## Amendment 4 — B2 dense-wedge walk shipped (2026-05-21)
+
+B2 (bead `padetaylor-0ln.37.6`, Lever 2; discharges and closes bead
+`padetaylor-0ln.23`) is implemented in the new module
+`src/VectorWedgeStep.jl`, `include`d before `src/VectorPathNetwork.jl`
+(the Rule-6 ≤200-LOC split — `VectorPathNetwork.jl` drops to 152
+code-LOC). Two coupled changes, now the **default** for vector walks:
+
+- **Direction selector `:max_q_root`.** The V7 min-‖y‖ proxy is replaced
+  by the principled criterion: of the five wedge candidates, choose the
+  one whose landed node has the largest distance to its nearest
+  shared-`Q` denominator root — the most pole-free disc. Exact, not a
+  proxy. `:min_y` is kept as an opt-in. A candidate whose canonical
+  shared-`Q` store cannot be built is *excluded* (the driver rebuilds
+  that store — picking it would crash); all-excluded throws (Rule 1).
+- **Adaptive `h`.** `h` is capped per-step by the parent node's
+  nearest shared-`Q` pole (`POLE_SAFETY·h·min|t*|`) and grows
+  geometrically toward `h_max` where the pole field is sparse. `h_max`
+  is the `h` kwarg; the floor is `h_min = H_MIN_RATIO·h_max` (`1e-3`);
+  a step forced below `h_min` throws (an honest wedged-walk signal).
+  C3 (the hand-tuned figure `h = 0.1`) is retired.
+
+**ADR-0021 deviation.** ADR-0021's "No vector `step_pade_root`" note
+anticipated reusing the FW 2011 §3.1 *directional* `step_pade_root` on
+the shared `Q` as the adaptive cap. B2 deviates deliberately: the cap
+is **direction-agnostic** (`min|t*|`, the nearest pole in *any*
+direction). The reason is the coupling with `:max_q_root` — the
+selector picks the step *direction* to dodge a pole, so a directional
+cap shrinks `h` for a pole the walk steers around (it stalled the
+figure walk to `h ≈ 3·10⁻⁶` in testing). `_adaptive_h`'s docstring
+records this in full.
+
+**Measured outcome.** On the P_I⁽²⁾ tritronquée wedge: the fixed-`h=0.1`
+walk BLOCKS the A2 extended target fan past `|x|≈8` with the
+`shared_denominator_pade` degeneration A2 documented; the B2 adaptive
+`:max_q_root` walk threads the same fan to `|x| ≈ 18–20`, extracting a
+dense validated pole field. `kkg_pi2_figure_test.jl` is GREEN (the
+Stage-B march now succeeds under the B2 default). Bead `0ln.23` is
+closed by this amendment.
+
+**Known cross-figure consequence.** Changing the *default* walk policy
+affects every vector-walk figure call site. The A_4⁽¹⁾ Noumi–Yamada
+figure (`figures/_noumi_yamada_a4_helpers.jl`, V8a) relies on the
+default; under `:max_q_root` its order-24 shared-`Q` SVD degenerates at
+specific node states the new walk's path reaches (`:min_y` and
+`h=0.2` complete; `h=0.3` blocks) — `test/noumi_yamada_a4_figure_test.jl`
+errors. B2's scope is the P_I⁽²⁾ headline figure (`figures/` files
+untouched per the B2 bead); the A_4 figure needs a B3-style explicit
+`step_policy = :min_y` pin or its own re-resolution — a follow-up bead
+for Phase F triage.
+
 ## References
 
 - KKG 2015 TeX `references/tex/painleve_hierarchy/KapaevKleinGrava2015_PI2_tritronquee_ConstrApprox41/tritronquee_coeff.tex`

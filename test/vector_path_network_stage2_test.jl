@@ -116,8 +116,12 @@ harmonic_exact(z) = ComplexF64[sin(z), cos(z)]
         cs  = ComplexF64[1.0, 0.7, -1.3]
         prob = riccati_pole_problem_s2(p, z0, cs; order = 24)
 
+        # Targets BRACKET the pole `p` without sitting on it: the B2
+        # adaptive walk caps `h` toward zero near a pole and cannot
+        # honestly walk *onto* one (a target equal to `p` collapses `h`
+        # below `h_min`, Rule 1).  The offset grid still surrounds `p`.
         targets = ComplexF64[x + y * im
-                             for x in 0.2:0.4:1.8 for y in -0.2:0.4:1.4]
+                             for x in 0.0:0.4:1.6 for y in -0.4:0.4:1.2]
         # The fine grid: a denser lattice over the same region.
         fine = ComplexF64[x + y * im
                           for x in 0.0:0.2:1.6 for y in -0.2:0.2:1.2]

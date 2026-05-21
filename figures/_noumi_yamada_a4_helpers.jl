@@ -157,8 +157,16 @@ from figures/").
 """
 function a4_walk()
     prob = a4_problem()
+    # Explicit walk-policy pin (ADR-0025 Amendment 4, bead `padetaylor-s8z`).
+    # B2 made `step_policy=:max_q_root` + `adaptive=true` the library
+    # default; the V8a A_4⁽¹⁾ figure was built and validated with the V7
+    # `:min_y` fixed-`h` walk, and its order-24 shared-`Q` SVD degenerates
+    # at node states the `:max_q_root` path reaches.  Pinning the policy
+    # reproduces the validated A_4 figure exactly and makes this figure's
+    # walk independent of the mutable library default.
     return vector_path_network_solve(prob.problem, a4_target_grid();
-                                     order = NY_ORDER, h = NY_H)
+                                     order = NY_ORDER, h = NY_H,
+                                     step_policy = :min_y, adaptive = false)
 end
 
 """
