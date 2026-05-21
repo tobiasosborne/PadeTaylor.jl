@@ -52,6 +52,7 @@ using PadeTaylor
     include("noumi_yamada_piv_test.jl")
     include("painleve_hierarchy_test.jl")
     include("vector_path_network_test.jl")
+    include("vector_path_network_stage2_test.jl")
     include("calogero_moser_test.jl")
     include("problems_test.jl")
     include("pathnetwork_test.jl")

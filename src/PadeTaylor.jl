@@ -139,12 +139,23 @@ include("NoumiYamadaSymmetry.jl")
 # v0.1/v0.2 module behaviour changes (bead padetaylor-0ln.15, V6,
 # ADR-0022).
 include("PainleveHierarchy.jl")
+# VectorPathNetworkStage2 is the Stage-2 fine-grid fill of the vector
+# path-network: dense evaluation of the per-node shared-Q approximants
+# over a fine grid, the substrate for the P_I^(2) tritronquée surface
+# figure.  It is split out of VectorPathNetwork purely for the CLAUDE.md
+# Rule 6 200-LOC cap; it has NO reverse dependency on VectorPathNetwork
+# (the nearest-visited scan it needs is passed as a function argument),
+# so it loads BEFORE VectorPathNetwork, which then `using`s it (bead
+# padetaylor-0ln.20, F2, ADR-0015).
+include("VectorPathNetworkStage2.jl")
 # VectorPathNetwork is the minimal Stage-1 vector path-network walk: a
 # ‖y‖-steered 5-direction wedge that builds a visited tree of shared-Q
 # approximants over a region of the complex plane.  It composes
-# VectorProblems + VectorStepper, so it loads after both.  Additive —
-# the substrate the v0.2 A_4^(1)/P_I^(2) pole-field figures stand on
-# (bead padetaylor-0ln.16, V7).
+# VectorProblems + VectorStepper, so it loads after both; it also
+# `using`s VectorPathNetworkStage2 for the Stage-2 fine-grid fill, so
+# that module loads before this one.  Additive — the substrate the v0.2
+# A_4^(1)/P_I^(2) pole-field figures stand on (bead padetaylor-0ln.16,
+# V7; Stage-2 fill bead padetaylor-0ln.20).
 include("VectorPathNetwork.jl")
 # VectorPoleField extracts the system's poles from each visited node's
 # shared denominator Q (one Q per node — every component's poles are

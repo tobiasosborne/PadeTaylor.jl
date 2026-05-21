@@ -94,6 +94,27 @@ first node landed in a per-target walk chains off the nearest
 already-visited node, later nodes of the same walk chain off their
 immediate predecessor (the v0.1 `PathNetwork` convention verbatim).
 
+## Stage-2 — the fine-grid fill (bead `padetaylor-0ln.20`)
+
+V7 shipped only the Stage-1 tree, because the `A_4⁽¹⁾`/`P_I⁽²⁾`
+*scatter* figures need only the pole locations — the roots of each
+node's shared `Q`.  The headline `P_I⁽²⁾` tritronquée *surface* figure
+needs more: a dense filled heatmap of `y(z)` over the pole-rich wedge.
+That is Stage 2, the direct vector lift of v0.1's
+`PathNetwork.path_network_solve` Stage-2 step (`src/PathNetwork.jl:29-32`,
+"Stage 2 — fine-grid extrapolation"; the fill loop at `:669-693`).
+
+When the caller passes a `fine_grid`, `vector_path_network_solve`, after
+building the Stage-1 tree, evaluates the dense solution at every grid
+point and stores the result in the `grid_z`/`grid_y` solution fields.
+The fill mechanics — nearest-visited lookup, the `t = (z_f − z_v)/h_v`
+rescaling with the real canonical step, the shared-`Q` `Pᵢ(t)/Q(t)`
+evaluation, and the `extrapolate` disc-radius gate (ADR-0015) — live in
+the sibling module `VectorPathNetworkStage2`, split out for the
+CLAUDE.md Rule 6 LOC cap; read its docstring for the full procedure.
+When no `fine_grid` is passed both Stage-2 fields are empty and the V7
+scatter-figure call sites are byte-unaffected.
+
 ## Fail-fast contract (CLAUDE.md Rule 1)
 
 Empty `targets`, non-positive `h`, a `wedge_angles` not of length 5,
@@ -113,15 +134,20 @@ it could not.
     per-step shared-`Q` primitive this walk loops.
   - `src/VectorPoleField.jl` — the shared-`Q` pole extractor that
     consumes `VectorPathNetworkSolution`.
+  - `src/VectorProblems.jl` — the `_eval_poly` Horner evaluator and the
+    `Pᵢ(t)/Q(t)` shared-`Q` dense-evaluation pattern Stage 2 mirrors.
   - `docs/v0p2_plan.md` — §"The 10 phases", V7 row.
   - `docs/adr/0019-shared-denominator-pade.md` — the shared `Q` whose
     roots are the pole field.
+  - `docs/adr/0015-extrapolate-stage-2.md` — the `extrapolate` Stage-2
+    disc-radius policy this module's Stage-2 fill honours.
 """
 module VectorPathNetwork
 
 using LinearAlgebra:    norm
 using ..VectorProblems: VectorPadeTaylorProblem
 using ..VectorStepper:  VectorPadeStepperState, vector_pade_step_with_pade!
+using ..VectorPathNetworkStage2: _stage2_fill
 
 export VectorPathNetworkSolution, vector_path_network_solve
 
@@ -161,6 +187,26 @@ The edge set `{(visited_parent[k], k) : k ≥ 2}` is the Stage-1 path
 tree.  Element type is `Complex{T}` throughout — path-network steps
 are complex-valued by construction even when the underlying problem is
 real.
+
+The two Stage-2 fields carry the fine-grid fill (bead `padetaylor-0ln.20`):
+
+  - `grid_z::Vector{Complex{T}}`               — the fine-grid points
+                                                 (the `fine_grid` kwarg
+                                                 of `vector_path_network_solve`
+                                                 verbatim);
+  - `grid_y::Vector{Vector{Complex{T}}}`       — the dense interpolated
+                                                 `d`-vector state `y(z)`
+                                                 at each grid point; a
+                                                 `d`-vector of `NaN + NaN·im`
+                                                 marks a grid point not
+                                                 covered by any visited
+                                                 node's disc (fail-soft,
+                                                 ADR-0015).
+
+When `vector_path_network_solve` is called without a `fine_grid`, both
+Stage-2 fields are empty — the V7 scatter-figure call sites are
+byte-unaffected.  A 6-arg backward-compat constructor (Stage-1 fields
+only) defaults `grid_z`/`grid_y` to empty vectors.
 """
 struct VectorPathNetworkSolution{T <: AbstractFloat}
     visited_z           :: Vector{Complex{T}}
@@ -169,7 +215,17 @@ struct VectorPathNetworkSolution{T <: AbstractFloat}
     visited_numerators  :: Vector{Vector{Vector{Complex{T}}}}
     visited_denominator :: Vector{Vector{Complex{T}}}
     visited_parent      :: Vector{Int}
+    grid_z              :: Vector{Complex{T}}
+    grid_y              :: Vector{Vector{Complex{T}}}
 end
+
+# Backward-compat 6-arg constructor: a Stage-1-only solution (no
+# fine-grid fill).  Defaults `grid_z`/`grid_y` to empty vectors so the
+# V7 scatter-figure call sites and the hand-built test fixtures that
+# predate Stage 2 (bead padetaylor-0ln.20) keep their exact shape.
+VectorPathNetworkSolution{T}(vz, vy, vh, vnum, vden, vpar) where {T} =
+    VectorPathNetworkSolution{T}(vz, vy, vh, vnum, vden, vpar,
+                                 Complex{T}[], Vector{Complex{T}}[])
 
 # -----------------------------------------------------------------------------
 # Public driver
@@ -180,12 +236,15 @@ end
                               order = prob.order, h = 0.5,
                               wedge_angles = DEFAULT_WEDGE,
                               step_policy = :min_y,
-                              max_steps_per_target = 1000)
+                              max_steps_per_target = 1000,
+                              fine_grid = nothing,
+                              extrapolate = false)
         -> VectorPathNetworkSolution
 
 Build the minimal Stage-1 vector path-network covering `targets` — a
 vector of complex points spanning the region of interest — from
-`prob`'s initial condition.
+`prob`'s initial condition; optionally also perform the Stage-2
+fine-grid fill.
 
 The walk seeds `visited = {z_0}` at `prob.zspan[1]` with the IC `y0`.
 For each `target`, it locates the nearest already-visited node and
@@ -204,12 +263,33 @@ Kwargs:
                          direction; must have exactly 5 entries.
   - `step_policy`      — `:min_y` (the only V7 value).
   - `max_steps_per_target` — cap on per-target walk length.
+  - `fine_grid`        — `Union{Nothing, AbstractVector}` (default
+                         `nothing`).  When a vector of complex points,
+                         the solve performs the Stage-2 fine-grid fill
+                         (see the module docstring, "Stage 2"): each
+                         grid point is evaluated against the nearest
+                         visited node's shared-`Q` Padé and the result
+                         is stored in `grid_y`.  When `nothing`, the
+                         Stage-2 fields stay empty (V7 scatter-figure
+                         behaviour, byte-unaffected).
+  - `extrapolate`      — `Bool` (default `false`, ADR-0015).  Gates the
+                         Stage-2 disc-radius check.  When `false`, a
+                         grid point more than `real(visited_h[idx])`
+                         from its nearest visited node receives a
+                         `d`-vector of `NaN + NaN·im` (fail-soft per
+                         Rule 1).  When `true`, the check is skipped and
+                         the nearest-node Padé is evaluated regardless
+                         of `|t|` vs 1 — gap-free figure panels at the
+                         cost of degraded accuracy past `|t| = 1`.
+                         Unused when `fine_grid === nothing`.
 
 Throws `ArgumentError` (Rule 1) for empty `targets`, non-positive `h`,
-a `wedge_angles` not of length 5, or an unknown `step_policy`;
-`ErrorException` if a target is unreachable in `max_steps_per_target`
-steps or all five wedge candidates fail.  A numerical breakdown inside
-the stepper (step landed on a pole) propagates unchanged.
+a `wedge_angles` not of length 5, an unknown `step_policy`, or an empty
+`fine_grid` (an empty fine grid is a caller mistake — pass `nothing` to
+skip Stage 2); `ErrorException` if a target is unreachable in
+`max_steps_per_target` steps or all five wedge candidates fail.  A
+numerical breakdown inside the stepper (step landed on a pole)
+propagates unchanged.
 """
 function vector_path_network_solve(prob::VectorPadeTaylorProblem{F, CT},
                                    targets::AbstractVector;
@@ -218,12 +298,19 @@ function vector_path_network_solve(prob::VectorPadeTaylorProblem{F, CT},
                                    wedge_angles::AbstractVector{<:Real} =
                                        DEFAULT_WEDGE,
                                    step_policy::Symbol = :min_y,
-                                   max_steps_per_target::Integer = 1000
+                                   max_steps_per_target::Integer = 1000,
+                                   fine_grid::Union{Nothing, AbstractVector} =
+                                       nothing,
+                                   extrapolate::Bool = false
                                    ) where {F, CT}
     isempty(targets) && throw(ArgumentError(
         "vector_path_network_solve: targets is empty — there is nothing " *
         "for the Stage-1 walk to reach.  Suggestion: pass a non-empty " *
         "vector of complex target points spanning the region of interest."))
+    fine_grid !== nothing && isempty(fine_grid) && throw(ArgumentError(
+        "vector_path_network_solve: fine_grid is empty — an empty Stage-2 " *
+        "grid is a caller mistake.  Suggestion: pass `fine_grid = nothing` " *
+        "to skip the Stage-2 fill, or a non-empty vector of grid points."))
     abs(h) > 0 || throw(ArgumentError(
         "vector_path_network_solve: h must be a non-zero step magnitude " *
         "(got $h).  Suggestion: pass a positive real h (FW 2011 default 0.5)."))
@@ -298,9 +385,26 @@ function vector_path_network_solve(prob::VectorPadeTaylorProblem{F, CT},
         end
     end
 
+    # Stage 2 — the fine-grid fill (bead padetaylor-0ln.20).  When no
+    # `fine_grid` is supplied the two Stage-2 fields stay empty (the V7
+    # scatter-figure behaviour).  Otherwise every grid point is
+    # evaluated against its nearest visited node's shared-Q Padé.
+    if fine_grid === nothing
+        return VectorPathNetworkSolution{T}(visited_z, visited_y, visited_h,
+                                            visited_numerators,
+                                            visited_denominator,
+                                            visited_parent)
+    end
+
+    grid_z = collect(C, fine_grid)
+    grid_y = _stage2_fill(grid_z, visited_z, visited_h, visited_numerators,
+                          visited_denominator, extrapolate, C,
+                          _nearest_visited)
+
     return VectorPathNetworkSolution{T}(visited_z, visited_y, visited_h,
                                         visited_numerators,
-                                        visited_denominator, visited_parent)
+                                        visited_denominator, visited_parent,
+                                        grid_z, grid_y)
 end
 
 # -----------------------------------------------------------------------------
@@ -388,5 +492,14 @@ function _canonical_pade(f, z::Complex{T}, y::Vector{Complex{T}},
         vector_pade_step_with_pade!(state, f, order, C(h_mag))
     return numerators, denominator
 end
+
+# The Stage-2 fine-grid fill (`_stage2_fill`) and its Horner evaluator
+# (`_eval_poly`) live in the sibling module `VectorPathNetworkStage2`,
+# `include`d *before* this file (see `src/PadeTaylor.jl`) and pulled in
+# via the `using` at the top.  Splitting them out keeps this file under
+# the CLAUDE.md Rule 6 200 effective-LOC cap.  Stage 2 has no reverse
+# dependency on this module — the nearest-visited scan it needs is
+# passed to `_stage2_fill` as a function argument — so the include
+# order is Stage 2 first, then this Stage-1 driver.
 
 end # module VectorPathNetwork
