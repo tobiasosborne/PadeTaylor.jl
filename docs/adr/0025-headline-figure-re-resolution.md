@@ -120,8 +120,8 @@ The figure-certifying suite. `[E]` = machinery exists in the codebase;
 | VC-5 | Conjugate-symmetry pole pairing (`V₀(x̄)=conj V₀(x)`) | strong | `[N]` shipped (beads `0ln.37.13`, `0ln.37.20`; `figures/_kkg_pi2_vc45.jl`; Amendment 6 optimal matching) |
 | VC-6 | Cross-node support filter (`min_support ≥ 2`) | medium | `[E]` active |
 | VC-7 | Loop-closure ΔP_rel certificate (`quality_diagnose`, ADR-0016) | medium | `[N]` shipped (bead `0ln.37.14`; vector adapter in `ext/PadeTaylorDiagnosticsExt.jl`; Amendment 7) |
-| VC-8 | BVP endpoint higher-derivative match (FW §5.2 diagnostic) | medium | `[N]` |
-| VC-9 | Weierstrass-℘ oracle for the *vector* pipeline (FW Table 5.1) | medium | `[N]` |
+| VC-8 | BVP endpoint higher-derivative match (FW §5.2 diagnostic) | medium | `[N]` shipped (bead `0ln.37.15`; `figures/_kkg_pi2_surface_helpers.jl` `surf_vc8_companion_check`; Amendment 8) |
+| VC-9 | Weierstrass-℘ oracle for the *vector* pipeline (FW Table 5.1) | medium | `[N]` shipped (bead `0ln.37.16`; `test/vector_pipeline_oracle_test.jl`; Amendment 8) |
 | VC-10 | Two-run different-path pole-disagreement accuracy indicator | medium | `[N]` |
 | VC-12 | 7-fold rotational-symmetry cross-check (`V₀`→`V₁` poles) | strong | `[N]` stretch |
 
@@ -695,6 +695,131 @@ requirement to certify the re-resolution *via* a loop-closure number
 rather than via VC-4/VC-5 (the per-pole certificates that already do
 certify it). VC-7 as shipped is the honest, senior-grade certificate of
 the walk's loop-closure structure.
+
+## Amendment 8 — Phase-D VC-8 + VC-9: the BVP / vector-solver chain certified (2026-05-21)
+
+Beads `padetaylor-0ln.37.15` (VC-8) and `padetaylor-0ln.37.16` (VC-9)
+— the last two medium-tier Phase-D validation criteria — certify the
+BVP and the vector-solver chain that underpins the headline figure.
+
+### VC-8 — BVP endpoint higher-derivative match (FW §5.2)
+
+FW 2011 §5.2 (`references/markdown/FW2011_painleve_methodology_JCP230/
+FW2011_painleve_methodology_JCP230.md:192-193`) validates a converged
+*scalar* Chebyshev BVP by estimating endpoint derivatives via the `D₁`
+matrix and matching them to known values — a mismatch beyond
+`~10⁻⁷·10⁻⁸` says "increase `N`". The figure's BVP is the `d = 4`
+first-order vector **companion** system `y' = f(z,y)`,
+`y = (u, u', u'', u''')`, whose companion form asserts the *exact* chain
+identities `y[k]' = y[k+1]` (`k = 1,2,3`).
+
+**The chosen invariant — companion-consistency.** A converged
+collocation solution must satisfy `y[k]' = y[k+1]`; VC-8 computes the
+spectral derivative `D₁·y[k]`, rescales it from the `t ∈ [-1,1]`
+collocation variable to `z` by `1/s` (`s = (z_b−z_a)/2`, `VectorBVP`'s
+affine scale), and checks it against component `y[k+1]` — at the two
+endpoint nodes (FW §5.2's endpoint check) **and** over the whole node
+set. This is FW's `D₁`-derivative diagnostic lifted to the companion
+system: a genuine self-consistency invariant of the spectral solution
+that owes nothing to the asymptotic seed and catches an under-resolved
+`N`. The helper is `surf_vc8_companion_check` in
+`figures/_kkg_pi2_surface_helpers.jl`; the gate is
+`figures/test_kkg_pi2_surface.jl` PI2S.8.
+
+**Measured agreement** on the figure's three BVP code paths (the
+`SURF_BVP_N = 96` ray BVPs and the `N = 128` anchor BVP):
+
+| BVP solve | companion-consistency max | y₃ vs asym. seed | y₄ vs asym. seed |
+|-----------|---------------------------|------------------|------------------|
+| ray φ=180° (neg. real axis) | `6.3e-10` | `1.1e-6` | `3.2e-6` |
+| ray φ=120°                  | `1.9e-11` | `1.2e-6` | `1.7e-5` |
+| anchor BVP `[-20,-2]`       | `1.7e-12` | `1.1e-6` | `3.2e-6` |
+
+The companion-consistency residual is `1.7e-12 – 6.3e-10` — **two to
+five orders below FW's `10⁻⁷·10⁻⁸` band**: the figure's BVPs are
+comfortably resolved. The second VC-8 facet — the BVP's *free* higher
+components `y₃ = u''`, `y₄ = u'''` at the deep-asymptotic endpoint
+`|z_a| = 20` (only `y₁, y₂` are pinned by the `2+2` split BC) — agree
+with the `pI2_tritronquee_ic` asymptotic seed to `~10⁻⁶·10⁻⁵`, the
+seed's own `n_terms = 2` truncation accuracy at `|x| = 20`; this
+certifies the BVP converged to the *tritronquée branch*, not merely to
+*a* companion solution.
+
+**Mutation-proven** (Rule 4): the same ray BVP solved at a starved
+`N = 6` has companion-consistency residual **`13.0`** — far above the
+FW band (RED) — while the figure `N = 96` solve is `6.3e-10` (GREEN).
+The starved solve's *Newton residual* stays at the spectral floor
+(`8e-12`) — proof that residual-norm convergence ≠ resolution, and that
+only the `D₁` companion-consistency check catches the under-resolution:
+exactly FW §5.2's insight. PI2S.8 asserts the figure-`N` GREEN and the
+starved-`N` RED in-test.
+
+### VC-9 — Weierstrass-℘ oracle for the vector pipeline
+
+The v0.1 *scalar* pipeline is ℘-oracle-validated (FW §5.1.1
+`u'' = 6u²`, the equianharmonic ℘ — `test/problems_test.jl`,
+`test/polefield_test.jl`). The v0.2 **vector** pipeline
+(`vector_solve_pade`, `vector_bvp_solve`, `vector_path_network_solve`,
+`extract_poles_shared_q`) had no equivalent oracle — its figure-grade
+exercise is the `P_I^(2)` tritronquée, which has no closed form. VC-9
+closes that gap: it formulates `u'' = 6u²` as the `d = 2` companion
+system `y' = (y₂, 6y₁²)` and drives it through the vector pipeline. The
+new testset is `test/vector_pipeline_oracle_test.jl` (`VPO.*`),
+registered in `test/runtests.jl`.
+
+**Measured oracle results vs FW Table 5.1 / the closed-form ℘ lattice:**
+
+- **VPO.1** — `vector_solve_pade` of the companion system on the
+  pole-free segment `[0, 0.5]` reproduces the FW closed-form `u(0.5) =
+  4.0044646690030875` to `rtol 1.8e-15`. The derivative component
+  `u'(0.5)` is carried by the single `h = 0.5` segment's (15,15)-Padé
+  and lands at `~4e-4` (the genuine single-segment vector Padé accuracy
+  for the derivative on this steep ℘ segment, confirmed converging
+  under finer `h`) — the tight `u'` oracle is VPO.3's job.
+- **VPO.2** — `vector_path_network_solve`, tunnelling ~21 ℘ lattice
+  poles along the real axis (a straight-line IVP step lands on a pole
+  and degenerates the shared-`Q` jet — this is *why* the path-network
+  exists), reaches the FW Table 5.1 **medium-range** value: measured
+  `u(30) = 1.0950944` vs the reference `1.095098255959744` — error
+  **`6.2e-6`** at walk step `h = 0.15` (264 visited nodes). The
+  **long-range** `u(10⁴)` is *not* asserted: the probe measured it
+  diverging (error `~5` after 58 705 tunnelled-pole nodes — the
+  accumulated shared-`Q` step error compounds over thousands of poles)
+  and the walk is impractically slow for a test; the achievable vector
+  pole-tunnelling frontier is the medium range, recorded honestly here.
+- **VPO.3** — `vector_bvp_solve` of the companion system on `[0, 0.5]`,
+  given only the closed-form ℘ *values* `u(0), u(0.5)` as 2-point
+  Dirichlet data, recovers the genuine ℘ *derivative* `u'(0) =
+  1.710337353176786` to **`~1e-15`** — the FW §5.2 "the BVP solver
+  provides `u'`" diagnostic, and a genuine oracle (the BVP is never
+  told `u'(0)`). The BVP solution tracks the independent IVP ℘
+  trajectory to `~1e-6`.
+- **VPO.4** — `extract_poles_shared_q` on a short path-network walk
+  past the nearest ℘ pole recovers the closed-form lattice pole `z = 1`
+  (FW md:297) to **`~1e-6`** — the FW Fig 4.7 pole-location capability
+  lifted to the shared-`Q` vector extractor, the same bar
+  `polefield_test.jl` PF.1.1 pins for the scalar pipeline. (A *dense*
+  2D ℘-lattice extraction is *not* claimed: the probe measured the
+  vector wedge walk threading the dense doubly-periodic lattice
+  erratically — worst-in-box `~1.3` — a genuine limit of a pipeline
+  designed for the *sparse* `P_I^(2)` wedge, recorded honestly.)
+
+**Mutation-proven** (Rule 4): VPO.5 perturbs the FW IC `u'(0)` by
+`1e-3` — a different ℘ translate — and confirms the perturbed solve no
+longer matches `u(0.5)` while the genuine IC does (RED/GREEN
+discriminator in-test). Out-of-test: M1 (perturb the `u_at_30` oracle
+to `1.10`) turns VPO.2 RED; M3 (corrupt the companion RHS to `5u²`)
+turns VPO.1/2/3/4 RED — both verified, both reverted. The `1e-4`
+tolerance on `u(30)` is the honest envelope of the vector
+pole-tunnelling accuracy (tightening it to `1e-8` would be RED — the
+measured error is `6.2e-6`).
+
+### Phase-D medium tier complete
+
+VC-4, VC-5, VC-7, VC-8, VC-9 are all shipped; the BVP and the
+vector-solver chain are now certified end-to-end against an independent
+oracle. VC-10 (two-run pole-disagreement) and VC-12 (7-fold symmetry,
+stretch) remain.
 
 ## References
 

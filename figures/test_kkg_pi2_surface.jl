@@ -631,4 +631,129 @@ const SURF2 = kkg_pi2_surface()      # second run, for reproducibility
             @test poisoned_edge.ΔP_rel > best_edge.ΔP_rel
         end
     end
+
+    @testset "PI2S.8 — VC-8 BVP endpoint higher-derivative match" begin
+        # ADR-0025 VC-8 (Validation Criteria Menu; bead
+        # `padetaylor-0ln.37.15`; Amendment 8).  FW 2011 §5.2's
+        # endpoint-derivative diagnostic
+        # (`references/markdown/FW2011_painleve_methodology_JCP230/
+        # FW2011_painleve_methodology_JCP230.md:192-193`) — estimate the
+        # endpoint derivatives of a converged Chebyshev BVP solution via
+        # the `D₁` matrix and match them to known values; a mismatch
+        # beyond `~10⁻⁷·10⁻⁸` says the collocation `N` is too small —
+        # adapted to the figure's `d = 4` first-order vector **companion**
+        # BVP.  The companion form asserts the exact chain identities
+        # `y[k]' = y[k+1]` (`k = 1,2,3`); `surf_vc8_companion_check`
+        # certifies that a converged collocation solution satisfies them:
+        # the spectral derivative `D₁·y[k]/s` must reproduce `y[k+1]` at
+        # the endpoints (and throughout) to FW tolerance.  This is a
+        # genuine self-consistency invariant of the spectral solution —
+        # it owes nothing to the asymptotic seed and catches an
+        # under-resolved `N`.
+        #
+        # The figure solves BVPs in `surf_ray_bvp` (every ray of the
+        # Region-1 fan) and `surf_anchor_bvp` (the Region-2 wedge
+        # anchor).  VC-8 is asserted on a representative ray BVP and on
+        # the anchor BVP — the figure's two BVP code paths.
+        f8, Jf8 = surf_companion()
+
+        # The FW §5.2 tolerance band: the diagnostic's "increase N"
+        # threshold is `10⁻⁷·10⁻⁸`.  A converged figure BVP must sit
+        # comfortably below it — `1e-7` is the load-bearing bar.
+        FW_VC8_TOL = 1.0e-7
+
+        for (label, sol8) in (
+                ("ray φ=180° (negative real axis)",
+                 surf_ray_bvp(f8, Jf8, deg2rad(180.0))),
+                ("ray φ=120°", surf_ray_bvp(f8, Jf8, deg2rad(120.0))),
+                ("anchor BVP [-20,-2]", surf_anchor_bvp()))
+            d8 = surf_vc8_companion_check(sol8)
+
+            # (a) the companion-consistency identity holds to FW
+            # tolerance — both at the endpoints (FW §5.2's check) and
+            # over the whole node set.  A collocation `N` too small
+            # would leave `D₁·y[k]/s − y[k+1]` above this band.
+            @test d8.consistency_endpoint < FW_VC8_TOL
+            @test d8.consistency_max      < FW_VC8_TOL
+            # The endpoint mismatch cannot exceed the global max (the
+            # endpoints are a subset of the nodes) — a structural sanity
+            # bound that pins the two quantities are consistently
+            # computed.
+            @test d8.consistency_endpoint ≤ d8.consistency_max + 1e-15
+
+            # (b) the BVP's own Newton residual is at the spectral floor
+            # — VC-8 reads a *converged* solution.
+            @test d8.residual_inf < 1.0e-8
+
+            # (c) the asymptotic-IC cross-check.  `VectorBVP` pins only
+            # `y[1],y[2]`; the free `y[3]=u''`, `y[4]=u'''` at the
+            # deep-asymptotic endpoint `|z_a|=20` must agree with the
+            # `pI2_tritronquee_ic` seed to the seed's own `n_terms=2`
+            # truncation accuracy — `O(10⁻⁵)` at `|x|=20` (the V8b probe
+            # number).  This certifies the BVP converged to the
+            # *tritronquée branch*, not merely to a companion solution.
+            @test d8.ic_y3_err < 1.0e-4
+            @test d8.ic_y4_err < 1.0e-4
+            # ...and to FAR better than O(1) — the seed and the solve
+            # genuinely agree, they are not unrelated.
+            @test d8.ic_y3_err < 1.0e-3
+            @test d8.ic_y4_err < 1.0e-3
+
+            @info "PI2S.8 — VC-8 BVP companion-consistency ($label)" *
+                  "\n  N                       = $(d8.N)" *
+                  "\n  companion-consistency max = " *
+                      "$(round(d8.consistency_max; sigdigits = 4))" *
+                  "\n  endpoint consistency      = " *
+                      "$(round(d8.consistency_endpoint; sigdigits = 4))" *
+                  "\n  y₃ vs asymptotic seed     = " *
+                      "$(round(d8.ic_y3_err; sigdigits = 4))" *
+                  "\n  y₄ vs asymptotic seed     = " *
+                      "$(round(d8.ic_y4_err; sigdigits = 4))" *
+                  "\n  BVP Newton residual       = " *
+                      "$(round(d8.residual_inf; sigdigits = 4))"
+        end
+
+        # --- VC-8 mutation-proof — an under-resolved BVP fails VC-8 -------
+        # The load-bearing invariant is `consistency_max < FW_VC8_TOL`.
+        # Solve the SAME ray BVP at a deliberately starved collocation
+        # `N` — small enough that the Chebyshev interpolant cannot
+        # resolve the tritronquée's curvature on the `[2,20]` ray — and
+        # confirm the companion-consistency residual blows past the FW
+        # band.  This proves VC-8 is the genuine "increase N" detector
+        # FW §5.2 describes, not a check the figure passes for free: at
+        # the figure `N = SURF_BVP_N = 96` it is comfortably GREEN, at a
+        # starved `N` it is RED.  (`N = 6` is the smallest the τ-method
+        # admits a 4-vector BC with — `VectorBVP` floors at `N ≥ 4`.)
+        starved = vector_bvp_solve(
+            f8,
+            SURF_R_MAX * cis(deg2rad(180.0)),
+            SURF_R_MIN * cis(deg2rad(180.0)),
+            ComplexF64[1 0 0 0; 0 1 0 0; 0 0 0 0; 0 0 0 0],
+            ComplexF64[0 0 0 0; 0 0 0 0; 1 0 0 0; 0 1 0 0],
+            let sa = pI2_tritronquee_ic(SURF_R_MAX * cis(deg2rad(180.0));
+                                        t = SURF_T, n_terms = 2),
+                sb = pI2_tritronquee_ic(SURF_R_MIN * cis(deg2rad(180.0));
+                                        t = SURF_T, n_terms = 2)
+                ComplexF64[sa[1], sa[2], sb[1], sb[2]]
+            end;
+            N = 6, tol = SURF_BVP_TOL, maxiter = SURF_BVP_MAXITER,
+            jacobian = Jf8,
+            initial_guess = z -> pI2_tritronquee_ic(z; t = SURF_T,
+                                                    n_terms = 2))
+        d_starved = surf_vc8_companion_check(starved)
+        # The starved solve's companion-consistency residual is far
+        # above the FW band — VC-8 RED, the "increase N" signal fires.
+        @test d_starved.consistency_max > FW_VC8_TOL
+        # ...and a converged figure-`N` solve on the same ray is GREEN —
+        # the discriminator is genuine.
+        d_full = surf_vc8_companion_check(
+            surf_ray_bvp(f8, Jf8, deg2rad(180.0)))
+        @test d_full.consistency_max < FW_VC8_TOL
+        @test d_starved.consistency_max > d_full.consistency_max
+        @info "PI2S.8 — VC-8 mutation-proof (starved N=6 vs figure N)" *
+              "\n  starved N=6  companion-consistency max = " *
+                  "$(round(d_starved.consistency_max; sigdigits = 4))" *
+              "\n  figure  N=$(d_full.N) companion-consistency max = " *
+                  "$(round(d_full.consistency_max; sigdigits = 4))"
+    end
 end

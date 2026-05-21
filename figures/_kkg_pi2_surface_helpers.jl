@@ -118,7 +118,9 @@
 # VC-4-validated field.  `vc5_pair` then matches the survivors into
 # conjugate pairs and reports the FW-style pairing-residual accuracy
 # estimate.  The VC-4/VC-5 machinery lives in the sibling helper
-# `figures/_kkg_pi2_vc45.jl` (CLAUDE.md Rule 6 file-size split).
+# `figures/_kkg_pi2_vc45.jl`; VC-8 (the BVP endpoint companion-
+# consistency certificate, ADR-0025 Amendment 8) in
+# `figures/_kkg_pi2_vc8.jl` — both CLAUDE.md Rule 6 file-size splits.
 # VC-7 (loop closure) remains a separate Phase-D bead.
 #
 # ### The stitch
@@ -218,6 +220,14 @@ end
 # §A3; beads `padetaylor-0ln.37.12` / `0ln.37.13`).
 if !isdefined(@__MODULE__, :vc4_validate)
     include(joinpath(@__DIR__, "_kkg_pi2_vc45.jl"))
+end
+
+# VC-8 (BVP endpoint higher-derivative match, FW 2011 §5.2) — the
+# Phase-D companion-consistency certificate of the figure's BVP solves
+# (ADR-0025 Amendment 8; bead `padetaylor-0ln.37.15`).  Sibling helper,
+# the Rule-6 file-size split, mirroring `_kkg_pi2_vc45.jl`.
+if !isdefined(@__MODULE__, :surf_vc8_companion_check)
+    include(joinpath(@__DIR__, "_kkg_pi2_vc8.jl"))
 end
 
 # ======================================================================
