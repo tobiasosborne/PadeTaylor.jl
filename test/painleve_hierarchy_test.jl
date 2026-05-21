@@ -40,12 +40,18 @@ asserts an invariant against a known-correct value (Rule 5):
     PH.1.5  failure modes      — m ≥ 3 throws; equation ≠ :I throws;
                                   wrong y0 length throws; n_terms ∉ {1,2}
                                   throws; n_terms = 2 with t ≠ 0 throws;
-                                  real(x0) ≥ 0 throws
+                                  abs(x0) < 1 throws
     PH.1.7  tritronquée IC n=2 — pI2_tritronquee_ic(·; n_terms = 2) at
                                   t = 0 equals Y + Y^{-6} (c_6 = 1) and
                                   its analytic derivatives; the n=2 seed's
                                   ODE residual is below 20/|x|^4 — orders
                                   of magnitude tighter than n=1 (bead V8b)
+    PH.1.8  tritronquée IC      — pI2_tritronquee_ic generalised to any
+            off-axis             complex x0 on the V_0 sheet (bead 0ln.32);
+                                  off-axis rays φ ∈ {2π/3,π,4π/3} give a
+                                  small, R-decaying P_I^(2) ODE residual,
+                                  and the φ=π ray reproduces the negative-
+                                  real-axis seed
     PH.1.6  mutation-proof     — recorded at end of file
 
 The decisive ground truth for the tritronquée seed (PH.1.4, PH.1.7) is
@@ -275,13 +281,13 @@ using PadeTaylor
         # v0.2 scope (the documented v1 corner), so it must throw.
         @test_throws ArgumentError pI2_tritronquee_ic(-20.0; t = 0.5,
                                                       n_terms = 2)
-        # pI2_tritronquee_ic: only the negative real axis is supported.
-        # real(x0) ≥ 0 must throw — on x > 0 the real ODE-consistent
-        # branch is u = -∛6·x^{1/3} < 0 (a documented v1 corner), and a
-        # zero x0 has no leading balance; both fail-fast (Rule 1).
-        @test_throws ArgumentError pI2_tritronquee_ic(20.0)
+        # pI2_tritronquee_ic: |x0| < 1 must throw — the KKG asymptotic
+        # series u ~ -∛6·x^{1/3} + … is meaningless at small |x0| (the
+        # V8/V8b figures seed at |x0| ≈ 20–50); fail-fast (Rule 1).
         @test_throws ArgumentError pI2_tritronquee_ic(0.0)
-        @test_throws ArgumentError pI2_tritronquee_ic(5.0; n_terms = 2)
+        @test_throws ArgumentError pI2_tritronquee_ic(-0.5)
+        @test_throws ArgumentError pI2_tritronquee_ic(0.3im)
+        @test_throws ArgumentError pI2_tritronquee_ic(-0.5; n_terms = 2)
     end
 
     # -------------------------------------------------------------------------
@@ -351,6 +357,92 @@ using PadeTaylor
     end
 
     # -------------------------------------------------------------------------
+    # PH.1.8 — tritronquée IC on OFF-AXIS rays of the V_0 sheet (bead
+    # 0ln.32).  pI2_tritronquee_ic is generalised from negative-real-axis-
+    # only to any complex x0 on the V_0 sheet.  The branch places the
+    # negative real axis at sheet angle θ = 3π: from the principal angle
+    # φ₀ = angle(x0) ∈ (-π,π], θ = φ₀≤0 ? φ₀+4π : φ₀+2π ∈ (2π,4π], and
+    # Y = -∛6·|x0|^{1/3}·exp(iθ/3).  The higher components are the branch-
+    # free rational functions y₂ = Y/(3x0), y₃ = -2Y/(9x0²),
+    # y₄ = 10Y/(27x0³); the c_6 correction adds (x0^{-2}, -2x0^{-3},
+    # 6x0^{-4}, -24x0^{-5})/36 (an even power of Y, single-valued in x0).
+    #
+    # Two ground-truth checks (Rule 5):
+    #   (a) the three test rays φ ∈ {2π/3, π, 4π/3} map to θ ∈ {8π/3, 3π,
+    #       10π/3} — all inside the V_0 pole-free sector
+    #       θ ∈ (3π − 6π/7+…, 3π + 6π/7−…) — and the φ = π ray reproduces
+    #       the negative-real-axis seed (continuity at the axis);
+    #   (b) the load-bearing assertion: the seed plugged into the P_I^(2)
+    #       ODE u'''' + 10u'² + 20u·u'' + 40(u³ + 6x) has a SMALL residual
+    #       that decays with R, with u'''' from the seed's CLOSED FORM
+    #       (NOT companion f[4] — that is the 0ln.30 tautology).
+    #       u'''' of Y = -∛6·x^{1/3}: coeff (1/3)(-2/3)(-5/3)(-8/3) = -80/81
+    #       and Y = -∛6·x^{1/3} ⇒ u4_Y = (80/81)·∛6·x0^{1/3}·x0^{-4};
+    #       u'''' of x0^{-2}/36: coeff (-2)(-3)(-4)(-5) = 120 ⇒ (120/36)x0^{-6}.
+    #   Empirically (verified in-session): |R1|·R ∈ [3.5,4.5] for n=1 and
+    #   |R2|·R⁴ ∈ [8.7,11] for n=2 — the SAME decay as on the negative
+    #   real axis (PH.1.4/1.7), so the bounds 6/R and 20/R⁴ carry over.
+    # -------------------------------------------------------------------------
+    @testset "PH.1.8 tritronquée IC on off-axis V_0-sheet rays" begin
+        c = cbrt(6.0)
+        for R in (15.0, 30.0), φ in (2π/3, 1.0π, 4π/3)
+            x0 = R * exp(im * φ)
+            for nt in (1, 2)
+                y = pI2_tritronquee_ic(x0; n_terms = nt)
+                @test length(y) == 4
+                @test eltype(y) <: Complex
+
+                # Reconstruct the branch independently and cross-check the
+                # leading component Y and the rational derivatives, plus
+                # the branch-free c_6 correction block when nt == 2.
+                φ0 = angle(x0)
+                θ  = φ0 ≤ 0 ? φ0 + 4π : φ0 + 2π
+                Y  = -c * abs(x0)^(1/3) * exp(im * θ / 3)
+                δ  = nt == 2 ?
+                     [x0^(-2), -2x0^(-3), 6x0^(-4), -24x0^(-5)] ./ 36 :
+                     zeros(ComplexF64, 4)
+                @test y[1] ≈ Y            + δ[1] atol = 1e-12
+                @test y[2] ≈ Y/(3x0)      + δ[2] atol = 1e-12
+                @test y[3] ≈ -2Y/(9x0^2)  + δ[3] atol = 1e-12
+                @test y[4] ≈ 10Y/(27x0^3) + δ[4] atol = 1e-12
+
+                # GROUND-TRUTH ODE residual — u'''' from the closed form.
+                u, ux, uxx, _ = y
+                u4 = (80/81) * c * abs(x0)^(1/3) * exp(im*θ/3) * x0^(-4)
+                nt == 2 && (u4 += (120/36) * x0^(-6))
+                resid = u4 + 10*ux^2 + 20*u*uxx + 40*(u^3 + 6*x0)
+                if nt == 1
+                    @test abs(resid) < 6 / R          # leading-order bound
+                else
+                    @test abs(resid) < 20 / R^4       # c_6-corrected bound
+                end
+            end
+            # n=2 residual must beat n=1 (the c_6 term is a refinement).
+            y1 = pI2_tritronquee_ic(x0; n_terms = 1)
+            y2 = pI2_tritronquee_ic(x0; n_terms = 2)
+            φ0 = angle(x0); θ = φ0 ≤ 0 ? φ0 + 4π : φ0 + 2π
+            r1 = abs((80/81)*c*abs(x0)^(1/3)*exp(im*θ/3)*x0^(-4) +
+                     10*y1[2]^2 + 20*y1[1]*y1[3] + 40*(y1[1]^3 + 6*x0))
+            r2 = abs((80/81)*c*abs(x0)^(1/3)*exp(im*θ/3)*x0^(-4) +
+                     (120/36)*x0^(-6) +
+                     10*y2[2]^2 + 20*y2[1]*y2[3] + 40*(y2[1]^3 + 6*x0))
+            @test r2 < r1
+        end
+
+        # Continuity at the negative real axis: the φ = π ray (a complex
+        # x0 = R·e^{iπ}) seed agrees with the real negative-axis seed.
+        for R in (15.0, 30.0)
+            y_axis = pI2_tritronquee_ic(-R; n_terms = 2)        # real path
+            y_ray  = pI2_tritronquee_ic(R*exp(im*1.0π); n_terms = 2)
+            @test maximum(abs.(y_ray .- y_axis)) < 1e-12
+        end
+
+        # Element type: Complex{BigFloat} x0 → Complex{BigFloat} seed.
+        yb = pI2_tritronquee_ic(big(20.0) * exp(im * big(2π/3)); n_terms = 1)
+        @test eltype(yb) == Complex{BigFloat}
+    end
+
+    # -------------------------------------------------------------------------
     # Umbrella: the module is wired into PadeTaylor.
     # -------------------------------------------------------------------------
     @testset "umbrella wiring" begin
@@ -390,10 +482,33 @@ end
 #         a tautological `f[4]`-based check would have stayed GREEN under
 #         this mutation (f[4] ≡ -(rest) regardless of sign).  Restored to
 #         GREEN (159/159).
+#   M5  — bead 0ln.32 generalisation.  `pI2_tritronquee_ic` general
+#         (off-axis) branch: the V_0-sheet leading order
+#         `Y = -∛6·|z|^{1/3}·exp(iθ/3)` mutated to `exp(iθ)` — the
+#         cube-root exponent dropped, so Y is no longer a cube root of
+#         -6x at all.  RESULT: 40 of 253 assertions RED, the PH.1.8
+#         off-axis block: the GROUND-TRUTH ODE residual `abs(resid) <
+#         6/R` jumped to 6235.6 (R=15) / 12470.9 (R=30) on the φ=2π/3
+#         and 4π/3 rays — the same ≈ -480·|x| explosion M4 exposed on
+#         the real axis.  (The φ=π ray stayed GREEN: there exp(iθ) =
+#         exp(i3π) = -1 = exp(iπ) coincidentally, the negative-real-axis
+#         special case.)  Confirms the off-axis residual check is
+#         GENUINE.  Restored to GREEN (253/253).
+#         FALSE START — a first mutation, dropping the `+2π`/`+4π`
+#         sheet shift (`θ = φ₀`), did NOT bite the ODE-residual
+#         assertion: `θ → θ − 2π` multiplies Y by `exp(-2πi/3)`, a cube
+#         root of unity, so the mutated Y is still *a* cube root of -6x
+#         and the leading dominant balance still holds — the residual
+#         stayed ≈ 0.3.  It only bit the explicit branch cross-checks
+#         (y[1..4] ≈ Y…).  Lesson: the dominant balance has a 3-fold
+#         cube-root ambiguity the residual check cannot see; the
+#         load-bearing mutation must perturb the *power* (θ/3 → θ), not
+#         the sheet index.
 #
-# All four mutations produced a RED suite; the source was restored to
+# All five mutations produced a RED suite; the source was restored to
 # GREEN after each.  The tests catch a wrong coefficient (M1), a wrong
-# t-sign (M2), a wrong exponent (M3), and — critically — the wrong
-# tritronquée branch (M4), which only the closed-form-u'''' residual
-# check (not the f[4] tautology) can detect.
+# t-sign (M2), a wrong exponent (M3), the wrong tritronquée branch on
+# the real axis (M4), and a wrong off-axis cube-root power (M5) — the
+# last two detectable only by the closed-form-u'''' residual check
+# (not the f[4] tautology).
 # -----------------------------------------------------------------------------
