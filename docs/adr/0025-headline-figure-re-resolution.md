@@ -204,6 +204,72 @@ Rule 9. All coding is serial (Rule 7: one Julia process).
   with `extrapolate=false` returns `NaN` (an honest gap), never a
   silently-extrapolated value.
 
+## Amendment 1 — Phase A exploration outcomes (2026-05-21)
+
+The Phase-A spikes (probes under `external/probes/`, gitignored — this
+amendment is their persistent record) resolve the two parameters the
+ADR left to exploration.
+
+### A1 — Stage-2 validity gate (bead `0ln.37.1`) — RESOLVED
+
+Five gate criteria auditioned on the 389-node V8b wedge walk:
+
+- Gates (ii) `h·min|t*|` and (iii) nearest-uncaptured singularity:
+  **rejected with evidence** — they over-estimate the honest radius
+  5.7× / 30×. The shared-Q roots are genuine *far* poles; the Padé in
+  fact fails by **order-24 truncation error** long before reaching any
+  pole. The honest radius is *truncation-limited*, not pole-limited.
+- Gate (i) `h`: unsound — over-estimates 36 % of nodes (the current
+  `extrapolate=false` default is already mildly dishonest).
+- Gate (iv) empirical (overlap + order-64 Taylor oracle): the
+  ground-truth anchor — honest radius median ≈ `1·h`, spread `0.6h–2h`.
+- **Winner — gate (v-b), per-node Jorba–Zou.** Feed each node's
+  rescaled order-24 jet to the existing `vector_step_jorba_zou`; it
+  honestly recovers **7–10.5× more disc area** than a global `κ·h`
+  gate at equal (≤2 %) over-estimation. A global constant cannot track
+  the 3.3× per-node spread; the per-node estimator collapses it to 1.5×.
+
+Production gate for B1 (`_stage2_fill`):
+```
+R_gate = min( s(tol)·h_JZ·h_v ,  0.5·h_v·min|t*| )
+  h_JZ    = vector_step_jorba_zou(rescaled order-24 jet, tol)
+  min|t*| = min |root of the node's shared-Q|
+  s(1e-6, 1e-8, 1e-10) = 0.34, 0.36 (default), 0.30
+```
+The truncation term binds for ~98 % of nodes; the `0.5·h·min|t*|`
+pole-adjacency clamp binds for ~2 % (deep-wedge nodes with a pole
+inside the disc). Honest by construction (`s<1` and the clamp both
+under-cover; gaps → `NaN`). **B1 sub-task:** cache the order-24 jet in
+the Stage-1 walk so the gate costs nothing extra.
+
+**Coupling finding:** B1 alone makes the figure *holier*, not bigger —
+honest discs are `med≈0.06, p90≈0.16` vs the dishonest `extrapolate=
+true`. Coverage must come from a denser walk: **B1 and B2 ship
+together.**
+
+### A3 — P_I⁽²⁾ local pole structure (bead `0ln.37.3`) — RESOLVED
+
+Dominant balance confirmed: every movable singularity is a **double
+pole** (`p=-2`), leading coefficient `A ∈ {-1,-3}`. Painlevé-test
+Laurent recursion `u = Σ aₖ(x-x₀)^{k-2}`:
+
+- `A=-1`: resonances `{-1,2,5,8}` — generic 4-parameter family
+  (V₀'s wedge poles expected here);
+- `A=-3`: resonances `{-3,-1,8,10}` — codimension-1 special family;
+- both families: **`a₁ = 0` exactly** — the residue vanishes
+  universally (as for P_I); no logarithmic terms.
+
+VC-4 acceptance form (final): per extracted pole `x₀`, fit
+`u ≈ A(x-x₀)⁻² + B(x-x₀)⁻¹ + C` by complex least squares on a ring of
+32 points at `r = min(0.05, 0.1·d_nearest)`:
+
+- **VC-4a** `min(|A+1|, |A+3|) < 0.10` — the ODE-structure check;
+- **VC-4b** `|B| < 0.10·|A|` — the zero-residue / Painlevé-property
+  check.
+
+Both are mutation-proof and independent of the path-network extraction
+algorithm under test.
+
 ## References
 
 - KKG 2015 TeX `references/tex/painleve_hierarchy/KapaevKleinGrava2015_PI2_tritronquee_ConstrApprox41/tritronquee_coeff.tex`
