@@ -35,6 +35,7 @@ julia --project=figures figures/fw2011_fig_5_2.jl
 julia --project=figures figures/ffw2017_fig_6.jl
 julia --project=figures figures/noumi_yamada_a4_pole_field.jl
 julia --project=figures figures/kkg_pi2_tritronquee_pole_field.jl
+julia --project=figures figures/kkg_pi2_tritronquee_surface.jl
 ```
 
 Each script prints timing + a one-line acceptance note and writes its
@@ -62,7 +63,8 @@ a runnable script.
 | `fw2011_fig_5_2.jl` | FW 2011 Fig 5.2 (`...md:320-326`) | `log₁₀`(rel-err) surface + accuracy/time contours over the `(order,h)` plane — the `order=30, h=0.5` justification |
 | `ffw2017_fig_6.jl` | FFW 2017 Fig 6 (`references/markdown/FFW2017_painleve_riemann_surfaces_preprint/FFW2017_painleve_riemann_surfaces_preprint.md:295-297`) | generic `P_V` `(α,β,γ,δ)=(1,−1,1,−1/2)` on three Riemann sheets — nine panels (`|w(ζ)|`, `|u(z)|`, `arg u(z)` × sheets 0/1/2); the first FFW 2017 figure reproduced |
 | `noumi_yamada_a4_pole_field.jl` | v0.2 PRD `n ≥ 4` acceptance (`docs/v0p2_plan.md` row V8a; pillar B §1, §5.2) | A_4⁽¹⁾ Noumi–Yamada pole field — generic α, all-nonzero IC; three panels (shared-`Q` pole scatter, Stage-1 visited tree, `log₁₀‖f‖` node field); the first vector-stack higher-Painlevé pole-field figure |
-| `kkg_pi2_tritronquee_pole_field.jl` | KKG 2015 Figs 7.4/7.5 (`references/painleve_hierarchy/KapaevKleinGrava2015_PI2_tritronquee_ConstrApprox41.pdf`; v0.2 plan row V8b; pillar C §1, §4) | P_I⁽²⁾ tritronquée V₀ (t = 0) — Panel A the vector-BVP solution on the negative real axis `[-20,-2]` (2+2 (u,u') split, matches the KKG `n=2` asymptotic to `3.4e-4`), Panel B the pole-field scatter (21 poles in the `arg x ≈ 0` wedge from a path-network march; 389 visited nodes); the final v0.2 vector-epic figure |
+| `kkg_pi2_tritronquee_pole_field.jl` | KKG 2015 Figs 7.4/7.5 (`references/painleve_hierarchy/KapaevKleinGrava2015_PI2_tritronquee_ConstrApprox41.pdf`; v0.2 plan row V8b; pillar C §1, §4) | P_I⁽²⁾ tritronquée V₀ (t = 0) — Panel A the vector-BVP solution on the negative real axis `[-20,-2]` (2+2 (u,u') split, matches the KKG `n=2` asymptotic to `3.4e-4`), Panel B the pole-field scatter (21 poles in the `arg x ≈ 0` wedge from a path-network march; 389 visited nodes); the V8b vector-epic figure |
+| `kkg_pi2_tritronquee_surface.jl` | KKG 2015 Figs 7.4/7.5 (`references/painleve_hierarchy/KapaevKleinGrava2015_PI2_tritronquee_ConstrApprox41.pdf`; v0.2 plan row V8b+; ADR-0024; pillar C §1, §4) | **the v0.2 headline figure** — the full `Re V₀` (KKG Fig 7.4) and `Im V₀` (KKG Fig 7.5) of the P_I⁽²⁾ tritronquée over the complex x-plane `[-20,20]²`, each as a 2D `:RdBu`-diverging heatmap and a 3D `Axis3` surface (2×2 panel grid). The smooth ~270° sector is the F3 triple-method majority vote (ray-fan BVP / 2D-Chebyshev + Gridap FEM Laplace); the `arg x ≈ 0` wedge is the path-network + Stage-2 fill (`\|u\|` spikes to O(10³), display-clamped to ±15 → the KKG jagged plateau); 21 wedge poles overlaid as dots; the negative-real-axis ridge is positive (`Re V₀(-15,0) = +4.48`, KKG eq. (1.3)) |
 
 `...md` is `references/markdown/FW2011_painleve_methodology_JCP230/FW2011_painleve_methodology_JCP230.md`.
 
@@ -105,6 +107,16 @@ the proven quantitative deliverable (probe `padetaylor-0ln.29`
 `3.4e-4`); Panel B (the pole-field march) succeeds as shipped
 (`h = 0.1`, 21 poles in the `arg x ≈ 0` wedge) — the wedge step `h`
 is a hand-tuned v1 corner (the principled shared-`Q`-root wedge
-criterion is deferred bead `padetaylor-0ln.23`), and the full KKG
-Re/Im surface over `[-20,20]²` is a separate deferred corner (Stage-2
-fill, bead `padetaylor-0ln.28`).
+criterion is deferred bead `padetaylor-0ln.23`).
+
+`kkg_pi2_tritronquee_surface.jl` is the v0.2 headline figure: the full
+KKG Fig 7.4/7.5 `Re V₀`/`Im V₀` surface over `[-20,20]²`, computed by
+the F3 triple-method kernel `_kkg_pi2_surface_helpers.jl` (bead
+`padetaylor-0ln.33`) — itself validated by `test_kkg_pi2_surface.jl`
+(17888 assertions GREEN). F4 is the render only; its acceptance is the
+visual KKG-7.4/7.5 match — a smooth ~270° sector with a positive
+negative-real-axis ridge, the jagged `arg x ≈ 0` pole wedge, and `Im V₀`
+odd under `y ↦ -y` (Schwarz symmetry). The four F3 v1 corners
+(inner-arc asymptotic seed, wedge Stage-2 extrapolation, hand-tuned
+wedge `h = 0.1`, ±3° Stokes-strip masking) carry through to this figure
+and are documented in its header docstring.
