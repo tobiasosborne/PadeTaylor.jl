@@ -36,34 +36,41 @@
 #
 # ### Region 1 — the triple-method majority vote
 #
-# **Method 1 — the ray-fan BVP (the direct voter).**  A fan of radial
-# rays `x = ξ·e^{iφ}`, `ξ ∈ [r_min, r_max]`, with `φ` stepping across
-# the sector.  Each ray is a `vector_bvp_solve` of the `d = 4` companion
-# `P_I^(2)` system (probe-verified recipe, `_kkg_pi2_helpers.jl` Stage
-# A), boundary-pinned at both ends by the F1-generalised
-# `pI2_tritronquee_ic` — now valid on any `V_0`-sheet ray, not just the
-# negative real axis.  The resulting polar grid is bilinearly
-# interpolated onto the Cartesian grid.  (Bilinear interpolation across
-# a fan of *exact* BVP rays is a sampling step, not a harmonic
-# reconstruction — Methods 2/3 are the principled harmonic fills; the
-# vote reconciles all three.)
+# The three sector voters live in the sibling helper
+# `figures/_kkg_pi2_sector.jl` (the Rule-6 file-size split); its
+# top-of-file docstring is the chapter on the triple-method pipeline.
+# In brief:
 #
-# **Method 2 — the in-house 2D-Chebyshev Laplace solve.**  A pole-free
+# **Voter 1 — the ray-fan BVP (the direct voter).**  A fan of radial
+# rays `x = ξ·e^{iφ}`, `φ` stepping across the sector.  Each ray is a
+# `vector_bvp_solve` of the `d = 4` companion `P_I^(2)` system,
+# boundary-pinned at both ends by the F1-generalised
+# `pI2_tritronquee_ic`.  **C2 (ADR-0025 Amendment 10)** widens each
+# ray's segment inward to `[R_MAX, R_INNER_BC]`, `R_INNER_BC < R_MIN`,
+# so the inner arc `|x| = R_MIN` is a BVP *interior* point — its value
+# is the genuine ODE solution, not the pinned asymptotic seed.
+# **C3 (ADR-0025 Amendment 10)** reconstructs voter 1 onto the Cartesian
+# grid by exact-radius barycentric evaluation of the stored ray
+# `VectorBVPSolution`s + a Catmull-Rom cubic angular blend across four
+# bracketing rays — retiring the lossy bilinear polar-raster scheme.
+#
+# **Voter 2 — the in-house 2D-Chebyshev Laplace solve.**  A pole-free
 # *angular sector* `{r₀ ≤ |x| ≤ r₁, θ₀ ≤ arg x ≤ θ₁}` is **conformally
 # a rectangle** under `w = log x`: `Re w = log|x| ∈ [log r₀, log r₁]`,
 # `Im w = arg x ∈ [θ₀, θ₁]`.  The Laplacian is conformally invariant,
 # so the sector Laplace problem IS a rectangle Laplace problem in `w`
 # (ADR-0024 Context).  `PadeTaylor.laplace2d_solve` solves it on the
-# rectangle with Dirichlet data: the two edge rays `θ = θ_lo, θ_hi` are
-# Method-1's edge BVP rays (reused — no extra solve); the inner and
-# outer arcs `s = log r_min, log r_max` are the `pI2_tritronquee_ic`
-# asymptotic series.  Run once for `Re u`, once for `Im u`, then mapped
-# back to the `x`-plane.
+# rectangle with Dirichlet data.  **C2** sources *all four* rectangle
+# edges from the ray fan: the side rays as before, and now the inner /
+# outer arcs from the fan's innermost / outermost interior radial
+# samples — *not* the `pI2_tritronquee_ic` asymptotic series (v1
+# corner C1 retired).  Run once for `Re u`, once for `Im u`.
 #
-# **Method 3 — the Gridap FEM Laplace solve.**  `laplace2d_solve_gridap`
+# **Voter 3 — the Gridap FEM Laplace solve.**  `laplace2d_solve_gridap`
 # (`figures/_kkg_pi2_gridap_helper.jl`), the same rectangle + the same
-# Dirichlet data, via an algorithmically-disjoint finite-element
-# discretisation — a FEM bug and a spectral bug cannot coincide.
+# (now BVP-sourced) Dirichlet data, via an algorithmically-disjoint
+# finite-element discretisation — a FEM bug and a spectral bug cannot
+# coincide.
 #
 # **The vote.**  At every Cartesian grid point inside the sector the
 # three estimates are reduced per component by the **median** (the
@@ -135,17 +142,19 @@
 #
 # ## v1 corners (CLAUDE.md Rule 9 — each with its forcing condition)
 #
-#   1. **Inner-arc asymptotic seed.**  Method 2/3's inner arc
-#      (`|x| = r_min ≈ 2`) is the KKG `n_terms = 2` asymptotic series,
-#      which is an *asymptotic* (large-`|x|`) expansion — at `|x| ≈ 2`
-#      its truncation error is `O(10⁻²)`, far worse than at the outer
-#      arc.  The harmonic solve damps this inward error (a Dirichlet
-#      datum's error is not amplified in the interior), and the ray-fan
-#      voter (Method 1, a genuine BVP) is *exact* on the inner arc, so
-#      the vote's median is anchored by an accurate voter there.  *Forcing
-#      condition for v2:* if a figure pin inside `|x| ≲ 3` must hold to
-#      better than `1e-2`, replace the inner-arc datum with a small-`|x|`
-#      Taylor/BVP patch.  (This is the sector's corner — Phase C.)
+#   1. **RETIRED — inner-arc asymptotic seed (C1).**  Voters 2/3's inner
+#      arc (`|x| = r_min ≈ 2`) was the KKG `n_terms = 2` asymptotic
+#      series — an *asymptotic* (large-`|x|`) expansion, `O(10⁻³·10⁻²)`
+#      at `|x| ≈ 2`.  ADR-0025 Amendment 10's C2 retires it: each ray
+#      BVP now extends inward to `R_INNER_BC = 1.05` (`surf_ray_bvp`),
+#      so the inner arc is a BVP *interior* datum (`~1·10⁻⁴` accurate —
+#      the C2 probe), and voters 2/3 read the inner / outer arcs from
+#      the ray fan instead of the series (`surf_laplace_voters`).  The
+#      C2 instinct "just read `fan.U[1,:]`" was *probe-falsified* — the
+#      production 2+2 split BC pins the BVP inner endpoint to the seed
+#      exactly — so the genuine fix is the *extended-inward* segment,
+#      not a re-route of the same pinned data.  Detail:
+#      `figures/_kkg_pi2_sector.jl`, `external/probes/c2-arc-data/`.
 #
 #   2. **RETIRED — wedge Stage-2 extrapolation.**  The shipped figure
 #      called the Stage-2 fill with `extrapolate = true`, evaluating the
@@ -170,6 +179,19 @@
 #      the Stokes line would let the two regions be stitched without a
 #      gap (Phase E).
 #
+#   5. **RETIRED — bilinear ray-fan voter (C5).**  Voter 1 sampled the
+#      ray fan onto a `40`-row polar raster and *bilinearly*
+#      interpolated it onto the Cartesian grid — interpolation error
+#      `~1·10⁻³` at the `6°` fan resolution (the C3 audition,
+#      `external/probes/c2-arc-data/c3_audition.jl`), larger than the
+#      bulk triple-method spread.  ADR-0025 Amendment 10's C3 retires
+#      it: `surf_ray_eval` now evaluates the stored ray
+#      `VectorBVPSolution`s exactly in the radius (barycentric) and
+#      blends four bracketing rays by a Catmull-Rom cubic in the angle
+#      (`~7·10⁻⁵` — a ~19× cut).  A *harmonic* voter 1 was rejected by
+#      the audition — it would be `≡ voter 2` and collapse the ADR-0024
+#      triple-method independence.
+#
 #   The wedge panel itself is no longer a v1 corner: ADR-0025
 #   Amendment 2 rescopes it to the achievable senior-grade deliverable
 #   — the validated pole field + honest partial underlay — and the A2
@@ -181,7 +203,10 @@
 #     re-resolution ADR; **Amendment 1** the B1 true-radius gate,
 #     **Amendment 2** the wedge-panel rescope (pole field + honest
 #     partial underlay), **Amendment 4** the B2 adaptive `:max_q_root`
-#     walk.  This kernel's Region 2 is the B3 deliverable of that ADR.
+#     walk, **Amendment 10** the C2 BVP-sourced arc data + C3 voter-1
+#     reconstruction.  This kernel's Region 2 is the B3 deliverable.
+#   * `figures/_kkg_pi2_sector.jl` — Region 1: the three sector voters
+#     and the median vote (the Rule-6 split; C2/C3 live there).
 #   * `docs/adr/0024-laplace-harmonic-extension.md` — the triple-method
 #     majority-vote decision; the conformal `w = log x` rectangle map;
 #     the Gridap-as-figure-helper correction.
@@ -232,6 +257,13 @@ if !isdefined(@__MODULE__, :surf_vc8_companion_check)
     include(joinpath(@__DIR__, "_kkg_pi2_vc8.jl"))
 end
 
+# Region 1 — the pole-free-sector triple-method pipeline (ADR-0024's
+# three voters + the median vote).  Sibling helper, the Rule-6
+# file-size split; ADR-0025 Amendment 10 (C2 BVP-sourced arc data + C3
+# voter-1 reconstruction) lives here.  The `include` is placed AFTER the
+# figure-defining constants below, so the sector code sees `SURF_R_MIN`,
+# `SURF_BVP_N`, … — see the `include` call further down.
+
 # ======================================================================
 # Figure-defining constants — fixed here, the kernel is a pure function
 # of them.
@@ -256,19 +288,35 @@ const SURF_WEDGE_HALF_DEG = 36.0
 # degrades at the boundary (v1 corner 4).
 const SURF_SECTOR_MARGIN_DEG = 4.0
 
-# Ray-fan radii.  r_min ≈ 2 (the asymptotic seed is meaningless below
-# |x| ≈ 1; 2 keeps a margin), r_max = 20 (the grid corner radius is
-# 20√2 ≈ 28, but the sector pins are set at 20 and the corners outside
-# the disc |x| ≤ 20 are NaN-masked — see SURF_R_MAX use).
+# Ray-fan radii.  r_min ≈ 2 (the inner arc of the conformal rectangle),
+# r_max = 20 (the grid corner radius is 20√2 ≈ 28, but the sector pins
+# are set at 20 and the corners outside the disc |x| ≤ 20 are
+# NaN-masked — see SURF_R_MAX use).
 const SURF_R_MIN = 2.0
 const SURF_R_MAX = 20.0
+
+# C2 (ADR-0025 Amendment 10) — the ray BVP's *inner boundary-condition*
+# radius.  Each sector ray BVP solves over `[SURF_R_MAX, SURF_R_INNER_BC]`
+# with `SURF_R_INNER_BC < SURF_R_MIN`, so the inner arc `|x| = SURF_R_MIN`
+# is an *interior* collocation point — its value is the genuine
+# ODE-constrained solution, not the asymptotic seed that pins the
+# endpoint.  The C2-exploration probe (`external/probes/c2-arc-data/`)
+# measured `1.05` recovers the inner-arc datum to `~1·10⁻⁴` (vs the
+# seed's `~5·10⁻⁴` directly at the arc) and that every fan ray BVP
+# still converges; `pI2_tritronquee_ic` floors at `|x| ≥ 1`, so `1.05`
+# keeps a margin.  The boundary-layer seed error lives in
+# `[SURF_R_INNER_BC, SURF_R_MIN]`, below the rendered window.
+const SURF_R_INNER_BC = 1.05
 
 # Angular step of the ray fan (≈ 6°).  The sector spans ≈ 280° usable.
 const SURF_RAY_DPHI_DEG = 6.0
 
-# BVP discretisation per ray.  N+1 Chebyshev nodes; N = 96 is converged
-# (V8b probe: identical to ~1e-7 for N ≥ 40).
-const SURF_BVP_N       = 96
+# BVP discretisation per ray.  N+1 Chebyshev nodes.  C2 widened the ray
+# segment to `[SURF_R_MAX, SURF_R_INNER_BC]` (ADR-0025 Amendment 10);
+# the wider segment has more curvature near its inner end, so `N = 128`
+# (the C2 probe: companion-consistency `~1·10⁻¹¹` at `N = 128` for
+# `[20, 1.05]`, vs a marginal `~1·10⁻⁷` at `N = 96`).
+const SURF_BVP_N       = 128
 const SURF_BVP_TOL     = 1.0e-9
 const SURF_BVP_MAXITER = 40
 
@@ -373,248 +421,18 @@ function surf_in_mask(z)
 end
 
 # ======================================================================
-# Region 1, Method 1 — the ray-fan BVP
+# Region 1 — the pole-free-sector triple-method pipeline
 # ======================================================================
-
-"""
-    surf_companion() -> (f, Jf)
-
-The `P_I^(2)` companion RHS and analytic Jacobian at `t = SURF_T`.
-"""
-surf_companion() = (painleve_hierarchy(:I, 2; t = SURF_T),
-                    painleve_hierarchy_jacobian(:I, 2; t = SURF_T))
-
-"""
-    surf_ray_bvp(f, Jf, φ) -> VectorBVPSolution
-
-Solve the `P_I^(2)` tritronquée BVP on the single radial ray
-`x = ξ·e^{iφ}`, `ξ ∈ [SURF_R_MIN, SURF_R_MAX]`.  The 2+2 split boundary
-condition pins `(u, u')` at both ray endpoints from the F1-generalised
-`pI2_tritronquee_ic` (valid on any `V_0`-sheet ray); the interior guess
-is the same seed sampled at every collocation node.
-"""
-function surf_ray_bvp(f, Jf, φ::Real)
-    CT = ComplexF64
-    z_a = SURF_R_MAX * cis(φ)        # outer end (smaller seed error)
-    z_b = SURF_R_MIN * cis(φ)        # inner end
-    Ba = zeros(CT, SURF_D, SURF_D)
-    Bb = zeros(CT, SURF_D, SURF_D)
-    Ba[1, 1] = 1; Ba[2, 2] = 1       # rows 1-2: (u, u') at z_a
-    Bb[3, 1] = 1; Bb[4, 2] = 1       # rows 3-4: (u, u') at z_b
-    seed_a = pI2_tritronquee_ic(z_a; t = SURF_T, n_terms = 2)
-    seed_b = pI2_tritronquee_ic(z_b; t = SURF_T, n_terms = 2)
-    g = CT[seed_a[1], seed_a[2], seed_b[1], seed_b[2]]
-    return vector_bvp_solve(f, z_a, z_b, Ba, Bb, g;
-                            N        = SURF_BVP_N,
-                            tol      = SURF_BVP_TOL,
-                            maxiter  = SURF_BVP_MAXITER,
-                            jacobian = Jf,
-                            initial_guess =
-                                z -> pI2_tritronquee_ic(z; t = SURF_T,
-                                                        n_terms = 2))
-end
-
-"""
-    surf_ray_fan() -> NamedTuple
-
-Method 1.  Solve the BVP on a fan of rays covering the pole-free sector
-(angle step `SURF_RAY_DPHI_DEG`, a few degrees inside the Stokes lines).
-Returns `(phis, radii, U)`:
-  - `phis`  : the ray angles (radians, ascending);
-  - `radii` : the common radial sample raster `[SURF_R_MIN, SURF_R_MAX]`;
-  - `U`     : `Matrix{ComplexF64}` of `u = V_0(x)`, `U[i,j] = u` at
-              `radii[i]·e^{im·phis[j]}` — the polar grid Methods 2/3 are
-              voted against and the Cartesian fill bilinearly samples.
-"""
-function surf_ray_fan()
-    f, Jf = surf_companion()
-    # The fan runs across the sector arg x ∈ (36°+margin, 324°-margin).
-    φ_lo = deg2rad(SURF_WEDGE_HALF_DEG + SURF_SECTOR_MARGIN_DEG)
-    φ_hi = deg2rad(360.0 - SURF_WEDGE_HALF_DEG - SURF_SECTOR_MARGIN_DEG)
-    nφ   = max(2, round(Int, (φ_hi - φ_lo) / deg2rad(SURF_RAY_DPHI_DEG)) + 1)
-    phis = collect(range(φ_lo, φ_hi; length = nφ))
-    # Radial raster: a modest number of points — each BVP solution is a
-    # smooth barycentric interpolant, so the raster is just a sampling.
-    nr    = 40
-    radii = collect(range(SURF_R_MIN, SURF_R_MAX; length = nr))
-    U = Matrix{ComplexF64}(undef, nr, nφ)
-    for (j, φ) in enumerate(phis)
-        sol = surf_ray_bvp(f, Jf, φ)
-        for (i, r) in enumerate(radii)
-            U[i, j] = sol(ComplexF64(r * cis(φ)))[1]
-        end
-    end
-    return (phis = phis, radii = radii, U = U)
-end
-
-"""
-    surf_ray_eval(fan, z) -> ComplexF64
-
-Bilinearly interpolate the ray-fan polar grid `fan.U` at the
-complex point `z` (in polar coordinates `(|z|, arg z)`).  Returns
-`NaN + NaN·im` when `z` is outside the fan's `[r,φ]` coverage — the
-caller treats that as "Method 1 has no datum here".
-"""
-function surf_ray_eval(fan, z)
-    r = abs(z)
-    # Map arg z into the fan's angular window [φ_lo, φ_hi] ⊂ (0, 2π).
-    φ = mod2pi(angle(z))
-    phis, radii, U = fan.phis, fan.radii, fan.U
-    (r < radii[1] || r > radii[end]) && return ComplexF64(NaN, NaN)
-    (φ < phis[1]  || φ > phis[end])  && return ComplexF64(NaN, NaN)
-    i = searchsortedlast(radii, r); i = clamp(i, 1, length(radii) - 1)
-    j = searchsortedlast(phis, φ);  j = clamp(j, 1, length(phis) - 1)
-    tr = (r - radii[i]) / (radii[i + 1] - radii[i])
-    tφ = (φ - phis[j])  / (phis[j + 1] - phis[j])
-    u00 = U[i, j];     u10 = U[i + 1, j]
-    u01 = U[i, j + 1]; u11 = U[i + 1, j + 1]
-    return (1 - tr) * (1 - tφ) * u00 + tr * (1 - tφ) * u10 +
-           (1 - tr) * tφ * u01      + tr * tφ * u11
-end
-
-# ======================================================================
-# Region 1, Methods 2 & 3 — the two Laplace voters on the w = log x
-# conformal rectangle
-# ======================================================================
-
-"""
-    surf_sector_rectangle() -> NamedTuple
-
-The conformal-map rectangle for the harmonic solves.  Under `w = log x`
-the pole-free sector becomes a rectangle in `(s, θ) = (log|x|, arg x)`:
-`s ∈ [log r_min, log r_max]`, `θ ∈ [φ_lo, φ_hi]` (the same angular
-window as the ray fan).  Returns `(s_lo, s_hi, θ_lo, θ_hi)`.
-"""
-function surf_sector_rectangle()
-    φ_lo = deg2rad(SURF_WEDGE_HALF_DEG + SURF_SECTOR_MARGIN_DEG)
-    φ_hi = deg2rad(360.0 - SURF_WEDGE_HALF_DEG - SURF_SECTOR_MARGIN_DEG)
-    return (s_lo = log(SURF_R_MIN), s_hi = log(SURF_R_MAX),
-            θ_lo = φ_lo, θ_hi = φ_hi)
-end
-
-"""
-    surf_laplace_voters(fan) -> NamedTuple
-
-Methods 2 & 3.  Build the Dirichlet boundary data on the `w = log x`
-rectangle and run both Laplace solvers — the in-house 2D-Chebyshev
-`laplace2d_solve` (Method 2) and the Gridap FEM `laplace2d_solve_gridap`
-(Method 3) — once for `Re u` and once for `Im u`.
-
-Boundary data:
-  - the two **edge rays** `θ = θ_lo, θ_hi` reuse `fan`'s edge BVP rays
-    (the first and last fan columns) — no extra solve;
-  - the inner / outer **arcs** `s = log r_min, log r_max` are the KKG
-    `pI2_tritronquee_ic` asymptotic series (v1 corner 1: the inner arc
-    is the weaker datum, damped by the harmonic solve and anchored by
-    the exact Method-1 voter).
-
-Returns `(rem2, imm2, rem3, imm3, rect)` — the four `Laplace2DSolution`
-objects (Re/Im × Method-2/3) and the rectangle.
-"""
-function surf_laplace_voters(fan)
-    rect = surf_sector_rectangle()
-    s_lo, s_hi = rect.s_lo, rect.s_hi
-    θ_lo, θ_hi = rect.θ_lo, rect.θ_hi
-
-    # Edge-ray data: u on the first / last fan column, as a function of
-    # the radial coordinate s = log|x|.  The fan's radii raster is in r;
-    # interpolate it in s (its own barycentric ray solution is smooth,
-    # but the fan only stores a discrete raster, so a 1-D linear
-    # interpolation in s reads it back).
-    radii = fan.radii
-    s_grid = log.(radii)
-    function ray_col_eval(col::AbstractVector{ComplexF64}, s)
-        s ≤ s_grid[1]   && return col[1]
-        s ≥ s_grid[end] && return col[end]
-        k  = searchsortedlast(s_grid, s)
-        k  = clamp(k, 1, length(s_grid) - 1)
-        tk = (s - s_grid[k]) / (s_grid[k + 1] - s_grid[k])
-        return (1 - tk) * col[k] + tk * col[k + 1]
-    end
-    col_lo = fan.U[:, 1]                      # θ = θ_lo edge
-    col_hi = fan.U[:, end]                    # θ = θ_hi edge
-
-    # Arc data: the asymptotic series at fixed |x|, as a function of θ.
-    arc(r, θ) = pI2_tritronquee_ic(ComplexF64(r * cis(θ));
-                                   t = SURF_T, n_terms = 2)[1]
-
-    # Dirichlet callables.  The rectangle's x-axis is s, y-axis is θ:
-    #   bc_x_lo : s = s_lo edge (inner arc),  function of θ
-    #   bc_x_hi : s = s_hi edge (outer arc),  function of θ
-    #   bc_y_lo : θ = θ_lo edge,              function of s
-    #   bc_y_hi : θ = θ_hi edge,              function of s
-    re_inner(θ) = real(arc(SURF_R_MIN, θ))
-    re_outer(θ) = real(arc(SURF_R_MAX, θ))
-    re_elo(s)   = real(ray_col_eval(col_lo, s))
-    re_ehi(s)   = real(ray_col_eval(col_hi, s))
-    im_inner(θ) = imag(arc(SURF_R_MIN, θ))
-    im_outer(θ) = imag(arc(SURF_R_MAX, θ))
-    im_elo(s)   = imag(ray_col_eval(col_lo, s))
-    im_ehi(s)   = imag(ray_col_eval(col_hi, s))
-
-    rem2 = laplace2d_solve(re_inner, re_outer, re_elo, re_ehi,
-                           (s_lo, s_hi), (θ_lo, θ_hi);
-                           Nx = SURF_LAP_NX, Ny = SURF_LAP_NY)
-    imm2 = laplace2d_solve(im_inner, im_outer, im_elo, im_ehi,
-                           (s_lo, s_hi), (θ_lo, θ_hi);
-                           Nx = SURF_LAP_NX, Ny = SURF_LAP_NY)
-    rem3 = laplace2d_solve_gridap(re_inner, re_outer, re_elo, re_ehi,
-                                  (s_lo, s_hi), (θ_lo, θ_hi);
-                                  n_x = SURF_FEM_NX, n_y = SURF_FEM_NY)
-    imm3 = laplace2d_solve_gridap(im_inner, im_outer, im_elo, im_ehi,
-                                  (s_lo, s_hi), (θ_lo, θ_hi);
-                                  n_x = SURF_FEM_NX, n_y = SURF_FEM_NY)
-    return (rem2 = rem2, imm2 = imm2, rem3 = rem3, imm3 = imm3, rect = rect)
-end
-
-"""
-    surf_laplace_eval(lap, z) -> Union{NamedTuple, Nothing}
-
-Evaluate a Laplace voter pair (Method 2 *or* Method 3) at the complex
-point `z`: map `z` through `w = log z` into the rectangle and read the
-`Re u` / `Im u` solutions.  Returns `(re, im)` or `nothing` when `z`
-falls outside the rectangle (`|z| ∉ [r_min, r_max]` or `arg z` outside
-the angular window).
-"""
-function surf_laplace_eval_one(re_sol, im_sol, rect, z)
-    s = log(abs(z))
-    θ = mod2pi(angle(z))
-    (s < rect.s_lo || s > rect.s_hi) && return nothing
-    (θ < rect.θ_lo || θ > rect.θ_hi) && return nothing
-    return (re = re_sol(s, θ), im = im_sol(s, θ))
-end
-
-# ======================================================================
-# Region 1 — the per-grid-point majority vote
-# ======================================================================
-
-"""
-    surf_vote(a, b, c) -> (voted, spread)
-
-The 3-sample majority vote, per component.  `a, b, c` are the three
-method estimates of one scalar (`Re u` or `Im u`).  The **median** of
-the three is the vote — it discards a single outlier and keeps the two
-that concur.  `spread` is the maximum pairwise disagreement, the
-agreement-map diagnostic.
-
-If a voter is `NaN` (a method has no datum at this point) it is dropped:
-with two finite voters the vote is their mean and `spread` their
-difference; with one, that one; with none, `NaN`.
-"""
-function surf_vote(a, b, c)
-    vals = filter(isfinite, (a, b, c))
-    if length(vals) == 3
-        x, y, z = vals
-        voted  = x + y + z - min(x, y, z) - max(x, y, z)   # median
-        spread = max(x, y, z) - min(x, y, z)
-        return voted, spread
-    elseif length(vals) == 2
-        return (vals[1] + vals[2]) / 2, abs(vals[1] - vals[2])
-    elseif length(vals) == 1
-        return vals[1], 0.0
-    else
-        return NaN, NaN
-    end
+# `surf_companion`, `surf_ray_bvp`, `surf_ray_fan`, `surf_ray_eval`,
+# `surf_sector_rectangle`, `surf_ray_arc_eval`, `surf_laplace_voters`,
+# `surf_laplace_eval_one`, `surf_vote` — the three ADR-0024 voters and
+# the median vote.  The Rule-6 file-size split (mirroring the VC-4/5/8/10
+# helpers); `include`d here, after the figure-defining constants, so the
+# sector code sees `SURF_R_MIN`, `SURF_R_INNER_BC`, `SURF_BVP_N`, ….
+# ADR-0025 Amendment 10 (C2 BVP-sourced arc data + C3 voter-1
+# reconstruction) is implemented in this sibling.
+if !isdefined(@__MODULE__, :surf_ray_fan)
+    include(joinpath(@__DIR__, "_kkg_pi2_sector.jl"))
 end
 
 # ======================================================================

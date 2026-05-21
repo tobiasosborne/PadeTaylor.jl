@@ -133,11 +133,11 @@ condition rather than scheduled.)
 
 | Corner | Disposition | Bead |
 |--------|-------------|------|
-| C1 inner-arc asymptotic datum | **Retired** — voters 2/3 inner/outer arc data sourced from BVP ray samples, not the series | C2 |
+| C1 inner-arc asymptotic datum | **Retired** (Amendment 10) — each sector ray BVP extends inward to `R_INNER_BC = 1.05 < R_MIN`, so the inner arc is a BVP-*interior* datum (`~1·10⁻⁴`, vs the series' `~5·10⁻⁴`); voters 2/3 source all four `w`-rectangle edges from the ray fan, the asymptotic series gone from the voter-boundary path | C2 (`0ln.37.10`) |
 | C2 `extrapolate=true` | **Retired** — Lever-1 true-radius gate; no out-of-disc evaluation | B1 |
 | C3 hand-tuned `h=0.1` | **Retired** — Lever-2 adaptive / shared-Q-root step | B2 |
 | C4 `±3°` Stokes mask | **Audition** (Phase E) — fill via overlap, or justify as masked with a forcing condition | E1 |
-| C5 bilinear ray-fan voter | **Audition** (Phase C3) — harmonic reconstruction, or justify bilinear | C3 |
+| C5 bilinear ray-fan voter | **Retired** (Amendment 10) — audition outcome: a harmonic voter 1 `≡ voter 2` (rejected — collapses ADR-0024 independence), plain bilinear materially too lossy (rejected); voter 1 reconstructed exact-radius (barycentric) + cubic-angular (Catmull-Rom), keeping it a direct ODE solve | C3 (`0ln.37.11`) |
 | C6 `121²` grid / `6°` rays | **Retired** — Lever-3 refinement | C1 |
 
 ## The phased child-bead plan
@@ -915,6 +915,157 @@ genuinely load-bearing for VC-10 specifically. Restored to GREEN.
 VC-4, VC-5, VC-7, VC-8, VC-9, VC-10 are all shipped — the entire
 Phase-D validation suite is in place. Only VC-12 (7-fold rotational
 symmetry, a stretch criterion) remains.
+
+## Amendment 10 — Phase-C sector voters: C2 BVP-sourced arc data + C3 voter-1 reconstruction (2026-05-21)
+
+Beads `padetaylor-0ln.37.10` (C2) and `padetaylor-0ln.37.11` (C3) — the
+Phase-C sector-voter improvements — retire v1 corners **C1** (the
+inner-arc asymptotic Dirichlet datum) and **C5** (the bilinear ray-fan
+voter). The Region-1 triple-method pipeline was extracted into the
+Rule-6 sibling helper `figures/_kkg_pi2_sector.jl` (mirroring the
+VC-4/5/8/10 splits); the ADR-0024 median vote and the two Laplace
+voters are unchanged — C2/C3 touch only the *voters' inputs* and the
+voter-1 reconstruction.
+
+### C2 — the inner arc is a BVP-interior datum, not the asymptotic seed
+
+The recon proposed "source voters 2/3's inner/outer arc data from the
+ray-fan BVP samples" (the ledger's original C2 line). The
+C2-exploration probe (`external/probes/c2-arc-data/probe.jl`)
+**falsified the literal form of that instruction**: the production ray
+BVP's `2+2` split boundary condition *pins* `(u, u')` at the inner
+endpoint `z_b = R_MIN·e^{iφ}` to the `n_terms = 2` asymptotic seed
+**exactly** — the probe measured `|prod(R_MIN) − seed(R_MIN)| = 0.0`.
+So `fan.U[1,:]` *is* the seed; re-routing voters 2/3 to read it would
+collapse the inner-arc vote spread (all three voters then agree on the
+same value) **without improving accuracy** — a gamed metric, not a fix
+(CLAUDE.md Rule 2).
+
+The genuine fix the probe found and C2 ships: each sector ray BVP is
+solved over an **extended-inward segment** `[R_MAX, R_INNER_BC]` with
+`R_INNER_BC = 1.05 < R_MIN = 2`, so the inner arc `|x| = R_MIN` is an
+*interior* collocation point. Its value is then the genuine
+ODE-constrained solution — the asymptotic-seed error is confined to the
+`[R_INNER_BC, R_MIN]` boundary layer below the rendered window.
+Measured (probe, vs a high-`N` deep-inward dedicated-BVP oracle
+converged to `~10⁻¹⁴`):
+
+| inner-arc datum | mean error vs oracle |
+|-----------------|----------------------|
+| `n_terms = 2` asymptotic seed | `~5·10⁻⁴` |
+| C2 BVP-interior (`R_INNER_BC = 1.2`) | `~4.9·10⁻⁴` (barely better — `R_INNER_BC` must reach near `|x| = 1`) |
+| **C2 BVP-interior (`R_INNER_BC = 1.05`)** | **`~1·10⁻⁴`** (a genuine ~5× gain) |
+
+The probe confirmed all 48 fan-ray BVPs converge with the extended
+segment, and that the **outer** arc needs no change — extending outward
+moves `u(R_MAX)` only `~2·10⁻⁸` (the seed at `|x| = 20` is already that
+accurate). `surf_laplace_voters` now sources *all four* `w`-rectangle
+edges from the ray fan, removing the asymptotic series from the
+voter-2/3 boundary path entirely (C1 fully retired). The wider
+`[20, 1.05]` segment has more inner-end curvature; **`SURF_BVP_N`
+was raised `96 → 128`** — the probe measured the BVP companion-
+consistency (VC-8's metric) at `~10⁻⁷` (marginal vs the FW `10⁻⁷·10⁻⁸`
+band) for `N = 96` on `[20, 1.05]` but `~10⁻¹¹` at `N = 128`; PI2S.8
+confirms `9.9·10⁻¹²` on the production figure.
+
+### C3 — voter-1 reconstruction: exact-radius + cubic-angular
+
+The C3 audition (`external/probes/c2-arc-data/c3_audition.jl`) measured
+the bilinear polar-raster voter-1 reconstruction's interpolation error
+against dedicated through-the-point BVP oracles:
+
+| voter-1 scheme | inter-ray error (median / max) | on-ray radial error (median / max) |
+|----------------|--------------------------------|------------------------------------|
+| **bilinear (the v1 corner C5 scheme)** | `7.9·10⁻⁴` / `1.3·10⁻³` | `3.6·10⁻⁴` / `1.0·10⁻³` |
+| exact-radius + linear-angular | `5.9·10⁻⁴` / `7.3·10⁻⁴` | `0.0` / `2.4·10⁻¹⁵` |
+| **exact-radius + cubic-angular (shipped)** | `1.5·10⁻⁷` / `6.9·10⁻⁵` | `0.0` / `2.4·10⁻¹⁵` |
+
+The bilinear error (`1.3·10⁻³` max) is **larger than the bulk
+triple-method spread** (`~5.5·10⁻⁴`, worklog 057) — at the production
+`6°` fan it was the least-accurate of the three voters, feeding its
+interpolation error straight into the vote. C5 is therefore genuinely
+material; "retain bilinear" is *not* a valid audition outcome.
+
+**Audition decision.** A *harmonic* voter 1 — a Laplace solve on the
+`w`-rectangle with the ray fan's own edge data — would be **`≡ voter 2`**
+(the in-house 2D-Chebyshev `laplace2d_solve`) and collapse the
+triple-method independence ADR-0024 requires (a FEM voter, a spectral
+voter, and a *third* that must stay disjoint). It is **rejected**.
+Plain bilinear is **also rejected** (materially too lossy). The shipped
+reconstruction keeps voter 1 a **direct ODE solve** (independent of both
+Laplace voters) and only fixes the polar-raster → Cartesian sampling:
+exact in the radius (the stored ray `VectorBVPSolution`s are barycentric
+spectral interpolants, exact at any radius — the `40`-row raster and its
+`~3.6·10⁻⁴` radial error are gone) and a Catmull-Rom cubic in the angle
+across four bracketing rays (inter-ray error `1.3·10⁻³ → 6.9·10⁻⁵`,
+~19×). In the two **boundary** angular cells the four-ray stencil is
+degenerate (no genuine flanking ray on the Stokes-line side); there the
+blend falls back to **linear** — a clamped-stencil cubic *extrapolates*
+in the steep, `6°`-under-sampled near-Stokes field and was measured to
+swing voter 1 `~8·10⁻³` off the bracketing-ray bracket. The three
+voters stay algorithmically disjoint.
+
+### Measured before/after — the sector spread
+
+The triple-method `spread` map (max pairwise voter disagreement), old
+pipeline vs C2+C3, over the rendered sector:
+
+| region | OLD median | C2+C3 median | OLD max | C2+C3 max |
+|--------|-----------:|-------------:|--------:|----------:|
+| inner arc (`|x| ≤ 3`) | `1.8·10⁻³` | **`1.4·10⁻⁴`** (~13×) | `2.9·10⁻³` | `3.9·10⁻³` |
+| bulk (`|x| ≥ 5`) | `5.4·10⁻⁴` | **`8.7·10⁻⁵`** (~6×) | `1.3·10⁻³` | `1.0·10⁻³` |
+
+The **median** spread improves dramatically everywhere — C2/C3 make the
+voters genuinely more accurate, not merely more agreeable. The
+inner-arc **max** spread rises slightly (`2.9·10⁻³ → 3.9·10⁻³`). This
+is **honest, expected, and in-scope**: an independent high-`N` BVP
+oracle confirms that at the worst inner-arc point voter 1 is now
+*accurate* (error `3.7·10⁻⁴`) while voters 2/3 — the Laplace solves —
+carry a `~5·10⁻³` error near the negative-real-axis inner arc. The old
+pipeline *masked* that error because its seed-contaminated bilinear
+voter 1 was *also* wrong there and agreed with voters 2/3; fixing voter
+1 un-masks the voter-2/3 defect, exactly as worklog-057 lesson 57
+predicts a majority vote should ("a vote earns its keep by exposing
+disagreement"). The voter-2/3 inner-arc inaccuracy traces to the
+**`w`-rectangle Laplace resolution** near the steep negative-axis inner
+arc (`SURF_LAP_NX = 40` radial nodes) — that is bead `0ln.37.9` (C1,
+"high-resolution sector — finer grid, denser rays, higher Laplace N"),
+a separate scheduled follow-up; C2/C3's mandate is the voter *inputs*
+and the voter-1 reconstruction, not the Laplace `N`. PI2S.2's
+`max < 1e-2` bound still holds (`3.9·10⁻³`).
+
+### Mutation-proven (Rule 4)
+
+`figures/test_kkg_pi2_surface.jl` PI2S.11 pins both decisions; PI2S.2
+gains the C2 inner-arc-spread report. Both mutation-proven out-of-test:
+
+- **C2** — reverting `surf_ray_bvp`'s `r_in` default to `SURF_R_MIN`
+  (the legacy `[R_MAX, R_MIN]` pinned segment) turns **9 PI2S.11
+  assertions RED**: the per-angle `err_fan < err_seed` oracle checks,
+  the segment-extent checks, and the mutation-proof discriminator. It
+  confirms the central probe finding — the legacy inner endpoint *is*
+  the asymptotic seed exactly, and the spread-only metric does **not**
+  catch it (PI2S.2's `inner_med` stays low under the mutation, because
+  all three voters then agree on the same wrong value). The genuine,
+  load-bearing C2 invariant is PI2S.11's *oracle* comparison, not the
+  spread.
+- **C3** — snapping the query radius to the `40`-row raster (the
+  retired bilinear scheme's radial quantization) turns **4 PI2S.11
+  assertions RED**: the exact-radius bar (`c3_radial_max` `0.0 →
+  2.5·10⁻²`), the inter-ray bar (`3.8·10⁻²`), and the two
+  bilinear-comparison assertions. The exact-radius reconstruction is
+  genuinely load-bearing.
+
+Both reverted; `figures/test_kkg_pi2_surface.jl` is GREEN at
+**24196 / 24196** (PI2S.8 confirms `N = 128` companion-consistency
+`9.9·10⁻¹²`; the figure is unaffected elsewhere).
+
+### Phase C — C2 + C3 complete
+
+C2 and C3 are shipped. Phase C's remaining bead is `0ln.37.9` (C1 — the
+high-resolution sector: finer grid, denser rays, higher Laplace `N`),
+which will additionally close the residual voter-2/3 inner-arc
+under-resolution this amendment's measurement surfaced.
 
 ## References
 

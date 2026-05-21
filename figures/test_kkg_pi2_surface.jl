@@ -172,6 +172,46 @@ const SURF2 = kkg_pi2_surface()      # second run, for reproducibility
         # ...and even the inner-arc v1 corner stays bounded.
         @test mx < 1e-2
 
+        # --- C2 — the inner-arc vote spread (ADR-0025 Amendment 10) -------
+        # v1 corner C1: voters 2/3's inner-arc (`|x| ≈ 2`) Dirichlet datum
+        # was the KKG `n_terms = 2` asymptotic series, and worklog 057
+        # measured the inner-arc triple-method spread at a coarse
+        # ~2.9·10⁻³ median.  C2 retires C1 — each ray BVP extends inward
+        # to `SURF_R_INNER_BC < SURF_R_MIN`, so the inner arc is a
+        # BVP-*interior* datum (`~1·10⁻⁴`), and voters 2/3 source the
+        # arc from the ray fan.  The inner-arc spread MEDIAN must now sit
+        # materially below the worklog ~2.9·10⁻³ baseline (`< 5·10⁻⁴`).
+        #
+        # NOTE — this spread assertion *reports the C2 gain* but is NOT
+        # the load-bearing C2 proof: spread alone is gameable — a fan
+        # whose inner endpoint is the pinned seed makes all three voters
+        # agree on the SAME wrong value, collapsing the spread without
+        # improving accuracy (the C2-exploration probe's central
+        # finding).  The genuine, mutation-proven C2 invariant is
+        # PI2S.11's *oracle* comparison (`err_fan < err_seed` against a
+        # high-`N` dedicated BVP).  This block is the figure-level
+        # symptom; PI2S.11 is the certificate.  (The inner-arc *max*
+        # spread is left to `mx < 1e-2`: C2/C3 make voter 1 accurate,
+        # which honestly *un-masks* a pre-existing voter-2 Laplace-
+        # rectangle under-resolution near the negative-real-axis inner
+        # arc — bead `0ln.37.9`, the higher-Laplace-N sector refinement,
+        # not C2/C3.  ADR-0025 Amendment 10 records this in full.)
+        inner_sp = Float64[]
+        for j in 1:n, i in 1:n
+            s = SURF.spread[i, j]
+            isnan(s) && continue
+            abs(ComplexF64(SURF.xs[i], SURF.ys[j])) ≤ 3.0 &&
+                push!(inner_sp, s)
+        end
+        @test !isempty(inner_sp)
+        sort!(inner_sp)
+        inner_med = inner_sp[cld(length(inner_sp), 2)]
+        @test inner_med < 5e-4               # C2 — well below worklog ~2.9e-3
+        @info "PI2S.2 — C2 inner-arc spread (|x| ≤ 3)" *
+              "\n  inner-arc spread median = $(round(inner_med; sigdigits = 4))" *
+              " (worklog-057 baseline ≈ 2.9e-3)" *
+              "\n  whole-sector spread median = $(round(med; sigdigits = 4))"
+
         # The voted surface IS the per-component median of the three
         # voters.  Re-derive the median from `sector_method` with an
         # INDEPENDENT computation — `Statistics.median` on the finite
@@ -911,5 +951,200 @@ const SURF2 = kkg_pi2_surface()      # second run, for reproducibility
         # The genuine two-ordering indicator is strictly non-zero — the
         # different paths really did diverge (the FFW premise).
         @test m.median_disagree > 0.0
+    end
+
+    @testset "PI2S.11 — C2/C3 sector voter-1 reconstruction" begin
+        # ADR-0025 Amendment 10 (beads `padetaylor-0ln.37.10` C2 +
+        # `0ln.37.11` C3).  C2 retires v1 corner C1 — the inner-arc
+        # Dirichlet datum is now a BVP-interior sample, not the KKG
+        # asymptotic series.  C3 retires v1 corner C5 — voter 1 is
+        # reconstructed exact-in-radius (the stored ray `VectorBVP
+        # Solution`s, barycentric) + cubic-in-angle (Catmull-Rom across
+        # four bracketing rays), retiring the lossy bilinear polar
+        # raster.  A *harmonic* voter 1 was rejected by the C3 audition:
+        # it would be a Laplace solve `≡ voter 2` and collapse the
+        # ADR-0024 triple-method independence.  This testset pins both
+        # decisions' load-bearing invariants and mutation-proves them.
+        fan11 = surf_ray_fan()
+        f11, Jf11 = surf_companion()
+
+        # --- C2 — the ray BVP segment extends inward past the inner arc --
+        # The genuine C2 fix is the *extended-inward* segment: each ray
+        # BVP runs `[SURF_R_MAX, SURF_R_INNER_BC]` with
+        # `SURF_R_INNER_BC < SURF_R_MIN`, so the inner arc `|x| = R_MIN`
+        # is an INTERIOR collocation point — not the pinned endpoint.
+        @test SURF_R_INNER_BC < SURF_R_MIN
+        ray11 = surf_ray_bvp(f11, Jf11, deg2rad(196.0))
+        @test isapprox(abs(ray11.z_b), SURF_R_INNER_BC; atol = 1e-9)
+        @test isapprox(abs(ray11.z_a), SURF_R_MAX;      atol = 1e-9)
+        # The inner arc is strictly inside the BVP segment — the C2
+        # precondition that makes the inner-arc datum an ODE-constrained
+        # interior value rather than the asymptotic seed.
+        @test SURF_R_INNER_BC < SURF_R_MIN < SURF_R_MAX
+
+        # --- C2 — the inner-arc datum beats the asymptotic seed ----------
+        # Independent oracle: a high-`N`, deep-inward dedicated ray BVP,
+        # converged to ~1e-14.  The C2 fan inner-arc datum must be
+        # materially closer to it than the `n_terms = 2` series is.
+        function oracle_ray(φ)
+            CT = ComplexF64
+            z_a = SURF_R_MAX * cis(φ); z_b = 1.02 * cis(φ)
+            Ba = zeros(CT, 4, 4); Bb = zeros(CT, 4, 4)
+            Ba[1,1] = 1; Ba[2,2] = 1; Bb[3,1] = 1; Bb[4,2] = 1
+            sa = pI2_tritronquee_ic(z_a; t = SURF_T, n_terms = 2)
+            sb = pI2_tritronquee_ic(z_b; t = SURF_T, n_terms = 2)
+            vector_bvp_solve(f11, z_a, z_b, Ba, Bb,
+                             CT[sa[1], sa[2], sb[1], sb[2]];
+                             N = 220, tol = 1e-9, maxiter = 40,
+                             jacobian = Jf11,
+                             initial_guess = z -> pI2_tritronquee_ic(z;
+                                 t = SURF_T, n_terms = 2))
+        end
+        n_c2_better = 0; n_c2_tested = 0
+        for degφ in (60.0, 120.0, 196.0, 240.0, 300.0)
+            φ = deg2rad(degφ)
+            oref = oracle_ray(φ)(ComplexF64(SURF_R_MIN * cis(φ)))[1]
+            fan_arc = surf_ray_arc_eval(fan11, SURF_R_MIN, φ)
+            seed_arc = pI2_tritronquee_ic(ComplexF64(SURF_R_MIN * cis(φ));
+                                          t = SURF_T, n_terms = 2)[1]
+            err_fan  = abs(fan_arc  - oref)
+            err_seed = abs(seed_arc - oref)
+            # The C2 BVP-sourced inner-arc datum is closer to the oracle
+            # than the asymptotic series — at every tested angle.
+            @test err_fan < err_seed
+            # ...and it is genuinely accurate (the C2 probe: ~1e-4).
+            @test err_fan < 1e-3
+            err_fan < err_seed && (n_c2_better += 1)
+            n_c2_tested += 1
+        end
+        @test n_c2_better == n_c2_tested
+
+        # --- C2 mutation-proof — the legacy `[R_MAX, R_MIN]` segment ------
+        # Solve the SAME ray with the inner BC pinned at `SURF_R_MIN`
+        # (the pre-C2 behaviour): the inner endpoint is then the pinned
+        # asymptotic seed, and the value at `|x| = R_MIN` is the seed
+        # *exactly* — measurably less accurate than the C2 interior
+        # datum.  This proves the extended-inward segment is genuinely
+        # load-bearing for C2, not cosmetic.
+        legacy = surf_ray_bvp(f11, Jf11, deg2rad(196.0);
+                              r_in = SURF_R_MIN)
+        legacy_arc = legacy(ComplexF64(SURF_R_MIN * cis(deg2rad(196.0))))[1]
+        seed196 = pI2_tritronquee_ic(
+            ComplexF64(SURF_R_MIN * cis(deg2rad(196.0)));
+            t = SURF_T, n_terms = 2)[1]
+        # The legacy inner endpoint IS the asymptotic seed (the 2+2 split
+        # BC pins it) — the exact equality the C2-exploration probe found.
+        @test isapprox(legacy_arc, seed196; atol = 1e-12)
+        oref196 = oracle_ray(deg2rad(196.0))(
+            ComplexF64(SURF_R_MIN * cis(deg2rad(196.0))))[1]
+        # C2's interior datum is strictly closer to the oracle than the
+        # legacy pinned-seed endpoint — the mutation-proof discriminator.
+        @test abs(surf_ray_arc_eval(fan11, SURF_R_MIN, deg2rad(196.0)) -
+                  oref196) < abs(legacy_arc - oref196)
+
+        # --- C3 — voter 1 is exact in the radius -------------------------
+        # The C3 reconstruction evaluates the stored ray `VectorBVP
+        # Solution` directly — a barycentric spectral interpolant, exact
+        # at ANY radius.  On a fan ray, `surf_ray_eval` at a non-raster
+        # radius must equal that ray's BVP solution to ~1e-9.  The
+        # retired bilinear scheme interpolated a 40-row raster and could
+        # not — it carried ~3.6e-4 radial error (the C3 audition).
+        j_mid = cld(length(fan11.phis), 2)
+        φ_on  = fan11.phis[j_mid]
+        sol_on = fan11.sols[j_mid]
+        c3_radial_max = 0.0
+        for r in (3.3, 7.7, 11.1, 16.6)        # deliberately off-raster
+            z = ComplexF64(r * cis(φ_on))
+            c3_radial_max = max(c3_radial_max,
+                                abs(surf_ray_eval(fan11, z) - sol_on(z)[1]))
+        end
+        # Exact in the radius — far below the retired bilinear scheme's
+        # ~3.6e-4 on-ray radial error.
+        @test c3_radial_max < 1e-8
+
+        # --- C3 — voter 1 is accurate between rays (cubic-angular) -------
+        # At an inter-ray midpoint a DEDICATED BVP straight through that
+        # angle is the independent oracle.  The C3 cubic reconstruction's
+        # inter-ray error must be materially below the retired bilinear
+        # scheme's ~1.3e-3 max (the C3 audition measured ~6.9e-5).
+        c3_inter_max = 0.0
+        for jr in (10, 20, 30)
+            φ_mid = (fan11.phis[jr] + fan11.phis[jr + 1]) / 2
+            sol_mid = surf_ray_bvp(f11, Jf11, φ_mid)
+            for r in (4.0, 9.0, 14.0)
+                z = ComplexF64(r * cis(φ_mid))
+                c3_inter_max = max(c3_inter_max,
+                                   abs(surf_ray_eval(fan11, z) - sol_mid(z)[1]))
+            end
+        end
+        # Materially below the retired bilinear scheme's ~1.3e-3 max —
+        # the load-bearing C3 bar (`< 3e-4` is comfortably above the
+        # audition's ~6.9e-5 yet far below bilinear's 1.3e-3).
+        @test c3_inter_max < 3e-4
+
+        # --- C3 mutation-proof — the retired bilinear polar raster -------
+        # Reconstruct voter 1 the OLD way: sample the fan onto a 40-row
+        # polar raster and bilinearly interpolate.  On a fan ray at an
+        # off-raster radius it carries a real radial interpolation error
+        # — it CANNOT meet the C3 exact-radius bar.  This proves the
+        # exact-radius reconstruction is genuinely load-bearing.
+        let radii_b = collect(range(SURF_R_MIN, SURF_R_MAX; length = 40)),
+            phis_b  = fan11.phis
+            Ub = Matrix{ComplexF64}(undef, length(radii_b), length(phis_b))
+            for (jb, sol) in enumerate(fan11.sols), (ib, r) in
+                    enumerate(radii_b)
+                Ub[ib, jb] = sol(ComplexF64(r * cis(phis_b[jb])))[1]
+            end
+            function bilin_v1(z)
+                r = abs(z); φ = mod2pi(angle(z))
+                ib = clamp(searchsortedlast(radii_b, r), 1,
+                           length(radii_b) - 1)
+                jb = clamp(searchsortedlast(phis_b, φ), 1,
+                           length(phis_b) - 1)
+                tr = (r - radii_b[ib]) / (radii_b[ib+1] - radii_b[ib])
+                tφ = (φ - phis_b[jb]) / (phis_b[jb+1] - phis_b[jb])
+                return (1-tr)*(1-tφ)*Ub[ib,jb] + tr*(1-tφ)*Ub[ib+1,jb] +
+                       (1-tr)*tφ*Ub[ib,jb+1]   + tr*tφ*Ub[ib+1,jb+1]
+            end
+            bilin_radial_max = 0.0
+            for r in (3.3, 7.7, 11.1, 16.6)
+                z = ComplexF64(r * cis(φ_on))
+                bilin_radial_max = max(bilin_radial_max,
+                                       abs(bilin_v1(z) - sol_on(z)[1]))
+            end
+            # The retired bilinear scheme carries a real on-ray radial
+            # error (~1e-4) — far above the C3 exact-radius `1e-8` bar:
+            # the reconstruction change is genuinely load-bearing.
+            @test bilin_radial_max > 1e-6
+            @test bilin_radial_max > c3_radial_max
+        end
+
+        # --- C3 — the three voters stay algorithmically independent ------
+        # The audition's binding constraint: voter 1 must NOT become a
+        # Laplace solve (≡ voter 2).  Verify the three voters genuinely
+        # disagree at a mid-sector point — a FEM voter, a spectral voter
+        # and a direct-ODE voter, three disjoint computations.  If voter
+        # 1 had been made harmonic, voter 1 ≡ voter 2 to ~1e-12 here.
+        lap11 = surf_laplace_voters(fan11)
+        z_ind = ComplexF64(-8.0, 3.0)
+        v1_ind = surf_ray_eval(fan11, z_ind)
+        l2_ind = surf_laplace_eval_one(lap11.rem2, lap11.imm2,
+                                       lap11.rect, z_ind)
+        l3_ind = surf_laplace_eval_one(lap11.rem3, lap11.imm3,
+                                       lap11.rect, z_ind)
+        @test l2_ind !== nothing && l3_ind !== nothing
+        # Voter 1 (direct ODE solve) is NOT bit-identical to voter 2
+        # (spectral Laplace) — they are genuinely different computations.
+        @test abs(real(v1_ind) - l2_ind.re) > 1e-9
+        # ...yet all three agree to figure tolerance (the vote is sound).
+        @test abs(real(v1_ind) - l2_ind.re) < 1e-2
+        @test abs(l2_ind.re - l3_ind.re)    < 1e-2
+
+        @info "PI2S.11 — C2/C3 sector voter-1 reconstruction" *
+              "\n  C2 inner-arc datum vs oracle (5 angles): all beat the seed" *
+              "\n  C3 on-ray radial error  = $(round(c3_radial_max; sigdigits = 3))" *
+              " (retired bilinear: ~3.6e-4)" *
+              "\n  C3 inter-ray error      = $(round(c3_inter_max; sigdigits = 3))" *
+              " (retired bilinear: ~1.3e-3)"
     end
 end
