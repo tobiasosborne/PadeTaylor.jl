@@ -60,6 +60,30 @@ value (Rule 5):
                                    Q-root is near; the cached `visited_jets`
                                    match the no-cache fallback; degenerate
                                    inputs throw (Rule 1).
+    VPN.2.7  B4 Voronoi honesty   — the retained nearest-node Voronoi fill
+                                   (ADR-0025 Amendment 2, bead B4) is
+                                   honest by construction: every covered
+                                   (non-NaN) fill cell is evaluated by a
+                                   node whose verified disc `R_gate`
+                                   STRICTLY contains it — the Padé is
+                                   never extrapolated.
+
+## The B4 audition — Voronoi retained over a blend (ADR-0025 Amendment 2)
+
+Bead `padetaylor-0ln.37.8` auditioned the nearest-node Voronoi fill
+against a distance-weighted blend of all overlapping in-disc Padé
+evaluations.  The audition
+(`external/probes/stage2-blend-audition/audition.jl`) measured, on the
+*actual* `P_I⁽²⁾` tritronquée wedge underlay, that the B1 true-radius
+discs barely overlap (98.2 % of covered pixels lie in exactly one
+node's disc; only 14.9 % of Voronoi seams lie inside a real overlap;
+the inter-disc disagreement at the overlaps is `~6·10⁻¹⁰` — machine
+precision).  A blend would change `~1.8 %` of a `~5 %` underlay by
+`~10⁻⁹` — a no-op.  The audition therefore **retains** the Voronoi
+fill (a well-evidenced retain is a legitimate audition outcome,
+Rule 9).  `VPN.2.7` pins the honesty invariant that motivated the
+audition's "the blend cannot be more honest than what we have"
+conclusion: the retained fill never evaluates a Padé outside its disc.
 
 Self-contained: `using Test, PadeTaylor` only — runnable standalone
 (`julia --project=. test/vector_path_network_stage2_test.jl`) and under
@@ -378,6 +402,65 @@ harmonic_exact(z) = ComplexF64[sin(z), cos(z)]
             [ComplexF64[1.0]], ComplexF64[1.0], h_v, 1.0e-8)
     end
 
+    # -------------------------------------------------------------------------
+    # VPN.2.7 — B4 Voronoi honesty (ADR-0025 Amendment 2, bead 0ln.37.8).
+    #
+    # The B4 audition retained the nearest-node Voronoi fill.  Its
+    # honesty contract — the load-bearing property the audition relied
+    # on to conclude "a blend cannot be more honest" — is: every covered
+    # (finite) Stage-2 cell is evaluated by SOME visited node whose B1
+    # true-radius disc `R_gate` strictly contains that cell; the Padé is
+    # never evaluated outside its verified disc.  We assert this
+    # directly: for each finite fill cell, at least one node satisfies
+    # `abs(z_f − z_v) ≤ R_gate(node)`.  A Riccati pole problem is used
+    # so the grid genuinely straddles covered and NaN regions.
+    # -------------------------------------------------------------------------
+    @testset "VPN.2.7 B4 Voronoi honesty" begin
+        p    = 1.0 + 0.6im
+        z0   = -0.4 + 0.0im
+        cs   = ComplexF64[1.0, 0.7, -1.3]
+        prob = riccati_pole_problem_s2(p, z0, cs; order = 24)
+        targets = ComplexF64[x + y * im
+                             for x in 0.0:0.4:1.6 for y in -0.4:0.4:1.2]
+        fine = ComplexF64[x + y * im
+                          for x in 0.0:0.2:1.6 for y in -0.2:0.2:1.2]
+        tol  = 1.0e-8
+        sol  = vector_path_network_solve(prob, targets; order = 24, h = 0.25,
+                                         tol = tol, fine_grid = fine)
+
+        # Recompute every node's B1 R_gate — the exact gate `_stage2_fill`
+        # applies (same `_validity_radius`, same cached `visited_jets`).
+        n_nodes = length(sol.visited_z)
+        R_gate  = [_validity_radius(sol.visited_jets[k],
+                                    sol.visited_denominator[k],
+                                    real(sol.visited_h[k]), tol)
+                   for k in 1:n_nodes]
+
+        # Every finite fill cell must lie strictly inside SOME node's
+        # verified disc — the honesty contract of the retained Voronoi
+        # fill (no Padé evaluated outside its disc).
+        n_covered = 0
+        for (zf, yf) in zip(sol.grid_z, sol.grid_y)
+            all(isfinite, yf) || continue
+            n_covered += 1
+            in_some_disc = any(abs(zf - sol.visited_z[k]) <= R_gate[k]
+                               for k in 1:n_nodes)
+            @test in_some_disc
+        end
+        # The fill must actually cover cells — otherwise the test is vacuous.
+        @test n_covered ≥ 20
+
+        # The complementary half: a cell OUTSIDE every node's disc must be
+        # NaN (fail-soft), never silently evaluated.  Plant one far away.
+        far  = 40.0 + 40.0im
+        sol_f = vector_path_network_solve(prob, targets; order = 24, h = 0.25,
+                                          tol = tol,
+                                          fine_grid = ComplexF64[far])
+        @test all(z -> isnan(real(z)) && isnan(imag(z)), sol_f.grid_y[1])
+        @test all(abs(far - sol_f.visited_z[k]) > R_gate[k]
+                  for k in 1:length(sol_f.visited_z))
+    end
+
 end
 
 # =============================================================================
@@ -478,9 +561,35 @@ end
 #        prevents — caught by the oracle, not just a gate unit test.
 #        Restored to GREEN.
 #
+# -- B4 Voronoi-honesty mutation (bead padetaylor-0ln.37.8) --
+#
+#   M7 — relax the Stage-2 gate comparison to over-cover.  In
+#        `_stage2_fill`, change the fail-soft gate test
+#          if abs(z_f - z_v) > R_gate
+#        to
+#          if abs(z_f - z_v) > 100 * R_gate
+#        (the fill now evaluates the canonical Padé at grid cells far
+#        OUTSIDE the node's verified disc — the dishonest extrapolation
+#        the Voronoi honesty contract forbids).  VPN.2.7 recomputes its
+#        OWN `R_gate` reference through the *untouched* `_validity_radius`,
+#        so its in-some-disc check is the honest one and correctly fails
+#        for the now-extrapolated cells.
+#        Expected: VPN.2.7's per-cell `@test in_some_disc` bites on every
+#        cell the relaxed gate wrongly evaluates between `R_gate` and
+#        `100·R_gate`, and the `far = 40+40im` fail-soft assertion bites
+#        (the far cell is now finite, not NaN).
+#        Result: RED — VPN.2.7 went 41 failures (the in-some-disc honesty
+#        assertions for the extrapolated cells + the fail-soft `far`
+#        cell).  VPN.2.3 and VPN.2.6 also bit, as expected — they share
+#        the same `_stage2_fill` gate comparison.  VPN.2.7 is the
+#        load-bearing B4 catch: it pins the honesty contract the
+#        audition relied on (no Padé evaluated outside its disc).
+#        Restored to GREEN.
+#
 # Certified bites: M1 → VPN.2.1+2.2 RED; M2 → VPN.2.1+2.2+2.4 RED;
 # M3 → VPN.2.6 (3 assertions: tol-dependence + clamp regime) RED;
 # M4 → VPN.2.6 (2 assertions: clamp + no-clamp consistency) RED;
-# M5 → VPN.2.6 s-factor RED; M6 → VPN.2.1 oracle RED.  M2-false is a
+# M5 → VPN.2.6 s-factor RED; M6 → VPN.2.1 oracle RED;
+# M7 → VPN.2.7 Voronoi-honesty RED (41 assertions).  M2-false is a
 # recorded non-bite.  Restored to GREEN after each mutation.
 # =============================================================================

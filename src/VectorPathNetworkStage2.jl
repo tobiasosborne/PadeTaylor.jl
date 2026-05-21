@@ -130,6 +130,58 @@ approximants outside their verified disc.  ADR-0025 deletes the
 *figure's* use of `extrapolate=true` (bead B3), but the kwarg itself
 stays — it is a legitimate diagnostic escape hatch.
 
+## Why nearest-node Voronoi, not a distance-weighted blend (B4 audition)
+
+ADR-0025 bead B4 (`padetaylor-0ln.37.8`) auditioned this nearest-node
+assignment against a smooth distance-weighted **blend** of *all* the
+node discs that cover a given grid pixel.  The hypothesis (ADR-0025
+Phase-B plan; the C4/C5 audition idiom) was that with the B1
+true-radius gate adjacent nodes' discs overlap, so a blend would give
+C⁰/C¹ continuity across the former Voronoi seams and the inter-disc
+spread would double as a free loop-closure quality signal.
+
+The audition (`external/probes/stage2-blend-audition/`) measured the
+hypothesis on the *actual* `P_I⁽²⁾` tritronquée wedge underlay — the
+2289-node B2 adaptive walk, a 380² grid fine enough (≈0.012 spacing) to
+resolve the discs.  The hypothesis **failed on the evidence**:
+
+  - **The discs barely overlap.**  The B1 gate is *truncation-limited*
+    (ADR-0025 Amendment 1) — honest discs are small (median `R_gate ≈
+    0.038`).  98.2 % of covered pixels lie in exactly **one** node's
+    disc; only 1.8 % are multiply-covered; the maximum multiplicity is
+    2.  ADR-0025 Amendment 1 already flagged this — "B1 alone makes the
+    figure holier, not bigger" — and the underlay confirms it directly.
+
+  - **Most Voronoi seams are not blendable.**  Of the covered
+    adjacent-pixel pairs straddling a Voronoi boundary, only **14.9 %**
+    lie inside a genuine node-pair overlap; the other 85 % are
+    separated by `NaN` gaps — there is no C⁰ discontinuity there for a
+    blend to smooth, only honest emptiness.
+
+  - **Where discs do overlap the nodes already agree.**  The
+    inter-disc evaluation spread at multiply-covered pixels has median
+    `≈ 6·10⁻¹⁰` — machine-precision agreement.  There is no
+    discontinuity to remove and the "spread as a quality signal" idea
+    yields a uniformly `~10⁻¹⁰` map carrying no information.
+
+  - **No visible seam to begin with.**  The C⁰ jump in `|u|` across a
+    Voronoi boundary has median `0.153`, which is `0.73×` the
+    *intrinsic* same-cell pixel-to-pixel field gradient (`0.21`): the
+    boundary "jump" is *smaller* than the field's own local variation.
+    The Voronoi and blend C⁰-jump statistics are identical to three
+    significant figures.
+
+A blend would therefore change 1.8 % of a ~5 % sparse underlay by
+`~10⁻⁹` — a no-op dressed as continuity.  Per Rule 9 ("no
+over-engineering; a well-evidenced retain is a legitimate audition
+outcome") the audition **retains the nearest-node Voronoi fill**.  The
+Voronoi assignment is already honest by construction: a pixel is
+evaluated by node `idx_v` only when `abs(z_f − z_v) ≤ R_gate`, i.e.
+strictly inside *that* node's own verified disc — never extrapolated;
+an uncovered pixel stays `NaN`.  The blend's honesty contract (combine
+only strictly-in-disc evaluations) is thus already met by the trivial
+one-term case the evidence shows is overwhelmingly dominant.
+
 ## Fail-fast contract (Rule 1)
 
 `_validity_radius` throws an `ArgumentError` with a `suggestion` /
@@ -156,8 +208,12 @@ the honest signal that the Stage-1 walk produced a malformed node.
   - `docs/adr/0019-shared-denominator-pade.md` — the shared `Q`.
   - `docs/adr/0025-headline-figure-re-resolution.md` Amendment 1 §A1 —
     the B1 true-radius gate (gate v-b); the production formula.
+    Amendment 2 — the B4-rescoped honest `|u|` surface underlay.
   - `external/probes/pade-validity-radius/REPORT.md` §5–§7 — the A1
     spike: the head-to-head evidence and the production formula.
+  - `external/probes/stage2-blend-audition/audition.jl` — the B4
+    Voronoi-vs-blend audition: the measured evidence that the B1 discs
+    barely overlap, so the nearest-node Voronoi fill is retained.
 """
 module VectorPathNetworkStage2
 
