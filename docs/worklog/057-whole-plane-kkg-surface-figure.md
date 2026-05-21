@@ -135,3 +135,69 @@ close-out. If a sharper headline figure is wanted before release, do
 `0ln.23` (the shared-Q wedge selector) first and re-run F3/F4 with a wider
 wedge target fan. The `figures/` project now carries Gridap 0.20.7 — the
 surface figure + its test run under `--project=figures`.
+
+## Required follow-up — figure-sharpening deep-dive (senior-grade; mandatory before v0.2 release)
+
+The shipped surface figure is **low-resolution** and its pole wedge is
+**coarse / blocky**. Sharpening it to senior-grade is bead
+`padetaylor-0ln.37` — a **DEEP-DIVE that must be planned (an ADR) before any
+code**. This section is the technical record so the next agent starts with
+the full diagnosis. Do **not** just crank grid/target numbers — this is a
+genuine numerical-analysis problem: faithfully rendering a meromorphic
+transcendent over a region densely packed with poles.
+
+### Precise diagnosis (exact parameters in `figures/_kkg_pi2_surface_helpers.jl`)
+
+Two regions, two very different blockers.
+
+**Smooth pole-free sector — grid-limited, cheap to fix.** `SURF_GRID_N = 121`
+(a 121² Cartesian grid over `[-20,20]²` → 0.33-unit pixels) and a 6° ray fan
+(`SURF_RAY_DPHI_DEG = 6.0`, ~47 rays). The three voters all evaluate cheaply
+at higher density — finer grid + denser rays + higher Laplace `N` is
+mechanical. One subtlety: the ray-fan voter is **bilinearly interpolated**
+onto the Cartesian grid; at high resolution its interpolation error may
+dominate the majority vote — consider a harmonic reconstruction for it too.
+
+**Pole-rich wedge — the real blocker.** `surf_wedge_targets()` =
+`SURF_TARGET_RADII (2,4,6,8)` × `SURF_TARGET_ANGLES (−0.5,−0.25,0,0.25,0.5)`
+= **20 targets, all `|x| ≤ 8`** — copied verbatim from V8b's
+`kkg_target_wedge` (V8b only needed the pole *scatter* — 20 targets found 21
+poles). The walk yields ~389 visited nodes, hull `|x| ≲ 8`. Consequences:
+- The figure window is `|x| ≤ 20`, so **> half the wedge is pure
+  extrapolation** — `surf_wedge_fill` calls Stage-2 with `extrapolate=true`,
+  i.e. shared-`Q` Padé approximants evaluated *outside their valid disc*.
+  Not senior-grade; it must go.
+- Stage-2 assigns each grid pixel to the **nearest visited node** and gates
+  validity at the *step* `h = 0.1` (`SURF_PN_H`). ~389 nodes over the wedge
+  → coarse Voronoi tessellation → blocky.
+
+### The senior-grade questions (for the `0ln.37` plan / ADR)
+
+1. **Gate Stage-2 at the true Padé radius, not `h`.** A node's shared-`Q`
+   Padé is valid up to the nearest singularity = the nearest root of its
+   denominator `Q` — typically *larger* than the step `h`. Gating at the true
+   radius lets each node cover a much bigger in-disc region → far fewer nodes
+   for full, honest (non-extrapolated) coverage. Likely the single biggest
+   lever; quantify it.
+2. **Walk density / extent + tractability.** Pole density grows with `|x|`;
+   estimate the node count to tile `|x| ≤ 20`; confirm tractable. A long walk
+   through a dense pole field will land a fixed-`h` step on a pole (the
+   shared-`Q` jet degenerates) — bead `0ln.23` (the shared-`Q` root-distance
+   step criterion) is the principled fix and a near-certain prerequisite;
+   adaptive `h` likely too.
+3. **Stage-2 interpolation.** Nearest-node is blocky; blend overlapping
+   in-disc approximants for C⁰/C¹ continuity.
+4. **What is the right GOAL?** KKG's own surface (Figs 7.4/7.5) shows the
+   wedge as *jagged* — they did not finely resolve individual poles in the
+   surface. The faithful senior-grade deliverable may be the pole *scatter*
+   (V8b extracted 21 clean poles) over a clamped `|u|` heatmap, rather than a
+   pixel-perfect sawtooth. The plan must define "faithful + senior-grade"
+   against the actual KKG figures.
+5. **Stokes strips.** The ±3° NaN-masked strips (`STITCH_MASK_DEG`) — can the
+   solution be seeded and filled there?
+6. **Performance** of a dense walk + dense grid must stay reasonable.
+
+Every current v1 corner — extrapolate-outside-disc, the `|x| ≤ 8` hull, the
+121² grid, the ±3° mask, the bilinear ray-fan voter, the hand-tuned
+`h = 0.1` — must be **retired or justified with rigour** (CLAUDE.md Rule 9).
+The triple-method majority vote stays. Plan first; do not crank numbers.

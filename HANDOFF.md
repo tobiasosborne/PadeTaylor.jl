@@ -65,6 +65,39 @@ docs/design_section_6_path_network.md scope), are all shipped:
 
 **2508 + 32 + 61 = 2601 expected GREEN** (61 new LD.X.* assertions verified in single-file isolation `lattice_dispatcher_test.jl`, 23.4 s; 32 new DG.* assertions verified in single-file isolation `diagnose_test.jl`, 18 s; full `Pkg.test()` not yet re-run — OOM-friction ongoing, see worklogs 048–049; existing 2508 assertions unchanged by additive `strict` kwarg and `:bvp_fail` tag with back-compat `strict = true` default).  Previously: **2508 / 2508 tests passing** as of worklog 047 (`HEAD = 1331755`, all committed; push pending).  The API audit (commit 9296731, worklog 050) made no source changes and adds no new assertions; test count is unchanged at 2601 expected GREEN.  The 12 spawned beads from the audit constitute the v1.0 normalisation work backlog.
 
+## 🔴 PRIORITY for the next agent — DEEP-DIVE: sharpen the headline figure
+
+**Bead `padetaylor-0ln.37`. This is the next substantive task, and it is a
+DEEP-DIVE — plan it properly (an ADR) before writing any code.**
+
+The whole-plane KKG 7.4/7.5 surface figure
+(`figures/kkg_pi2_tritronquee_surface.jl`) is shipped but **low-resolution**,
+and its pole-wedge render is **coarse and blocky**. It carries v1 corners
+that are **not senior-grade for a headline figure** and must be retired:
+Padé approximants evaluated *outside their valid disc* (`extrapolate=true`);
+a path-network walk whose hull only reaches `|x| ≲ 8` while the figure window
+is `|x| ≤ 20`; a 121² grid; ±3° masked Stokes strips.
+
+**The blocker** (precise diagnosis in `docs/worklog/057-*.md` §"Required
+follow-up"): the pole-wedge walk's `surf_wedge_targets()` is 20 targets, all
+within `|x| ≤ 8` — copied verbatim from V8b's pole-*scatter* figure, which
+only needed pole *locations*. A dense *surface* needs the path-network walk
+to densely and accurately tile the wedge out to `|x| = 20`, through an
+increasingly dense pole field.
+
+**Do NOT just crank grid/target numbers.** This is a genuine
+numerical-analysis problem — faithfully rendering a meromorphic transcendent
+over a pole-dense region. Bead `0ln.37` lists the seven open questions the
+plan must resolve (chiefly: Stage-2 validity should gate at each Padé's
+*true* convergence radius — distance to the nearest shared-`Q` denominator
+root — not at the step `h`; that one change may be the biggest lever). The
+required workflow (senior-grade, CLAUDE.md Rule 9): deep-dive recon → **an
+ADR** with every v1 corner retired or rigorously justified → granular child
+beads → serial Opus implementation → re-verify. Bead `0ln.23` (the shared-`Q`
+root-distance wedge step criterion) is a near-certain prerequisite and folds
+into the plan. Ground truth: KKG 2015 Figs 7.4/7.5 + the FW figure
+conventions (`references/`).
+
 **Next pickup (2026-05-21 — whole-plane KKG surface session close)**: **the
 vector BVP solver, V8b, and the whole-plane headline figure are all done.**
 This session added `src/VectorBVP.jl` (first-order vector-system
