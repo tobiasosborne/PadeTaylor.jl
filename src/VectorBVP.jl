@@ -211,8 +211,7 @@ function vector_bvp_solve(f, z_a, z_b, B_a, B_b, g;
     Ba = Matrix{CT}(B_a); Bb = Matrix{CT}(B_b); g_CT = Vector{CT}(g)
 
     # ---- Chebyshev extrema nodes + affine map -------------------------------
-    pi_T    = T(π)
-    nodes_t = T[cos(T(j) * pi_T / T(N)) for j in 0:N]
+    nodes_t = T[cos(T(j) * T(π) / T(N)) for j in 0:N]
     half_sum  = (z_a_CT + z_b_CT) / 2
     s         = (z_b_CT - z_a_CT) / 2          # affine scale; dY/dt = s·f
     nodes_z   = CT[half_sum + s * t for t in nodes_t]
@@ -222,19 +221,10 @@ function vector_bvp_solve(f, z_a, z_b, B_a, B_b, g;
     Dop = kron(D1, Matrix{CT}(I, d, d))        # (D1 ⊗ I_d), the stack operator
 
     # ---- initial guess (stacked, node-major) --------------------------------
-    Y = if initial_guess === nothing
-        zeros(CT, np1 * d)
-    else
-        stk = Vector{CT}(undef, np1 * d)
-        for j in 1:np1
-            yj = initial_guess(nodes_z[j])
-            length(yj) == d || throw(ArgumentError(
-                "vector_bvp_solve: initial_guess returned a length-$(length(yj)) " *
-                "vector, expected d = $d."))
-            stk[(j-1)*d + 1 : j*d] .= CT.(yj)
-        end
-        stk
-    end
+    # Default is the zero d-vector at every node; a caller `initial_guess`
+    # is sampled at each mapped node, length-checked, and `vcat`-stacked.
+    Y = initial_guess === nothing ? zeros(CT, np1 * d) :
+        reduce(vcat, (_checked_guess(initial_guess(z), d, CT) for z in nodes_z))
 
     # ---- τ-method: the d BC rows replace node-0's d collocation rows --------
     # DMSUITE node order is descending: t_0 = +1 ↦ z_b, t_N = -1 ↦ z_a (the
@@ -248,6 +238,12 @@ function vector_bvp_solve(f, z_a, z_b, B_a, B_b, g;
     J_bc[:, nodeN+1 : nodeN+d] .= Ba           # B_a hits y(z_a) = node N
     J_bc[:, 1:d]               .= Bb           # B_b hits y(z_b) = node 0
 
+    # Collocation context bundle — the invariant data `_residual` needs;
+    # bundling it gives the Newton loop and the post-convergence diagnostic
+    # one shared `_residual` call signature, so the iterated residual and
+    # the reported `residual_inf` can never drift (CLAUDE.md Rule 6, VB2).
+    ctx = (; f, Dop, nodes_z, s, np1, d, CT, Ba, Bb, g_CT, nodeN, bc_rows)
+
     # ---- Newton iteration ---------------------------------------------------
     iter         = 0
     residual_inf = T(Inf)
@@ -256,35 +252,21 @@ function vector_bvp_solve(f, z_a, z_b, B_a, B_b, g;
 
     for k in 1:maxiter
         iter = k
-        # Collocation residual R = (D1⊗I)·Y − s·f(z_j, Y_j), stacked.
-        R = Dop * Y
-        for j in 1:np1
-            yj = Y[(j-1)*d + 1 : j*d]
-            fj = f(nodes_z[j], yj)
-            length(fj) == d || throw(ArgumentError(
-                "vector_bvp_solve: f(z, y) returned a length-$(length(fj)) " *
-                "vector, expected d = $d.  Suggestion: the RHS must return " *
-                "a d-vector matching length(g)."))
-            R[(j-1)*d + 1 : j*d] .-= s .* CT.(fj)
-        end
+        # Full Newton residual (collocation rows + τ-method BC rows).
+        R = _residual(ctx, Y)
         residual_inf = T(maximum(abs, R))
 
-        # Jacobian: collocation rows = (D1⊗I) − s·blkdiag(∂f/∂y).
+        # Jacobian: collocation rows = (D1⊗I) − s·blkdiag(∂f/∂y); node-0's
+        # d rows are then replaced by the constant BC block J_bc.
         J = copy(Dop)
         for j in 1:np1
-            yj  = Y[(j-1)*d + 1 : j*d]
-            Jfj = jacobian === nothing ?
-                  _autodiff_jacobian(f, nodes_z[j], yj, d, CT) :
-                  Matrix{CT}(jacobian(nodes_z[j], yj))
             rng = (j-1)*d + 1 : j*d
+            Jfj = jacobian === nothing ?
+                  _autodiff_jacobian(f, nodes_z[j], Y[rng], d, CT) :
+                  Matrix{CT}(jacobian(nodes_z[j], Y[rng]))
             J[rng, rng] .-= s .* Jfj
         end
-
-        # τ-method row replacement: node-0's d rows become the BC rows.
-        # y(z_a) is the node-N block, y(z_b) the node-0 block (see above).
         J[bc_rows, :] .= J_bc
-        Yza = Y[nodeN+1 : nodeN+d]; Yzb = Y[1:d]
-        R[bc_rows]    .= Ba * Yza .+ Bb * Yzb .- g_CT
 
         ΔY = _solve(J, R)
         step_inf = T(maximum(abs, ΔY))
@@ -304,13 +286,10 @@ function vector_bvp_solve(f, z_a, z_b, B_a, B_b, g;
             "(c) raise `maxiter`; (d) verify the BVP has a unique solution."))
     end
 
-    # Final residual diagnostic at the converged Y (collocation part only).
-    Rf = Dop * Y
-    for j in 1:np1
-        yj = Y[(j-1)*d + 1 : j*d]
-        Rf[(j-1)*d + 1 : j*d] .-= s .* CT.(f(nodes_z[j], yj))
-    end
-    Rf[bc_rows] .= Ba * Y[nodeN+1 : nodeN+d] .+ Bb * Y[1:d] .- g_CT
+    # Final residual diagnostic at the converged Y — the same `_residual`
+    # the Newton loop drives on, so the diagnostic and the iteration can
+    # never drift apart (CLAUDE.md Rule 6 de-duplication; VB2).
+    Rf = _residual(ctx, Y)
     residual_inf = T(maximum(abs, Rf))
 
     Y_nodes = [Y[(j-1)*d + 1 : j*d] for j in 1:np1]
@@ -353,6 +332,36 @@ end
 # =============================================================================
 
 """
+    _check_len(v, d, what)
+
+Fail-loud guard (CLAUDE.md Rule 1): assert the produced `d`-vector
+`v` has exactly `length(v) == d`, else throw an `ArgumentError`
+naming its `what` source (`"initial_guess"`, `"f(z, y)"`,
+`"f(z, y) under autodiff"`).  One helper for the three structurally
+identical length checks the driver, `_residual`, and
+`_autodiff_jacobian` each used to inline verbatim (VB2 de-duplication).
+"""
+function _check_len(v, d::Integer, what::AbstractString)
+    length(v) == d || throw(ArgumentError(
+        "vector_bvp_solve: $what returned a length-$(length(v)) vector, " *
+        "expected d = $d.  Suggestion: the produced vector must match " *
+        "d = length(g)."))
+    return nothing
+end
+
+"""
+    _checked_guess(v, d, ::Type{CT}) -> Vector{CT}
+
+Length-check the user `initial_guess` output `v` (via `_check_len`)
+then convert it to a `Vector{CT}` node block.  Factored out so the
+driver's initial-guess stacking is a single `reduce(vcat, …)` line.
+"""
+function _checked_guess(v, d::Integer, ::Type{CT}) where CT
+    _check_len(v, d, "initial_guess")
+    return CT.(v)
+end
+
+"""
     _chebyshev_D1(t, ::Type{T}, N) -> Matrix{T}
 
 The `(N+1)×(N+1)` Chebyshev first-derivative matrix in `t ∈ [-1,1]`,
@@ -385,6 +394,41 @@ function _chebyshev_D1(t::AbstractVector{T}, ::Type{T}, N::Integer) where T <: A
 end
 
 """
+    _residual(ctx, Y) -> R
+
+Assemble the full Newton residual of the collocation system at the
+stacked iterate `Y`.  `ctx` is the invariant collocation-context
+NamedTuple built once in `vector_bvp_solve` (the RHS `f`, the stack
+operator `Dop`, the mapped nodes, the affine scale `s`, the dimensions
+`np1`/`d`, the element type `CT`, the BC data `Ba`/`Bb`/`g_CT`, and the
+node-0/node-N index data `nodeN`/`bc_rows`).
+
+The collocation rows are `R = (D1⊗I)·Y − s·f(z_j, Y_j)` stacked
+node-major; the `d` rows in `ctx.bc_rows` (node-0's block) are then
+**replaced** by the τ-method boundary residual
+`B_a·y(z_a) + B_b·y(z_b) − g` — with `y(z_a)` the node-`N` block and
+`y(z_b)` the node-`0` block per the descending DMSUITE node order.
+
+This is the *single* residual definition in the module: the Newton
+loop and the post-convergence `residual_inf` diagnostic both call it,
+so the reported residual is by construction the residual the iteration
+drove to zero — no duplicated formula to drift (CLAUDE.md Rule 6 / the
+VB2 de-duplication that brought the file back under the 200-LOC cap).
+"""
+function _residual(ctx, Y)
+    R = ctx.Dop * Y
+    for j in 1:ctx.np1
+        rng = (j-1)*ctx.d + 1 : j*ctx.d
+        fj  = ctx.f(ctx.nodes_z[j], Y[rng])
+        _check_len(fj, ctx.d, "f(z, y)")
+        R[rng] .-= ctx.s .* ctx.CT.(fj)
+    end
+    n = ctx.nodeN
+    R[ctx.bc_rows] .= ctx.Ba * Y[n+1:n+ctx.d] .+ ctx.Bb * Y[1:ctx.d] .- ctx.g_CT
+    return R
+end
+
+"""
     _autodiff_jacobian(f, z, y, d, ::Type{CT}) -> Matrix{CT}
 
 The `d×d` Jacobian `∂f/∂y(z, y)` by `Taylor1` automatic differentiation.
@@ -400,9 +444,7 @@ function _autodiff_jacobian(f, z, y, d::Integer, ::Type{CT}) where CT
         yt = Taylor1{CT}[Taylor1(CT[y[k]], 1) for k in 1:d]
         yt[i] = Taylor1(CT[y[i], one(CT)], 1)
         ft = f(z, yt)
-        length(ft) == d || throw(ArgumentError(
-            "vector_bvp_solve: f(z, y) returned a length-$(length(ft)) " *
-            "vector under autodiff, expected d = $d."))
+        _check_len(ft, d, "f(z, y) under autodiff")
         for r in 1:d
             Jf[r, i] = ft[r][1]
         end

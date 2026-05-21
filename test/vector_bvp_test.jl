@@ -29,6 +29,16 @@ if !isdefined(Main, :VectorBVP)
 end
 using .VectorBVP
 
+# VB.6.x cross-validates the vector solver against the scalar second-order
+# `BVP.bvp_solve`, which is itself oracle-pinned (DMSUITE/mpmath) in
+# test/bvp_test.jl + test/_oracle_bvp.jl.  `BVP.jl` is self-contained
+# (`using LinearAlgebra` only), so it is `include`d directly here — the
+# same standalone-runnable idiom VB1 uses for `VectorBVP.jl`.
+if !isdefined(Main, :BVP)
+    include(joinpath(@__DIR__, "..", "src", "BVP.jl"))
+end
+using .BVP
+
 @testset "VectorBVP (VB1): first-order vector Chebyshev-collocation BVP" begin
 
     # -------------------------------------------------------------------------
@@ -232,44 +242,214 @@ using .VectorBVP
         end
     end
 
+    # -------------------------------------------------------------------------
+    # VB.6.x — NONLINEAR cross-validation against the scalar BVP oracle.
+    #
+    # The scalar Painlevé-I BVP  u'' = 6u² + z  is recast as a d=2 first-order
+    # companion system:  y = (u, u'),  y' = f(z, y) = (y₂, 6·y₁² + z).
+    # `vector_bvp_solve` on that system, with B_a = [1 0; 0 0], B_b = [0 0; 1 0],
+    # g = [u(z_a); u(z_b)] pinning y₁ at both ends, must reproduce the scalar
+    # `BVP.bvp_solve` solution: vector y₁ ≡ scalar u, vector y₂ ≡ scalar u'.
+    #
+    # The scalar config is the PI BVP on [-18,-14] N=20 — the FW 2011 Fig 4.6
+    # case validated in test/bvp_test.jl BV.1.3 against the DMSUITE/Octave
+    # oracle constants `test_bvp_pi_real_N20_u` / `..._nodes_z` in
+    # test/_oracle_bvp.jl (Group 3).  Cross-checking the vector solver against
+    # `bvp_solve` here therefore transitively validates it against that
+    # independent oracle (CLAUDE.md Rule 4 port-and-verify).
+    #
+    # This run uses the AUTODIFF Jacobian (jacobian = nothing), so it also
+    # exercises the Taylor1 autodiff path on a genuinely nonlinear RHS — the
+    # d=1 linear reduction was already covered by VB.1.1, so it is not re-added.
+    # -------------------------------------------------------------------------
+    @testset "VB.6.x: nonlinear PI companion system vs scalar BVP oracle" begin
+        # Scalar PI ODE  u'' = 6u² + z  and its companion 4-vector form... d=2.
+        f_PI_scalar(z, u)  = 6 * u^2 + z
+        ∂f_PI_scalar(z, u) = 12 * u
+        f_PI_vec(z, y)     = [y[2], 6 * y[1]^2 + z]   # companion: y'=(y₂,6y₁²+z)
+
+        z_a, z_b = -18.0, -14.0
+        sqrt_guess(z)    = sqrt(-z / 6)               # u ≈ √(-z/6) asymptotic
+        # u' of the asymptotic guess: d/dz √(-z/6) = -1 / (2·√6·√(-z)).
+        sqrt_guess_up(z) = -1 / (2 * sqrt(6) * sqrt(-z))
+        u_a, u_b = sqrt_guess(z_a), sqrt_guess(z_b)
+
+        # Scalar oracle-validated solution (BV.1.3 config, N = 20).
+        scalar_sol = bvp_solve(f_PI_scalar, ∂f_PI_scalar, z_a, z_b, u_a, u_b;
+                               N = 20, initial_guess = sqrt_guess)
+
+        # Vector companion-system solve.  B_a pins y₁ at z_a, B_b pins y₁ at
+        # z_b; g = [u(z_a); u(z_b)].  Autodiff Jacobian (jacobian = nothing).
+        B_a = [1.0 0.0; 0.0 0.0]
+        B_b = [0.0 0.0; 1.0 0.0]
+        g   = [u_a, u_b]
+        vec_init(z) = [sqrt_guess(z), sqrt_guess_up(z)]
+        vec_sol = vector_bvp_solve(f_PI_vec, z_a, z_b, B_a, B_b, g;
+                                   N = 20, initial_guess = vec_init)
+
+        @testset "VB.6.1: Newton convergence sanity (autodiff path)" begin
+            # Nonlinear ⇒ a few Newton steps; FW 2011 line 190 reports ≤ 6.
+            @test vec_sol.iterations ≤ 6
+            @test vec_sol.iterations ≥ 2          # genuinely nonlinear, not 1-step
+            # Discrete residual floors at cond(D1⊗I)·eps — same order as the
+            # scalar BV.1.3 floor (~1e-12); assert it is tiny.
+            @test vec_sol.residual_inf ≤ 1e-10
+            # Same Chebyshev grid + affine map ⇒ identical mapped nodes.
+            @test isapprox(vec_sol.nodes_z, scalar_sol.nodes_z; atol = 1e-12)
+        end
+
+        @testset "VB.6.2: companion y₁ node values ≡ scalar u (oracle-pinned)" begin
+            # vector y₁ at every node must equal the scalar BVP's u — which
+            # BV.1.3 pins to test_bvp_pi_real_N20_u to atol 1e-10.
+            #
+            # The scalar D₂-collocation method and the vector D₁⊗I τ-method
+            # are TWO DIFFERENT discretizations of the same continuous PI BVP;
+            # each converges to its own discrete fixed point, and those node
+            # values differ from each other by the DIFFERENCE of their
+            # Chebyshev truncation errors — empirically ~7.5e-13 at N=20 on
+            # [-18,-14] (the ~1e-12 floor that _oracle_bvp.jl Group 3 records).
+            # That gap is set by N, NOT by the float precision: VB.6.6 below
+            # confirms the BF-256 gap is the SAME ~7.5e-13.  atol = 1e-11
+            # therefore certifies the cross-validation with honest headroom
+            # above the (precision-independent) truncation floor.
+            for j in 1:vec_sol.N+1
+                @test isapprox(vec_sol.Y_nodes[j][1], scalar_sol.u_nodes[j];
+                               atol = 1e-11)
+            end
+        end
+
+        @testset "VB.6.3: companion y₂ node values ≡ scalar u'" begin
+            # vector y₂ ≡ u'.  The scalar callable gives (u, u') at each node;
+            # compare to the vector solver's second component.
+            for j in 1:vec_sol.N+1
+                zj          = scalar_sol.nodes_z[j]
+                (_, up_sca) = scalar_sol(zj)
+                @test isapprox(vec_sol.Y_nodes[j][2], up_sca; atol = 1e-9)
+            end
+        end
+
+        @testset "VB.6.4: barycentric callable ≡ scalar (u, u') off-node" begin
+            # The vector barycentric callable's components must track the
+            # scalar callable at interior off-node points.
+            for z in (-17.3, -16.0, -14.7)
+                yz          = vec_sol(z)
+                (u_s, up_s) = scalar_sol(z)
+                @test isapprox(yz[1], u_s;  atol = 1e-10)
+                @test isapprox(yz[2], up_s; atol = 1e-9)
+            end
+        end
+
+        @testset "VB.6.5: explicit analytic Jacobian agrees with autodiff" begin
+            # Analytic 2×2 companion Jacobian ∂f/∂y = [0 1; 12·y₁ 0].
+            Jf(z, y) = [0.0 1.0; 12 * y[1] 0.0]
+            vec_sol_J = vector_bvp_solve(f_PI_vec, z_a, z_b, B_a, B_b, g;
+                                         N = 20, initial_guess = vec_init,
+                                         jacobian = Jf)
+            for j in 1:vec_sol_J.N+1
+                @test isapprox(vec_sol_J.Y_nodes[j][1], scalar_sol.u_nodes[j];
+                               atol = 1e-12)
+                @test isapprox(vec_sol_J.Y_nodes[j][2],
+                               vec_sol.Y_nodes[j][2]; atol = 1e-11)
+            end
+        end
+
+        @testset "VB.6.6: BigFloat-256 companion system vs scalar BVP" begin
+            # Same cross-validation at BF-256.  CRITICAL (CLAUDE.md Rule 2):
+            # the scalar↔vector node-value gap is ~7.5e-13 at N=20 — and it
+            # is the SAME ~7.5e-13 at Float64 and at BigFloat-256.  That is
+            # the root-cause signature of a *discretization* difference (two
+            # distinct Chebyshev schemes for one continuous PI BVP), NOT a
+            # rounding difference: raising the precision F64 → BF-256 drives
+            # each solver's *residual* from ~1e-12 to ~1e-74 yet leaves the
+            # mutual gap untouched.  So the cross-validation atol is the
+            # N=20 truncation floor (~1e-12), precision-independent — a
+            # tighter atol would be wrong (and was caught, not patched away).
+            setprecision(BigFloat, 256) do
+                za, zb = big(-18.0), big(-14.0)
+                sg(z)   = sqrt(-z / 6)
+                sg_up(z) = -1 / (2 * sqrt(big(6)) * sqrt(-z))
+                ua, ub  = sg(za), sg(zb)
+                sca = bvp_solve(f_PI_scalar, ∂f_PI_scalar, za, zb, ua, ub;
+                                N = 20, initial_guess = sg)
+                Ba  = BigFloat[1 0; 0 0]
+                Bb  = BigFloat[0 0; 1 0]
+                gv  = BigFloat[ua, ub]
+                vinit(z) = [sg(z), sg_up(z)]
+                vec = vector_bvp_solve(f_PI_vec, za, zb, Ba, Bb, gv;
+                                       N = 20, initial_guess = vinit)
+                @test vec.iterations ≤ 6
+                # Newton drives the BF-256 residual far below the F64 floor —
+                # proof the solver itself reaches machine-precision accuracy.
+                @test vec.residual_inf ≤ big(1e-40)
+                # The truncation-limited cross-validation gap.
+                gapB = maximum(abs(vec.Y_nodes[j][1] - sca.u_nodes[j])
+                               for j in 1:vec.N+1)
+                @test gapB ≤ big(1e-11)
+                for j in 1:vec.N+1
+                    @test isapprox(vec.Y_nodes[j][1], sca.u_nodes[j];
+                                   atol = big(1e-11))
+                end
+            end
+        end
+    end
+
 end # @testset VectorBVP
 
-# VB.6.1  Mutation-proof procedure (verified 2026-05-21 before commit;
-# CLAUDE.md Rule 4 — perturb the impl, confirm specific VB.* go RED, restore):
+# VB.7.1  Mutation-proof procedure (Mutations A–C verified 2026-05-21 for
+# VB1; Mutation D verified 2026-05-21 for VB2; CLAUDE.md Rule 4 — perturb
+# the impl, confirm specific VB.* go RED, restore).  Renumbered from the
+# VB1 label `VB.6.1` so it no longer collides with the new VB.6.x
+# nonlinear-cross-validation testsets.
 #
-#   Mutation A  --  in `vector_bvp_solve`, drop the affine scale factor `s`
-#     on the residual: replace `R[...] .-= s .* CT.(fj)` with
-#     `R[...] .-= CT.(fj)`.  The collocation operator dY/dt = s·f is then
-#     mis-scaled by 1/s.
-#     Verified bite (2026-05-21): VB.1.1, VB.1.2, VB.1.3, VB.1.4 RED and
-#     VB.4.1 + VB.5.1 errored — 6 errored, 17 passed.  Newton fails to
-#     converge (the linearised problem no longer has the right fixed point)
-#     so the non-convergence ErrorException fires.  The `s` factor is the
-#     single most load-bearing element, exactly as the analogous Mutation A
-#     bit scalar BVP.jl.  Restored.
+#   Mutation A  --  in the `_residual` helper, drop the affine scale factor
+#     `s` on the residual: replace `R[rng] .-= ctx.s .* ctx.CT.(fj)` with
+#     `R[rng] .-= ctx.CT.(fj)`.  The collocation operator dY/dt = s·f is then
+#     mis-scaled by 1/s.  (Post-VB2 the residual lives in `_residual`; the
+#     `s` factor is the same load-bearing element.)
+#     Verified bite (2026-05-21, VB1): VB.1.1, VB.1.2, VB.1.3, VB.1.4 RED and
+#     VB.4.1 + VB.5.1 errored.  Newton fails to converge (the linearised
+#     problem no longer has the right fixed point) so the non-convergence
+#     ErrorException fires.  The `s` factor is the single most load-bearing
+#     element, exactly as the analogous Mutation A bit scalar BVP.jl.
+#     Restored.
 #
-#   Mutation B  --  in `vector_bvp_solve`, swap the τ-method endpoint↔node
-#     pairing: write `J_bc[:, 1:d] .= Ba` and `J_bc[:, nodeN+1:nodeN+d] .= Bb`
-#     (and swap `Yza`/`Yzb` in the residual the same way).  The BC then
-#     multiplies B_a against y(z_b) and B_b against y(z_a) — the descending
-#     DMSUITE node order (t_0=+1↦z_b, t_N=-1↦z_a) is mis-read.
-#     Verified bite (2026-05-21): VB.1.1, VB.1.2, VB.1.3, VB.1.4, VB.5.1
-#     RED — 281 failed, 26 passed.  Newton still converges (residual
-#     ~1e-15) but to the REFLECTED solution y₁(z)=cos(z_a+z_b-z), which
-#     violates the user's BC.  This is the exact bug caught during VB1
-#     development; the reflected-solution symptom is in ADR-0023.  Restored.
+#   Mutation B  --  swap the τ-method endpoint↔node pairing: write
+#     `J_bc[:, 1:d] .= Ba` and `J_bc[:, nodeN+1:nodeN+d] .= Bb` in
+#     `vector_bvp_solve`, and swap `ctx.Ba`/`ctx.Bb` (or the node-N/node-0
+#     slices) in `_residual`'s BC-row line.  The BC then multiplies B_a
+#     against y(z_b) and B_b against y(z_a) — the descending DMSUITE node
+#     order (t_0=+1↦z_b, t_N=-1↦z_a) is mis-read.
+#     Verified bite (2026-05-21, VB1): VB.1.1, VB.1.2, VB.1.3, VB.1.4,
+#     VB.5.1 RED.  Newton still converges (residual ~1e-15) but to the
+#     REFLECTED solution y₁(z)=cos(z_a+z_b-z), which violates the user's BC.
+#     This is the exact bug caught during VB1 development; the
+#     reflected-solution symptom is in ADR-0023.  Restored.
 #
 #   Mutation C  --  in `_autodiff_jacobian`, read coefficient `[0]` instead
 #     of `[1]`: `Jf[r, i] = ft[r][0]`.  The Jacobian becomes the RHS value,
 #     not its derivative.
-#     Verified bite (2026-05-21): VB.3.1 RED (both the real and complex
+#     Verified bite (2026-05-21, VB1): VB.3.1 RED (both the real and complex
 #     asserts) — the autodiff Jacobian no longer matches the analytic
-#     matrix.  VB.1.2/1.3 + VB.5.1 also bite (3 failed, 3 errored) because
-#     Newton's Jacobian is then wrong on the autodiff path.  VB.1.4 stays
-#     fully GREEN — it passes an explicit `jacobian` and so never touches
-#     `_autodiff_jacobian`: the suite localises the fault.  Restored.
+#     matrix.  VB.1.2/1.3 + VB.5.1 also bite because Newton's Jacobian is
+#     then wrong on the autodiff path.  VB.1.4 stays fully GREEN — it passes
+#     an explicit `jacobian` and so never touches `_autodiff_jacobian`: the
+#     suite localises the fault.  Restored.
 #
-# All three mutations restored before commit.  Matches the inline
-# mutation-proof pattern of test/bvp_test.jl (BV.6.1).
+#   Mutation D  (VB2 — the nonlinear cross-validation)  --  the same
+#     `_autodiff_jacobian` perturbation as Mutation C (`ft[r][1]` → `ft[r][0]`),
+#     re-verified against the VB.6.x companion-system tests.
+#     Verified bite (2026-05-21, VB2): the VB.6.x testset ERRORS — building
+#     the autodiff-path `vec_sol` for the nonlinear PI companion system
+#     `y' = (y₂, 6y₁²+z)` throws the Newton non-convergence ErrorException,
+#     because the wrong node Jacobian `[0 0; 0 0]` (the RHS value's `[0]`
+#     coefficient at the linear/quadratic terms) destroys the Newton basin.
+#     VB.1.4 (explicit-jacobian harmonic oscillator) stays fully GREEN — it
+#     never touches `_autodiff_jacobian`, so the suite localises the fault
+#     to the autodiff path.  This confirms the VB.6.x nonlinear
+#     cross-validation genuinely exercises (and depends on) the Taylor1
+#     autodiff Jacobian on a nonlinear RHS.  Restored.
+#
+# All mutations restored before commit.  Matches the inline mutation-proof
+# pattern of test/bvp_test.jl (BV.6.1).
 
 # Standalone entry point: `julia --project=. test/vector_bvp_test.jl`.
