@@ -229,7 +229,7 @@ using .Dispatcher:  dispatch_solve, DispatcherSolution, IVPSegment, BVPSegment
 # Laplace2D — the in-house 2D-Chebyshev spectral Dirichlet Laplace
 # solver; voter (2) of the triple-method tritronquée sector fill
 # (ADR-0024).
-using .Laplace2D:  laplace2d_solve, Laplace2DSolution
+using .Laplace2D:  laplace2d_solve, Laplace2DSolution, laplace2d_solve_gridap
 using .EdgeDetector: laplacian_residual, pole_field_mask
 using .EdgeGatedSolve: edge_gated_pole_field_solve, EdgeGatedSolution
 using .LatticeDispatcher: lattice_dispatch_solve, LatticeSolution
@@ -301,7 +301,7 @@ export extract_poles
 export bvp_solve, BVPSolution
 export dispatch_solve, DispatcherSolution, IVPSegment, BVPSegment
 export laplacian_residual, pole_field_mask
-export laplace2d_solve, Laplace2DSolution
+export laplace2d_solve, Laplace2DSolution, laplace2d_solve_gridap
 export lattice_dispatch_solve, LatticeSolution
 export edge_gated_pole_field_solve, EdgeGatedSolution
 export pIII_transformed_rhs, pV_transformed_rhs,

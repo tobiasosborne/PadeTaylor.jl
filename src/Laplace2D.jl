@@ -97,7 +97,7 @@ module Laplace2D
 using LinearAlgebra: kron, I
 using GenericLinearAlgebra: GenericLinearAlgebra  # extends `\` for BigFloat
 
-export laplace2d_solve, Laplace2DSolution
+export laplace2d_solve, Laplace2DSolution, laplace2d_solve_gridap
 
 # =============================================================================
 # Solution container
@@ -336,6 +336,45 @@ function _bary(x_nodes::AbstractVector{T}, vals::AbstractVector, x_star::T) wher
         den  += w / δ
     end
     return num / den
+end
+
+# =============================================================================
+# Voter (3): Gridap FEM Laplace solver — package-extension stub
+# =============================================================================
+
+"""
+    laplace2d_solve_gridap(bc_x_lo, bc_x_hi, bc_y_lo, bc_y_hi,
+                           (a, b), (c, d); n_x = 32, n_y = 32) -> Laplace2DSolution
+
+Solve the **same** Dirichlet Laplace problem `∇²φ = 0` on the rectangle
+`[a,b] × [c,d]` as [`laplace2d_solve`](@ref), but by **Gridap.jl finite
+elements** instead of Chebyshev spectral collocation.
+
+This is *voter (3)* of the triple-method majority-vote harmonic-extension
+fill (ADR-0024): an algorithmically disjoint third solver, so F3 can
+majority-vote `ray-fan BVP` vs `2D-Chebyshev` vs `Gridap`. A FEM bug and
+a spectral bug will not coincide.
+
+The method is provided by the `PadeTaylorGridapExt` package extension
+(ADR-0003 weak-dep pattern) — it exists only when `Gridap` is loaded
+alongside `PadeTaylor`. Calling it **without** a `Gridap` load throws an
+`ArgumentError` directing the caller to `using Gridap` (CLAUDE.md
+Rule 1, fail loud — no silent `nothing`).
+
+The four `bc_*` arguments and the rectangle `(a,b)`, `(c,d)` mirror
+`laplace2d_solve`'s contract; the kwargs `n_x` / `n_y` are the FEM mesh
+subdivision counts (the `CartesianDiscreteModel` has `n_x × n_y` cells).
+The return value's interface (a `Laplace2DSolution`-shaped object with a
+`φ` grid and a callable `(x,y) -> φ`) is compatible with
+`laplace2d_solve`'s so F3 treats the two Laplace voters uniformly.
+"""
+function laplace2d_solve_gridap(args...; kwargs...)
+    throw(ArgumentError(
+        "laplace2d_solve_gridap: the Gridap FEM Laplace backend (voter (3) " *
+        "of the ADR-0024 triple-method tritronquée sector fill) is a weak " *
+        "dependency and is not currently loaded.  Suggestion: `using Gridap` " *
+        "alongside `using PadeTaylor` — that activates the `PadeTaylorGridapExt` " *
+        "package extension which provides this method (ADR-0003)."))
 end
 
 end # module Laplace2D
