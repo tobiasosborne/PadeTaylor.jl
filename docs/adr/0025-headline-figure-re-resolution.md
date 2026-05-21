@@ -206,9 +206,9 @@ Rule 9. All coding is serial (Rule 7: one Julia process).
 
 ## Amendment 1 — Phase A exploration outcomes (2026-05-21)
 
-The Phase-A spikes (probes under `external/probes/`, gitignored — this
-amendment is their persistent record) resolve the two parameters the
-ADR left to exploration.
+The Phase-A spikes (probes committed under `external/probes/`) resolve
+the two parameters the ADR left to exploration; this amendment is the
+ADR-level summary of their reports.
 
 ### A1 — Stage-2 validity gate (bead `0ln.37.1`) — RESOLVED
 
