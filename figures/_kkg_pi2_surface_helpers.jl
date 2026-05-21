@@ -107,9 +107,19 @@
 #      are explicit (Rule 1 fail-loud — an honest gap, never an
 #      extrapolated lie).
 #
-# Per-pole validation VC-4 (dominant-balance `A ∈ {-1,-3}`),
-# VC-5 (conjugate-symmetry pairing) and VC-7 (loop closure) are
-# Phase D — this kernel ships the structural invariants only.
+# Per-pole validation **VC-4** (dominant-balance `A ∈ {-1,-3}`) and
+# **VC-5** (conjugate-symmetry pairing) are wired in: the candidate
+# pole field of `extract_poles_shared_q` (~380 poles, VC-6 cross-node
+# filter only) is passed through `vc4_validate` — each candidate fitted
+# to a local Laurent model on a 32-point ring, kept iff the leading
+# coefficient is in the `{-1,-3}` dominant-balance family (VC-4a) and
+# the residue vanishes (VC-4b), spurious candidates (Froissart doublets
+# / out-of-family) pruned — so `kkg_pi2_surface().poles` is the
+# VC-4-validated field.  `vc5_pair` then matches the survivors into
+# conjugate pairs and reports the FW-style pairing-residual accuracy
+# estimate.  The VC-4/VC-5 machinery lives in the sibling helper
+# `figures/_kkg_pi2_vc45.jl` (CLAUDE.md Rule 6 file-size split).
+# VC-7 (loop closure) remains a separate Phase-D bead.
 #
 # ### The stitch
 #
@@ -200,6 +210,14 @@ using PadeTaylor.VectorPoleField:  extract_poles_shared_q
 # include when both helpers are pulled into one session.
 if !isdefined(@__MODULE__, :laplace2d_solve_gridap)
     include(joinpath(@__DIR__, "_kkg_pi2_gridap_helper.jl"))
+end
+
+# VC-4 (dominant-balance per-pole certificate) and VC-5 (conjugate-
+# symmetry pairing) — the Phase-D per-pole validation that certifies the
+# genuine wedge poles and prunes the spurious ones (ADR-0025 Amendment 1
+# §A3; beads `padetaylor-0ln.37.12` / `0ln.37.13`).
+if !isdefined(@__MODULE__, :vc4_validate)
+    include(joinpath(@__DIR__, "_kkg_pi2_vc45.jl"))
 end
 
 # ======================================================================
@@ -638,20 +656,39 @@ Two honesty-defining choices:
     gate's `s(tol)` safety factor.
 
 The **pole field** — `extract_poles_shared_q` with cross-node
-`min_support ≥ 2` (VC-6) — is the primary wedge deliverable: the
-extracted pole *locations*.
+`min_support ≥ 2` (VC-6) — produces a *candidate* field (~380 poles
+with the B3 fan).  VC-6 is a cross-node artefact filter; it does not
+catch a Froissart doublet or a mis-located cluster.  So the candidate
+field is then passed through the **Phase-D per-pole validation**:
 
-Returns `(walk, poles, u, covered, message)`:
+  * **VC-4** (`vc4_validate`, ADR-0025 Amendment 1 §A3) — for each
+    candidate fit `u ≈ A·ξ⁻² + B·ξ⁻¹ + C` on a 32-point ring; keep it
+    iff `min(|A+1|,|A+3|) < 0.10` (VC-4a, the dominant-balance family)
+    **and** `|B| < 0.10·|A|` (VC-4b, the zero residue).  A candidate
+    failing either is spurious and **pruned** — `poles` is the
+    VC-4-surviving field, the field the figure renders.
+  * **VC-5** (`vc5_pair`) — match the VC-4-surviving poles into
+    conjugate pairs (`V₀(x̄)=conj V₀(x)`); the pairing residual is an
+    FW-style accuracy estimate, a flagged off-axis unpaired pole is
+    suspect.  VC-5 is a diagnostic — it *reports*, it does not prune.
+
+Returns `(walk, poles, u, covered, vc4, vc5, message)`:
   - `walk`     : the `VectorPathNetworkSolution`;
-  - `poles`    : the `extract_poles_shared_q` validated pole field
-                 (the FW Fig 4.7 pole-location scatter);
+  - `poles`    : the **VC-4-validated** pole field — the figure's final
+                 field (the FW Fig 4.7 pole-location scatter);
   - `u`        : `Vector{ComplexF64}` of `V_0` at `grid_pts` — finite
                  only where a B1-gated node disc honestly covers,
                  `NaN + NaN·im` everywhere else (no extrapolation);
   - `covered`  : `Vector{Bool}`, `true` iff that grid point is honestly
                  covered (`u[k]` finite) — the honest-coverage mask;
-  - `message`  : a status note (node count, pole count, `|x|` frontier,
-                 honest-coverage fraction).
+  - `vc4`      : the `vc4_validate` diagnostics — per-candidate `A`,
+                 `B`, `dA`, `pass`, `family`, the pruned count and
+                 per-pruned-pole failure reason;
+  - `vc5`      : the `vc5_pair` diagnostics — conjugate pairs, the
+                 pairing residuals, median/max, unpaired + flagged;
+  - `message`  : a status note (node count, candidate / validated pole
+                 counts, `|x|` frontier, honest-coverage fraction,
+                 VC-4 prune count, VC-5 residual).
 """
 function surf_wedge_fill(bvp_sol::VectorBVPSolution,
                          grid_pts::AbstractVector{ComplexF64})
@@ -670,10 +707,17 @@ function surf_wedge_fill(bvp_sol::VectorBVPSolution,
                                      fine_grid   = grid_pts,
                                      extrapolate = false,
                                      tol         = SURF_PN_TOL)
-    poles = extract_poles_shared_q(walk;
-                                   radius_t     = SURF_RADIUS_T,
-                                   cluster_atol = SURF_CLUSTER_ATOL,
-                                   min_support  = SURF_MIN_SUPPORT)
+    candidates = extract_poles_shared_q(walk;
+                                        radius_t     = SURF_RADIUS_T,
+                                        cluster_atol = SURF_CLUSTER_ATOL,
+                                        min_support  = SURF_MIN_SUPPORT)
+    # Phase-D per-pole validation: VC-4 prunes the spurious candidates
+    # (Froissart doublets / out-of-family / non-zero-residue), VC-5
+    # pairs the survivors by conjugate symmetry.  `poles` is the
+    # VC-4-validated field — the field the figure renders.
+    vc4   = vc4_validate(walk, ComplexF64.(candidates))
+    poles = vc4.kept
+    vc5   = vc5_pair(poles)
     # The Stage-2 grid_y is ordered as grid_pts; u is its first
     # component.  A `NaN` slot is an honest B1 gate gap (a grid point
     # outside every node's verified disc) — never an extrapolated lie.
@@ -685,11 +729,16 @@ function surf_wedge_fill(bvp_sol::VectorBVPSolution,
                maximum(abs, walk.visited_z)
     cov_frac = isempty(u) ? 0.0 : count(covered) / length(u)
     msg = "wedge: $(length(walk.visited_z)) visited nodes, " *
-          "$(length(poles)) poles, |x|-frontier $(round(frontier; digits=1)), " *
+          "$(length(candidates)) candidate poles → " *
+          "$(length(poles)) VC-4-validated " *
+          "($(vc4.n_pruned) pruned), " *
+          "|x|-frontier $(round(frontier; digits=1)), " *
           "$(count(covered))/$(length(u)) grid points honestly covered " *
-          "($(round(100 * cov_frac; digits=1))%)"
-    return (walk = walk, poles = ComplexF64.(poles),
-            u = u, covered = covered, message = msg)
+          "($(round(100 * cov_frac; digits=1))%), " *
+          "VC-5 conjugate-pair residual median " *
+          "$(round(vc5.median_resid; digits=4))"
+    return (walk = walk, poles = poles, u = u, covered = covered,
+            vc4 = vc4, vc5 = vc5, message = msg)
 end
 
 # ======================================================================
@@ -759,10 +808,26 @@ Returns a `NamedTuple`:
   - `spread`              : the agreement map — per sector grid point,
                             the max pairwise disagreement of the three
                             methods (`max(Re-spread, Im-spread)`);
-  - `poles`               : the validated wedge pole field
-                            (`extract_poles_shared_q`, `min_support ≥ 2`
-                            — VC-6) — the Amendment-2 primary wedge
-                            deliverable (the FW Fig 4.7 pole locations);
+  - `poles`               : the **VC-4-validated** wedge pole field —
+                            `extract_poles_shared_q` candidates
+                            (`min_support ≥ 2`, VC-6) pruned by the
+                            VC-4 dominant-balance per-pole certificate
+                            (ADR-0025 Amendment 1 §A3) — the
+                            Amendment-2 primary wedge deliverable (the
+                            FW Fig 4.7 pole locations);
+  - `vc4`                 : the VC-4 diagnostics — per-candidate `A`,
+                            `B`, `dA`, `pass`, `family`, the pruned
+                            count and per-pruned-pole failure reason
+                            (`nothing` when the wedge has no points);
+  - `vc5`                 : the VC-5 conjugate-pairing diagnostics —
+                            the pairs, the residuals, median/max, the
+                            unpaired and flagged-suspect poles
+                            (`nothing` when the wedge has no points);
+  - `wedge_walk`          : the Region-2 `VectorPathNetworkSolution`
+                            (`nothing` when the wedge has no points) —
+                            the shared-`Q` path-network the VC-4 ring
+                            fit and the pole extraction both read, so a
+                            test can re-exercise VC-4 against it;
   - `sector_method`       : per sector grid point, the per-method
                             `(re1, im1, re2, im2, re3, im3)` estimates —
                             so a test can inspect each voter (a
@@ -814,7 +879,8 @@ function kkg_pi2_surface()
     end
     wedge = isempty(wedge_pts) ?
         (walk = nothing, poles = ComplexF64[], u = ComplexF64[],
-         covered = Bool[], message = "wedge: no grid points") :
+         covered = Bool[], vc4 = nothing, vc5 = nothing,
+         message = "wedge: no grid points") :
         surf_wedge_fill(anchor, wedge_pts)
 
     # ---- assemble the grid ------------------------------------------------
@@ -862,6 +928,8 @@ function kkg_pi2_surface()
 
     return (xs = xs, ys = ys, Re_u = Re_u, Im_u = Im_u,
             spread = spread, poles = wedge.poles,
+            vc4 = wedge.vc4, vc5 = wedge.vc5,
+            wedge_walk = wedge.walk,
             sector_method = sector_method,
             wedge_covered = wedge_covered,
             ray_fan = fan, message = wedge.message)

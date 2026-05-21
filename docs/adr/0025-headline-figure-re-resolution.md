@@ -116,8 +116,8 @@ The figure-certifying suite. `[E]` = machinery exists in the codebase;
 | VC-1 | Non-tautological ODE residual (FD of `u'''` vs equation side) | strong | `[E]` active |
 | VC-2 | Sign + KKG `n=2` series cross-check, negative real axis | strong | `[E]` active |
 | VC-3 | Wedge confinement + pole-free-sector purity of poles | strong | `[E]` active |
-| VC-4 | Dominant-balance leading coefficient `A ∈ {-1,-3}` per pole | strong | `[N]` |
-| VC-5 | Conjugate-symmetry pole pairing (`V₀(x̄)=conj V₀(x)`) | strong | `[N]` |
+| VC-4 | Dominant-balance leading coefficient `A ∈ {-1,-3}` per pole | strong | `[N]` shipped (beads `0ln.37.12`; `figures/_kkg_pi2_vc45.jl`) |
+| VC-5 | Conjugate-symmetry pole pairing (`V₀(x̄)=conj V₀(x)`) | strong | `[N]` shipped (bead `0ln.37.13`; `figures/_kkg_pi2_vc45.jl`) |
 | VC-6 | Cross-node support filter (`min_support ≥ 2`) | medium | `[E]` active |
 | VC-7 | Loop-closure ΔP_rel certificate (`quality_diagnose`, ADR-0016) | medium | `[E]` unused on vector walks |
 | VC-8 | BVP endpoint higher-derivative match (FW §5.2 diagnostic) | medium | `[N]` |
@@ -434,6 +434,56 @@ errors. B2's scope is the P_I⁽²⁾ headline figure (`figures/` files
 untouched per the B2 bead); the A_4 figure needs a B3-style explicit
 `step_policy = :min_y` pin or its own re-resolution — a follow-up bead
 for Phase F triage.
+
+## Amendment 5 — Phase-D VC-4 / VC-5 per-pole validation shipped (2026-05-21)
+
+VC-4 (bead `padetaylor-0ln.37.12`) and VC-5 (bead `0ln.37.13`) — the
+first two Phase-D validation criteria — are implemented in the new
+figure helper `figures/_kkg_pi2_vc45.jl` (`include`d by the kernel
+`figures/_kkg_pi2_surface_helpers.jl`; the Rule-6 file-size split).
+The kernel's wedge `poles` field is now the **VC-4-validated** set:
+`extract_poles_shared_q` produces a *candidate* field; `vc4_validate`
+prunes every candidate that is not a genuine P_I⁽²⁾ double pole.
+
+**VC-4 — measured outcome on the B3 wedge field.** The B3 extended
+threading fan extracts **380 candidate poles** (`min_support ≥ 2`,
+VC-6). VC-4 fits each candidate to `u ≈ A·ξ⁻² + B·ξ⁻¹ + C` on a
+32-point ring and applies VC-4a (`min(|A+1|,|A+3|) < 0.10`) + VC-4b
+(`|B| < 0.10·|A|`):
+
+- **266 candidates survive** VC-4 — all in the `A = -1` generic family
+  (`m1`); **zero** `A = -3` poles, confirming the A3 §5.1 genericity
+  prediction (the tritronquée's wedge poles are the generic family);
+- **114 pruned** — 48 `:froissart` (`|A| < 0.1`, no double-pole
+  structure — the Froissart-doublet signature the A4 baseline first
+  flagged at `+5.44+2.40im`), 56 `:nonzero_residue` (right `A`,
+  `|B|` too large — a mis-located cluster), 10 `:out_of_family`
+  (a double pole but `A ∉ {-1,-3}`).
+
+So ~30 % of the raw VC-6 candidate field is spurious — VC-4 is
+load-bearing, not cosmetic.
+
+**VC-5 — measured outcome.** The 266 VC-4-survivors split 131 upper /
+127 lower / 8 near-real — a balanced field (contrast the V8b baseline's
+15 / 6 catastrophe, ADR Amendment 3). `vc5_pair` matches them by a
+globally-greedy conjugate assignment (`VC5_MATCH_TOL = 0.5`): **93
+conjugate pairs**, pairing-residual **median 0.24, max 0.50** — an
+FW-style accuracy estimate of the pole field, ~5× better than the V8b
+baseline median 1.25. The field's pole nearest-neighbour spacing is
+~0.69, so a residual of 0.24 is genuine conjugate symmetry at roughly
+a third of the pole spacing. VC-5 is a **diagnostic** (it reports, it
+does not prune): 72 off-axis survivors have no mirror partner within
+`VC5_MATCH_TOL` and are **flagged suspect** — the far-wedge
+(`|x| ≳ 12`) field is extracted asymmetrically by the walk filament,
+the residual Phase-F must still close.
+
+Both criteria are **mutation-proven** (Rule 4): forcing the VC-4a
+family set to `{-2}` empties the validated field (RED); disabling the
+prune fails the shrink / `n_pruned > 0` / per-pole VC-4a/b assertions
+(RED). A deliberately-injected fake `A ≈ 0` location is rejected as
+`:froissart` while a genuine field pole through the same path is kept
+— the in-test mutation-proof. `figures/test_kkg_pi2_surface.jl` PI2S.4
+asserts all of the above; the suite is GREEN.
 
 ## References
 
