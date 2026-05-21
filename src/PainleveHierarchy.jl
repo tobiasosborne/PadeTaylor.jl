@@ -70,39 +70,53 @@ a v0.2+ target requires a PI-hierarchy member of order ≥ 6 (m ≥ 3)*.
 ## The tritronquée asymptotic initial condition
 
 `pI2_tritronquee_ic(x0)` returns the asymptotic seed for the `P_I^(2)`
-tritronquée at a large real point `x0` (pillar C §4,
-`findings.md:172-281`; KKG 2015 §7).  At `t = 0` the tritronquée obeys
-`u ~ -∛6 · x^{1/3}` as `|x| → ∞` (KKG `tritronquee_coeff.tex` `V0_sector`
-multline).  Seeding at large *negative* real `x0`, write `r = |x0|` and
-take the real branch `Y = -∛6·r^{1/3}`; for `x < 0` the chain rule is
-`d/dx = -d/dr`.
+tritronquée at a large **negative real** point `x0 < 0` (pillar C §4,
+`findings.md:172-281`; KKG 2015 §7).  KKG 2015 write the tritronquée
+asymptotic uniformly as `u ~ -∛6 · x^{1/3}` as `|x| → ∞`; the sign on the
+real axis depends entirely on the branch of `x^{1/3}`.  The decisive
+ground truth is the `P_I^(2)` ODE itself: the leading dominant balance
+`40(u³ + 6x) = 0` (`t = 0`) gives `u³ = -6x`, so on the negative real
+axis (`x < 0`) `u³ = 6|x| > 0` and the **real root is positive**,
+`u = +∛6·|x|^{1/3}`.  This *is* `-∛6·x^{1/3}` with the real cube root:
+for `x < 0`, `x^{1/3} = -|x|^{1/3}`, so `-∛6·x^{1/3} = +∛6·|x|^{1/3} > 0`.
 
-`n_terms = 1` is the leading order `u(x) = -∛6·r^{1/3}`; differentiating
+Write `r = |x0|`; for `x < 0` the chain rule is `d/dx = -d/dr`, which
+flips the sign of every odd-order `x`-derivative of `Y = +∛6·r^{1/3}`.
+`n_terms = 1` is the leading order `u(x) = +∛6·r^{1/3}`; differentiating
 gives the four components
 
-    y_1 = -∛6 · r^{1/3}
-    y_2 = +(1/3)  ∛6 · r^{-2/3}
-    y_3 = +(2/9)  ∛6 · r^{-5/3}
-    y_4 = +(10/27) ∛6 · r^{-8/3}.
+    y_1 = +∛6 · r^{1/3}
+    y_2 = -(1/3)  ∛6 · r^{-2/3}
+    y_3 = -(2/9)  ∛6 · r^{-5/3}
+    y_4 = -(10/27) ∛6 · r^{-8/3}.
 
-All four after `y_1` are positive — `u` decreases as `|x|` grows, so
-`u' > 0` for `x < 0`, and successive derivatives stay positive.  Pillar C
-§4 (`findings.md:274`) prints `y_3` with a leading *minus*; that is a
-transcription sign-slip — differentiation gives `+(2/9)`, and the test
-PH.1.4 oracle is the differentiation-derived value.
+`u > 0` and decreasing as `x → 0⁻`, so `u' = y_2 < 0`; the higher
+derivatives alternate by `d/dx = -d/dr`.  Seeding the **negative**
+leading value `-∛6·r^{1/3}` is the historical bug fixed by bead
+`0ln.31`: that branch is *not a `P_I^(2)` solution at all* — its ODE
+residual is `≈ -480·|x|` (`-9600` at `x = -20`).  The earlier `be9dc3c`
+"`y_3` sign correction" was applied *within that wrong-branch frame*;
+the whole leading branch was wrong, and all four components flip.
 
 `n_terms = 2` (bead V8b) adds the **first non-zero correction** of the
 KKG `u = Y + Σ c_n Y^{-n}` series (KKG 2015 §7, eq. (7.2),
 `findings.md:196-202`).  At `t = 0` the coefficients `c_1 = 2t`, `c_2 =
 c_3 = c_4 = 0`, `c_5 = -(8/3)t^3` all vanish and `c_6 = 1`, so the series
-through the first correction is `u = Y + Y^{-6}`.  With `Y = -∛6·r^{1/3}`
-the correction is `Y^{-6} = (∛6)^{-6}·r^{-2} = 6^{-2}·r^{-2} = r^{-2}/36`
-(the `b_1 = 1/36` of `findings.md:257`).  Differentiating
-`u = -∛6·r^{1/3} + 6^{-2}·r^{-2}` three times w.r.t. `x` (`d/dx = -d/dr`,
+through the first correction is `u = Y + Y^{-6}`.  The correction
+`Y^{-6} = (∛6)^{-6}·r^{-2} = 6^{-2}·r^{-2} = r^{-2}/36` (the `b_1 = 1/36`
+of `findings.md:257`) is **branch-insensitive** — `Y^{-6}` is an even
+power of `Y`, so the sign of `Y` drops out and the `c_6` block is
+identical for either leading branch.  Differentiating
+`u = +∛6·r^{1/3} + 6^{-2}·r^{-2}` three times w.r.t. `x` (`d/dx = -d/dr`,
 `x < 0`) the `n_terms = 2` seed adds, on top of the `n_terms = 1` values,
 
     Δy_1 = + 6^{-2} · r^{-2}     Δy_2 = + 2·6^{-2} · r^{-3}
-    Δy_3 = + 6·6^{-2} · r^{-4}   Δy_4 = + 24·6^{-2} · r^{-5}.
+    Δy_3 = + 6·6^{-2} · r^{-4}   Δy_4 = + 24·6^{-2} · r^{-5}
+
+(uniformly positive: the `(-1)^k` chain-rule factor cancels the
+all-negative falling factorial of `d^k/dr^k r^{-2}`).  The `c_6` term is
+a genuine refinement — the seed's ODE residual drops from `≈ -5/|x|`
+(`n_terms = 1`) to `≈ 10/|x|^4` (`n_terms = 2`).
 
 `n_terms = 2` is supported only for `t = 0` — the general `c_n(t)` series
 (`c_1 = 2t`, …) is out of v0.2 scope; `t ≠ 0` with `n_terms ≥ 2` throws
@@ -116,8 +130,9 @@ implemented).  `n_terms ≤ 0` throws.
 `m < 1`, and for `m ≥ 3`.  `PainleveHierarchyProblem` additionally
 validates `length(y0) == 2m` and a non-degenerate `xspan` (the
 `VectorPadeTaylorProblem` it wraps re-checks `order` and the span).
-`pI2_tritronquee_ic` throws for `n_terms ∉ {1, 2}` and for `n_terms = 2`
-with `t ≠ 0`.  No silent NaN / zero.
+`pI2_tritronquee_ic` throws for `real(x0) ≥ 0` (only the negative real
+axis is supported), for `n_terms ∉ {1, 2}`, and for `n_terms = 2` with
+`t ≠ 0`.  No silent NaN / zero.
 
 ## References
 
@@ -427,27 +442,50 @@ end
     pI2_tritronquee_ic(x0; t = 0, n_terms = 1) -> Vector
 
 Asymptotic-series initial condition `(y_1, y_2, y_3, y_4) =
-(u, u', u'', u''')` for the `P_I^(2)` tritronquée at a large real point
-`x0` (pillar C §4; KKG 2015 §7).  At `t = 0` the tritronquée obeys
-`u ~ -∛6 · x^{1/3}` as `|x| → ∞`; with `r = |x0|` and `d/dx = -d/dr` for
-`x < 0`:
+(u, u', u'', u''')` for the `P_I^(2)` tritronquée at a large **negative
+real** point `x0 < 0` (pillar C §4; KKG 2015 §7).
 
-  - `n_terms = 1` (leading order) — `u = -∛6·r^{1/3}`, giving
-    `(y_1,…,y_4) = (-∛6·r^{1/3}, (1/3)∛6·r^{-2/3}, (2/9)∛6·r^{-5/3},
-    (10/27)∛6·r^{-8/3})`.
+## The branch — `u > 0` on the negative real axis
+
+KKG 2015 write the tritronquée asymptotic uniformly as `u ~ -∛6·x^{1/3}`
+as `|x| → ∞`.  The sign on the real axis depends entirely on which branch
+of `x^{1/3}` is taken.  The decisive ground truth is the `P_I^(2)` ODE
+itself: the leading dominant balance `40(u³ + 6x) = 0` (`t = 0`) gives
+`u³ = -6x`; on the negative real axis (`x < 0`) `u³ = 6|x| > 0`, so the
+**real** root is **positive**, `u = +∛6·|x|^{1/3}`.  This is exactly
+`-∛6·x^{1/3}` with the *real* cube root: for `x < 0`, `x^{1/3} =
+-|x|^{1/3}`, so `-∛6·x^{1/3} = +∛6·|x|^{1/3} > 0`.  Seeding the negative
+leading value `-∛6·|x|^{1/3}` is **not a `P_I^(2) solution at all** — its
+ODE residual is `≈ -480·|x|` (e.g. `-9600` at `x = -20`), not small.
+
+With `r = |x0|` and the chain rule `d/dx = -d/dr` for `x < 0`,
+differentiating `Y = +∛6·r^{1/3}` flips the sign of every odd-order
+`x`-derivative:
+
+  - `n_terms = 1` (leading order) — `u = +∛6·r^{1/3}`, giving
+    `(y_1,…,y_4) = (+∛6·r^{1/3}, -(1/3)∛6·r^{-2/3}, -(2/9)∛6·r^{-5/3},
+    -(10/27)∛6·r^{-8/3})`.  Its ODE residual decays as `≈ -5/|x|`
+    (the leading-order truncation error).
   - `n_terms = 2` (bead V8b) — adds the first non-zero KKG correction
     `Y^{-6} = 6^{-2}·r^{-2}` (`c_6 = 1`, `t = 0`; KKG eq. (7.2)).  The
-    seed becomes the `n_terms = 1` values plus
+    `Y^{-6}` correction is branch-INSENSITIVE — `Y^{-6}` is an even power
+    of `Y`, so the sign of `Y` drops out.  The seed becomes the
+    `n_terms = 1` values plus
     `(6^{-2}r^{-2}, 2·6^{-2}r^{-3}, 6·6^{-2}r^{-4}, 24·6^{-2}r^{-5})`.
+    The `c_6` term is a genuine refinement: the residual now decays as
+    `≈ 10/|x|^4` — orders of magnitude smaller (`≈ 6e-5` at `x = -20`).
 
 The element type follows `x0`'s (a `BigFloat` `x0` yields a `BigFloat`
-seed).  `n_terms = 2` is supported only for `t = 0`; the general
-`c_n(t)` series is out of v0.2 scope, so `t ≠ 0` with `n_terms ≥ 2`
-throws (Rule 9 v1 corner — forced if a `t ≠ 0` tritronquée figure is
-required).  `n_terms ≥ 3` and `n_terms ≤ 0` throw (Rule 1).
+seed).  Only the **negative real axis** is supported: `real(x0) ≥ 0`
+throws (on `x > 0` the real branch is `u = -∛6·x^{1/3} < 0` with `r = x`
+and `d/dx = +d/dr` — a Rule 9 v1 corner, forced if a positive-axis seed
+is ever required).  `n_terms = 2` is supported only for `t = 0`; the
+general `c_n(t)` series is out of v0.2 scope, so `t ≠ 0` with
+`n_terms ≥ 2` throws (Rule 9 v1 corner).  `n_terms ≥ 3` and `n_terms ≤ 0`
+throw (Rule 1).
 
-Throws `ArgumentError` for `n_terms ∉ {1, 2}`, and for `n_terms = 2`
-with `t ≠ 0`.
+Throws `ArgumentError` for `real(x0) ≥ 0`, `n_terms ∉ {1, 2}`, and for
+`n_terms = 2` with `t ≠ 0`.
 """
 function pI2_tritronquee_ic(x0; t = 0, n_terms::Integer = 1)
     n_terms in (1, 2) || throw(ArgumentError(
@@ -461,15 +499,36 @@ function pI2_tritronquee_ic(x0; t = 0, n_terms::Integer = 1)
         "(got t = $t); at t = 0 the KKG series simplifies to u = Y + " *
         "Y^{-6}, but for t ≠ 0 the general c_n(t) series (c_1 = 2t, …) is " *
         "out of v0.2 scope.  Suggestion: pass t = 0, or n_terms = 1."))
+    real(x0) < 0 || throw(ArgumentError(
+        "pI2_tritronquee_ic: only the negative real axis (real(x0) < 0) is " *
+        "supported for v0.2 — that is the segment the V8 tritronquée figure " *
+        "and the V8b BVP use (KKG 2015 §7).  On x > 0 the real ODE-consistent " *
+        "branch is u = -∛6·x^{1/3} < 0 with r = x and d/dx = +d/dr; that " *
+        "corner is unimplemented (Rule 9 v1 corner — forced if a positive- " *
+        "axis tritronquée seed is ever required).  Suggestion: pass x0 < 0."))
     c  = cbrt(6 * one(float(real(typeof(x0)))))
     r  = abs(x0)
-    y  = [-c * r^(1//3),
-           (1//3)  * c * r^(-2//3),
-           (2//9)  * c * r^(-5//3),
-           (10//27) * c * r^(-8//3)]
+    # Leading order Y = +∛6·r^{1/3}.  On the negative real axis the real,
+    # ODE-consistent branch is POSITIVE: the dominant balance 40(u³+6x)=0
+    # gives u³ = -6x = 6r > 0, so the real root is u = +∛6·r^{1/3}.  This
+    # equals KKG's uniform asymptotic u ~ -∛6·x^{1/3} once the *real* cube
+    # root is taken — for x<0, x^{1/3} = -r^{1/3}, so -∛6·x^{1/3} = +∛6·r^{1/3}.
+    # Differentiating Y three times with d/dx = -d/dr (x < 0) flips the sign
+    # of every odd-order derivative: y₂, y₄ are negative, y₃ positive.
+    y  = [ c * r^(1//3),
+          -(1//3)  * c * r^(-2//3),
+          -(2//9)  * c * r^(-5//3),
+          -(10//27) * c * r^(-8//3)]
     n_terms == 1 && return y
-    # n_terms = 2: add the c_6 = 1 correction Y^{-6} = 6^{-2}·r^{-2} and
-    # its three x-derivatives (d/dx = -d/dr for x < 0).
+    # n_terms = 2: add the c_6 = 1 correction Y^{-6} and its three
+    # x-derivatives.  With Y = +∛6·r^{1/3}, Y^{-6} = (∛6)^{-6}·r^{-2} =
+    # 6^{-2}·r^{-2} = r^{-2}/36 — branch-INSENSITIVE: Y^{-6} is an even
+    # power of Y, so the sign of Y drops out and the c_6 block is identical
+    # for either leading branch (this block needs no correction by the
+    # sign fix).  The k-th x-derivative is (-1)^k·d^k/dr^k of s·r^{-2}:
+    # d^k/dr^k r^{-2} = (-2)(-3)…(-1-k)·r^{-2-k}, so the (-1)^k and the
+    # all-negative falling factorial combine to a uniformly positive
+    # coefficient — +2r^{-3}, +6r^{-4}, +24r^{-5}.
     s = one(c) / 36          # 6^{-2}
     y[1] += s * r^(-2)
     y[2] += 2  * s * r^(-3)

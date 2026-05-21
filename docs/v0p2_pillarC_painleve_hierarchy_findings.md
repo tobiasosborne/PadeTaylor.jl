@@ -181,6 +181,19 @@ u ~ -∛6 · x^{1/3}     as |x| → ∞
 
 in certain sectors of the complex x-plane.
 
+> **Branch note (bead `padetaylor-0ln.31`, 2026-05-21).** KKG write this
+> asymptotic *uniformly*; the sign on the **real** axis depends entirely
+> on which branch of `x^{1/3}` is taken. The decisive ground truth is
+> the `P_I^(2)` ODE itself: the leading dominant balance `40(u³+6x)=0`
+> (`t=0`) gives `u³ = -6x`. On the **negative real axis** (`x<0`),
+> `u³ = 6|x| > 0`, so the **real root is POSITIVE**: `u = +∛6·|x|^{1/3}`.
+> This *is* `-∛6·x^{1/3}` evaluated with the **real** cube root — for
+> `x<0`, `x^{1/3} = -|x|^{1/3}`, so `-∛6·x^{1/3} = +∛6·|x|^{1/3} > 0`.
+> Seeding the *negative* value `-∛6·|x|^{1/3}` on `x<0` is **not a
+> `P_I^(2)` solution at all** — its ODE residual is `≈ -480·|x|`
+> (`-9600` at `x=-20`). The "Practical IC" block §4 below has been
+> corrected; see the corrected component list there.
+
 More precisely, the leading asymptotic is:
 
 ```
@@ -266,19 +279,34 @@ b_{n+1} = -Σ_{m=0}^{n-1} (1/3) b_0^{-1} b_{n-m} b_{m+1}
 ```
 
 **Practical IC for numerical integration:** Start at large real negative `x_0`
-(e.g., `x_0 = -20` with `t = 0`) and set:
+(e.g., `x_0 = -20` with `t = 0`) and set (corrected, bead `padetaylor-0ln.31`,
+2026-05-21 — `u > 0` on the negative real axis, `r = |x_0|`,
+`d/dx = -d/dr` flips every odd-order derivative):
 
 ```
-y_1 = -∛6 · |x_0|^{1/3}  (+ correction b_1 · |x_0|^{-2} + ...)
-y_2 = (1/3) · ∛6 · |x_0|^{-2/3}  (+ ...)
-y_3 = +(2/9) · ∛6 · |x_0|^{-5/3}  (+ ...)   [corrected 2026-05-20, bead padetaylor-0ln.15:
-                                              differentiating u=-∛6·|x|^{1/3} twice for x<0
-                                              gives a POSITIVE u'' — the original "-(2/9)"
-                                              was a transcription sign-slip]
-y_4 = (10/27) · ∛6 · |x_0|^{-8/3}  (+ ...)
+y_1 = +∛6 · |x_0|^{1/3}        (+ correction b_1 · |x_0|^{-2} + ...)
+y_2 = -(1/3)  · ∛6 · |x_0|^{-2/3}  (+ ...)
+y_3 = -(2/9)  · ∛6 · |x_0|^{-5/3}  (+ ...)
+y_4 = -(10/27) · ∛6 · |x_0|^{-8/3}  (+ ...)
 ```
 
 where corrections `y_j` come from differentiating the asymptotic series.
+
+> **Sign correction (bead `padetaylor-0ln.31`, supersedes the 2026-05-20
+> `0ln.15` note).** The earlier note "corrected" `y_3` from `-(2/9)` to
+> `+(2/9)` — but that was a fix *within the wrong branch frame*: the
+> whole leading branch was wrong. The decisive ground truth is the ODE
+> dominant balance `40(u³+6x)=0 ⇒ u³ = -6x`; on `x<0` this gives
+> `u = +∛6·|x|^{1/3} > 0`, so **all four leading-order components flip**:
+> `y_1` becomes `+∛6·|x_0|^{1/3}` (positive), and the three derivatives,
+> obtained by `d/dx = -d/dr`, are `y_2,y_3,y_4 = -(1/3), -(2/9),
+> -(10/27)` times `∛6·|x_0|^{-(3k-1)/3}`. The `n_terms=2` correction
+> `Y^{-6} = |x_0|^{-2}/36` (`c_6 = 1`) is branch-INSENSITIVE — `Y^{-6}`
+> is an even power of `Y` — so the `Δy` block is unchanged:
+> `Δy = (+|x_0|^{-2}/36, +2|x_0|^{-3}/36, +6|x_0|^{-4}/36,
+> +24|x_0|^{-5}/36)`. Verification: the corrected `n_terms=1` seed has
+> P_I^(2) ODE residual `≈ -5/|x|` (vs `≈ -480·|x|` for the old wrong
+> branch); the `n_terms=2` seed `≈ +10/|x|^4`.
 KKG implemented this as a boundary-value problem on `x ∈ [x_l, x_r]` with
 the truncated series (7.2) providing boundary data at both ends (KKG p. 27,
 §7.1).
@@ -410,7 +438,9 @@ end
 ### Initial condition for the Type I tritronquée (V_0)
 
 Seed from the asymptotic series at a large real negative point `x_0 < 0`,
-`t = 0`. Using `Y = -∛6 · |x_0|^{1/3}`:
+`t = 0`. Using the **real, ODE-consistent** branch `Y = +∛6 · |x_0|^{1/3}`
+(bead `padetaylor-0ln.31` — see the branch note in §4: on `x<0` the
+dominant balance forces `u > 0`):
 
 ```
 c_1 = 2t = 0  (since t=0)
@@ -419,16 +449,19 @@ c_5 = -(8/3)t^3 = 0
 c_6 = 1
 ```
 
-Leading terms of (KKG eq. 7.2):
+Leading terms of (KKG eq. 7.2), with `r = |x_0|` and `d/dx = -d/dr`
+(`x<0`) flipping every odd-order derivative:
 
 ```
-u(x_0)   ≈  Y + c_6 Y^{-6} + ...  ≈  -∛6 · |x_0|^{1/3}
-u'(x_0)  ≈  (1/3) · ∛6 · |x_0|^{-2/3}   [from differentiating Y]
-u''(x_0) ≈  -(2/9) · ∛6 · |x_0|^{-5/3}
-u'''(x_0)≈  (10/27) · ∛6 · |x_0|^{-8/3}
+u(x_0)   ≈  Y + c_6 Y^{-6} + ...  ≈  +∛6 · |x_0|^{1/3}
+u'(x_0)  ≈ -(1/3)  · ∛6 · |x_0|^{-2/3}   [from differentiating Y]
+u''(x_0) ≈ -(2/9)  · ∛6 · |x_0|^{-5/3}
+u'''(x_0)≈ -(10/27) · ∛6 · |x_0|^{-8/3}
 ```
 
-For `x_0 = -20, t = 0`: `Y ≈ -∛6 · 20^{1/3} ≈ -1.8171 · 2.7144 ≈ -4.932`.
+For `x_0 = -20, t = 0`: `Y ≈ +∛6 · 20^{1/3} ≈ +1.8171 · 2.7144 ≈ +4.932`
+(positive — `u` is real, positive and monotone-decreasing toward `x=0⁻`,
+matching the BVP-converged tritronquée).
 
 KKG validated this by solving a boundary-value problem on a finite interval,
 confirming accuracy to `~10^{-6}` with `Nc = 512` Chebyshev points.

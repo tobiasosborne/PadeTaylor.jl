@@ -33,22 +33,33 @@ asserts an invariant against a known-correct value (Rule 5):
                                   PainleveProblem(:I) (same normalisation)
     PH.1.3  P_I^(2) ODE residual — solved trajectory satisfies the
                                   original 4th-order ODE (residual ≈ 0)
-    PH.1.4  tritronquée IC     — pI2_tritronquee_ic returns the documented
-                                  leading values; short integration stays
-                                  near the asymptotic series u_f
+    PH.1.4  tritronquée IC     — pI2_tritronquee_ic returns the CORRECT-
+                                  SIGN leading values (u > 0 on x < 0);
+                                  the seed's P_I^(2) ODE residual is small
+                                  and below the leading-order bound 6/|x|
     PH.1.5  failure modes      — m ≥ 3 throws; equation ≠ :I throws;
                                   wrong y0 length throws; n_terms ∉ {1,2}
-                                  throws; n_terms = 2 with t ≠ 0 throws
+                                  throws; n_terms = 2 with t ≠ 0 throws;
+                                  real(x0) ≥ 0 throws
     PH.1.7  tritronquée IC n=2 — pI2_tritronquee_ic(·; n_terms = 2) at
                                   t = 0 equals Y + Y^{-6} (c_6 = 1) and
-                                  its analytic derivatives; refines the
-                                  leading-order ODE residual (bead V8b)
+                                  its analytic derivatives; the n=2 seed's
+                                  ODE residual is below 20/|x|^4 — orders
+                                  of magnitude tighter than n=1 (bead V8b)
     PH.1.6  mutation-proof     — recorded at end of file
+
+The decisive ground truth for the tritronquée seed (PH.1.4, PH.1.7) is
+the P_I^(2) ODE itself.  The leading dominant balance 40(u³ + 6x) = 0
+gives u³ = -6x; on the negative real axis (x < 0) u³ = 6|x| > 0, so the
+REAL root is u = +∛6·|x|^{1/3} — POSITIVE.  The seed (u, u', u'', u''')
+is plugged into u'''' + 10u'^2 + 20u·u'' + 40(u³ + 6x) with u'''' taken
+from the seed's CLOSED FORM (a genuine residual, not the f[4] tautology)
+and the residual asserted against its leading-order decay rate.
 
 Oracles: the hand-written companion RHS (PH.1.1); v0.1
 `PainleveProblem(:I)` trajectory (PH.1.2); the original ODE residual
-computed from the solved jet (PH.1.3); the closed-form asymptotic series
-`u = -∛6·|x|^{1/3}` and its derivatives (PH.1.4).
+computed from the solved jet (PH.1.3); the P_I^(2) ODE residual of the
+asymptotic seed, with u'''' from the seed's closed form (PH.1.4, PH.1.7).
 
 Self-contained: `using Test, PadeTaylor` only — runnable standalone
 (`julia --project=. test/painleve_hierarchy_test.jl`) and under
@@ -136,15 +147,22 @@ using PadeTaylor
     # -------------------------------------------------------------------------
     # PH.1.3 — P_I^(2) ODE residual along a solved trajectory.
     # Solve P_I^(2) from a smooth (non-tritronquée) IC, then verify the
-    # recovered components satisfy the original 4th-order ODE:
-    #   u_xxxx + 10 u_x^2 + 20 u u_xx + 40(u^3 - 6t u + 6x) = 0,
-    # with u_xxxx read off as the 4th component of f(x, y) along the
-    # dense solution.  This is a genuine invariant — the companion form
-    # is faithful iff the residual vanishes.
+    # recovered components satisfy the original 4th-order ODE
+    #   u_xxxx + 10 u_x^2 + 20 u u_xx + 40(u^3 - 6t u + 6x) = 0.
+    #
+    # bead-0ln.30 caveat: u_xxxx must NOT be read off as f(x,y)[4] of the
+    # solved state.  f[4] is DEFINED as -(10y2^2 + 20y1y3 + 40(...)), so
+    # the residual f[4] + 10y2^2 + 20y1y3 + 40(...) ≡ 0 for ANY y — a
+    # tautology that says nothing about whether `sv` actually solved the
+    # ODE.  The genuine invariant tested here instead is the companion-
+    # CHAIN consistency: along the solved trajectory the dense components
+    # must satisfy y_{k+1} = d/dx y_k.  We finite-difference the solved
+    # third component y_4 = u''' to get an INDEPENDENT u'''' and plug
+    # THAT into the ODE — a residual that goes large the moment the
+    # integrator returns an inconsistent jet.
     # -------------------------------------------------------------------------
     @testset "PH.1.3 P_I^(2) ODE residual ≈ 0" begin
         t = 0.0
-        f = painleve_hierarchy(:I, 2; t = t)
         # Small smooth IC, short interval — no pole on [0, 0.4].
         y0    = [0.1, 0.02, -0.01, 0.005]
         xspan = (0.0, 0.4)
@@ -154,59 +172,69 @@ using PadeTaylor
         for x in 0.05:0.05:0.35
             y  = sv(x)
             u, ux, uxx, uxxx = y
-            uxxxx = f(x, y)[4]      # y_4' from the companion RHS
-            resid = uxxxx + 10*ux^2 + 20*u*uxx + 40*(u^3 - 6*t*u + 6*x)
-            @test abs(resid) < 1e-7
+            # INDEPENDENT u'''' — central-difference the solved u''' (the
+            # 4th companion component); NOT the companion RHS f[4].
+            dx     = 1e-4
+            uxxxx  = (sv(x + dx)[4] - sv(x - dx)[4]) / (2*dx)
+            resid  = uxxxx + 10*ux^2 + 20*u*uxx + 40*(u^3 - 6*t*u + 6*x)
+            @test abs(resid) < 1e-5
+            # Companion-chain consistency: y_{k+1} = d/dx y_k along sv.
+            @test (sv(x + dx)[1] - sv(x - dx)[1]) / (2*dx) ≈ ux  atol = 1e-6
+            @test (sv(x + dx)[2] - sv(x - dx)[2]) / (2*dx) ≈ uxx atol = 1e-6
         end
     end
 
     # -------------------------------------------------------------------------
-    # PH.1.4 — tritronquée IC: documented leading values + self-consistency.
-    # The KKG asymptotic seed at large negative real x_0 (t=0):
-    #   u   = -∛6 · |x_0|^{1/3}
-    #   u'  = +(1/3) ∛6 · |x_0|^{-2/3}
-    #   u'' = +(2/9) ∛6 · |x_0|^{-5/3}
-    #   u'''= +(10/27) ∛6 · |x_0|^{-8/3}
-    # obtained by differentiating u(x) = -∛6·|x|^{1/3} w.r.t. x for x<0
-    # (d/dx = -d/d|x|).  NOTE: pillar C §4 line 274 prints y_3 with a
-    # leading MINUS — that is a transcription sign-slip; differentiation
-    # gives +(2/9).  We assert the differentiation-derived (correct) value.
+    # PH.1.4 — tritronquée IC: CORRECT-SIGN leading values + genuine ODE
+    # residual.  The KKG asymptotic seed at large negative real x_0 (t=0)
+    # is u = +∛6·|x_0|^{1/3} — POSITIVE on x < 0.  Ground truth: the
+    # P_I^(2) leading balance 40(u³ + 6x) = 0 gives u³ = -6x = 6|x| > 0,
+    # so the real cube root is positive (bead 0ln.31; KKG's uniform
+    # u ~ -∛6·x^{1/3} with the *real* cube root, x^{1/3} = -|x|^{1/3} for
+    # x<0).  Differentiating u = +∛6·|x|^{1/3} for x<0 (d/dx = -d/d|x|)
+    # flips every odd-order derivative:
+    #   u   = +∛6 · |x_0|^{1/3}
+    #   u'  = -(1/3) ∛6 · |x_0|^{-2/3}
+    #   u'' = -(2/9) ∛6 · |x_0|^{-5/3}
+    #   u'''= -(10/27) ∛6 · |x_0|^{-8/3}
+    #
+    # The load-bearing assertion is a GROUND-TRUTH ODE-residual check
+    # (Rule 5).  Plug (u,u',u'',u''') into the original 4th-order ODE
+    #   u'''' + 10u'^2 + 20u·u'' + 40(u³ - 6t·u + 6x)
+    # with u'''' taken from the seed's CLOSED FORM, NOT from the companion
+    # RHS f(x,y)[4].  This is the bead-0ln.30 fix: f[4] is DEFINED as the
+    # negative of the rest of the row, so resid = f[4] + rest ≡ 0 is an
+    # identity that holds for ANY y — a tautology, not a test.  The
+    # closed-form u'''' makes it a genuine, non-trivial residual.
+    # d⁴/dx⁴ of u = +∛6·|x|^{1/3} (x<0, d/dx=-d/d|x|, 4th order ⇒ even ⇒
+    # sign +): coeff (1/3)(-2/3)(-5/3)(-8/3) = -80/81 ⇒ u'''' =
+    # -(80/81)·∛6·|x|^{-11/3}.  The leading-order seed is exact only at
+    # dominant-balance order, so the residual is the leading truncation
+    # error; empirically |resid| ≈ 5/|x| (decaying), so 6/|x| is a safe
+    # pin (verified by /tmp/verify_scale.jl: 4.06 at x=-20, 2.99 at -50).
     # -------------------------------------------------------------------------
-    @testset "PH.1.4 tritronquée IC leading values + self-consistency" begin
-        x0   = -20.0
-        c    = cbrt(6.0)
-        r    = abs(x0)            # |x_0| = 20
-        y    = pI2_tritronquee_ic(x0)
-        @test length(y) == 4
-        @test y[1] ≈ -c * r^(1/3)        atol = 1e-12
-        @test y[2] ≈  (1/3) * c * r^(-2/3) atol = 1e-12
-        @test y[3] ≈  (2/9) * c * r^(-5/3) atol = 1e-12
-        @test y[4] ≈  (10/27) * c * r^(-8/3) atol = 1e-12
+    @testset "PH.1.4 tritronquée IC: correct sign + genuine ODE residual" begin
+        c = cbrt(6.0)
+        for x0 in (-12.0, -20.0, -35.0, -50.0)
+            r = abs(x0)
+            y = pI2_tritronquee_ic(x0)
+            @test length(y) == 4
+            # Correct-sign leading values: u>0, u'<0, u''<0, u'''<0.
+            @test y[1] ≈  c * r^(1/3)          atol = 1e-12
+            @test y[2] ≈ -(1/3)  * c * r^(-2/3) atol = 1e-12
+            @test y[3] ≈ -(2/9)  * c * r^(-5/3) atol = 1e-12
+            @test y[4] ≈ -(10/27) * c * r^(-8/3) atol = 1e-12
+            @test y[1] > 0          # u is POSITIVE on the negative axis
 
-        # Self-consistency #1 — the seed satisfies the original P_I^(2)
-        # ODE exactly at x0: the leading power law u = -∛6·|x|^{1/3} is a
-        # solution of the dominant balance, so the residual vanishes.
-        f = painleve_hierarchy(:I, 2; t = 0.0)
-        u, ux, uxx, uxxx = y
-        uxxxx = f(x0, y)[4]
-        resid0 = uxxxx + 10*ux^2 + 20*u*uxx + 40*(u^3 + 6*x0)
-        @test abs(resid0) < 1e-9
-
-        # Self-consistency #2 — a *short* forward integration tracks the
-        # asymptotic series.  The P_I^(2) tritronquée is an UNSTABLE
-        # special solution: nearby solutions diverge exponentially, which
-        # is exactly why KKG 2015 §7 solved a boundary-value problem
-        # rather than a forward IVP.  So we only assert tracking over a
-        # short window (L = 0.05) where the divergence has not yet bitten;
-        # the deep KKG-figure (BVP) validation is the separate bead V8b.
-        L   = 0.05
-        php = PainleveHierarchyProblem(2; y0 = y, xspan = (x0, x0 + L),
-                                       t = 0.0, order = 30)
-        sv  = vector_solve_pade(php.problem; h = 0.01)
-        for x in (x0, x0 + L/2, x0 + L)
-            u_series = -c * abs(x)^(1/3)
-            u_solved = sv(x)[1]
-            @test abs(u_solved - u_series) < 0.01 * abs(u_series)
+            # Genuine ODE residual — u'''' from the seed's closed form.
+            u, ux, uxx, uxxx = y
+            uxxxx = -(80/81) * c * r^(-11/3)
+            resid = uxxxx + 10*ux^2 + 20*u*uxx + 40*(u^3 + 6*x0)
+            @test abs(resid) < 6 / r        # leading-order truncation bound
+            # The OLD (negative) branch is NOT a solution: its residual is
+            # ≈ -480·|x| ~ thousands.  Pin that the correct seed beats it
+            # by a wide margin (a few orders of magnitude).
+            @test abs(resid) < 1.0
         end
     end
 
@@ -247,18 +275,37 @@ using PadeTaylor
         # v0.2 scope (the documented v1 corner), so it must throw.
         @test_throws ArgumentError pI2_tritronquee_ic(-20.0; t = 0.5,
                                                       n_terms = 2)
+        # pI2_tritronquee_ic: only the negative real axis is supported.
+        # real(x0) ≥ 0 must throw — on x > 0 the real ODE-consistent
+        # branch is u = -∛6·x^{1/3} < 0 (a documented v1 corner), and a
+        # zero x0 has no leading balance; both fail-fast (Rule 1).
+        @test_throws ArgumentError pI2_tritronquee_ic(20.0)
+        @test_throws ArgumentError pI2_tritronquee_ic(0.0)
+        @test_throws ArgumentError pI2_tritronquee_ic(5.0; n_terms = 2)
     end
 
     # -------------------------------------------------------------------------
     # PH.1.7 — tritronquée IC, n_terms = 2 (bead V8b).  The KKG series at
     # t = 0 through the first non-zero correction is u = Y + Y^{-6}, with
-    # Y = -∛6·r^{1/3} and Y^{-6} = 6^{-2}·r^{-2} (c_6 = 1, KKG eq. (7.2),
-    # `findings.md:196-202`).  We assert the n_terms = 2 seed equals the
-    # n_terms = 1 seed plus the analytic x-derivatives of 6^{-2}·r^{-2}
-    # (d/dx = -d/dr for x < 0), at several x0; that n_terms = 1 is
-    # byte-identical to its pre-V8b behaviour; and the n_terms = 2 seed's
-    # residual against the FULL P_I^(2) ODE is smaller than the
-    # leading-order seed's (the c_6 term is a genuine refinement).
+    # Y = +∛6·r^{1/3} (the CORRECT-SIGN real branch on x<0, bead 0ln.31)
+    # and Y^{-6} = 6^{-2}·r^{-2} (c_6 = 1, KKG eq. (7.2),
+    # `findings.md:196-202`).  The c_6 correction Y^{-6} is an EVEN power
+    # of Y, hence branch-insensitive — the sign fix touches only the
+    # n_terms = 1 leading block; the Δ-pieces are unchanged.
+    #
+    # We assert the n_terms = 2 seed equals the n_terms = 1 seed plus the
+    # analytic x-derivatives of 6^{-2}·r^{-2} (d/dx = -d/dr for x < 0);
+    # the correct-sign leading values; and — the load-bearing GROUND-
+    # TRUTH check (Rule 5) — that the n_terms = 2 seed's P_I^(2) ODE
+    # residual is below 20/|x|^4, orders of magnitude tighter than the
+    # n_terms = 1 seed's ≈ 5/|x|.  The c_6 term IS a genuine refinement.
+    # u'''' is taken from the seed's CLOSED FORM (bead 0ln.30 — never the
+    # companion f[4], which gives an identically-zero tautology):
+    #   d⁴/dx⁴ of +c·r^{1/3}: coeff (1/3)(-2/3)(-5/3)(-8/3) = -80/81 ⇒
+    #     -(80/81)c·r^{-11/3} (even order, d/dx=-d/dr sign cancels);
+    #   d⁴/dx⁴ of s·r^{-2}: coeff (-2)(-3)(-4)(-5) = 120 ⇒ 120s·r^{-6}.
+    # Empirical n=2 residual (verify_scale.jl): |R2|·|x|^4 ∈ [8,13], so
+    # 20/|x|^4 is a safe pin; n=1: |R1|·|x| ∈ [3,5], pin 6/|x|.
     # -------------------------------------------------------------------------
     @testset "PH.1.7 tritronquée IC n_terms = 2 (c_6 correction)" begin
         for x0 in (-12.0, -20.0, -35.0, -50.0)
@@ -268,39 +315,38 @@ using PadeTaylor
             y1 = pI2_tritronquee_ic(x0; n_terms = 1)
             y2 = pI2_tritronquee_ic(x0; n_terms = 2)
             @test length(y2) == 4
-            # n_terms = 2 = n_terms = 1 + analytic derivatives of Y^{-6}.
+            # n_terms = 2 = n_terms = 1 + analytic derivatives of Y^{-6}
+            # (branch-insensitive: Δ-pieces all positive, unchanged).
             @test y2[1] ≈ y1[1] + s * r^(-2) atol = 1e-13
             @test y2[2] ≈ y1[2] + 2  * s * r^(-3) atol = 1e-13
             @test y2[3] ≈ y1[3] + 6  * s * r^(-4) atol = 1e-13
             @test y2[4] ≈ y1[4] + 24 * s * r^(-5) atol = 1e-13
-            # Closed-form cross-check of the y2[1] value: u = Y + Y^{-6}.
-            @test y2[1] ≈ -c * r^(1/3) + s * r^(-2) atol = 1e-13
+            # Closed-form cross-check of y2[1]: u = Y + Y^{-6}, Y>0.
+            @test y2[1] ≈  c * r^(1/3) + s * r^(-2) atol = 1e-13
 
-            # n_terms = 1 unchanged from its pre-V8b leading-order form.
-            @test y1[1] ≈ -c * r^(1/3)         atol = 1e-13
-            @test y1[2] ≈  (1/3)  * c * r^(-2/3) atol = 1e-13
-            @test y1[3] ≈  (2/9)  * c * r^(-5/3) atol = 1e-13
-            @test y1[4] ≈  (10/27) * c * r^(-8/3) atol = 1e-13
+            # n_terms = 1 correct-sign leading-order form: u>0, u'<0,…
+            @test y1[1] ≈  c * r^(1/3)          atol = 1e-13
+            @test y1[2] ≈ -(1/3)  * c * r^(-2/3) atol = 1e-13
+            @test y1[3] ≈ -(2/9)  * c * r^(-5/3) atol = 1e-13
+            @test y1[4] ≈ -(10/27) * c * r^(-8/3) atol = 1e-13
+            @test y1[1] > 0 && y2[1] > 0
 
-            # The c_6 correction is a genuine refinement.  The full
-            # P_I^(2) ODE residual u'''' + 10u'^2 + 20u u'' + 40(u^3+6x)
-            # must be evaluated with u'''' from the *seed formula* (a 4th
-            # x-derivative of u = Y + Y^{-6} — d/dx = -d/dr, even order so
-            # sign +), NOT from the companion RHS f[4] (which is defined
-            # AS the negative of the rest, making that residual an
-            # identically-zero tautology).  d⁴/dr⁴ of -c·r^{1/3}:
-            # coeff (1/3)(-2/3)(-5/3)(-8/3) = -80/81 ⇒ +(80/81)c·r^{-11/3};
-            # d⁴/dr⁴ of s·r^{-2}: coeff (-2)(-3)(-4)(-5) = 120 ⇒ 120s·r^{-6}.
-            u4_1 = (80/81) * c * r^(-11/3)                 # n_terms = 1
-            u4_2 = (80/81) * c * r^(-11/3) + 120 * s * r^(-6)  # n_terms = 2
+            # GROUND-TRUTH ODE residual — u'''' from the seed's closed
+            # form (NOT companion f[4]: that residual is identically 0).
+            u4_1 = -(80/81) * c * r^(-11/3)                 # n_terms = 1
+            u4_2 = -(80/81) * c * r^(-11/3) + 120 * s * r^(-6)  # n_terms = 2
             res1 = abs(u4_1 + 10*y1[2]^2 + 20*y1[1]*y1[3] + 40*(y1[1]^3 + 6*x0))
             res2 = abs(u4_2 + 10*y2[2]^2 + 20*y2[1]*y2[3] + 40*(y2[1]^3 + 6*x0))
+            # The c_6 term is a genuine refinement: n=2 residual is far
+            # smaller than n=1, and below the documented |x|^{-4} bound.
+            @test res1 < 6  / r           # n=1 leading-order bound
+            @test res2 < 20 / r^4         # n=2 c_6-corrected bound
             @test res2 < res1
         end
         # BigFloat element type propagates (a BigFloat x0 → BigFloat seed).
         yb = pI2_tritronquee_ic(big"-20.0"; n_terms = 2)
         @test eltype(yb) == BigFloat
-        @test yb[1] ≈ -cbrt(big(6)) * big(20)^(big(1)/3) +
+        @test yb[1] ≈ cbrt(big(6)) * big(20)^(big(1)/3) +
                       (one(BigFloat)/36) * big(20)^(-2)  atol = big(1e-40)
     end
 
@@ -323,17 +369,31 @@ end
 #   M1  — `_rhs_PI2`: coefficient 40 → 41 in the `40*(...)` term.
 #         Bit 18 asserts RED — PH.1.1 (10: every m=2 RHS comparison),
 #         PH.1.3 (7: every residual point), PH.1.4 (1: short-integration
-#         tracking).  RED.
+#         tracking).  RED.  [pre-0ln.31 record; PH.1.3/1.4 since reshaped]
 #   M2  — `_rhs_PI2`: sign of the `6*t*y1` term flipped (−6t → +6t).
 #         Bit 7 asserts RED — all in PH.1.1, the t≠0 RHS comparisons;
 #         the t=0 asserts and PH.1.3/1.4 (both t=0) stayed GREEN, exactly
 #         as expected for a t-only mutation.  RED.
 #   M3  — `pI2_tritronquee_ic`: exponent 1/3 → 2/3 on the y[1] term.
 #         Bit 4 asserts RED — PH.1.4 (the y[1] leading-value assert + the
-#         three short-integration tracking asserts).  RED.
+#         three short-integration tracking asserts).  RED.  [pre-0ln.31]
+#   M4  — bead 0ln.31 sign-fix mutation.  `pI2_tritronquee_ic`: the four
+#         corrected leading-order seed signs flipped back to the OLD
+#         (wrong) branch — y[1] = -c·r^{1/3}, y[2..4] sign-flipped — the
+#         exact bug 0ln.31 fixes.  RESULT: 61 of 159 assertions RED,
+#         dominated by the PH.1.4 and PH.1.7 GROUND-TRUTH ODE-residual
+#         checks: `abs(resid) < 6/r` evaluated to 9600.2 < 0.3 at x=-20
+#         and 5760.4 < 0.5 at x=-12 — the residual jumps from ~0.2 (the
+#         correct leading-order truncation error) to ~thousands (the
+#         wrong branch is not a P_I^(2) solution at all, residual ≈
+#         -480·|x|).  Confirms the new residual assertions are GENUINE:
+#         a tautological `f[4]`-based check would have stayed GREEN under
+#         this mutation (f[4] ≡ -(rest) regardless of sign).  Restored to
+#         GREEN (159/159).
 #
-# All three mutations produced a RED suite; the source was restored to
-# GREEN (59/59) after each.  The tests catch a wrong coefficient, a
-# wrong sign, and a wrong exponent — the three regression classes for
-# this module.
+# All four mutations produced a RED suite; the source was restored to
+# GREEN after each.  The tests catch a wrong coefficient (M1), a wrong
+# t-sign (M2), a wrong exponent (M3), and — critically — the wrong
+# tritronquée branch (M4), which only the closed-form-u'''' residual
+# check (not the f[4] tautology) can detect.
 # -----------------------------------------------------------------------------
