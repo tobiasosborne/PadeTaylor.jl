@@ -38,8 +38,27 @@
 #   3. **Sector coverage.**  ≥ 80% of the pole-free-sector grid cells
 #      (inside the `|x| ≤ 20` disc) must carry a non-`NaN` value.
 #
-#   4. **Wedge.**  ≥ 1 pole in the wedge; every extracted pole confined
-#      to `|arg x| ≲ 36°` (continuity with V8b's 21 poles in the wedge).
+#   4. **Wedge pole field (ADR-0025 Amendment 2).**  The wedge panel is
+#      rescoped to the validated pole *field* + an honest partial `|u|`
+#      surface underlay — NOT a filled surface (the A2 probe proved a
+#      filled honest wedge surface numerically unreachable; honest
+#      coverage saturates at ~8-18 %).  PI2S.4 asserts the
+#      Amendment-2 deliverable's structural invariants:
+#        - the pole field is non-empty and grows *richer* than V8b's
+#          21 poles (the B3 extended threading fan threads the *whole*
+#          wedge to `|x| = 20`, where V8b's fan stopped at `|x| ≤ 8`);
+#        - every pole is wedge-confined, `|arg p|` within `36° + margin`
+#          (VC-3) — no pole leaks into the pole-free sector;
+#        - the honest-coverage mask `wedge_covered` is *consistent*
+#          with `Re_u`/`Im_u`: a covered cell is finite, an uncovered
+#          wedge cell is `NaN` — and the coverage fraction is the
+#          honest, partial (~5-20 %) figure A2 predicts, NOT a filled
+#          surface;
+#        - no Padé is evaluated out of disc (covered ⊆ finite, the B1
+#          true-radius gate's contract).
+#      The rich per-pole validation — VC-4 dominant-balance `A∈{-1,-3}`,
+#      VC-5 conjugate-symmetry pairing, VC-7 loop closure — is Phase D
+#      and is NOT asserted here; PI2S.4 leaves a marked placeholder.
 #
 #   5. **Schwarz symmetry.**  `V_0(x̄) = conj(V_0(x))` (the ODE has real
 #      coefficients and the tritronquée is real on `x < 0`), so in the
@@ -140,16 +159,76 @@ const SURF2 = kkg_pi2_surface()      # second run, for reproducibility
         @test filled / total ≥ 0.80
     end
 
-    @testset "PI2S.4 — wedge pole field" begin
+    @testset "PI2S.4 — wedge pole field + honest partial underlay" begin
+        # --- the pole field — the Amendment-2 primary wedge deliverable ---
+        # The B3 extended threading fan drives the B2 `:max_q_root`
+        # adaptive walk through the whole wedge to `|x| = 20`; the field
+        # is non-empty and RICHER than V8b's 21 poles (V8b's fan stopped
+        # at `|x| ≤ 8` — A2 §1).  `> 21` is the senior-grade bar: the
+        # re-resolution must beat the baseline, not merely match it.
         @test length(SURF.poles) ≥ 1
-        # Every pole confined to the |arg x| ≲ 36° wedge (a small
-        # numerical margin past the 36° Stokes line is allowed for the
-        # clustered root positions).
+        @test length(SURF.poles) > 21
+
+        # VC-3 — every extracted pole is wedge-confined: `|arg p|` within
+        # the 36° Stokes line plus a small clustering margin.  A pole
+        # leaking into the pole-free ~270° sector would be spurious (the
+        # tritronquée is analytic there).
         for p in SURF.poles
             @test abs(rad2deg(angle(p))) ≤ 36.0 + 2.0
         end
-        # Continuity with V8b: the same recipe found 21 poles.
-        @test length(SURF.poles) ≥ 10
+
+        # --- the honest-coverage mask `wedge_covered` is consistent -------
+        # ADR-0025 Amendment 1/2 contract: the Stage-2 fill ran
+        # `extrapolate = false`, so a cell is finite in `Re_u`/`Im_u`
+        # IFF it is honestly covered by a B1-gated node disc.  Verify
+        # the mask agrees with the matrices cell-by-cell over the wedge,
+        # and that uncovered wedge cells are genuinely `NaN` (an honest
+        # gap — no Padé evaluated out of disc).
+        n_covered = 0; n_wedge = 0; mask_consistent = true
+        for j in 1:n, i in 1:n
+            z = ComplexF64(SURF.xs[i], SURF.ys[j])
+            (abs(z) <= SURF_XY_LIM && !surf_in_sector(z) &&
+             !surf_in_mask(z) && !iszero(z)) || continue
+            n_wedge += 1
+            cov = SURF.wedge_covered[i, j]
+            fin = !isnan(SURF.Re_u[i, j]) && !isnan(SURF.Im_u[i, j])
+            # covered  ⟺  finite  (the B1-gate honesty contract)
+            (cov == fin) || (mask_consistent = false)
+            cov && (n_covered += 1)
+        end
+        @test mask_consistent
+        @test n_wedge > 0
+
+        # The honest coverage is PARTIAL — the A2 probe measured
+        # ~8-18 %; this is NOT a filled surface.  Lower bound: the gate
+        # genuinely covers *some* cells (the field is not all-NaN);
+        # upper bound: it is well short of a filled wedge (`< 60 %` — A2
+        # found no annulus past 50 %, so the global figure cannot
+        # approach the 70 % filled-surface bar).
+        cov_frac = n_covered / n_wedge
+        @test cov_frac > 0.0
+        @test cov_frac < 0.60
+
+        # Outside the covered mask, every wedge cell is `NaN` — the
+        # honest gap.  (This is the negation of out-of-disc evaluation:
+        # the gate returns `NaN`, never a silently-extrapolated value.)
+        for j in 1:n, i in 1:n
+            z = ComplexF64(SURF.xs[i], SURF.ys[j])
+            (abs(z) <= SURF_XY_LIM && !surf_in_sector(z) &&
+             !surf_in_mask(z) && !iszero(z)) || continue
+            SURF.wedge_covered[i, j] && continue
+            @test isnan(SURF.Re_u[i, j])
+            @test isnan(SURF.Im_u[i, j])
+        end
+
+        # --- Phase-D placeholder ------------------------------------------
+        # The rich per-pole validation — VC-4 dominant-balance
+        # `A ∈ {-1,-3}` (ADR-0025 A3), VC-5 conjugate-symmetry pairing,
+        # VC-7 loop-closure ΔP_rel — re-expands a dedicated jet per pole
+        # and is the Phase-D validation-suite beads (`0ln.37.11-14`).
+        # It is deliberately NOT asserted here.  PI2S.4 pins only the
+        # structural invariants of the B3 deliverable.
+        @test true  # Phase-D hook — see ADR-0025 §Validation Criteria Menu
     end
 
     @testset "PI2S.5 — Schwarz symmetry across the real axis" begin

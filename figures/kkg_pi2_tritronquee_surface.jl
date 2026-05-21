@@ -31,10 +31,11 @@
 # ## How the surface is computed — the F3 triple-method kernel
 #
 # Every load-bearing computation lives in the Makie-free kernel
-# `figures/_kkg_pi2_surface_helpers.jl` (F3, bead `padetaylor-0ln.33`),
-# shared verbatim with its acceptance test `figures/test_kkg_pi2_surface.jl`
-# (17888 assertions GREEN).  This script ONLY renders — it `include`s the
-# kernel and calls `kkg_pi2_surface()`.
+# `figures/_kkg_pi2_surface_helpers.jl` (F3, bead `padetaylor-0ln.33`;
+# the wedge half re-resolved by B3, bead `padetaylor-0ln.37.7`), shared
+# verbatim with its acceptance test `figures/test_kkg_pi2_surface.jl`.
+# This script ONLY renders — it `include`s the kernel and calls
+# `kkg_pi2_surface()`.
 #
 # The kernel stitches two regions onto one `[-20,20]²` Cartesian grid:
 #
@@ -47,9 +48,18 @@
 #     median: an outlier voter is discarded, the two that concur win;
 #     ADR-0024).  The `spread` map records the max pairwise disagreement.
 #
-#   * **Region 2 — the pole-rich wedge** (`|arg x| < 36°`): the V8b
-#     vector path-network walk (`h = 0.1`) + the F2 Stage-2 fine-grid
-#     barycentric fill.  `|u|` spikes to `O(10³)` at the dense pole field.
+#   * **Region 2 — the pole-rich wedge** (`|arg x| < 36°`): the
+#     validated pole *field* + an honest partial `|u|` surface underlay
+#     (ADR-0025 Amendment 2).  The A2 tractability probe proved a filled
+#     honest wedge surface numerically unreachable — honest coverage
+#     saturates at ~8-18 % — so the wedge panel is rescoped: the B2
+#     `:max_q_root` adaptive walk threads the B3 extended fan through
+#     the whole wedge to `|x| = 20`, `extract_poles_shared_q`
+#     (`min_support ≥ 2`, VC-6) extracts the validated pole *locations*
+#     (the FW 2011 Fig 4.7 idiom, the primary deliverable), and the F2
+#     Stage-2 fill — run `extrapolate = false`, B1 true-radius gate —
+#     supplies an honest `|u|` underlay only where the verified node
+#     discs cover.  The rest of the wedge is `NaN` (an honest gap).
 #
 #   The `±36°` Stokes-line strips are `NaN`-masked (the asymptotic seed
 #   and both region solvers degrade there).  Cells outside the `|x| ≤ 20`
@@ -78,41 +88,54 @@
 #   * **3D view.**  `Axis3` azimuth/elevation borrowed from
 #     `figutil.jl`'s `pole_field_figure` (the MATLAB-`surf`-like FW view).
 #
-#   * **Pole overlay.**  The extracted wedge `poles` are scattered as
-#     small black dots on the two heatmaps (KKG 7.4/7.5 show the pole
-#     field implicitly as the jagged region; the dots make it explicit).
+#   * **Pole overlay.**  The wedge panel's primary content is the
+#     validated pole *field* (ADR-0025 Amendment 2): the extracted
+#     `poles` are scattered as black dots over the honest partial `|u|`
+#     underlay — the FW 2011 Fig 4.7 idiom.  Where the B1 gate found no
+#     honest datum the underlay is `NaN`/grey: an explicit gap, not an
+#     extrapolation.
 #
-# ## v1 corners (CLAUDE.md Rule 9) — inherited verbatim from the F3 kernel
+# ## v1 corners (CLAUDE.md Rule 9) — inherited from the F3 kernel
 #
 #   1. **Inner-arc asymptotic seed.**  Methods 2/3's inner arc
 #      (`|x| ≈ 2`) is the KKG `n_terms = 2` asymptotic series, accurate
 #      only to `O(10⁻²)` at `|x| ≈ 2`.  The harmonic solve damps it and
 #      the exact ray-fan voter anchors the vote.  *Forcing condition for
 #      v2:* a figure pin inside `|x| ≲ 3` to better than `1e-2` needs a
-#      small-`|x|` Taylor/BVP patch.
+#      small-`|x|` Taylor/BVP patch.  (The sector's corner — Phase C.)
 #
-#   2. **Wedge Stage-2 extrapolation.**  The path-network visited nodes
-#      span only `|x| ≲ 8`; wedge grid points beyond that are genuine
-#      extrapolations of the local Padé jets (flagged by the kernel's
-#      `wedge_extrapolated` mask).  *Forcing condition for v2:* resolving
-#      the pole sawtooth at `|x| ≳ 8` needs a larger path-network target
-#      fan (bead `padetaylor-0ln.23`).
+#   2. **RETIRED — wedge Stage-2 extrapolation (C2).**  The shipped
+#      figure evaluated the wedge Padé far outside its disc
+#      (`extrapolate = true`).  ADR-0025 Amendment 1's B1 true-radius
+#      gate retires it: the Stage-2 fill now runs `extrapolate = false`,
+#      the honest gaps render `NaN`/grey, and the wedge panel is the
+#      validated pole field + partial underlay (Amendment 2), not a
+#      dishonestly-filled surface.
 #
-#   3. **Hand-tuned wedge step `h = 0.1`.**  The tritronquée pole field
-#      is dense near `arg x ≈ 0`; a coarser step overshoots a pole.
-#      *Forcing condition for v2:* a shared-`Q`-root-distance wedge
-#      selector removes the hand-tune (bead `padetaylor-0ln.23`).
+#   3. **RETIRED — hand-tuned wedge step `h = 0.1` (C3).**  ADR-0025
+#      Amendment 4's B2 adaptive `:max_q_root` walk (the package
+#      default) retires the hand-tune: the step dodges the nearest
+#      shared-`Q` pole and `h` adapts to the local density, threading
+#      the B3 extended fan to `|x| ≈ 18-20`.
 #
 #   4. **Stokes-strip masking.**  `±3°` of arc on each `±36°` Stokes line
 #      is `NaN`-masked — both region solvers degrade at the boundary.
 #      *Forcing condition for v2:* a uniform connection formula across the
-#      Stokes line would close the gap.
+#      Stokes line would close the gap (Phase E).
+#
+# The deferred fully-filled honest wedge *surface* (a 2D-fill
+# architecture) is recorded as a deferred bead under ADR-0025
+# Amendment 2 §Deferred.
 #
 # References:
 #   * `references/painleve_hierarchy/KapaevKleinGrava2015_PI2_tritronquee_ConstrApprox41.pdf`
 #     — KKG 2015: eq. (1.1) the ODE, eq. (1.3) the negative-axis
 #     asymptotics, eq. (1.4) the pole-free sector, §7 Figs 7.4/7.5 the
 #     Re/Im surfaces this script reproduces.
+#   * `docs/adr/0025-headline-figure-re-resolution.md` — the
+#     re-resolution ADR; Amendment 1 (B1 gate), Amendment 2 (wedge
+#     rescope to pole field + honest partial underlay), Amendment 4
+#     (B2 adaptive walk).
 #   * `docs/adr/0024-laplace-harmonic-extension.md` — the triple-method
 #     majority-vote decision; the conformal `w = log x` rectangle map.
 #   * `docs/v0p2_pillarC_painleve_hierarchy_findings.md` — §4 the sector
@@ -252,14 +275,17 @@ axI_s      = surface_panel(fig[2, 2], Im_disp,
 Colorbar(fig[1:2, 3], hmR;
          label = @sprintf("V₀ component  (display clamp ±%.0f)", SURF_CLAMP))
 
-# A standing note: the clamp + the v1 corners, on the figure itself.
+# A standing note: the clamp + the wedge rescope, on the figure itself.
 const FIGNOTE = string(
     "Smooth ~270° sector: triple-method majority vote (ray-fan BVP / ",
-    "2D-Chebyshev + Gridap FEM Laplace, ADR-0024).  Wedge |arg x|<36°: ",
-    "path-network + Stage-2 fill — |u| spikes to O(10³), display clamped ",
-    @sprintf("to ±%.0f (jagged plateau).  Black dots: %d extracted wedge ",
-             SURF_CLAMP, length(res.poles)),
-    "poles.  Grey: NaN (outside |x|≤20 disc / ±3° Stokes strips).")
+    "2D-Chebyshev + Gridap FEM Laplace, ADR-0024).  Wedge |arg x|<36° ",
+    "(ADR-0025 Amend. 2): validated pole field — ",
+    @sprintf("%d extracted poles (black dots) — over an honest partial ",
+             length(res.poles)),
+    "|u| underlay, B1-gated (no Padé out of disc); display clamped ",
+    @sprintf("to ±%.0f.  Grey: NaN — outside |x|≤20 disc, ±3° Stokes ",
+             SURF_CLAMP),
+    "strips, and the wedge gaps the honest B1 gate leaves unfilled.")
 Label(fig[3, 1:3], FIGNOTE; fontsize = 9, padding = (0, 0, 8, 0))
 
 mkpath(dirname(OUTPNG))

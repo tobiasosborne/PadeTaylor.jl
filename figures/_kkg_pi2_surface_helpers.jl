@@ -72,14 +72,44 @@
 # maximum pairwise disagreement per point — a figure-quality diagnostic
 # of where the three methods concur (and, honestly, where they do not).
 #
-# ### Region 2 — the pole-rich wedge
+# ### Region 2 — the pole-rich wedge (ADR-0025 Amendment 2)
 #
-# Reused verbatim from V8b (`_kkg_pi2_helpers.jl`): seed a
-# `VectorPadeTaylorProblem` from a BVP-anchored on-tritronquée state,
-# run the `vector_path_network_solve` wedge walk with `h = 0.1` (V8b's
-# proven value — `h = 0.3` overshoots the dense wedge poles), then the
-# F2 Stage-2 `fine_grid` fill evaluates the per-node local Padé on the
-# wedge's portion of the Cartesian grid.  `|u|` spikes at the poles.
+# The wedge is **not** a filled surface.  ADR-0025 Amendment 2 rescopes
+# it after the A2 tractability probe (`external/probes/wedge-
+# tractability/REPORT.md`) measured the *honest* coverage achievable by
+# a path-network walk + per-node A1-gated disc and found it saturates
+# at ~8.6 % (solver tol) — ~18 % even at display tol with order-48 jets.
+# A filled honest wedge *surface* is numerically unreachable with the
+# local-Padé-tiling architecture.  The wedge panel is therefore the
+# **validated pole FIELD** — the extracted pole *locations* in the FW
+# 2011 Fig 4.7 idiom — plus an **honest partial `|u|` surface underlay**
+# only where the B1-gated node discs genuinely cover.
+#
+# Concretely Region 2 is:
+#
+#   1. **Pole field — the primary deliverable.**  An extended threading
+#      fan (`surf_wedge_targets`) drives the B2 `:max_q_root` adaptive
+#      walk through the *whole* wedge out to `|x| = 20`, so the walk's
+#      nodes pass near every pole; `extract_poles_shared_q` with
+#      cross-node `min_support ≥ 2` (VC-6) roots the per-node shared `Q`
+#      and clusters the roots into the validated pole field.  The walk
+#      is the B2 default (the fixed-`h = 0.1` V8b walk *blocks* past
+#      `|x| ≈ 8` — A2 §3.1); the adaptive walk threads to `|x| ≈ 18-20`.
+#
+#   2. **Honest partial surface underlay.**  The F2 Stage-2 `fine_grid`
+#      fill runs with `extrapolate = false`, so the B1 true-radius gate
+#      (ADR-0025 Amendment 1, gate v-b) applies: a grid point outside
+#      the nearest node's verified disc of validity gets `NaN` — no
+#      Padé is ever evaluated outside its disc.  The kernel returns a
+#      `covered` mask flagging exactly the (~13-18 %) cells the gated
+#      discs honestly carry; everywhere else in the wedge is `NaN` and
+#      renders neutral grey.  The partial surface is honest; the gaps
+#      are explicit (Rule 1 fail-loud — an honest gap, never an
+#      extrapolated lie).
+#
+# Per-pole validation VC-4 (dominant-balance `A ∈ {-1,-3}`),
+# VC-5 (conjugate-symmetry pairing) and VC-7 (loop closure) are
+# Phase D — this kernel ships the structural invariants only.
 #
 # ### The stitch
 #
@@ -101,47 +131,59 @@
 #      the vote's median is anchored by an accurate voter there.  *Forcing
 #      condition for v2:* if a figure pin inside `|x| ≲ 3` must hold to
 #      better than `1e-2`, replace the inner-arc datum with a small-`|x|`
-#      Taylor/BVP patch.
+#      Taylor/BVP patch.  (This is the sector's corner — Phase C.)
 #
-#   2. **Wedge Stage-2 extrapolation.**  The path-network visited nodes
-#      span only `|x| ≲ 8` (probe: re ∈ [−3,8], im ∈ [−4,4]).  The
-#      Stage-2 fill is called with `extrapolate = true` so the full
-#      wedge portion of `[-20,20]²` is covered — but wedge points beyond
-#      the visited hull are genuine extrapolations of the local Padé
-#      jets and are less trustworthy.  The returned `wedge_extrapolated`
-#      mask flags them.  *Forcing condition for v2:* if the figure must
-#      resolve the pole sawtooth at `|x| ≳ 8`, extend the path-network
-#      target fan to larger radii (bead `padetaylor-0ln.23`'s wedge
-#      selector refinement is the principled fix).
+#   2. **RETIRED — wedge Stage-2 extrapolation.**  The shipped figure
+#      called the Stage-2 fill with `extrapolate = true`, evaluating the
+#      shared-`Q` Padé approximants far outside their verified disc (the
+#      A4 baseline probe measured midpoints 50× outside the disc; ~70 %
+#      of loop closures catastrophic).  ADR-0025 Amendment 1's B1
+#      true-radius gate retires it: `surf_wedge_fill` now runs the fill
+#      with `extrapolate = false`, so no Padé is evaluated outside its
+#      B1-gated disc and the honest gaps render as `NaN`/grey.
 #
-#   3. **Hand-tuned wedge step `h = 0.1`.**  Inherited from V8b; the
-#      tritronquée pole field is dense near `arg x ≈ 0` and a coarser
-#      step overshoots a pole (the shared-`Q` jet degenerates at a
-#      blown-up state).  *Forcing condition for v2:* a wedge selector
-#      that avoids the nearest shared-`Q` root removes the need to
-#      hand-tune `h` (bead `padetaylor-0ln.23`).
+#   3. **RETIRED — hand-tuned wedge step `h = 0.1`.**  ADR-0025
+#      Amendment 4's B2 adaptive `:max_q_root` walk (the package
+#      default) retires the hand-tune: the step direction dodges the
+#      nearest shared-`Q` pole and `h` adapts to the local pole density.
+#      The fixed-`h = 0.1` V8b walk *blocks* the extended fan past
+#      `|x| ≈ 8` (A2 §3.1); the B2 walk threads it to `|x| ≈ 18-20`.
 #
 #   4. **Boundary-strip masking.**  `STITCH_MASK_DEG` of arc on each
 #      side of the `±36°` Stokes lines is `NaN`-masked: the asymptotic
 #      seed and both region solvers degrade at the sector boundary.
 #      *Forcing condition for v2:* a uniform connection formula across
 #      the Stokes line would let the two regions be stitched without a
-#      gap.
+#      gap (Phase E).
+#
+#   The wedge panel itself is no longer a v1 corner: ADR-0025
+#   Amendment 2 rescopes it to the achievable senior-grade deliverable
+#   — the validated pole field + honest partial underlay — and the A2
+#   probe records the filled-surface ambition as a deferred bead with a
+#   2D-fill-architecture forcing condition.
 #
 # References:
+#   * `docs/adr/0025-headline-figure-re-resolution.md` — the
+#     re-resolution ADR; **Amendment 1** the B1 true-radius gate,
+#     **Amendment 2** the wedge-panel rescope (pole field + honest
+#     partial underlay), **Amendment 4** the B2 adaptive `:max_q_root`
+#     walk.  This kernel's Region 2 is the B3 deliverable of that ADR.
 #   * `docs/adr/0024-laplace-harmonic-extension.md` — the triple-method
 #     majority-vote decision; the conformal `w = log x` rectangle map;
 #     the Gridap-as-figure-helper correction.
 #   * `references/painleve_hierarchy/KapaevKleinGrava2015_PI2_tritronquee_ConstrApprox41.pdf`
 #     — KKG 2015: eq. (1.1) the ODE, eq. (1.4) the `V_0` pole-free
 #     sector, §7 Figs 7.4/7.5 the Re/Im surface this kernel assembles.
+#   * `external/probes/wedge-tractability/REPORT.md` — A2: the wedge
+#     honest-coverage saturation that forced the Amendment-2 rescope.
 #   * `docs/v0p2_pillarC_painleve_hierarchy_findings.md` — §4 the sector
 #     geometry and the (sign-corrected) tritronquée IC.
-#   * `figures/_kkg_pi2_helpers.jl` — V8b: the BVP recipe + the
-#     path-network wedge march reused here for Region 2.
+#   * `figures/_kkg_pi2_helpers.jl` — V8b: the BVP recipe reused here
+#     for Region 2's negative-axis anchor.
 #   * `figures/_kkg_pi2_gridap_helper.jl` — voter (3).
 #   * `src/Laplace2D.jl`, `src/VectorBVP.jl`, `src/VectorPathNetwork.jl`,
-#     `src/VectorPathNetworkStage2.jl`, `src/PainleveHierarchy.jl`.
+#     `src/VectorPathNetworkStage2.jl`, `src/VectorWedgeStep.jl`,
+#     `src/PainleveHierarchy.jl`.
 
 using PadeTaylor
 using PadeTaylor.PainleveHierarchy: painleve_hierarchy,
@@ -208,13 +250,60 @@ const SURF_LAP_NY = 56           # angular (θ) Chebyshev nodes
 const SURF_FEM_NX = 64           # FEM mesh subdivisions, radial
 const SURF_FEM_NY = 88           # FEM mesh subdivisions, angular
 
-# --- Region 2: the pole-rich wedge ---------------------------------------
-# Reused V8b path-network parameters (`_kkg_pi2_helpers.jl`).
+# --- Region 2: the pole-rich wedge (ADR-0025 Amendment 2) ----------------
+# The wedge deliverable is the validated pole FIELD + an honest partial
+# `|u|` underlay (NOT a filled surface — A2 proved that unreachable).
+#
+# Seed: a BVP-anchored on-tritronquée state at `z = -3` (V8b Stage A).
 const SURF_Z_SEED  = -3.0 + 0.0im
+
+# Taylor order of the path-network jets.  Order 24 is the A2-verified
+# value: A2 §5b.5 showed an order-48 *walk* degenerates the shared-`Q`
+# Padé linear solve outright (all-below-τ singular spectrum), so order
+# 24 is the senior-grade ceiling for the shared-`Q` route.
 const SURF_PN_ORDER = 24
-const SURF_PN_H     = 0.1         # hand-tuned (v1 corner 3)
-const SURF_TARGET_RADII  = (2.0, 4.0, 6.0, 8.0)
-const SURF_TARGET_ANGLES = (-0.5, -0.25, 0.0, 0.25, 0.5)   # radians
+
+# The B2 adaptive-walk step *ceiling* `h_max`.  With `adaptive = true`
+# (the package default — ADR-0025 Amendment 4) `h` is capped per step
+# at `POLE_SAFETY·h·min|t*|` near a pole and grows geometrically toward
+# this ceiling where the field is sparse.  `0.1` is the V8b ceiling;
+# the adaptive controller shrinks it automatically in the dense field,
+# so it is no longer hand-tuned — it is the *upper bound*, not the step.
+const SURF_PN_H = 0.1
+
+# The B2 walk truncation tolerance.  Passed to the B1 true-radius gate
+# (`s(1e-8) = 0.36`, the production default — ADR-0025 Amendment 1) and
+# to the adaptive step controller.  `1e-8` is the solver tolerance.
+const SURF_PN_TOL = 1.0e-8
+
+# --- The extended threading fan (the B3 production fan) ------------------
+# ADR-0025 Amendment 2 rescopes B3 from "tile the wedge area" to "thread
+# the walk through the *whole* wedge to extract the pole field densely
+# and accurately to `|x| = 20`".  The fan is designed so the B2
+# `:max_q_root` adaptive walk threads a node filament past every pole.
+#
+# Design (A2 §5.2 recommends a 9-angle `dr = 1` fan as the densest that
+# threads; B2's adaptive walk threads it to `|x| ≈ 18-20` — Amendment 4):
+#
+#   * **Angles** — 9 rays fanned across `±0.5 rad ≈ ±28.6°`.  The wedge
+#     half-width is `36°`; `±28.6°` keeps a `~7°` margin inside the
+#     Stokes line so the fan stays well within the pole region and the
+#     walk does not stray into the masked boundary strip.
+#   * **Radii** — `dr = 1` spacing from `|x| = 2` out to `|x| = 20`,
+#     i.e. 19 radial shells.  `9 × 19 = 171` targets — the A2 §5.2
+#     "densest-completing" fan.  Denser fans (13-angle / `dr = 0.5`)
+#     BLOCK (A2 §3.3): the extra inter-target bridging walks each get a
+#     fresh chance to step onto a pole.
+#
+# Targets are ordered radius-major so the walk completes inner shells
+# before reaching out — the threading order the B2 walk extends from.
+const SURF_TARGET_RADII  = Tuple(2.0:1.0:20.0)             # 19 shells
+const SURF_TARGET_ANGLES = Tuple(range(-0.5, 0.5; length = 9))  # rad
+
+# Pole-extraction filter (`extract_poles_shared_q`).  `min_support = 2`
+# is VC-6: a cluster is a physical pole only when ≥ 2 *distinct* nodes
+# independently root it — keeps Froissart doublets (spurious
+# single-node roots) out of the field.
 const SURF_RADIUS_T     = 5.0
 const SURF_CLUSTER_ATOL = 0.2
 const SURF_MIN_SUPPORT  = 2
@@ -505,9 +594,18 @@ end
 """
     surf_wedge_targets() -> Vector{ComplexF64}
 
-The path-network target fan for the wedge walk — `r·e^{iθ}` straddling
-the positive real axis (`SURF_TARGET_RADII × SURF_TARGET_ANGLES`),
-identical to V8b's `kkg_target_wedge`.
+The B3 extended threading fan for the wedge walk (ADR-0025 Amendment 2).
+The Cartesian product `SURF_TARGET_RADII × SURF_TARGET_ANGLES` — 9 rays
+fanned across `±0.5 rad` (`±28.6°`, a `~7°` margin inside the `36°`
+Stokes line), `dr = 1` radial spacing from `|x| = 2` out to `|x| = 20`
+— `9 × 19 = 171` targets.
+
+Unlike V8b's 20-target `|x| ≤ 8` fan (copied from the pole-scatter
+figure), this fan threads the B2 `:max_q_root` adaptive walk through the
+*whole* wedge so the walk's node filament passes near every pole out to
+`|x| = 20`.  Targets are emitted **radius-major** (inner shells first):
+the walk completes the inner field before reaching out, the threading
+order the adaptive walk extends along.
 """
 surf_wedge_targets() =
     ComplexF64[r * cis(θ) for r in SURF_TARGET_RADII
@@ -516,24 +614,44 @@ surf_wedge_targets() =
 """
     surf_wedge_fill(bvp_sol, grid_pts) -> NamedTuple
 
-Region 2.  Seed a `VectorPadeTaylorProblem` from the BVP-anchored
-on-tritronquée state `bvp_sol(SURF_Z_SEED)`, run the
-`vector_path_network_solve` wedge walk (`h = SURF_PN_H`), and use the F2
-Stage-2 `fine_grid` fill to evaluate `u = V_0` on `grid_pts` — the
-Cartesian grid points that lie inside the wedge.
+Region 2 — the validated pole field + the honest partial `|u|` underlay
+(ADR-0025 Amendment 2).
 
-`extrapolate = true` (v1 corner 2): the path-network visited nodes only
-span `|x| ≲ 8`, so the wedge portion of `[-20,20]²` beyond the visited
-hull is extrapolated.  The returned `extrapolated` flags each grid point
-farther than the visited-hull radius from any visited node.
+Seed a `VectorPadeTaylorProblem` from the BVP-anchored on-tritronquée
+state `bvp_sol(SURF_Z_SEED)`, run the `vector_path_network_solve` wedge
+walk over the B3 extended threading fan `surf_wedge_targets()`, and use
+the F2 Stage-2 `fine_grid` fill to evaluate `u = V_0` on `grid_pts` (the
+Cartesian grid points inside the wedge).
 
-Returns `(walk, poles, u, extrapolated, message)`:
-  - `walk`         : the `VectorPathNetworkSolution`;
-  - `poles`        : the `extract_poles_shared_q` pole field;
-  - `u`            : `Vector{ComplexF64}` of `V_0` at `grid_pts`
-                     (`NaN` where the Stage-2 fill produced no datum);
-  - `extrapolated` : `Vector{Bool}`, the v1-corner-2 flag;
-  - `message`      : a status note.
+Two honesty-defining choices:
+
+  * the walk runs with the **B2 adaptive `:max_q_root`** policy (the
+    package default) — `h = SURF_PN_H` is the step *ceiling*, not a
+    hand-tuned fixed step; the controller dodges poles and adapts `h`
+    to the local density, threading the fan to `|x| ≈ 18-20` where the
+    fixed-`h = 0.1` V8b walk *blocks* past `|x| ≈ 8` (A2 §3.1);
+
+  * the Stage-2 fill runs with **`extrapolate = false`** — the B1
+    true-radius gate (ADR-0025 Amendment 1) applies, so a grid point
+    outside the nearest node's verified disc gets `NaN`.  **No Padé is
+    ever evaluated outside its disc.**  `tol = SURF_PN_TOL` selects the
+    gate's `s(tol)` safety factor.
+
+The **pole field** — `extract_poles_shared_q` with cross-node
+`min_support ≥ 2` (VC-6) — is the primary wedge deliverable: the
+extracted pole *locations*.
+
+Returns `(walk, poles, u, covered, message)`:
+  - `walk`     : the `VectorPathNetworkSolution`;
+  - `poles`    : the `extract_poles_shared_q` validated pole field
+                 (the FW Fig 4.7 pole-location scatter);
+  - `u`        : `Vector{ComplexF64}` of `V_0` at `grid_pts` — finite
+                 only where a B1-gated node disc honestly covers,
+                 `NaN + NaN·im` everywhere else (no extrapolation);
+  - `covered`  : `Vector{Bool}`, `true` iff that grid point is honestly
+                 covered (`u[k]` finite) — the honest-coverage mask;
+  - `message`  : a status note (node count, pole count, `|x|` frontier,
+                 honest-coverage fraction).
 """
 function surf_wedge_fill(bvp_sol::VectorBVPSolution,
                          grid_pts::AbstractVector{ComplexF64})
@@ -541,30 +659,37 @@ function surf_wedge_fill(bvp_sol::VectorBVPSolution,
     y_seed = ComplexF64.(bvp_sol(ComplexF64(SURF_Z_SEED)))
     prob   = VectorPadeTaylorProblem(f, y_seed,
                                      (ComplexF64(SURF_Z_SEED),
-                                      ComplexF64(8.0 + 0.0im));
+                                      ComplexF64(20.0 + 0.0im));
                                      order = SURF_PN_ORDER)
     targets = surf_wedge_targets()
+    # B2 adaptive `:max_q_root` walk (the package default); the Stage-2
+    # fill is gated honest — `extrapolate = false`, B1 true-radius gate.
     walk = vector_path_network_solve(prob, targets;
                                      order       = SURF_PN_ORDER,
                                      h           = SURF_PN_H,
                                      fine_grid   = grid_pts,
-                                     extrapolate = true)
+                                     extrapolate = false,
+                                     tol         = SURF_PN_TOL)
     poles = extract_poles_shared_q(walk;
                                    radius_t     = SURF_RADIUS_T,
                                    cluster_atol = SURF_CLUSTER_ATOL,
                                    min_support  = SURF_MIN_SUPPORT)
-    # The Stage-2 grid_y is ordered as grid_pts; u is its first component.
+    # The Stage-2 grid_y is ordered as grid_pts; u is its first
+    # component.  A `NaN` slot is an honest B1 gate gap (a grid point
+    # outside every node's verified disc) — never an extrapolated lie.
     u = ComplexF64[any(isnan, gy) ? ComplexF64(NaN, NaN) : gy[1]
                    for gy in walk.grid_y]
-    # Flag extrapolated points: those farther than the visited hull's
-    # nearest-node reach.  Use the largest visited |x| as the hull radius.
-    hull_r = isempty(walk.visited_z) ? 0.0 : maximum(abs, walk.visited_z)
-    extrapolated = Bool[abs(z) > hull_r for z in grid_pts]
+    covered = Bool[!isnan(real(uz)) for uz in u]
+    # The |x| frontier the walk's node filament reached.
+    frontier = isempty(walk.visited_z) ? 0.0 :
+               maximum(abs, walk.visited_z)
+    cov_frac = isempty(u) ? 0.0 : count(covered) / length(u)
     msg = "wedge: $(length(walk.visited_z)) visited nodes, " *
-          "$(length(poles)) poles, $(count(z -> !isnan(real(z)), u))" *
-          "/$(length(u)) grid points filled"
+          "$(length(poles)) poles, |x|-frontier $(round(frontier; digits=1)), " *
+          "$(count(covered))/$(length(u)) grid points honestly covered " *
+          "($(round(100 * cov_frac; digits=1))%)"
     return (walk = walk, poles = ComplexF64.(poles),
-            u = u, extrapolated = extrapolated, message = msg)
+            u = u, covered = covered, message = msg)
 end
 
 # ======================================================================
@@ -615,8 +740,11 @@ Construction (see the file docstring):
      (ray-fan BVP / in-house 2D-Chebyshev Laplace / Gridap FEM Laplace)
      and **majority-voted per grid point** (median); an agreement /
      spread map records the max pairwise disagreement.
-  2. **Region 2 — the pole-rich wedge** is the V8b path-network walk +
-     the F2 Stage-2 fine-grid fill.
+  2. **Region 2 — the pole-rich wedge** (ADR-0025 Amendment 2) is the
+     validated pole *field* (`extract_poles_shared_q`, the primary
+     deliverable) plus an honest partial `|u|` surface underlay — the
+     B2 adaptive walk + the B1-gated Stage-2 fill, finite only where the
+     verified node discs cover (~13-18 % of the wedge), `NaN` elsewhere.
   3. The two regions are stitched onto one grid; the `±36°` Stokes-line
      strips are `NaN`-masked.
 
@@ -625,21 +753,31 @@ Returns a `NamedTuple`:
   - `Re_u`, `Im_u`        : `SURF_GRID_N × SURF_GRID_N` matrices,
                             `Re_u[i,j] = Re V_0(xs[i] + im·ys[j])`
                             (`NaN` outside the disc `|x| ≤ 20`, in the
-                            masked strips, and where no method has a
-                            datum);
+                            masked strips, in the wedge wherever the B1
+                            gate found no honest datum, and where no
+                            sector method has a datum);
   - `spread`              : the agreement map — per sector grid point,
                             the max pairwise disagreement of the three
                             methods (`max(Re-spread, Im-spread)`);
-  - `poles`               : the wedge pole field (`extract_poles_shared_q`);
+  - `poles`               : the validated wedge pole field
+                            (`extract_poles_shared_q`, `min_support ≥ 2`
+                            — VC-6) — the Amendment-2 primary wedge
+                            deliverable (the FW Fig 4.7 pole locations);
   - `sector_method`       : per sector grid point, the per-method
                             `(re1, im1, re2, im2, re3, im3)` estimates —
                             so a test can inspect each voter (a
                             `Dict` keyed by `(i, j)`);
-  - `wedge_extrapolated`  : `SURF_GRID_N × SURF_GRID_N` `Bool` matrix,
-                            `true` where Region 2 extrapolated beyond
-                            the path-network visited hull (v1 corner 2);
+  - `wedge_covered`       : `SURF_GRID_N × SURF_GRID_N` `Bool` matrix,
+                            `true` exactly where Region 2's honest
+                            partial surface underlay carries a B1-gated
+                            datum (the honest-coverage mask — covered
+                            cells are finite in `Re_u`/`Im_u`,
+                            uncovered cells are `NaN`).  No cell is
+                            ever an extrapolation (ADR-0025 Amendment
+                            1/2: `extrapolate = false`);
   - `ray_fan`             : the Method-1 polar grid (for inspection);
-  - `message`             : the Region-2 status note.
+  - `message`             : the Region-2 status note (node count, pole
+                            count, `|x|` frontier, coverage fraction).
 
 Deterministic — a fixed recipe; two calls return identical matrices.
 """
@@ -651,7 +789,7 @@ function kkg_pi2_surface()
     Re_u   = fill(NaN, n, n)
     Im_u   = fill(NaN, n, n)
     spread = fill(NaN, n, n)
-    wedge_extrapolated = fill(false, n, n)
+    wedge_covered = fill(false, n, n)
     sector_method = Dict{Tuple{Int,Int},
                          NTuple{6,Float64}}()
 
@@ -676,7 +814,7 @@ function kkg_pi2_surface()
     end
     wedge = isempty(wedge_pts) ?
         (walk = nothing, poles = ComplexF64[], u = ComplexF64[],
-         extrapolated = Bool[], message = "wedge: no grid points") :
+         covered = Bool[], message = "wedge: no grid points") :
         surf_wedge_fill(anchor, wedge_pts)
 
     # ---- assemble the grid ------------------------------------------------
@@ -705,23 +843,26 @@ function kkg_pi2_surface()
         end
     end
 
-    # ---- write Region 2 into the grid -------------------------------------
+    # ---- write Region 2's honest partial underlay into the grid -----------
+    # Only the B1-gated covered cells carry a datum; everywhere else in
+    # the wedge stays `NaN` — an honest gap, never an extrapolation
+    # (ADR-0025 Amendment 1/2: the Stage-2 fill ran `extrapolate=false`).
     if wedge.walk !== nothing
         for (k, (i, j)) in enumerate(wedge_idx)
             uz = wedge.u[k]
             if isnan(real(uz))
-                # Stage-2 produced no datum here — leave NaN, honest.
+                # B1 gate found no honest datum here — leave NaN, honest.
                 continue
             end
             Re_u[i, j] = real(uz)
             Im_u[i, j] = imag(uz)
-            wedge_extrapolated[i, j] = wedge.extrapolated[k]
+            wedge_covered[i, j] = true
         end
     end
 
     return (xs = xs, ys = ys, Re_u = Re_u, Im_u = Im_u,
             spread = spread, poles = wedge.poles,
             sector_method = sector_method,
-            wedge_extrapolated = wedge_extrapolated,
+            wedge_covered = wedge_covered,
             ray_fan = fan, message = wedge.message)
 end
