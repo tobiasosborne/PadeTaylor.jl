@@ -64,6 +64,55 @@ walk both endpoints up to equal depth and continue until they meet
 (probe.jl:236-274).  This is `O(depth)` per edge — fine for the
 edge counts we see in practice (~2000 edges, depth a few hundred).
 
+## The vector adapter — `quality_diagnose(::VectorPathNetworkSolution)`
+
+ADR-0025 Amendment 3 (§"D-VC7 scope", bead `padetaylor-0ln.37.14`)
+brings the same loop-closure certificate to the v0.2 *vector*
+path-network walk — the substrate of the headline `P_I⁽²⁾` tritronquée
+figure.  The scalar `quality_diagnose` above is typed for
+`PathNetworkSolution`; the vector walk produces a
+`VectorPathNetworkSolution`, whose data model differs in three ways
+the A4 baseline probe (`external/probes/v8b-baseline/REPORT.md` §2b)
+catalogued and whose §2b is the verified reference implementation this
+adapter lifts:
+
+  - **per-node approximant.**  A scalar node stores a single
+    `PadeApproximant` and the `_evaluate_pade` evaluator returns a
+    scalar.  A vector node stores a *shared-`Q`* approximant — `d`
+    numerator polynomials `visited_numerators[k]` over **one**
+    denominator `visited_denominator[k]` (ADR-0019).  The adapter
+    evaluates component `i` as the Horner ratio `Pᵢ(t)/Q(t)`, the
+    identical `_eval_poly` pattern `VectorPathNetworkStage2._stage2_fill`
+    uses; the result is a `d`-vector `y`, not a scalar.
+  - **`ΔP_rel` is a vector norm.**  The scalar `ΔP_rel` is generalised
+    to the Euclidean 2-norm over the `d` companion components:
+    `ΔP_rel = ‖y_A(M) − y_B(M)‖ / (‖y_A(M)‖ + ‖y_B(M)‖ + ε)`.
+  - **no sheet mask.**  `PathNetworkSolution` carries a `visited_sheet`
+    field and the scalar method filters to sheet 0.  The `P_I⁽²⁾`
+    companion system is meromorphic — single-sheeted — so
+    `VectorPathNetworkSolution` has **no** `visited_sheet` field at all
+    (`VectorPathNetwork.jl` docstring).  The vector adapter therefore
+    drops `_sheet_mask` entirely: every visited node participates,
+    global index == local index, and the `sheet` field of the returned
+    `DiagnosticReport` is fixed at `0` ("the single sheet").
+
+Everything else — the Delaunay triangulation, the tree-edge
+subtraction, the non-tree edge set, the midpoint `t = (M − z_X)/h_X`
+rescaling, the `_build_depths` / `_tree_path_distance` LCA tree
+distance, the `_categorise` thresholds, and the `DiagnosticReport`
+aggregation — ports **verbatim** from the scalar method.  The
+`EdgeReport` / `DiagnosticReport` structs are reused unchanged: they
+store `ΔP_rel` / `ΔP_abs` as `Float64`, agnostic to a scalar-vs-vector
+origin.  The adapter is **purely additive** (ADR-0001): the scalar
+`quality_diagnose(::PathNetworkSolution)` is byte-identical, so every
+v0.1 + v0.2 scalar test stays bit-identical.
+
+The vector method itself lives in `ext/diagnostics_vector_adapter.jl`,
+`include`d at the end of this module (a continuation of it, not a
+submodule — it shares this module's `using`s and private helpers).
+The split is the CLAUDE.md Rule 6 ≤200-effective-LOC cap; the seam is
+scalar-vs-vector.
+
 ## Why this is an extension, not core
 
 `DelaunayTriangulation.jl` carries `ExactPredicates`, `AdaptivePredicates`,
@@ -75,13 +124,18 @@ Makie); ADR-0016 ties this extension to it.
 ## References
 
   - ADR-0016 — `docs/adr/0016-diagnostics-extension.md` (this design).
-  - Probe — `external/probes/loop-closure-fig1/probe.jl` (algorithmic source).
-  - Probe verdict — `external/probes/loop-closure-fig1/REPORT.md:79-98`.
+  - ADR-0025 Amendment 3 §"D-VC7 scope" / Amendment 7 — the vector
+    adapter spec and the measured before/after loop-closure numbers.
+  - Probe — `external/probes/loop-closure-fig1/probe.jl` (scalar
+    algorithmic source); `external/probes/v8b-baseline/probe.jl` §2b
+    (the vector-adapter reference implementation).
+  - Probe verdict — `external/probes/loop-closure-fig1/REPORT.md:79-98`;
+    `external/probes/v8b-baseline/REPORT.md` §2b (the V8b baseline).
   - FFW 2017 §2.1.2 — `references/markdown/FFW2017_painleve_riemann_surfaces_preprint/FFW2017_painleve_riemann_surfaces_preprint.md:74-103`.
 """
 module PadeTaylorDiagnosticsExt
 
-using PadeTaylor: PathNetworkSolution
+using PadeTaylor: PathNetworkSolution, VectorPathNetworkSolution
 using PadeTaylor.Diagnostics: DiagnosticReport, EdgeReport, quality_diagnose
 using PadeTaylor.PathNetwork: _evaluate_pade
 using DelaunayTriangulation: triangulate, each_edge
@@ -272,5 +326,13 @@ function quality_diagnose(sol::PathNetworkSolution;
                             n_branch, med, p90, p99, maxR, worst,
                             centroid, sheet, tol_w, tol_b)
 end
+
+# The VC-7 vector adapter — `quality_diagnose(::VectorPathNetworkSolution)`
+# — is `include`d here as a continuation of this module (NOT a submodule:
+# it shares this module's `using`s and private helpers).  The split is
+# the CLAUDE.md Rule 6 ≤200-effective-LOC cap; the seam is scalar-vs-
+# vector.  See `ext/diagnostics_vector_adapter.jl`'s header and the
+# module docstring's "vector adapter" section for the design.
+include("diagnostics_vector_adapter.jl")
 
 end # module PadeTaylorDiagnosticsExt

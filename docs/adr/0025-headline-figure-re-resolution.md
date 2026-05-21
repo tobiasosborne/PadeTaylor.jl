@@ -119,7 +119,7 @@ The figure-certifying suite. `[E]` = machinery exists in the codebase;
 | VC-4 | Dominant-balance leading coefficient `A ∈ {-1,-3}` per pole | strong | `[N]` shipped (beads `0ln.37.12`; `figures/_kkg_pi2_vc45.jl`) |
 | VC-5 | Conjugate-symmetry pole pairing (`V₀(x̄)=conj V₀(x)`) | strong | `[N]` shipped (beads `0ln.37.13`, `0ln.37.20`; `figures/_kkg_pi2_vc45.jl`; Amendment 6 optimal matching) |
 | VC-6 | Cross-node support filter (`min_support ≥ 2`) | medium | `[E]` active |
-| VC-7 | Loop-closure ΔP_rel certificate (`quality_diagnose`, ADR-0016) | medium | `[E]` unused on vector walks |
+| VC-7 | Loop-closure ΔP_rel certificate (`quality_diagnose`, ADR-0016) | medium | `[N]` shipped (bead `0ln.37.14`; vector adapter in `ext/PadeTaylorDiagnosticsExt.jl`; Amendment 7) |
 | VC-8 | BVP endpoint higher-derivative match (FW §5.2 diagnostic) | medium | `[N]` |
 | VC-9 | Weierstrass-℘ oracle for the *vector* pipeline (FW Table 5.1) | medium | `[N]` |
 | VC-10 | Two-run different-path pole-disagreement accuracy indicator | medium | `[N]` |
@@ -586,6 +586,115 @@ as do the two in-test greedy-vs-optimal comparison assertions. The
 bound `55` is set strictly below the greedy result so the optimal
 matcher is genuinely load-bearing, not carried by the tolerance change
 alone. The suite is GREEN with the optimal matcher.
+
+## Amendment 7 — Phase-D VC-7 loop-closure certificate: the vector adapter + a metric-scope correction (2026-05-21)
+
+Bead `padetaylor-0ln.37.14` (Phase D, "VC-7") brings the loop-closure
+quality certificate (`quality_diagnose`, ADR-0016) to the headline
+figure's vector wedge walk and wires it in as a figure acceptance gate.
+
+### The vector adapter — shipped
+
+`quality_diagnose` was typed for the scalar `PathNetworkSolution`; the
+figure's wedge walk produces a `VectorPathNetworkSolution`. The
+additive method `quality_diagnose(::VectorPathNetworkSolution)` in
+`ext/PadeTaylorDiagnosticsExt.jl` (Amendment 3 §"D-VC7 scope" is its
+spec) differs from the scalar method in exactly three ways: it
+evaluates each node's shared-`Q` approximant `Pᵢ(t)/Q(t)` by Horner
+(the vector node stores `visited_numerators` + one
+`visited_denominator`, not a scalar `PadeApproximant`); it generalises
+`ΔP_rel` to the vector 2-norm `‖y_A − y_B‖ / (‖y_A‖ + ‖y_B‖ + ε)`; and
+it drops the sheet mask (the `P_I⁽²⁾` companion is meromorphic —
+single-sheeted — and `VectorPathNetworkSolution` has no `visited_sheet`
+field). The Delaunay / tree-edge / LCA / categorise / aggregate
+machinery ports verbatim; the A4 probe `§2b`
+(`external/probes/v8b-baseline/probe.jl`) was the verified reference.
+The adapter is purely additive (ADR-0001) — the scalar
+`quality_diagnose` stays bit-identical (`test/diagnose_test.jl` 32/32
+GREEN, unchanged). A new vector-adapter testset (`VDG.1`–`VDG.5`)
+mutation-proves it: dropping the `/Q` from the shared-`Q` evaluation
+turns the well-closed-lobe assertion RED. `DelaunayTriangulation` is
+added to `figures/Project.toml` (a figures-project dep — it activates
+the extension without becoming a hard dep of the core package).
+
+### A4 §2b over-attribution corrected — VC-7 is *not* a B1/B2 proxy
+
+The A4 baseline (`external/probes/v8b-baseline/REPORT.md` §2b) measured
+the V8b walk's loop-closure ΔP_rel as median `9.9e-4`, p90 `0.996`,
+~70 % catastrophic, and attributed the catastrophe to "the direct
+signature of the ungated `extrapolate=true` walk (corner C2)". **D-VC7
+measurement falsifies that attribution.** `quality_diagnose` evaluates
+each node's *canonical* shared-`Q` Padé at Delaunay-edge midpoints; that
+metric is governed purely by the geometry `Delaunay-edge-length vs
+canonical step h`. It is **independent of the Stage-2 `extrapolate`
+flag and the B1 true-radius gate** — those govern only the separate
+Stage-2 grid fill, a code path `quality_diagnose` never touches. So the
+B1/B2 levers cannot, and do not, move the `quality_diagnose`
+distribution.
+
+### Measured before/after — the re-resolved walk is *comparable*, not better
+
+The vector adapter was run on both walks (the adapter bit-reproduces
+the A4 §2b numbers on the old V8b walk — median `9.915e-4`, well 5.2 %,
+noisy 24.8 %, extrap 65.6 %, depth 4.4 %, 767 edges — confirming it is
+correct):
+
+| metric (non-tree Delaunay edges) | old V8b (`:min_y`, fixed `h`, `|x|≤8` fan) | re-resolved B3 (`:max_q_root`, adaptive, `|x|≤20` fan) |
+|----------------------------------|---------------------|-----------------------|
+| visited nodes / non-tree edges   | 389 / 767           | 1878 / 3736           |
+| median ΔP_rel                    | `9.9e-4`            | `0.29`                |
+| p90 / p99 ΔP_rel                 | `0.996` / `1.00`    | `0.999` / `1.00`      |
+| well / noisy / extrap / depth %  | 5.2 / 24.8 / 65.6 / 4.4 | 0.2 / 10.3 / 74.8 / 14.6 |
+| in-disc edges (`extrap_max≤1`)   | 188 (24.5 %)        | 884 (23.7 %)          |
+| in-disc median ΔP_rel            | `2.8e-8`            | `3.1e-6`              |
+| in-disc tight fraction (`≤1e-6`) | 0.82                | 0.38                  |
+
+The re-resolved B3 walk is **comparable, slightly worse on the raw
+distribution**. The reason is geometric and honest: the B3 walk threads
+a ~6× larger area (`|x|≤20` vs `|x|≤8`) with 1878 nodes, so its
+Delaunay graph carries far more long edges whose midpoints sit outside
+the small canonical discs (`h ≈ 0.1`) — `extrap_driven` by
+construction. This is **not a regression** in the figure: the B1/B2
+re-resolution made the *Stage-2 surface fill* honest and the *pole
+field* accurate (VC-4/VC-5, Amendments 5–6); it was never claimed to
+improve the canonical-Padé Delaunay-midpoint consensus, and the metric
+shows it did not.
+
+### VC-7's actual role — a structural quality certificate (the gate)
+
+VC-7 is therefore wired in as a **structural quality certificate**, not
+a before/after re-resolution proxy. The figure acceptance gate
+(`figures/test_kkg_pi2_surface.jl` PI2S.7) asserts the certificate's
+genuine, load-bearing invariants on the figure's wedge walk: the
+certificate is non-degenerate (`n_edges > 100`, single sheet); it is
+structurally sound (the five category tallies partition `n_edges`, the
+quantiles are monotone — the identical contract `diagnose_test.jl` pins
+for the scalar method); the **well-closed lobe genuinely closes to
+machine precision** (`min ΔP_rel < 1e-8` — the load-bearing invariant
+that proves the shared-`Q` `Pᵢ(t)/Q(t)` evaluation pipeline is correct
+end-to-end); and a meaningful fraction of the genuine *in-disc* loop
+closures close tightly (`> 25 %` of `extrap_max ≤ 1` edges have
+`ΔP_rel ≤ tol_bad` — measured 0.38). The load-bearing assertions are
+**mutation-proven** in-test: corrupting a visited node's shared-`Q`
+store (scaling its numerators by `1e3`) poisons every incident Delaunay
+edge and drives both the well-closed count and the in-disc tight
+fraction down — confirming the gate has teeth. The measured
+distribution is logged (`@info`), not masked — VC-7's value is the
+certificate, and a certificate is only meaningful if its numbers are
+surfaced (FW-style honest reporting, ADR Decision 1).
+
+### Deferred — a loop-closure metric that *is* a re-resolution proxy
+
+A metric that would genuinely reward the B1/B2 re-resolution would have
+to evaluate each node's Padé only *inside* its B1 true-radius disc and
+restrict the edge population to genuine in-disc loop closures — i.e.
+fold the B1 gate into the diagnostic itself. That is a different
+diagnostic (a "B1-gated loop-closure certificate") and is recorded as a
+deferred bead under the v0.2 epic; forcing condition: a figure
+requirement to certify the re-resolution *via* a loop-closure number
+rather than via VC-4/VC-5 (the per-pole certificates that already do
+certify it). VC-7 as shipped is the honest, senior-grade certificate of
+the walk's loop-closure structure.
 
 ## References
 

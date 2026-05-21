@@ -187,6 +187,20 @@ alongside `PadeTaylor`.  Without that load, calling this function
 surfaces a `MethodError`; the `path_network_solve(diagnose=true)`
 entry point catches that and rethrows with an explicit `using
 DelaunayTriangulation` suggestion.
+
+## The vector method — `quality_diagnose(::VectorPathNetworkSolution)`
+
+The extension also carries an **additive** method for the v0.2 vector
+path-network walk (`VectorPathNetworkSolution`), the VC-7 criterion of
+ADR-0025 (Amendment 3 §"D-VC7 scope"; Amendment 7).  It differs from
+the scalar method in exactly three ways: it evaluates each node's
+shared-`Q` approximant `Pᵢ(t)/Q(t)` (not a scalar `PadeApproximant`),
+it generalises `ΔP_rel` to the vector 2-norm
+`‖y_A − y_B‖ / (‖y_A‖ + ‖y_B‖ + ε)`, and it takes **no** `sheet` kwarg
+— the `P_I⁽²⁾` companion system is single-sheeted, so there is no
+`visited_sheet` field and the report's `sheet` is fixed at `0`.  The
+Delaunay / tree-edge / LCA / categorise / aggregate machinery is
+identical.  See the extension module's docstring for the full design.
 """
 function quality_diagnose end
 

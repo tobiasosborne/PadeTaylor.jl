@@ -25,6 +25,9 @@
 using Test
 using PadeTaylor
 using DelaunayTriangulation         # activates PadeTaylorDiagnosticsExt
+using PadeTaylor.VectorProblems: VectorPadeTaylorProblem
+using PadeTaylor.VectorPathNetwork: vector_path_network_solve,
+                                    VectorPathNetworkSolution
 
 include(joinpath(@__DIR__, "_oracle_problems.jl"))
 
@@ -156,6 +159,128 @@ include(joinpath(@__DIR__, "_oracle_problems.jl"))
     end
 
 end # @testset Diagnostics
+
+# ======================================================================
+# VC-7 vector adapter — quality_diagnose(::VectorPathNetworkSolution)
+# (ADR-0025 Amendment 3 §"D-VC7 scope" / Amendment 7; bead
+# `padetaylor-0ln.37.14`).
+#
+# `quality_diagnose` above is typed for the scalar `PathNetworkSolution`;
+# the v0.2 vector path-network walk produces a `VectorPathNetworkSolution`,
+# whose per-node approximant is a *shared-`Q`* store (`d` numerator
+# polynomials over one denominator) and whose state is a `d`-vector.  The
+# additive vector method evaluates `Pᵢ(t)/Q(t)`, generalises `ΔP_rel` to
+# the vector 2-norm, and drops the sheet mask (the companion system is
+# single-sheeted).  These tests validate that adapter.
+# ======================================================================
+
+@testset "Diagnostics VC-7 vector adapter (bead padetaylor-0ln.37.14)" begin
+
+    # A small synthetic vector walk: a d=3 Riccati system with one
+    # shared movable pole `p` (every component blows up at the SAME
+    # z = p — the shared-pole property the shared-`Q` machinery
+    # exploits).  IC `y_i(z0) = c_i/(z0 − p)`.  A bracketing target grid
+    # builds a multi-node visited tree with a non-trivial Delaunay
+    # graph — the loop-closure population the certificate diagnoses.
+    fR  = (z, y) -> [-(y[i]^2) / (i == 1 ? 1.0 : i == 2 ? 0.7 : -1.3)
+                     for i in eachindex(y)]
+    cs  = ComplexF64[1.0, 0.7, -1.3]
+    p   = 1.0 + 0.6im
+    z0  = -0.4 + 0.0im
+    y0  = ComplexF64[cs[i] / (z0 - p) for i in 1:3]
+    probV = VectorPadeTaylorProblem(fR, y0, (z0, z0 + 1.0 + 0im); order = 24)
+    targetsV = ComplexF64[x + y * im for x in 0.0:0.4:1.6 for y in -0.4:0.4:1.2]
+    walkV = vector_path_network_solve(probV, targetsV; order = 24, h = 0.25)
+
+    @testset "VDG.1: quality_diagnose accepts a VectorPathNetworkSolution" begin
+        # The data-model gap the A4 probe documented: the scalar method
+        # `MethodError`s on the vector type, the adapter resolves it.
+        @test walkV isa VectorPathNetworkSolution
+        @test length(walkV.visited_z) ≥ 6        # a non-trivial tree
+        r = quality_diagnose(walkV)
+        @test r isa DiagnosticReport
+        # Single-sheeted companion system ⇒ the report's sheet is 0.
+        @test r.sheet == 0
+        @test r.n_edges ≥ 1                      # ≥ 1 non-tree edge
+    end
+
+    @testset "VDG.2: category tallies + quantile invariants" begin
+        # The vector adapter must honour the scalar method's structural
+        # contract byte-for-byte: tallies partition n_edges, quantiles
+        # monotone, worst_edges sorted descending.
+        r = quality_diagnose(walkV)
+        @test r.n_well_closed + r.n_noisy + r.n_extrap_driven +
+              r.n_depth_driven + r.n_branch_cut == r.n_edges
+        @test r.n_branch_cut == 0
+        @test r.median_ΔP_rel ≤ r.p90_ΔP_rel
+        @test r.p90_ΔP_rel    ≤ r.p99_ΔP_rel
+        @test r.p99_ΔP_rel    ≤ r.max_ΔP_rel
+        @test issorted([e.ΔP_rel for e in r.worst_edges]; rev = true)
+    end
+
+    @testset "VDG.3: a good loop closure is well_closed" begin
+        # The LOAD-BEARING positive invariant.  On this benign synthetic
+        # walk — a smooth Riccati field, no pole inside any canonical
+        # disc — the best-closed non-tree Delaunay edge must close to
+        # machine precision: two independently-walked shared-`Q` patches
+        # agree at their shared midpoint.  This proves the adapter's
+        # `Pᵢ(t)/Q(t)` Horner evaluation, the midpoint rescaling, and
+        # the vector-norm `ΔP_rel` are all correct.  `n_well_closed > 0`
+        # mutation-proves the `:well_closed` path (a corrupted node
+        # destroys this lobe — VDG.4).
+        r = quality_diagnose(walkV; n_worst = 10^9)
+        rels = Float64[e.ΔP_rel for e in r.worst_edges]
+        @test minimum(rels) < 1e-8
+        @test r.n_well_closed > 0
+    end
+
+    @testset "VDG.4: a corrupted node produces a catastrophic edge" begin
+        # Mutation-proof.  Corrupt one mid-walk node's shared-`Q` store
+        # — scale every numerator coefficient by 1e6 so that node's
+        # `Pᵢ(t)/Q(t)` is wrong by six orders of magnitude — and rebuild
+        # the solution.  The corrupted node poisons every Delaunay edge
+        # incident on it: the certificate MUST register the damage —
+        # the worst edge becomes catastrophic and the well-closed count
+        # falls.  Without the adapter actually evaluating the per-node
+        # shared-`Q` store this mutation would be invisible.
+        good = quality_diagnose(walkV)
+        kbad = length(walkV.visited_numerators) ÷ 2          # a mid node
+        vnum = [[copy(poly) for poly in node]
+                for node in walkV.visited_numerators]
+        for poly in vnum[kbad]
+            poly .*= 1e6
+        end
+        WT  = typeof(walkV)
+        bad = WT(walkV.visited_z, walkV.visited_y, walkV.visited_h,
+                 vnum, walkV.visited_denominator, walkV.visited_parent,
+                 walkV.grid_z, walkV.grid_y, walkV.visited_jets)
+        badrep = quality_diagnose(bad)
+        # The corruption injects a catastrophic loop closure: the worst
+        # edge of the corrupted walk is far worse than the good walk's.
+        @test badrep.max_ΔP_rel > good.max_ΔP_rel
+        @test badrep.max_ΔP_rel > 1e-3
+        # ...and the well-closed lobe shrinks (corrupted-node edges
+        # leave `:well_closed`).
+        @test badrep.n_well_closed ≤ good.n_well_closed
+        # The bad midpoints have a finite centroid (≥ 1 bad edge exists).
+        @test isfinite(badrep.bad_centroid)
+    end
+
+    @testset "VDG.5: empty / single-node walk → n_edges = 0, no throw" begin
+        # A degenerate one-node walk has no non-tree edges; the adapter
+        # returns a well-formed empty report (NaN quantiles), exactly as
+        # the scalar method does — it does not throw.
+        solo = VectorPathNetworkSolution{Float64}(
+            walkV.visited_z[1:1], walkV.visited_y[1:1],
+            walkV.visited_h[1:1], walkV.visited_numerators[1:1],
+            walkV.visited_denominator[1:1], Int[0])
+        r = quality_diagnose(solo)
+        @test r.n_edges == 0
+        @test isnan(r.median_ΔP_rel)
+        @test r.sheet == 0
+    end
+
+end # @testset VC-7 vector adapter
 
 # ----------------------------------------------------------------------
 # MUTATION-PROOF procedure (CLAUDE.md Rule 4 — bead `padetaylor-5t4`).
