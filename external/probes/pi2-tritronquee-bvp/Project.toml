@@ -1,0 +1,6 @@
+[deps]
+PadeTaylor = "00000000-0000-0000-0000-000000000001"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+
+[sources]
+PadeTaylor = {path = "../../.."}

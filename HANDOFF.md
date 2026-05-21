@@ -65,21 +65,24 @@ docs/design_section_6_path_network.md scope), are all shipped:
 
 **2508 + 32 + 61 = 2601 expected GREEN** (61 new LD.X.* assertions verified in single-file isolation `lattice_dispatcher_test.jl`, 23.4 s; 32 new DG.* assertions verified in single-file isolation `diagnose_test.jl`, 18 s; full `Pkg.test()` not yet re-run — OOM-friction ongoing, see worklogs 048–049; existing 2508 assertions unchanged by additive `strict` kwarg and `:bvp_fail` tag with back-compat `strict = true` default).  Previously: **2508 / 2508 tests passing** as of worklog 047 (`HEAD = 1331755`, all committed; push pending).  The API audit (commit 9296731, worklog 050) made no source changes and adds no new assertions; test count is unchanged at 2601 expected GREEN.  The 12 spawned beads from the audit constitute the v1.0 normalisation work backlog.
 
-**Next pickup (2026-05-20 v0.2 vector-stack session close)**: **17 of 19
-v0.2-epic children are closed** — the entire vector ODE stack is built and
-validated. See `docs/worklog/055-v0p2-vector-stack-orchestration.md` for the
-full rundown. New `src/` modules: `SharedPade`, `VectorCoefficients`,
-`VectorStepper`, `VectorProblems`, `VectorStepControl`, `NoumiYamada`,
-`NoumiYamadaSymmetry`, `PainleveHierarchy`, `VectorPathNetwork`,
-`VectorPoleField`. ADRs 0019–0022 Accepted. PRD v0.2 acceptance is met
-except the last figure. **Immediate next steps**: (1) **V8b**
-(`padetaylor-0ln.18`, P_I^(2) tritronquée figure) was dispatched as a
-background subagent at session close — `git log` to see if it committed;
-if not, re-dispatch (brief reconstructable from worklog 055 + plan). V8b's
-known risk: the P_I^(2) tritronquée is a separatrix, forward IVP diverges,
-KKG used a BVP and v0.2 has none — see worklog 055 lesson 47. (2) **V9**
-(`padetaylor-0ln.19`) — v0.2 docs + release prep — is the last planned
-phase. **Older context below.** The prior pickup note: v0.2 literature
+**Next pickup (2026-05-21 — vector-BVP + V8b session close)**: **the vector
+BVP solver and V8b are done.** `src/VectorBVP.jl` — a first-order
+vector-system Chebyshev-Newton BVP solver (`y'=f(z,y)`, general linear BC,
+autodiff Jacobian; ADR-0023) — shipped, wired into the umbrella, validated;
+the V8b figure `figures/kkg_pi2_tritronquee_pole_field.jl` reproduces KKG
+2015 Figs 7.4/7.5 (the P_I^(2) tritronquée via the vector BVP + a 21-pole
+field). Full suite **4472 / 4472 GREEN** (12m47s). See
+`docs/worklog/056-vector-bvp-and-v8b-figure.md` — headline lesson: the V8b
+"separatrix" blocker was a three-pass misdiagnosis; the real cause was a
+sign error in `pI2_tritronquee_ic` (it returned the negative, non-solution
+branch of the tritronquée on the negative real axis — fixed, `bb1e208`).
+Worklog 055 covers the V1–V8a vector stack. **The only remaining planned
+epic phase is V9** (`padetaylor-0ln.19`) — v0.2 docs + release prep:
+README/CHANGELOG/RESEARCH v0.2 sections, ADR review (incl. the new
+ADR-0023), HANDOFF refresh, the `padetaylor-0ln` epic close-out. Open
+deferred beads: `0ln.20`–`0ln.23` (V7 sophistications), `0ln.27` (ChebUtil
+`_chebyshev_D1` de-duplication), `0ln.28` (V8b+ — the full KKG Re/Im surface,
+behind Stage-2 fill). **Older context below.** The prior pickup note: v0.2 literature
 acquisition is substantially complete — 46 PDFs + 15 stubs across 7 cluster directories under `references/`, plus 5 reports + 2 worklogs under `docs/`. The next agent should move from acquisition to consumption, per `docs/worklog/053-v0p2-batch1-and-gap-sweep.md` §"Pickup point": (1) marker-convert the priority papers (Mano–Tsuda 2017, Kapaev–Klein–Grava 2015, Noumi–Yamada 1998, Cosgrove 2000-6, López Lagomasino 2019, Adler–Sokolov 2025, Amore 2021); (2) fix the 3 PRD citation errors (lines 402, 403, 405) via an append-note, and add the Adler–Sokolov 2025 + Amore 2021 acknowledgements; (3) create the v0.2 Stage 0+ epic bead before deep-dive work begins; (4) begin the `RESEARCH.md` v0.2 extension structured by the seven pillars, fanned out one-subagent-at-a-time per the user's preference established this session. **v1.0 normalisation beads still open**: `padetaylor-xds` (canonical `h` rename — top P2 from the API audit; rename `h_max` in `solve_pade`/`PadeTaylorAlg` and `h_path` in `lattice_dispatch_solve` to `h` with deprecation shims) is the top P2 audit-derived item.  Two more P2s follow: `padetaylor-0xn` (`max_iter` normalisation — rename `bvp_solve`'s `maxiter` + cascade through `dispatch_solve`) and `padetaylor-gvz` (one-line export addition for `pii_rational`, `pii_airy`, `piv_entire`).  Also open: `padetaylor-6pj` (FW 2011 Figs 4.1/4.7/5.1/5.2 empirical validation sweep with `diagnose=true`) and `padetaylor-8py` (multi-sheet diagnostics, sheets ±1).  **v0.1.0 tagged** (`38a49ae`, `CHANGELOG.md` ships); **Documenter site** generated (`30b3298`).  Since v0.1.0: classical-Padé F64 default (worklogs 020+021); **thirteen FW 2011 figures reproduced** in a new `figures/` project (Fig 3.1–3.3, 4.1, 4.2–4.4, 4.7, 4.8, 5.1, 5.2; worklogs 022–029); **ADR-0006 + `src/Painleve.jl`** — the `PainleveProblem` per-equation builder layer (worklog 026); `PoleField` (027), `EdgeGatedSolve` (028), the FW Fig 4.1 full composition (029), the `PainleveSolution` wrapper + Makie extension (ADR-0007, worklog 030), the `tritronquee` / `hastings_mcleod` named constructors (ADR-0008, worklog 031), the `EdgeDetector` h-aware level fix that unblocked the N=641 hero render (ADR-0009, worklog 032), and the closed-form Painlevé families `pii_rational` / `pii_airy` / `piv_entire` (ADR-0010, worklog 033).  See the "Session 2026-05-15" entry below for the worklog-032–033 rundown; older sessions live in `HANDOFF_ARCHIVE.md`.
 
 **Phase 6 shipped 2026-05-09 on the pivoted scope** — the v1
