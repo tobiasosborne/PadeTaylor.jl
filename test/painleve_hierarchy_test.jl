@@ -37,7 +37,12 @@ asserts an invariant against a known-correct value (Rule 5):
                                   leading values; short integration stays
                                   near the asymptotic series u_f
     PH.1.5  failure modes      — m ≥ 3 throws; equation ≠ :I throws;
-                                  wrong y0 length throws
+                                  wrong y0 length throws; n_terms ∉ {1,2}
+                                  throws; n_terms = 2 with t ≠ 0 throws
+    PH.1.7  tritronquée IC n=2 — pI2_tritronquee_ic(·; n_terms = 2) at
+                                  t = 0 equals Y + Y^{-6} (c_6 = 1) and
+                                  its analytic derivatives; refines the
+                                  leading-order ODE residual (bead V8b)
     PH.1.6  mutation-proof     — recorded at end of file
 
 Oracles: the hand-written companion RHS (PH.1.1); v0.1
@@ -233,9 +238,70 @@ using PadeTaylor
         @test_throws ArgumentError PainleveHierarchyProblem(2;
             y0 = zeros(4), xspan = (1.0, 1.0))
 
-        # pI2_tritronquee_ic: n_terms ≥ 2 not supported (leading-order only)
-        # — must throw rather than silently return the leading order.
-        @test_throws ArgumentError pI2_tritronquee_ic(-20.0; n_terms = 2)
+        # pI2_tritronquee_ic: n_terms ≥ 3 not supported (only the c_6
+        # correction is implemented) — must throw rather than silently
+        # truncating to a lower order.
+        @test_throws ArgumentError pI2_tritronquee_ic(-20.0; n_terms = 3)
+        @test_throws ArgumentError pI2_tritronquee_ic(-20.0; n_terms = 0)
+        # n_terms = 2 with t ≠ 0 — the general c_n(t) series is out of
+        # v0.2 scope (the documented v1 corner), so it must throw.
+        @test_throws ArgumentError pI2_tritronquee_ic(-20.0; t = 0.5,
+                                                      n_terms = 2)
+    end
+
+    # -------------------------------------------------------------------------
+    # PH.1.7 — tritronquée IC, n_terms = 2 (bead V8b).  The KKG series at
+    # t = 0 through the first non-zero correction is u = Y + Y^{-6}, with
+    # Y = -∛6·r^{1/3} and Y^{-6} = 6^{-2}·r^{-2} (c_6 = 1, KKG eq. (7.2),
+    # `findings.md:196-202`).  We assert the n_terms = 2 seed equals the
+    # n_terms = 1 seed plus the analytic x-derivatives of 6^{-2}·r^{-2}
+    # (d/dx = -d/dr for x < 0), at several x0; that n_terms = 1 is
+    # byte-identical to its pre-V8b behaviour; and the n_terms = 2 seed's
+    # residual against the FULL P_I^(2) ODE is smaller than the
+    # leading-order seed's (the c_6 term is a genuine refinement).
+    # -------------------------------------------------------------------------
+    @testset "PH.1.7 tritronquée IC n_terms = 2 (c_6 correction)" begin
+        for x0 in (-12.0, -20.0, -35.0, -50.0)
+            c = cbrt(6.0)
+            r = abs(x0)
+            s = 1 / 36                       # 6^{-2}
+            y1 = pI2_tritronquee_ic(x0; n_terms = 1)
+            y2 = pI2_tritronquee_ic(x0; n_terms = 2)
+            @test length(y2) == 4
+            # n_terms = 2 = n_terms = 1 + analytic derivatives of Y^{-6}.
+            @test y2[1] ≈ y1[1] + s * r^(-2) atol = 1e-13
+            @test y2[2] ≈ y1[2] + 2  * s * r^(-3) atol = 1e-13
+            @test y2[3] ≈ y1[3] + 6  * s * r^(-4) atol = 1e-13
+            @test y2[4] ≈ y1[4] + 24 * s * r^(-5) atol = 1e-13
+            # Closed-form cross-check of the y2[1] value: u = Y + Y^{-6}.
+            @test y2[1] ≈ -c * r^(1/3) + s * r^(-2) atol = 1e-13
+
+            # n_terms = 1 unchanged from its pre-V8b leading-order form.
+            @test y1[1] ≈ -c * r^(1/3)         atol = 1e-13
+            @test y1[2] ≈  (1/3)  * c * r^(-2/3) atol = 1e-13
+            @test y1[3] ≈  (2/9)  * c * r^(-5/3) atol = 1e-13
+            @test y1[4] ≈  (10/27) * c * r^(-8/3) atol = 1e-13
+
+            # The c_6 correction is a genuine refinement.  The full
+            # P_I^(2) ODE residual u'''' + 10u'^2 + 20u u'' + 40(u^3+6x)
+            # must be evaluated with u'''' from the *seed formula* (a 4th
+            # x-derivative of u = Y + Y^{-6} — d/dx = -d/dr, even order so
+            # sign +), NOT from the companion RHS f[4] (which is defined
+            # AS the negative of the rest, making that residual an
+            # identically-zero tautology).  d⁴/dr⁴ of -c·r^{1/3}:
+            # coeff (1/3)(-2/3)(-5/3)(-8/3) = -80/81 ⇒ +(80/81)c·r^{-11/3};
+            # d⁴/dr⁴ of s·r^{-2}: coeff (-2)(-3)(-4)(-5) = 120 ⇒ 120s·r^{-6}.
+            u4_1 = (80/81) * c * r^(-11/3)                 # n_terms = 1
+            u4_2 = (80/81) * c * r^(-11/3) + 120 * s * r^(-6)  # n_terms = 2
+            res1 = abs(u4_1 + 10*y1[2]^2 + 20*y1[1]*y1[3] + 40*(y1[1]^3 + 6*x0))
+            res2 = abs(u4_2 + 10*y2[2]^2 + 20*y2[1]*y2[3] + 40*(y2[1]^3 + 6*x0))
+            @test res2 < res1
+        end
+        # BigFloat element type propagates (a BigFloat x0 → BigFloat seed).
+        yb = pI2_tritronquee_ic(big"-20.0"; n_terms = 2)
+        @test eltype(yb) == BigFloat
+        @test yb[1] ≈ -cbrt(big(6)) * big(20)^(big(1)/3) +
+                      (one(BigFloat)/36) * big(20)^(-2)  atol = big(1e-40)
     end
 
     # -------------------------------------------------------------------------

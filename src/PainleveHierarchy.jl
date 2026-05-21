@@ -69,27 +69,46 @@ a v0.2+ target requires a PI-hierarchy member of order ≥ 6 (m ≥ 3)*.
 
 ## The tritronquée asymptotic initial condition
 
-`pI2_tritronquee_ic(x0)` returns the leading-order asymptotic seed for
-the `P_I^(2)` tritronquée at a large real point `x0` (pillar C §4,
+`pI2_tritronquee_ic(x0)` returns the asymptotic seed for the `P_I^(2)`
+tritronquée at a large real point `x0` (pillar C §4,
 `findings.md:172-281`; KKG 2015 §7).  At `t = 0` the tritronquée obeys
 `u ~ -∛6 · x^{1/3}` as `|x| → ∞` (KKG `tritronquee_coeff.tex` `V0_sector`
-multline).  Seeding at large *negative* real `x0`, write `u(x) =
--∛6·|x|^{1/3}`; differentiating w.r.t. `x` for `x < 0` (so `d/dx =
--d/d|x|`) gives the four components
+multline).  Seeding at large *negative* real `x0`, write `r = |x0|` and
+take the real branch `Y = -∛6·r^{1/3}`; for `x < 0` the chain rule is
+`d/dx = -d/dr`.
 
-    y_1 = -∛6 · |x0|^{1/3}
-    y_2 = +(1/3)  ∛6 · |x0|^{-2/3}
-    y_3 = +(2/9)  ∛6 · |x0|^{-5/3}
-    y_4 = +(10/27) ∛6 · |x0|^{-8/3}.
+`n_terms = 1` is the leading order `u(x) = -∛6·r^{1/3}`; differentiating
+gives the four components
+
+    y_1 = -∛6 · r^{1/3}
+    y_2 = +(1/3)  ∛6 · r^{-2/3}
+    y_3 = +(2/9)  ∛6 · r^{-5/3}
+    y_4 = +(10/27) ∛6 · r^{-8/3}.
 
 All four after `y_1` are positive — `u` decreases as `|x|` grows, so
 `u' > 0` for `x < 0`, and successive derivatives stay positive.  Pillar C
 §4 (`findings.md:274`) prints `y_3` with a leading *minus*; that is a
 transcription sign-slip — differentiation gives `+(2/9)`, and the test
-PH.1.4 oracle is the differentiation-derived value.  `n_terms = 1`
-(leading order) is the v1 scope: the higher-order `b_n` series refinement
-(KKG eq. (5.16) recurrence) is deferred to bead V8b, and `n_terms ≥ 2`
-throws rather than silently returning the leading order.
+PH.1.4 oracle is the differentiation-derived value.
+
+`n_terms = 2` (bead V8b) adds the **first non-zero correction** of the
+KKG `u = Y + Σ c_n Y^{-n}` series (KKG 2015 §7, eq. (7.2),
+`findings.md:196-202`).  At `t = 0` the coefficients `c_1 = 2t`, `c_2 =
+c_3 = c_4 = 0`, `c_5 = -(8/3)t^3` all vanish and `c_6 = 1`, so the series
+through the first correction is `u = Y + Y^{-6}`.  With `Y = -∛6·r^{1/3}`
+the correction is `Y^{-6} = (∛6)^{-6}·r^{-2} = 6^{-2}·r^{-2} = r^{-2}/36`
+(the `b_1 = 1/36` of `findings.md:257`).  Differentiating
+`u = -∛6·r^{1/3} + 6^{-2}·r^{-2}` three times w.r.t. `x` (`d/dx = -d/dr`,
+`x < 0`) the `n_terms = 2` seed adds, on top of the `n_terms = 1` values,
+
+    Δy_1 = + 6^{-2} · r^{-2}     Δy_2 = + 2·6^{-2} · r^{-3}
+    Δy_3 = + 6·6^{-2} · r^{-4}   Δy_4 = + 24·6^{-2} · r^{-5}.
+
+`n_terms = 2` is supported only for `t = 0` — the general `c_n(t)` series
+(`c_1 = 2t`, …) is out of v0.2 scope; `t ≠ 0` with `n_terms ≥ 2` throws
+(Rule 9 v1 corner — forced if a `t ≠ 0` tritronquée figure is ever
+required).  `n_terms ≥ 3` throws (the `c_7…` corrections are not
+implemented).  `n_terms ≤ 0` throws.
 
 ## Fail-fast contract (CLAUDE.md Rule 1)
 
@@ -97,7 +116,8 @@ throws rather than silently returning the leading order.
 `m < 1`, and for `m ≥ 3`.  `PainleveHierarchyProblem` additionally
 validates `length(y0) == 2m` and a non-degenerate `xspan` (the
 `VectorPadeTaylorProblem` it wraps re-checks `order` and the span).
-`pI2_tritronquee_ic` throws for `n_terms ≥ 2`.  No silent NaN / zero.
+`pI2_tritronquee_ic` throws for `n_terms ∉ {1, 2}` and for `n_terms = 2`
+with `t ≠ 0`.  No silent NaN / zero.
 
 ## References
 
@@ -406,39 +426,56 @@ end
 """
     pI2_tritronquee_ic(x0; t = 0, n_terms = 1) -> Vector
 
-Leading-order asymptotic-series initial condition `(y_1, y_2, y_3, y_4) =
+Asymptotic-series initial condition `(y_1, y_2, y_3, y_4) =
 (u, u', u'', u''')` for the `P_I^(2)` tritronquée at a large real point
 `x0` (pillar C §4; KKG 2015 §7).  At `t = 0` the tritronquée obeys
-`u ~ -∛6 · x^{1/3}` as `|x| → ∞`; differentiating `u(x) = -∛6·|x|^{1/3}`
-w.r.t. `x` gives
+`u ~ -∛6 · x^{1/3}` as `|x| → ∞`; with `r = |x0|` and `d/dx = -d/dr` for
+`x < 0`:
 
-    y_1 = -∛6 · |x0|^{1/3}
-    y_2 = +(1/3)  ∛6 · |x0|^{-2/3}
-    y_3 = +(2/9)  ∛6 · |x0|^{-5/3}
-    y_4 = +(10/27) ∛6 · |x0|^{-8/3}.
+  - `n_terms = 1` (leading order) — `u = -∛6·r^{1/3}`, giving
+    `(y_1,…,y_4) = (-∛6·r^{1/3}, (1/3)∛6·r^{-2/3}, (2/9)∛6·r^{-5/3},
+    (10/27)∛6·r^{-8/3})`.
+  - `n_terms = 2` (bead V8b) — adds the first non-zero KKG correction
+    `Y^{-6} = 6^{-2}·r^{-2}` (`c_6 = 1`, `t = 0`; KKG eq. (7.2)).  The
+    seed becomes the `n_terms = 1` values plus
+    `(6^{-2}r^{-2}, 2·6^{-2}r^{-3}, 6·6^{-2}r^{-4}, 24·6^{-2}r^{-5})`.
 
 The element type follows `x0`'s (a `BigFloat` `x0` yields a `BigFloat`
-seed).  `n_terms = 1` (leading order) is the v1 scope — the higher-order
-`b_n`-series refinement (KKG eq. (5.16) recurrence) is deferred to bead
-V8b; `n_terms ≥ 2` throws (Rule 1) rather than silently returning the
-leading order.  The `t` keyword is accepted for forward-compatibility
-with the V8b `c_n(t)` corrections; at leading order the seed is
-`t`-independent.
+seed).  `n_terms = 2` is supported only for `t = 0`; the general
+`c_n(t)` series is out of v0.2 scope, so `t ≠ 0` with `n_terms ≥ 2`
+throws (Rule 9 v1 corner — forced if a `t ≠ 0` tritronquée figure is
+required).  `n_terms ≥ 3` and `n_terms ≤ 0` throw (Rule 1).
 
-Throws `ArgumentError` for `n_terms ≥ 2`.
+Throws `ArgumentError` for `n_terms ∉ {1, 2}`, and for `n_terms = 2`
+with `t ≠ 0`.
 """
 function pI2_tritronquee_ic(x0; t = 0, n_terms::Integer = 1)
-    n_terms == 1 || throw(ArgumentError(
-        "pI2_tritronquee_ic: only n_terms = 1 (leading order) is " *
-        "implemented for v0.2; the higher-order b_n / c_n(t) series " *
-        "refinement (KKG 2015 eq. (5.16)) is deferred to bead V8b. " *
-        "Suggestion: pass n_terms = 1."))
-    c = cbrt(6 * one(float(real(typeof(x0)))))
-    r = abs(x0)
-    return [-c * r^(1//3),
-             (1//3)  * c * r^(-2//3),
-             (2//9)  * c * r^(-5//3),
-             (10//27) * c * r^(-8//3)]
+    n_terms in (1, 2) || throw(ArgumentError(
+        "pI2_tritronquee_ic: only n_terms ∈ {1, 2} are implemented for " *
+        "v0.2 — n_terms = 1 is the leading order, n_terms = 2 adds the " *
+        "first non-zero KKG correction (c_6 = 1) at t = 0.  The further " *
+        "c_7… corrections (KKG 2015 eq. (7.2)) are not implemented. " *
+        "Suggestion: pass n_terms = 1 or 2."))
+    n_terms == 2 && !iszero(t) && throw(ArgumentError(
+        "pI2_tritronquee_ic: n_terms = 2 is implemented only for t = 0 " *
+        "(got t = $t); at t = 0 the KKG series simplifies to u = Y + " *
+        "Y^{-6}, but for t ≠ 0 the general c_n(t) series (c_1 = 2t, …) is " *
+        "out of v0.2 scope.  Suggestion: pass t = 0, or n_terms = 1."))
+    c  = cbrt(6 * one(float(real(typeof(x0)))))
+    r  = abs(x0)
+    y  = [-c * r^(1//3),
+           (1//3)  * c * r^(-2//3),
+           (2//9)  * c * r^(-5//3),
+           (10//27) * c * r^(-8//3)]
+    n_terms == 1 && return y
+    # n_terms = 2: add the c_6 = 1 correction Y^{-6} = 6^{-2}·r^{-2} and
+    # its three x-derivatives (d/dx = -d/dr for x < 0).
+    s = one(c) / 36          # 6^{-2}
+    y[1] += s * r^(-2)
+    y[2] += 2  * s * r^(-3)
+    y[3] += 6  * s * r^(-4)
+    y[4] += 24 * s * r^(-5)
+    return y
 end
 
 end # module PainleveHierarchy
