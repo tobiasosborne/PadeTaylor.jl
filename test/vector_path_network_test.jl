@@ -63,6 +63,30 @@ adaptive.  The `VPN.3.*` testset asserts the real B2 wins:
     VPN.3.5  fixed-walk fallback — adaptive=false + :min_y reproduces
                                    the verified V7 fixed-step walk.
 
+## The VC-10 target-ordering tests (`VPN.4.*`)
+
+VC-10 (`padetaylor-0ln.37.17`, ADR-0025 Phase D) makes the Stage-1
+target processing order controllable by the optional `rng` kwarg — the
+substrate of the FW/FFW double-run accuracy indicator (FW 2011 §3.1
+line 156 shuffles the targets; FFW 2017 `:246-247` makes the
+cross-ordering disagreement the diagnostic).  The `VPN.4.*` testset
+pins the kwarg's contract:
+
+    VPN.4.1  additive default    — `rng = nothing` (the default)
+                                   reproduces the no-`rng` walk
+                                   bit-identically (ADR-0001).
+    VPN.4.2  fixed-seed determ.  — a fixed `MersenneTwister` seed gives
+                                   a bit-identical walk on every call
+                                   (the per-fixed-seed reproducibility
+                                   guarantee — PI2F.1.6's invariant
+                                   lifted to the seeded walk).
+    VPN.4.3  different orderings — two different seeds genuinely build
+                                   different path-network trees; both
+                                   still reach every target and extract
+                                   finite, non-empty pole fields that
+                                   agree within the walk's numerical
+                                   error (the VC-10 indicator itself).
+
 Self-contained: `using Test, PadeTaylor` only — runnable standalone
 (`julia --project=. test/vector_path_network_test.jl`) and under
 `runtests.jl`.
@@ -70,6 +94,7 @@ Self-contained: `using Test, PadeTaylor` only — runnable standalone
 
 using Test
 using PadeTaylor
+using Random: MersenneTwister
 using PadeTaylor.VectorPathNetwork: vector_path_network_solve,
                                     VectorPathNetworkSolution
 using PadeTaylor.VectorPoleField: extract_poles_shared_q
@@ -517,6 +542,112 @@ end
         @test all(s -> imag(s) == 0.0, sol.visited_h)
     end
 
+    # =========================================================================
+    # VPN.4.* — VC-10 target-ordering control (bead padetaylor-0ln.37.17,
+    # ADR-0025 Phase D).  See the file docstring.
+    # =========================================================================
+
+    # -------------------------------------------------------------------------
+    # VPN.4.1 — the `rng` kwarg is ADDITIVE.  `rng = nothing` (the
+    # default) walks the targets in the order given; it must reproduce
+    # the no-`rng` call bit-identically (ADR-0001 — v0.1 + v0.2 stay
+    # byte-identical, the kwarg only ADDS the shuffle path).
+    # -------------------------------------------------------------------------
+    @testset "VPN.4.1 rng = nothing reproduces the default walk" begin
+        p   = 1.0 + 0.6im
+        z0  = -0.4 + 0.0im
+        cs  = ComplexF64[1.0, 0.7, -1.3]
+        prob = riccati_pole_problem(p, z0, cs; order = 24)
+        targets = ComplexF64[x + y * im
+                             for x in 0.0:0.4:1.6 for y in -0.4:0.4:1.2]
+        # The default (no `rng` passed) and the explicit `rng = nothing`
+        # must produce a bit-identical visited tree — the additive
+        # guarantee: the new code path is inert unless an RNG is given.
+        sol_default = vector_path_network_solve(prob, targets;
+                                                order = 24, h = 0.25)
+        sol_nilrng  = vector_path_network_solve(prob, targets;
+                                                order = 24, h = 0.25,
+                                                rng = nothing)
+        @test sol_nilrng.visited_z == sol_default.visited_z
+        @test sol_nilrng.visited_y == sol_default.visited_y
+        @test sol_nilrng.visited_parent == sol_default.visited_parent
+        @test sol_nilrng.visited_h == sol_default.visited_h
+        @test sol_nilrng.visited_denominator == sol_default.visited_denominator
+    end
+
+    # -------------------------------------------------------------------------
+    # VPN.4.2 — a FIXED seed is fully deterministic.  VC-10 introduces a
+    # *different* ordering per seed, but a given seed's walk is still
+    # bit-reproducible: the same `MersenneTwister` state ⇒ the same
+    # shuffle ⇒ the same path-network tree.  This is the per-fixed-seed
+    # reproducibility guarantee (`test/kkg_pi2_figure_test.jl` PI2F.1.6's
+    # exact-determinism invariant, lifted to the seeded vector walk).
+    # -------------------------------------------------------------------------
+    @testset "VPN.4.2 fixed-seed walk is bit-deterministic" begin
+        p   = 1.0 + 0.6im
+        z0  = -0.4 + 0.0im
+        cs  = ComplexF64[1.0, 0.7, -1.3]
+        prob = riccati_pole_problem(p, z0, cs; order = 24)
+        targets = ComplexF64[x + y * im
+                             for x in 0.0:0.4:1.6 for y in -0.4:0.4:1.2]
+        # Two calls with the SAME seed (a fresh MersenneTwister at the
+        # same seed each time) — bit-identical tree.
+        s1 = vector_path_network_solve(prob, targets; order = 24, h = 0.25,
+                                       rng = MersenneTwister(12345))
+        s2 = vector_path_network_solve(prob, targets; order = 24, h = 0.25,
+                                       rng = MersenneTwister(12345))
+        @test s1.visited_z == s2.visited_z
+        @test s1.visited_parent == s2.visited_parent
+        @test s1.visited_h == s2.visited_h
+        poles1 = extract_poles_shared_q(s1; radius_t = 6.0,
+                                        cluster_atol = 0.2, min_support = 2)
+        poles2 = extract_poles_shared_q(s2; radius_t = 6.0,
+                                        cluster_atol = 0.2, min_support = 2)
+        @test poles1 == poles2
+    end
+
+    # -------------------------------------------------------------------------
+    # VPN.4.3 — two DIFFERENT orderings build different trees, and both
+    # converge to the same pole field within the walk's numerical error
+    # — the FW/FFW double-run accuracy indicator (VC-10).  On the
+    # exactly-soluble Riccati oracle the field is a single known pole, so
+    # "within the numerical error" is a hard ~1e-8 bar.
+    # -------------------------------------------------------------------------
+    @testset "VPN.4.3 different orderings, same pole field (VC-10)" begin
+        p   = 1.0 + 0.6im
+        z0  = -0.4 + 0.0im
+        cs  = ComplexF64[1.0, 0.7, -1.3]
+        prob = riccati_pole_problem(p, z0, cs; order = 24)
+        targets = ComplexF64[x + y * im
+                             for x in 0.0:0.4:1.6 for y in -0.4:0.4:1.2]
+        sa = vector_path_network_solve(prob, targets; order = 24, h = 0.25,
+                                       rng = MersenneTwister(1))
+        sb = vector_path_network_solve(prob, targets; order = 24, h = 0.25,
+                                       rng = MersenneTwister(2))
+        # Two different seeds genuinely thread DIFFERENT path-network
+        # trees — the FFW premise: "different paths will be run".
+        @test sa.visited_z != sb.visited_z
+        # ...yet both still cover the region and extract the SAME
+        # physical pole `p` to the walk's numerical error.  This is the
+        # VC-10 indicator: different orderings converge to the same field.
+        pa = extract_poles_shared_q(sa; radius_t = 6.0,
+                                    cluster_atol = 0.2, min_support = 2)
+        pb = extract_poles_shared_q(sb; radius_t = 6.0,
+                                    cluster_atol = 0.2, min_support = 2)
+        @test !isempty(pa) && !isempty(pb)
+        da = minimum(abs(q - p) for q in pa)
+        db = minimum(abs(q - p) for q in pb)
+        @test da < 1.0e-8
+        @test db < 1.0e-8
+        # The two runs' best pole estimates agree with each other — the
+        # two-run disagreement (the FW/FFW indicator) is at the numerical
+        # floor on this exactly-soluble oracle.
+        qa = pa[argmin(abs.(pa .- p))]
+        qb = pb[argmin(abs.(pb .- p))]
+        @info "VPN.4.3 two-run disagreement |q_a - q_b| = $(abs(qa - qb))"
+        @test abs(qa - qb) < 1.0e-7
+    end
+
 end
 
 # =============================================================================
@@ -600,7 +731,26 @@ end
 #        errored (the uncapped walk blocks), VPN.3.4 failed (no throw on
 #        `Q_near`).  Restored to GREEN.
 #
+# -- VC-10 target-ordering mutation (bead padetaylor-0ln.37.17) --
+#
+#   M7 — VectorPathNetwork: make the `rng` shuffle inert.  In
+#        `vector_path_network_solve`, replace
+#          rng === nothing || (target_list = shuffle(rng, target_list))
+#        with the no-op
+#          target_list = target_list
+#        (the `rng` kwarg is accepted but never used — every seed walks
+#        the same order).
+#        Expected: VPN.4.3's `sa.visited_z != sb.visited_z` assertion
+#        bites — with the shuffle removed two different seeds build the
+#        SAME tree, so the two-run accuracy indicator (VC-10) is vacuous.
+#        Result: RED — VPN.4.3's different-tree assertion failed (the two
+#        seeds produced byte-identical visited trees); VPN.4.1 / VPN.4.2
+#        stayed GREEN (the additive default and fixed-seed determinism do
+#        not depend on the shuffle being live).  This proves the shuffle
+#        is genuinely load-bearing for VC-10.  Restored to GREEN.
+#
 # Certified bites: M1 → 6 RED, M3 → 1 RED, M4 → 17 RED (16 fail +
 # 1 error), M5 → 3 RED (1 fail + 2 error), M6 → 6 RED (4 fail +
-# 2 error).  M2 superseded.  Restored to GREEN after each mutation.
+# 2 error), M7 → 1 RED (VPN.4.3 different-tree assertion — VC-10
+# substrate).  M2 superseded.  Restored to GREEN after each mutation.
 # =============================================================================

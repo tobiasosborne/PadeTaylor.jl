@@ -106,6 +106,33 @@ extra `vector_pade_step_with_pade!` from `(z_new, y_new)` with the
 real step `h` to build the node's own canonical store.  `VectorPoleField`'s
 `z = z_node + t·h` mapping is then exact.
 
+## Target ordering — the FW/FFW double-run accuracy indicator (VC-10)
+
+FW 2011 §3.1 (line 156) shuffles the Stage-1 targets into a *random*
+order before walking; FFW 2017 (`references/markdown/FFW2017_painleve_
+riemann_surfaces_preprint/FFW2017_painleve_riemann_surfaces_preprint.md:
+246-247`) makes that randomness a *diagnostic*: "the PFS method selects
+the target nodes in Stage 1 in a random order ... if we compute the
+same solution twice, different paths will be run, resulting in
+solutions that should differ by approximately the numerical error."
+The disagreement between two differently-ordered runs is a practical,
+oracle-free accuracy estimate of the result — VC-10 of ADR-0025.
+
+The walk's target processing order is therefore made **controllable**
+by the optional `rng` kwarg.  With `rng === nothing` (the default) the
+targets are processed in the *given* order — the V7/V8 behaviour,
+reproduced bit-identically (ADR-0001 additive guarantee).  With `rng`
+an `AbstractRNG`, the targets are `shuffle`d by it before the walk: a
+*different* processing order builds a *different* path-network tree, so
+the visited node sequence — and any pole field independently extracted
+from it — differs by the walk's numerical error.  The walk for a
+**fixed** `rng` is still fully deterministic (the same `rng` state ⇒
+the same shuffle ⇒ the same tree, bit-identical); VC-10 is the
+*complementary* fact that *different* orderings converge to the *same*
+pole field within the reported accuracy.  Two seeded runs + a
+nearest-neighbour pole-field match (the figure helper `surf_vc10_two_
+run`) is the FW/FFW double-run indicator.
+
 ## The Stage-1 tree
 
 `VectorPathNetworkSolution` carries the visited tree.
@@ -166,6 +193,7 @@ it could not.
 """
 module VectorPathNetwork
 
+using Random:               AbstractRNG, shuffle
 using ..VectorProblems:     VectorPadeTaylorProblem
 using ..VectorCoefficients: vector_taylor_coefficients
 using ..VectorStepper:      VectorPadeStepperState, vector_pade_step_with_pade!
@@ -299,7 +327,8 @@ VectorPathNetworkSolution{T}(vz, vy, vh, vnum, vden, vpar, gz, gy) where {T} =
                               max_steps_per_target = 1000,
                               fine_grid = nothing,
                               extrapolate = false,
-                              tol = 1e-8)
+                              tol = 1e-8,
+                              rng = nothing)
         -> VectorPathNetworkSolution
 
 Build the minimal Stage-1 vector path-network covering `targets` — a
@@ -369,6 +398,23 @@ Kwargs:
                          1e-8 / 1e-10`; values between the calibration
                          points clamp to the nearest.  Unused when
                          `fine_grid === nothing` or `extrapolate=true`.
+  - `rng`              — `Union{Nothing, AbstractRNG}` (default
+                         `nothing`).  Controls the Stage-1 target
+                         *processing order* — the FW/FFW double-run
+                         accuracy indicator (VC-10, ADR-0025; FFW 2017
+                         `:246-247`).  With `nothing` the targets are
+                         walked in the *given* order (the V7/V8
+                         behaviour, reproduced bit-identically — ADR-0001
+                         additive).  With an `AbstractRNG` the targets
+                         are `shuffle`d by it first: a different order
+                         builds a different path-network tree and a
+                         different visited-node sequence, so a pole
+                         field independently extracted from two
+                         differently-`rng`-seeded runs differs by the
+                         walk's numerical error — the practical accuracy
+                         estimate FW/FFW exploit.  The walk for a
+                         **fixed** `rng` state stays fully deterministic
+                         (same shuffle ⇒ same tree, bit-identical).
 
 Throws `ArgumentError` (Rule 1) for empty `targets`, non-positive `h`,
 a `wedge_angles` not of length 5, an unknown `step_policy`, or an empty
@@ -391,7 +437,8 @@ function vector_path_network_solve(prob::VectorPadeTaylorProblem{F, CT},
                                    fine_grid::Union{Nothing, AbstractVector} =
                                        nothing,
                                    extrapolate::Bool = false,
-                                   tol::Real = 1e-8
+                                   tol::Real = 1e-8,
+                                   rng::Union{Nothing, AbstractRNG} = nothing
                                    ) where {F, CT}
     isempty(targets) && throw(ArgumentError(
         "vector_path_network_solve: targets is empty — there is nothing " *
@@ -440,7 +487,18 @@ function vector_path_network_solve(prob::VectorPadeTaylorProblem{F, CT},
     visited_parent      = Int[0]
     visited_jets        = Vector{Vector{C}}[jet0]
 
-    for target in collect(C, targets)
+    # Stage-1 target processing order.  With `rng === nothing` the
+    # targets are walked in the order given — the V7/V8 behaviour,
+    # bit-identical (ADR-0001).  With an `rng` they are `shuffle`d by it
+    # — a different processing order builds a different path-network
+    # tree, the FW/FFW double-run accuracy indicator (VC-10, ADR-0025;
+    # FW 2011 §3.1 line 156 shuffles; FFW 2017 `:246-247` makes the
+    # cross-order disagreement the diagnostic).  Deterministic for a
+    # fixed `rng` state.
+    target_list = collect(C, targets)
+    rng === nothing || (target_list = shuffle(rng, target_list))
+
+    for target in target_list
         # Skip a target we already sit on.
         any(z -> abs(z - target) ≤ 10 * eps(T), visited_z) && continue
 

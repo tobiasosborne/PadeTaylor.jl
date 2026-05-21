@@ -120,8 +120,10 @@
 # estimate.  The VC-4/VC-5 machinery lives in the sibling helper
 # `figures/_kkg_pi2_vc45.jl`; VC-8 (the BVP endpoint companion-
 # consistency certificate, ADR-0025 Amendment 8) in
-# `figures/_kkg_pi2_vc8.jl` — both CLAUDE.md Rule 6 file-size splits.
-# VC-7 (loop closure) remains a separate Phase-D bead.
+# `figures/_kkg_pi2_vc8.jl`; VC-10 (the FW/FFW two-run pole-field
+# accuracy indicator, ADR-0025 Amendment 9) in `figures/_kkg_pi2_vc10.jl`
+# — all CLAUDE.md Rule 6 file-size splits.  VC-7 (loop closure) remains
+# a separate Phase-D bead.
 #
 # ### The stitch
 #
@@ -705,7 +707,8 @@ Returns `(walk, poles, u, covered, vc4, vc5, message)`:
                  VC-4 prune count, VC-5 residual).
 """
 function surf_wedge_fill(bvp_sol::VectorBVPSolution,
-                         grid_pts::AbstractVector{ComplexF64})
+                         grid_pts::AbstractVector{ComplexF64};
+                         rng = nothing)
     f      = painleve_hierarchy(:I, 2; t = SURF_T)
     y_seed = ComplexF64.(bvp_sol(ComplexF64(SURF_Z_SEED)))
     prob   = VectorPadeTaylorProblem(f, y_seed,
@@ -715,12 +718,17 @@ function surf_wedge_fill(bvp_sol::VectorBVPSolution,
     targets = surf_wedge_targets()
     # B2 adaptive `:max_q_root` walk (the package default); the Stage-2
     # fill is gated honest — `extrapolate = false`, B1 true-radius gate.
+    # `rng` controls the Stage-1 target processing order — `nothing`
+    # (the figure default) walks the radius-major fan in order, an
+    # `AbstractRNG` shuffles it for the VC-10 double-run accuracy
+    # indicator (`surf_vc10_two_run`).
     walk = vector_path_network_solve(prob, targets;
                                      order       = SURF_PN_ORDER,
                                      h           = SURF_PN_H,
                                      fine_grid   = grid_pts,
                                      extrapolate = false,
-                                     tol         = SURF_PN_TOL)
+                                     tol         = SURF_PN_TOL,
+                                     rng         = rng)
     candidates = extract_poles_shared_q(walk;
                                         radius_t     = SURF_RADIUS_T,
                                         cluster_atol = SURF_CLUSTER_ATOL,
@@ -755,6 +763,15 @@ function surf_wedge_fill(bvp_sol::VectorBVPSolution,
             vc4 = vc4, vc5 = vc5, message = msg)
 end
 
+# VC-10 — the FW/FFW two-run pole-field accuracy indicator (ADR-0025
+# Validation Criteria Menu VC-10; bead `padetaylor-0ln.37.17`,
+# Amendment 9).  Sibling helper — the Rule-6 file-size split, mirroring
+# `_kkg_pi2_vc45.jl` (VC-4/VC-5) and `_kkg_pi2_vc8.jl` (VC-8).  Pulled
+# in here, after `surf_wedge_fill` (which it runs twice) and after
+# `_kkg_pi2_vc45.jl` (whose `_vc5_augment!` matcher core it reuses).
+if !isdefined(@__MODULE__, :surf_vc10_two_run)
+    include(joinpath(@__DIR__, "_kkg_pi2_vc10.jl"))
+end
 # ======================================================================
 # Region 2's negative-axis BVP anchor (V8b Stage A)
 # ======================================================================

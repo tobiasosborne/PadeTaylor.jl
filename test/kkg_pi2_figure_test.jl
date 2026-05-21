@@ -184,6 +184,14 @@ include(joinpath(@__DIR__, "..", "figures", "_kkg_pi2_helpers.jl"))
     # recipe + a fixed walk must produce the identical solution and the
     # identical pole set on every call — the figure is a function of
     # the (fixed) helper constants, nothing else.
+    #
+    # Determinism is per-fixed-ordering: `vector_path_network_solve`
+    # processes targets in the given order unless an `rng` is passed
+    # (ADR-0025 VC-10).  This figure passes no `rng`, so its walk uses
+    # the fixed default order — exactly reproducible, the guarantee
+    # pinned here.  VC-10 (`figures/test_kkg_pi2_surface.jl` PI2S.10)
+    # adds the complementary fact: a *different* `rng` ordering converges
+    # to the *same* pole field within the FW/FFW double-run accuracy.
     @testset "PI2F.1.6: deterministic BVP + pole march" begin
         res2 = kkg_pi2_compute()
         # The BVP solution is identical at every node.

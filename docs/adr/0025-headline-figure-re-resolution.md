@@ -122,7 +122,7 @@ The figure-certifying suite. `[E]` = machinery exists in the codebase;
 | VC-7 | Loop-closure ΔP_rel certificate (`quality_diagnose`, ADR-0016) | medium | `[N]` shipped (bead `0ln.37.14`; vector adapter in `ext/PadeTaylorDiagnosticsExt.jl`; Amendment 7) |
 | VC-8 | BVP endpoint higher-derivative match (FW §5.2 diagnostic) | medium | `[N]` shipped (bead `0ln.37.15`; `figures/_kkg_pi2_surface_helpers.jl` `surf_vc8_companion_check`; Amendment 8) |
 | VC-9 | Weierstrass-℘ oracle for the *vector* pipeline (FW Table 5.1) | medium | `[N]` shipped (bead `0ln.37.16`; `test/vector_pipeline_oracle_test.jl`; Amendment 8) |
-| VC-10 | Two-run different-path pole-disagreement accuracy indicator | medium | `[N]` |
+| VC-10 | Two-run different-path pole-disagreement accuracy indicator | medium | `[N]` shipped (bead `0ln.37.17`; `src/VectorPathNetwork.jl` `rng` kwarg + `figures/_kkg_pi2_surface_helpers.jl` `surf_vc10_two_run`; Amendment 9) |
 | VC-12 | 7-fold rotational-symmetry cross-check (`V₀`→`V₁` poles) | strong | `[N]` stretch |
 
 (VC-11 Froissart residue filter and VC-13 pole-count growth law are
@@ -820,6 +820,101 @@ VC-4, VC-5, VC-7, VC-8, VC-9 are all shipped; the BVP and the
 vector-solver chain are now certified end-to-end against an independent
 oracle. VC-10 (two-run pole-disagreement) and VC-12 (7-fold symmetry,
 stretch) remain.
+
+## Amendment 9 — Phase-D VC-10: the FW/FFW two-run accuracy indicator (2026-05-21)
+
+Bead `padetaylor-0ln.37.17` (Phase D, "VC-10") — the last Phase-D
+validation criterion — implements the FW/FFW double-run pole-field
+accuracy indicator for the headline figure's wedge.
+
+### The mechanism — a controllable Stage-1 target ordering
+
+FW 2011 §3.1 (line 156) shuffles the Stage-1 targets into a *random*
+order before the path-network walk; FFW 2017
+(`references/markdown/FFW2017_painleve_riemann_surfaces_preprint/
+FFW2017_painleve_riemann_surfaces_preprint.md:246-247`) makes that
+randomness a *diagnostic*: "if we compute the same solution twice,
+different paths will be run, resulting in solutions that should differ
+by approximately the numerical error". The cross-ordering disagreement
+is a practical, oracle-free accuracy estimate — exactly the
+manufactured FW-style criterion ADR Decision 1 commits to (the
+tritronquée wedge field has no external oracle).
+
+`vector_path_network_solve` gains an additive `rng::Union{Nothing,
+AbstractRNG}` kwarg (`src/VectorPathNetwork.jl`), mirroring the v0.1
+scalar `PathNetwork`'s `rng_seed`/`shuffle` idiom (`src/PathNetwork.jl:
+480-481`). With `rng === nothing` (the default) the targets are walked
+in the *given* order — the V7/V8 behaviour, **bit-identical** (ADR-0001
+additive; `test/vector_path_network_test.jl` VPN.4.1 pins it, and
+v0.1 + v0.2 scalar suites are byte-unaffected). With an `AbstractRNG`
+the targets are `shuffle`d by it: a different processing order builds a
+different path-network tree, a different node filament, a different
+independently-extracted pole field. The walk for a **fixed** `rng`
+state stays fully deterministic (VPN.4.2; `test/kkg_pi2_figure_test.jl`
+PI2F.1.6's exact-determinism guarantee is **per-fixed-ordering** —
+unchanged, the figure passes no `rng`).
+
+### Measured two-run disagreement
+
+The figure helper `surf_vc10_two_run` (`figures/_kkg_pi2_surface_
+helpers.jl`) runs the wedge walk twice with two fixed `MersenneTwister`
+seeds, VC-4-validates each pole field, and matches the two fields
+nearest-neighbour by a maximum-cardinality bipartite matching (reusing
+the VC-5 `_vc5_augment!` augmenting-path core, `_kkg_pi2_vc45.jl`).
+Measured on the production B3 wedge fan:
+
+| quantity | value |
+|----------|-------|
+| run A / run B pole count | 240 / 227 (2102 / 2142 nodes) |
+| matched pole pairs | 181 |
+| matched-pole disagreement — **median / max** | **0.348 / 0.590** |
+| single-run-only poles | 59 (A) + 46 (B) |
+
+The matched-pole disagreement **median 0.348** is the VC-10 accuracy
+indicator: the wedge pole field is accurate to roughly **half the pole
+nearest-neighbour spacing** (~0.69, the VC-5 measurement). This is
+consistent with — and an *independent* confirmation of — the VC-5b
+finding (Amendment 6): the field carries an intrinsic ~0.3 median
+conjugate-residual accuracy from the A2 far-wedge tractability ceiling.
+VC-10 corroborates it from a *different* direction — two differently-
+ordered walks, not the conjugate symmetry — so the ~0.35 figure is the
+genuine accuracy of the field, not an artefact of either diagnostic.
+
+The 59 + 46 single-run-only poles are the second FFW facet: each
+ordering's adaptive-`h` history threads a slightly different subset of
+the dense far-wedge pole lattice (the same A2 ceiling). A *majority* of
+each field still matches (181 of 240 / 227) — the two runs genuinely
+agree, they do not produce disjoint fields.
+
+### Reconciliation with PI2F.1.6
+
+`PI2F.1.6` asserts the V8b figure walk is exactly reproducible; it
+**stays true** — the figure passes no `rng`, so it walks the fixed
+default order, exactly reproducible. VC-10 adds the complementary fact:
+a *different* `rng` ordering converges to the *same* pole field within
+the reported ~0.35 accuracy. A one-line clarifying comment was added to
+`PI2F.1.6` recording that determinism is per-fixed-ordering. All 27
+PI2F.* assertions stay GREEN; the v0.1 scalar `pathnetwork_test.jl`
+(107/107) is bit-identical.
+
+### Mutation-proven
+
+`figures/test_kkg_pi2_surface.jl` PI2S.10 asserts the indicator
+(`median_disagree < 0.45`, `< 0.69` spacing; matched pairs ≥ 100;
+matched + only-this-run partitions each field; per-fixed-seed
+determinism; a same-seed match has *zero* disagreement). The
+load-bearing mutation (M7, `test/vector_path_network_test.jl`): making
+the `rng` `shuffle` inert turns the two seeds into identical trees —
+`median_disagree → 0.0`, every PI2S.10 disagreement assertion and
+VPN.4.3's different-tree assertion go RED; VPN.4.1 / VPN.4.2 (additive
+default, fixed-seed determinism) stay GREEN, proving the shuffle is
+genuinely load-bearing for VC-10 specifically. Restored to GREEN.
+
+### Phase D complete
+
+VC-4, VC-5, VC-7, VC-8, VC-9, VC-10 are all shipped — the entire
+Phase-D validation suite is in place. Only VC-12 (7-fold rotational
+symmetry, a stretch criterion) remains.
 
 ## References
 
