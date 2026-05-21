@@ -189,7 +189,8 @@ include("CoordTransforms.jl")
 # data absorbed into the RHS, one linear solve.  It is voter (2) of the
 # triple-method majority-vote harmonic-extension fill for the P_I^(2)
 # tritronquée surface figure (voter (1): ray-fan vector_bvp_solve;
-# voter (3): the Gridap.jl FEM extension, bead 0ln.36).  It depends only
+# voter (3): a Gridap.jl FEM solve homed in the figures/ project, bead
+# 0ln.36).  It depends only
 # on the standard external deps (LinearAlgebra, GenericLinearAlgebra) —
 # on no sibling src/ module (the _chebyshev_D1 builder is copied verbatim
 # from BVP.jl, not reached into).  Additive — no other module changes
@@ -229,7 +230,7 @@ using .Dispatcher:  dispatch_solve, DispatcherSolution, IVPSegment, BVPSegment
 # Laplace2D — the in-house 2D-Chebyshev spectral Dirichlet Laplace
 # solver; voter (2) of the triple-method tritronquée sector fill
 # (ADR-0024).
-using .Laplace2D:  laplace2d_solve, Laplace2DSolution, laplace2d_solve_gridap
+using .Laplace2D:  laplace2d_solve, Laplace2DSolution
 using .EdgeDetector: laplacian_residual, pole_field_mask
 using .EdgeGatedSolve: edge_gated_pole_field_solve, EdgeGatedSolution
 using .LatticeDispatcher: lattice_dispatch_solve, LatticeSolution
@@ -301,7 +302,7 @@ export extract_poles
 export bvp_solve, BVPSolution
 export dispatch_solve, DispatcherSolution, IVPSegment, BVPSegment
 export laplacian_residual, pole_field_mask
-export laplace2d_solve, Laplace2DSolution, laplace2d_solve_gridap
+export laplace2d_solve, Laplace2DSolution
 export lattice_dispatch_solve, LatticeSolution
 export edge_gated_pole_field_solve, EdgeGatedSolution
 export pIII_transformed_rhs, pV_transformed_rhs,

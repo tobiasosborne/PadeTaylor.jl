@@ -1,9 +1,17 @@
 [deps]
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+# Gridap — finite-element Laplace solver, voter (3) of the ADR-0024
+# triple-method tritronquée sector fill.  It lives in the figures/
+# project, NOT as a package weak-dep: Gridap 0.18's `ForwardDiff 0.10.x`
+# pin is unsatisfiable against the core package's `SpecialFunctions`
+# stack (it broke `Pkg.test()` — see ADR-0024).  Gridap 0.20 dropped
+# that pin and resolves clean here alongside CairoMakie on Julia 1.12.
+Gridap = "56d4f2e9-7ea1-5844-9cf6-b9c51ca7ce8e"
 PadeTaylor = "00000000-0000-0000-0000-000000000001"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 
 [compat]
 CairoMakie = "0.12, 0.13, 0.14, 0.15"
+Gridap = "0.20"
 SpecialFunctions = "2"
 julia = "1.10"

@@ -22,10 +22,12 @@ per Cartesian grid point**:
      fully determined by its boundary values. A single tensor-product
      Chebyshev Laplacian solve on a rectangle recovers the interior.
 
-  3. **Gridap.jl FEM Laplace solve** — a `PadeTaylorGridapExt` weak-dep
-     package extension (ADR-0003 extensions pattern; separate bead
-     `padetaylor-0ln.36`). An unstructured-FEM solution of the same
-     Dirichlet Laplace problem, an algorithmically disjoint third voter.
+  3. **Gridap.jl FEM Laplace solve** — a Gridap.jl finite-element
+     solution of the same Dirichlet Laplace problem, an algorithmically
+     disjoint third voter. It is a **`figures/`-project dependency + a
+     plain figure-helper file** (`figures/_kkg_pi2_gridap_helper.jl`),
+     **NOT a package weak-dep** — see the *Correction* section below for
+     the root cause of that placement.
 
 The three interior fields are reconciled by a **per-grid-point majority
 vote / agreement map** (assembled in F3, bead `padetaylor-0ln.33`):
@@ -36,6 +38,60 @@ project's standing triple-oracle discipline (CLAUDE.md Rule 4; cf. the
 `padeapprox.m`, a closed-form oracle, and a finite-difference oracle).
 One numerical method can hide a systematic bug behind a plausible-looking
 surface; three independent methods that agree cannot all share it.
+
+## Correction (2026-05-21) — Gridap is a `figures/` dependency, not a package weak-dep
+
+The original plan (and commit `cfe8b86`) shipped voter (3) as a
+`PadeTaylorGridapExt` **package weak-dep extension** with
+`Gridap = "0.18"` in `Project.toml` `[weakdeps]` / `[extensions]` /
+`[compat]` (the ADR-0003 extensions pattern). **This broke the package
+build.** `julia --project=. -e 'using Pkg; Pkg.test()'` failed at
+environment resolution with `Unsatisfiable requirements detected for
+package ForwardDiff`: Gridap 0.18 pins `ForwardDiff 0.10.x`, which is
+**unsatisfiable** against the core package's `SpecialFunctions 2.7.2`
+stack (it needs a newer `ForwardDiff`). The package test environment
+became unresolvable — the whole suite could not run.
+
+The root cause is architectural, not a version typo. Gridap is a
+~160-dependency FEM package. Making it a *package* weak-dep puts its
+entire conflict surface into the core package's resolvable set even
+though Gridap here is **figure-only infrastructure** — one of three
+Laplace solvers cross-checked in a single headline figure, exercised
+only inside F3. The ADR-0003 weak-dep pattern is right for *small*,
+presentation-only deps (Makie, Arblib, CommonSolve, DelaunayTriangulation);
+it is the wrong tool for a heavy FEM stack with a deep transitive
+conflict surface.
+
+**The correction (bead `padetaylor-0ln.36`, corrective phase):**
+
+- Gridap is **removed** from the package `Project.toml` (`[weakdeps]`,
+  `[extensions]`, `[compat]`, `[extras]`, `[targets]`); the
+  `ext/PadeTaylorGridapExt.jl` extension and the
+  `laplace2d_solve_gridap` stub in `src/Laplace2D.jl` are deleted; the
+  package `Manifest.toml` is restored to its pre-`cfe8b86` state.
+  `Pkg.test()` resolves cleanly again.
+- Gridap is **re-homed into the separate `figures/` project**: added to
+  `figures/Project.toml` `[deps]` with `Gridap = "0.20"` in `[compat]`.
+  Gridap **0.20** (0.20.7 at time of writing) dropped the `ForwardDiff
+  0.10` pin and resolves cleanly in the figures env alongside CairoMakie
+  + dev PadeTaylor on Julia 1.12.
+- The FEM solver becomes a **plain figure-helper file**,
+  `figures/_kkg_pi2_gridap_helper.jl` (the `figures/_kkg_pi2_helpers.jl`
+  pattern — figure scripts `include` it), exposing
+  `laplace2d_solve_gridap(...)`. The logic is ported verbatim from the
+  deleted extension; it still returns a `PadeTaylor.Laplace2DSolution`
+  so F3 treats the FEM and spectral voters uniformly.
+- The Gridap verification is re-homed to
+  `figures/test_kkg_pi2_gridap.jl`, a standalone script run under
+  `--project=figures` (closed-form harmonic functions + agreement with
+  `laplace2d_solve` to FEM tolerance; ~5e-5 FEM-vs-spectral agreement,
+  O(h²) convergence confirmed). The main `test/` suite stays Gridap-free.
+
+**The triple-method majority vote is unchanged.** Voters (1) ray-fan
+BVP, (2) in-house 2D-Chebyshev, (3) Gridap FEM all still feed the
+per-grid-point agreement map — that vote simply executes in F3 *within
+the `figures/` environment*, where Gridap is available, rather than via
+a package extension.
 
 ## Context
 
@@ -119,6 +175,13 @@ asymptotic series; sector-edge rays from `vector_bvp_solve`) is F3's job
   spectral/collocation methods: a FEM bug and a spectral bug will not
   coincide.
 
+- **Gridap as a package weak-dep extension** (the original `cfe8b86`
+  plan). Rejected — see the *Correction* section: Gridap 0.18's
+  `ForwardDiff 0.10.x` pin is unsatisfiable against the core package's
+  `SpecialFunctions` stack, and a ~160-dependency FEM package does not
+  belong in the core package's resolvable set for figure-only
+  infrastructure. Gridap lives in the `figures/` project instead.
+
 - **ApproxFun.jl / MethodOfLines.jl.** Rejected: ApproxFun's PDE support
   would duplicate the spectral method we already own via `_chebyshev_D1`;
   MethodOfLines is a finite-difference method-of-lines discretiser aimed
@@ -139,14 +202,19 @@ asymptotic series; sector-edge rays from `vector_bvp_solve`) is F3's job
   mutation-proof block. `Laplace2D` is `include`d in `src/PadeTaylor.jl`
   and `laplace2d_solve` / `Laplace2DSolution` are re-exported.
 
-- Bead `padetaylor-0ln.36` adds the `PadeTaylorGridapExt` weak-dep
-  extension (third voter) with a `Project.toml` `[weakdeps]` line and a
-  justification per ADR-0003 + Law 2.
+- Bead `padetaylor-0ln.36` adds the Gridap FEM voter (third voter) as a
+  `figures/` figure-helper (`figures/_kkg_pi2_gridap_helper.jl`) with
+  `Gridap` in `figures/Project.toml` `[deps]` (`[compat]` `0.20`) and a
+  Law-2 justification line — NOT a package weak-dep (see the *Correction*
+  section). Its verification is `figures/test_kkg_pi2_gridap.jl`, run
+  under `--project=figures`.
 
-- F3 (bead `padetaylor-0ln.33`) composes the three methods: it applies
-  the `w = log x` conformal map, supplies the tritronquée boundary data,
-  runs all three solvers, and assembles the per-grid-point majority vote
-  and the agreement map.
+- F3 (bead `padetaylor-0ln.33`) composes the three methods *within the
+  `figures/` environment*: it applies the `w = log x` conformal map,
+  supplies the tritronquée boundary data, runs all three solvers
+  (`vector_bvp_solve`, `laplace2d_solve`, the
+  `_kkg_pi2_gridap_helper.jl` `laplace2d_solve_gridap`), and assembles
+  the per-grid-point majority vote and the agreement map.
 
 - Fail-loud (Rule 1): `Nx`/`Ny` too small, and `bc_*` boundary-data
   dimension mismatches, all throw with a `suggestion`/`detail`.
@@ -166,8 +234,12 @@ asymptotic series; sector-edge rays from `vector_bvp_solve`) is F3's job
   its tensor product).
 - ADR-0023 — `VectorBVP.jl`, voter (1); also the precedent for copying
   `_chebyshev_D1` verbatim rather than reaching into a private symbol.
-- ADR-0003 — the weak-dep extension pattern that bead `0ln.36`'s Gridap
-  voter (3) follows.
+- ADR-0003 — the weak-dep extension pattern; the *Correction* section
+  records why Gridap voter (3) is **not** placed there (heavy FEM stack
+  + an unsatisfiable `ForwardDiff` pin) and lives in `figures/` instead.
+- `figures/_kkg_pi2_gridap_helper.jl` — voter (3), the Gridap FEM
+  Laplace figure-helper; `figures/test_kkg_pi2_gridap.jl` — its
+  figures-env verification.
 - ADR-0001 (four-layer / additive architecture), ADR-0002 (BigFloat
   linear algebra via `GenericLinearAlgebra`).
 - KKG 2015 §7 (Kapaev–Kitaev–… tritronquée figures 7.4/7.5) — the

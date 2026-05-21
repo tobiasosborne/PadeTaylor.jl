@@ -2,7 +2,7 @@
 
 julia_version = "1.12.5"
 manifest_format = "2.0"
-project_hash = "cccb7cd2578f77fe11429ca8bc31b131b7bf1ab2"
+project_hash = "0e343a0e61239a282b31a1ed7f79cc8030388eef"
 
 [[deps.Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
@@ -154,14 +154,12 @@ version = "0.1.0"
     PadeTaylorArblibExt = "Arblib"
     PadeTaylorCommonSolveExt = "CommonSolve"
     PadeTaylorDiagnosticsExt = "DelaunayTriangulation"
-    PadeTaylorGridapExt = "Gridap"
     PadeTaylorMakieExt = "Makie"
 
     [deps.PadeTaylor.weakdeps]
     Arblib = "fb37089c-8514-4489-9461-98f9c8763369"
     CommonSolve = "38540f10-b2f7-11e9-35d8-d573e4eb0ff2"
     DelaunayTriangulation = "927a84f5-c5f4-47a5-9785-b46e178433df"
-    Gridap = "56d4f2e9-7ea1-5844-9cf6-b9c51ca7ce8e"
     Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 
 [[deps.Polynomials]]

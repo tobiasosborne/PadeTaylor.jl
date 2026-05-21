@@ -1,115 +1,112 @@
-"""
-    PadeTaylorGridapExt
+# figures/_kkg_pi2_gridap_helper.jl
+#
+# Gridap.jl finite-element Dirichlet Laplace solver — voter (3) of the
+# triple-method majority-vote harmonic-extension fill (ADR-0024) for the
+# `P_I⁽²⁾` tritronquée surface figure.
+#
+# ## Why this is a figure helper, NOT a package extension
+#
+# This solver was originally shipped (commit cfe8b86) as the
+# `PadeTaylorGridapExt` package weak-dep extension.  That BROKE the
+# package build: Gridap 0.18 pins `ForwardDiff 0.10.x`, which is
+# unsatisfiable against PadeTaylor's `SpecialFunctions 2.7.2` stack —
+# `Pkg.test()` failed at environment resolution with
+# `Unsatisfiable requirements detected for package ForwardDiff`.  The
+# root cause is architectural: Gridap is a ~160-dependency FEM package
+# and was wrongly given a *package*-level conflict surface for what is
+# figure-only infrastructure.
+#
+# The correction (bead `padetaylor-0ln.36`, ADR-0024): Gridap is a
+# **`figures/`-project dependency** and this is a plain figure-helper
+# file the figure scripts `include`, exactly like
+# `figures/_kkg_pi2_helpers.jl`.  Gridap 0.20 (which the figures env
+# pins) dropped the ForwardDiff 0.10 pin, so it resolves cleanly there
+# alongside CairoMakie + dev PadeTaylor on Julia 1.12.  The core package
+# stays Gridap-free; the triple-method majority vote (ray-fan BVP /
+# in-house 2D-Cheb / Gridap FEM) is unchanged — it executes in F3 within
+# the `figures/` env.
+#
+# ## Why a third, FEM-based voter (ADR-0024)
+#
+# `Re u` / `Im u` of the analytic `P_I⁽²⁾` tritronquée are harmonic on
+# the pole-free sector, hence each is the unique solution of a Dirichlet
+# Laplace problem.  ADR-0024 fixes the discipline of computing that fill
+# **three algorithmically disjoint ways** and majority-voting per grid
+# point: (1) ray-fan `vector_bvp_solve`, (2) the in-house 2D-Chebyshev
+# spectral solve (`PadeTaylor.laplace2d_solve`, `src/Laplace2D.jl`), and
+# (3) **this file's Gridap FEM solve**.  A FEM discretisation error and a
+# spectral discretisation error are structurally different and cannot
+# hide the same systematic bug — that disjointness is the whole point of
+# the third voter.
+#
+# ## Algorithm — Gridap Dirichlet Laplace on a rectangle
+#
+# `laplace2d_solve_gridap` solves the **same** problem as
+# `PadeTaylor.laplace2d_solve`: `∇²φ = 0` on `[a,b] × [c,d]` with
+# Dirichlet data on all four edges.
+#
+#   1. **Mesh.** A `CartesianDiscreteModel` of the rectangle with
+#      `n_x × n_y` quadrilateral cells.  Cartesian models tag the whole
+#      boundary collectively as `"boundary"` — a continuous boundary
+#      trace (the exact trace of one harmonic function is automatically
+#      corner-consistent) is imposed in one stroke with that tag.
+#
+#   2. **FE space.** A first-order (`order = 1`) Lagrangian `TestFESpace`
+#      with `dirichlet_tags = "boundary"`, and the matching `TrialFESpace`
+#      carrying the Dirichlet datum `g(x) = φ_edge` — a single function
+#      of the physical point that dispatches on which edge `x` lies on.
+#
+#   3. **Weak form.** Laplace's equation `∇²φ = 0` has weak form
+#      `∫_Ω ∇u · ∇v dΩ = 0` for all test `v` (no source term).  We
+#      assemble it on a degree-2 quadrature `Measure` and solve the
+#      resulting linear `AffineFEOperator` — one linear solve, no Newton
+#      (the problem is linear), mirroring `laplace2d_solve`.
+#
+#   4. **Dense output.** The Gridap solution `uh` is a `CellField`,
+#      itself evaluatable at any physical point.  We sample `uh` on a
+#      Chebyshev grid and wrap it in a `PadeTaylor.Laplace2DSolution`,
+#      whose tensor-barycentric callable then provides `(x,y) -> φ` with
+#      the **same interface** as `laplace2d_solve` so F3 treats both
+#      Laplace voters uniformly.
+#
+# ## Accuracy
+#
+# FEM with order-`p` Lagrangian elements converges as `O(h^{p+1})` in
+# the `L²` norm (`h ~ 1/n`).  With `order = 1` and `n ~ 48` cells per
+# axis the interior error on a smooth harmonic field is
+# `O(10⁻³…10⁻⁴)` — algebraic, NOT spectral (contrast `laplace2d_solve`,
+# which converges geometrically with a handful of nodes).  This is
+# expected and is the reason ADR-0024 keeps Gridap only as a
+# *cross-check* voter, never the sole method.
+#
+# References:
+#   * `docs/adr/0024-laplace-harmonic-extension.md` — the triple-method
+#     majority-vote decision; this is voter (3), and the ADR records the
+#     Gridap-as-figure-helper correction.
+#   * `src/Laplace2D.jl` — voter (2); `laplace2d_solve`, the in-house
+#     2D-Chebyshev solver this FEM solve cross-checks, and the
+#     `Laplace2DSolution` container reused for the dense output.
+#   * `figures/test_kkg_pi2_gridap.jl` — the figures-env verification of
+#     this helper (closed-form harmonic functions + agreement with
+#     `laplace2d_solve`).
+#   * Gridap.jl tutorial 1 ("Poisson equation") — the
+#     `CartesianDiscreteModel` / `TestFESpace` / `AffineFEOperator`
+#     idiom adapted here.
 
-Package-extension providing the **Gridap.jl finite-element Laplace
-backend** — voter (3) of the triple-method majority-vote
-harmonic-extension fill (ADR-0024).  Loaded automatically when both
-`PadeTaylor` and `Gridap` are present:
-
-```julia
-using PadeTaylor, Gridap
-
-# φ = x² − y² is harmonic; supply its exact edge trace as boundary data.
-g = (x, y) -> x^2 - y^2
-sol = laplace2d_solve_gridap(y -> g(0.0, y), y -> g(1.0, y),
-                             x -> g(x, 0.0), x -> g(x, 1.0),
-                             (0.0, 1.0), (0.0, 1.0); n_x = 48, n_y = 48)
-sol(0.37, 0.61)            # ≈ 0.37² − 0.61²
-```
-
-## Why a third, FEM-based voter (ADR-0024)
-
-`Re u` / `Im u` of the analytic `P_I⁽²⁾` tritronquée are harmonic on the
-pole-free sector, hence each is the unique solution of a Dirichlet
-Laplace problem.  ADR-0024 fixes the discipline of computing that fill
-**three algorithmically disjoint ways** and majority-voting per grid
-point: (1) ray-fan `vector_bvp_solve`, (2) the in-house 2D-Chebyshev
-spectral solve (`laplace2d_solve`, `src/Laplace2D.jl`), and (3) **this
-extension's Gridap FEM solve**.  A FEM discretisation error and a
-spectral discretisation error are structurally different and cannot hide
-the same systematic bug — that disjointness is the whole point of the
-third voter.  Gridap is, per ADR-0003, a *weak* dependency: a user who
-does not need the FEM cross-check pays neither its precompile time nor
-its dependency stack.
-
-## Algorithm — Gridap Dirichlet Laplace on a rectangle
-
-The extension solves the **same** problem as `laplace2d_solve`:
-`∇²φ = 0` on `[a,b] × [c,d]` with Dirichlet data on all four edges.
-
-  1. **Mesh.** A `CartesianDiscreteModel` of the rectangle with
-     `n_x × n_y` quadrilateral cells.  Cartesian models tag the four
-     boundary edges as faces `1…8` ("tag_1"…"tag_8") and the whole
-     boundary collectively as `"boundary"` — a continuous boundary
-     trace (the exact trace of one harmonic function is automatically
-     corner-consistent) is therefore imposed in one stroke with the
-     `"boundary"` tag.
-
-  2. **FE space.** A first-order (`order = 1`) Lagrangian `TestFESpace`
-     with `dirichlet_tags = "boundary"`, and the matching `TrialFESpace`
-     carrying the Dirichlet datum `g(x) = φ_edge` — a single function of
-     the physical point that dispatches on which edge `x` lies on.
-
-  3. **Weak form.** Laplace's equation `∇²φ = 0` has weak form
-     `∫_Ω ∇u · ∇v dΩ = 0` for all test `v` (no source term).  We
-     assemble it on a degree-2 quadrature `Measure` and solve the
-     resulting linear `AffineFEOperator` — one linear solve, no Newton
-     (the problem is linear), mirroring `laplace2d_solve`.
-
-  4. **Dense output.** The Gridap solution `uh` is a `CellField`, which
-     is itself evaluatable at any physical point — but point evaluation
-     of a raw `CellField` needs a cell-search.  We instead sample `uh`
-     on a Cartesian grid and wrap it in a `Laplace2DSolution`, whose
-     tensor-barycentric callable then provides `(x,y) -> φ` with the
-     **same interface** as `laplace2d_solve` so F3 treats both Laplace
-     voters uniformly.
-
-## Accuracy
-
-FEM with order-`p` Lagrangian elements converges as `O(h^{p+1})` in the
-`L²` norm (`h ~ 1/n`).  With `order = 1` and `n ~ 48` cells per axis the
-interior error on a smooth harmonic field is `O(10^{-3}…10^{-4})` —
-algebraic, NOT spectral (contrast `laplace2d_solve`, which converges
-geometrically with a handful of nodes).  This is expected and is the
-reason ADR-0024 keeps Gridap only as a *cross-check* voter, never the
-sole method.  The test file pins the convergence rate by mesh
-refinement.
-
-## References
-
-  - `docs/adr/0024-laplace-harmonic-extension.md` — the triple-method
-    majority-vote decision; this extension is voter (3).
-  - `docs/adr/0003-extensions-pattern.md` — the weak-dep extension
-    pattern this file follows.
-  - `src/Laplace2D.jl` — voter (2); `laplace2d_solve`, the in-house
-    2D-Chebyshev solver this FEM solve cross-checks, and the
-    `Laplace2DSolution` container reused for the dense output.
-  - Gridap.jl tutorial 1 ("Poisson equation") — the
-    `CartesianDiscreteModel` / `TestFESpace` / `AffineFEOperator`
-    idiom adapted here.
-"""
-module PadeTaylorGridapExt
-
-using PadeTaylor: PadeTaylor
+using PadeTaylor
 using PadeTaylor.Laplace2D: Laplace2DSolution
-import PadeTaylor.Laplace2D: laplace2d_solve_gridap
-
 using Gridap
-
-# =============================================================================
-# laplace2d_solve_gridap — the FEM method (voter (3))
-# =============================================================================
 
 """
     laplace2d_solve_gridap(bc_x_lo, bc_x_hi, bc_y_lo, bc_y_hi,
                            (a, b), (c, d); n_x = 32, n_y = 32,
                            Nx_out = nothing, Ny_out = nothing)
-        -> Laplace2DSolution
+        -> PadeTaylor.Laplace2D.Laplace2DSolution
 
 Gridap FEM solution of the Dirichlet Laplace problem `∇²φ = 0` on the
-rectangle `[a,b] × [c,d]`.  See the `PadeTaylor.laplace2d_solve_gridap`
-docstring for the contract; the four `bc_*` arguments and the rectangle
-mirror `laplace2d_solve`.
+rectangle `[a,b] × [c,d]` — voter (3) of the ADR-0024 triple-method
+tritronquée sector fill.  The four `bc_*` arguments and the rectangle
+mirror `PadeTaylor.laplace2d_solve`.
 
 `n_x` / `n_y` are the FEM mesh subdivision counts (the
 `CartesianDiscreteModel` has `n_x × n_y` cells).  `Nx_out` / `Ny_out`
@@ -203,9 +200,8 @@ function laplace2d_solve_gridap(bc_x_lo, bc_x_hi, bc_y_lo, bc_y_hi,
     xs = T[(a + b) / 2 + (b - a) / 2 * t for t in tx]
     ys = T[(c + d) / 2 + (d - c) / 2 * t for t in ty]
 
-    # `uh` is a CellField — evaluate it at physical points.  Searching the
-    # mesh cell per point is what `Gridap` does for CellField evaluation;
-    # we keep interior points strictly inside the rectangle to avoid the
+    # `uh` is a CellField — evaluate it at physical points.  We keep
+    # interior points strictly inside the rectangle to avoid the
     # boundary-face ambiguity in the cell search.
     sx = (b - a)
     sy = (d - c)
@@ -228,5 +224,3 @@ function laplace2d_solve_gridap(bc_x_lo, bc_x_hi, bc_y_lo, bc_y_hi,
 
     return Laplace2DSolution{T}(a, b, c, d, xs, ys, phi)
 end
-
-end # module PadeTaylorGridapExt
