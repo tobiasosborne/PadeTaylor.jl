@@ -591,6 +591,152 @@ surf_wedge_targets() =
     ComplexF64[r * cis(θ) for r in SURF_TARGET_RADII
                           for θ in SURF_TARGET_ANGLES]
 
+# --- The dense disc-spaced wedge target lattice (ADR-0026 D2) -------------
+# Default Cartesian lattice spacing for `surf_wedge_dense_targets`.  The
+# B1 honest disc radius (ADR-0025 Amendment 1, the true-radius Stage-2
+# gate) is median ≈ 0.06, p90 ≈ 0.16 — so a spacing of ≈ 2× the p90
+# disc radius keeps adjacent filaments' validity discs overlapping.
+# This is a *starting* value, not a hard-coded fixed one: `s` is a kwarg
+# of the generator and ADR-0026 D2 mandates rendering, measuring the
+# achieved coverage, and tightening until it saturates.
+const SURF_DENSE_SPACING = 0.25
+# Inner radius of the dense lattice — the rendered window starts at
+# `|x| = 2` (`SURF_R_MIN`); the lattice mirrors that floor.
+const SURF_DENSE_R_INNER = 2.0
+# Angular half-extent of the dense lattice, in degrees.  The wedge
+# half-width is `SURF_WEDGE_HALF_DEG = 36°`; the `±1°` Stokes mask
+# (`SURF_STITCH_MASK_DEG`) blanks `35°–37°`, so a `34°` lattice extent
+# fills right up to the honest edge of the wedge underlay.  The legacy
+# `surf_wedge_targets` fan stopped at `±28.6°`, leaving the genuine
+# `28.6°–34°` band untargeted; the dense lattice closes it.
+const SURF_DENSE_HALF_DEG = 34.0
+
+"""
+    surf_wedge_dense_targets(; s = SURF_DENSE_SPACING,
+                               r_inner = SURF_DENSE_R_INNER,
+                               half_deg = SURF_DENSE_HALF_DEG,
+                               r_outer = SURF_R_MAX)
+        -> Vector{ComplexF64}
+
+A **dense, disc-spaced** wedge target set for the resilient Stage-1 walk
+(ADR-0026 D2).
+
+## Why a uniform Cartesian lattice, not a polar fan
+
+The legacy `surf_wedge_targets` is a sparse polar fan — 19 radial
+shells × 9 angular rays = 171 points.  Two structural problems make it
+unable to *tile* the pole-rich wedge:
+
+  1. **It is sparse.**  171 filament-endpoints over the wedge area
+     (`≈ 235` square units out to `|x| = 20`) leave wide gaps between
+     adjacent path-network filaments — the headline figure's wedge is
+     `~95 %` blank (worklog 059).
+  2. **A polar fan has non-uniform areal density.**  A constant-`dθ`
+     fan crowds targets near the origin and thins them outward: the
+     ring at `|x| = 2` carries the same 9 rays as the ring at
+     `|x| = 20`, so the outer arc length per target is `10×` the inner.
+     The path-network's validity discs are roughly `|x|`-independent
+     in size (the B1 honest radius is `median ≈ 0.06`), so a fan
+     *over-tiles* the inner wedge and *under-tiles* the outer.
+
+FW 2011's analogue tiles its domain with a **uniform `40×40 = 1600`
+Cartesian grid** of Stage-1 nodes feeding a `161×161` fine grid
+(`references/markdown/FW2011_painleve_methodology_JCP230/`
+`FW2011_painleve_methodology_JCP230.md:153-164`) — a *uniform areal
+density* so every fine-grid point is within one coarse step of a node.
+This generator is the wedge-shaped analogue: a uniform Cartesian
+lattice of spacing `s`, clipped to the wedge sector.
+
+## The disc-tiling rationale
+
+The B1 true-radius gate (ADR-0025 Amendment 1) measures each visited
+node's *honest* validity disc — median radius `≈ 0.06`, p90 `≈ 0.16`.
+For the Stage-2 fill to cover the wedge without gaps, adjacent
+filaments' discs must overlap, so the target spacing `s` must be of
+order the disc *diameter*.  The default `s = SURF_DENSE_SPACING = 0.25`
+is `≈ 2×` the p90 disc radius — the ADR-0026 D2 starting point; the
+coverage probe (`figures/probe_wedge_coverage.jl`) sweeps `s` and
+measures the achieved coverage fraction so `s` is a *measured*
+parameter, never assumed.  `s` is therefore a kwarg, not a constant.
+
+## Clipping and ordering
+
+A lattice point `x = (i·s, j·s)` is kept iff it lies in the wedge
+annulus:
+
+  * `r_inner ≤ |x| ≤ r_outer` — inside the rendered window
+    (`r_inner ≈ SURF_R_MIN = 2`, `r_outer = SURF_R_MAX = 20`);
+  * `|arg x| ≤ half_deg` — inside the wedge sector.  The default
+    `half_deg = SURF_DENSE_HALF_DEG = 34°` fills up to `2°` shy of the
+    `36°` Stokes line; the residual `35°–37°` band is the `±1°`
+    `SURF_STITCH_MASK_DEG` strip, masked downstream.  The legacy fan
+    stopped at `±28.6°`, leaving `28.6°–34°` a genuine untargeted gap;
+    `34°` closes it.
+
+The surviving lattice points are emitted **radius-major** — sorted by
+`|x|` ascending.  This preserves the legacy fan's deliberate ordering
+(FW 2011 §5.5, "complete the pole field before stepping into smooth
+regions"): the resilient walk threads the dense inner pole field first
+and only then reaches outward, so each per-target bridging walk starts
+from a nearby already-visited node rather than chording across the
+wedge.
+
+## Kwargs
+
+  - `s::Real`        — Cartesian lattice spacing.  Default
+                       `SURF_DENSE_SPACING = 0.25` (`≈ 2×` the B1 p90
+                       disc radius).  Tighten toward `0.18` for denser
+                       coverage; loosen toward `0.35` for a faster
+                       walk.  Must be positive.
+  - `r_inner::Real`  — inner radius of the kept annulus.  Default
+                       `SURF_DENSE_R_INNER = 2.0` (`= SURF_R_MIN`).
+  - `half_deg::Real` — angular half-extent in degrees.  Default
+                       `SURF_DENSE_HALF_DEG = 34.0`.
+  - `r_outer::Real`  — outer radius.  Default `SURF_R_MAX = 20.0`.
+
+Throws `ArgumentError` (CLAUDE.md Rule 1) for a non-positive `s`, a
+non-positive `r_inner`, an `r_outer ≤ r_inner`, or a `half_deg` outside
+`(0, 90]` — each a caller mistake that would yield an empty or
+ill-defined lattice rather than a silent empty return.
+"""
+function surf_wedge_dense_targets(; s::Real = SURF_DENSE_SPACING,
+                                    r_inner::Real = SURF_DENSE_R_INNER,
+                                    half_deg::Real = SURF_DENSE_HALF_DEG,
+                                    r_outer::Real = SURF_R_MAX)
+    s > 0 || throw(ArgumentError(
+        "surf_wedge_dense_targets: lattice spacing s must be positive " *
+        "(got $s).  Suggestion: pass s ≈ 0.18–0.35 — of order the B1 " *
+        "honest disc diameter (ADR-0025: median ≈ 0.06, p90 ≈ 0.16)."))
+    r_inner > 0 || throw(ArgumentError(
+        "surf_wedge_dense_targets: r_inner must be positive (got " *
+        "$r_inner).  Suggestion: pass r_inner ≈ SURF_R_MIN = 2.0."))
+    r_outer > r_inner || throw(ArgumentError(
+        "surf_wedge_dense_targets: r_outer ($r_outer) must exceed " *
+        "r_inner ($r_inner) — the kept annulus would be empty.  " *
+        "Suggestion: pass r_outer = SURF_R_MAX = 20.0."))
+    (0 < half_deg ≤ 90) || throw(ArgumentError(
+        "surf_wedge_dense_targets: half_deg must lie in (0, 90] (got " *
+        "$half_deg); it is the wedge angular half-extent in degrees.  " *
+        "Suggestion: pass half_deg ≈ 34 — just inside the 36° Stokes " *
+        "line."))
+    # A uniform Cartesian lattice on `[-r_outer, r_outer]²` at spacing
+    # `s`, clipped to the wedge annulus.  `nmax` is the largest integer
+    # lattice index whose coordinate stays within `r_outer`.
+    nmax = floor(Int, r_outer / s)
+    pts = ComplexF64[]
+    for i in -nmax:nmax, j in -nmax:nmax
+        z = ComplexF64(i * s, j * s)
+        r = abs(z)
+        (r_inner ≤ r ≤ r_outer) || continue
+        abs(rad2deg(angle(z))) ≤ half_deg || continue
+        push!(pts, z)
+    end
+    # Radius-major emission — the FW §5.5 "complete the pole field
+    # before stepping into smooth regions" ordering (see the docstring).
+    sort!(pts; by = abs)
+    return pts
+end
+
 """
     surf_wedge_fill(bvp_sol, grid_pts) -> NamedTuple
 
@@ -599,17 +745,28 @@ Region 2 — the validated pole field + the honest partial `|u|` underlay
 
 Seed a `VectorPadeTaylorProblem` from the BVP-anchored on-tritronquée
 state `bvp_sol(SURF_Z_SEED)`, run the `vector_path_network_solve` wedge
-walk over the B3 extended threading fan `surf_wedge_targets()`, and use
-the F2 Stage-2 `fine_grid` fill to evaluate `u = V_0` on `grid_pts` (the
-Cartesian grid points inside the wedge).
+walk over the **dense disc-spaced** target lattice
+`surf_wedge_dense_targets()` (ADR-0026 D2), and use the F2 Stage-2
+`fine_grid` fill to evaluate `u = V_0` on `grid_pts` (the Cartesian grid
+points inside the wedge).
 
-Two honesty-defining choices:
+Three honesty-defining choices:
 
   * the walk runs with the **B2 adaptive `:max_q_root`** policy (the
     package default) — `h = SURF_PN_H` is the step *ceiling*, not a
     hand-tuned fixed step; the controller dodges poles and adapts `h`
     to the local density, threading the fan to `|x| ≈ 18-20` where the
     fixed-`h = 0.1` V8b walk *blocks* past `|x| ≈ 8` (A2 §3.1);
+
+  * the walk runs with **`on_target_failure = :skip`** — the resilient
+    Stage-1 walk (ADR-0026 D1).  A dense target lattice has thousands
+    of targets; under the default `:throw` policy a single unreachable
+    target would abort the whole walk and cost every other target's
+    coverage.  With `:skip` a failed per-target walk is recorded as a
+    `VectorWalkFailure` in `walk.failed_targets` and the walk continues.
+    This is fail-*loud-by-accounting*, never a silent swallow (CLAUDE.md
+    Rule 1): the count of skipped targets is surfaced in `message`, and
+    `walk.failed_targets` carries one first-class record per skip;
 
   * the Stage-2 fill runs with **`extrapolate = false`** — the B1
     true-radius gate (ADR-0025 Amendment 1) applies, so a grid point
@@ -652,9 +809,10 @@ Returns `(walk, poles, u, covered, vc4, vc5, message)`:
                  per-pruned-pole failure reason;
   - `vc5`      : the `vc5_pair` diagnostics — conjugate pairs, the
                  pairing residuals, median/max, unpaired + flagged;
-  - `message`  : a status note (node count, candidate / validated pole
-                 counts, `|x|` frontier, honest-coverage fraction,
-                 VC-4 prune count, VC-5 residual).
+  - `message`  : a status note (node count, dense-target count and the
+                 number skipped by the resilient walk, candidate /
+                 validated pole counts, `|x|` frontier, honest-coverage
+                 fraction, VC-4 prune count, VC-5 residual).
 """
 function surf_wedge_fill(bvp_sol::VectorBVPSolution,
                          grid_pts::AbstractVector{ComplexF64};
@@ -665,20 +823,25 @@ function surf_wedge_fill(bvp_sol::VectorBVPSolution,
                                      (ComplexF64(SURF_Z_SEED),
                                       ComplexF64(20.0 + 0.0im));
                                      order = SURF_PN_ORDER)
-    targets = surf_wedge_targets()
+    targets = surf_wedge_dense_targets()
     # B2 adaptive `:max_q_root` walk (the package default); the Stage-2
     # fill is gated honest — `extrapolate = false`, B1 true-radius gate.
-    # `rng` controls the Stage-1 target processing order — `nothing`
-    # (the figure default) walks the radius-major fan in order, an
-    # `AbstractRNG` shuffles it for the VC-10 double-run accuracy
-    # indicator (`surf_vc10_two_run`).
+    # `on_target_failure = :skip` (ADR-0026 D1) makes the dense walk
+    # resilient: a per-target walk failure is recorded in
+    # `walk.failed_targets` rather than aborting the whole solve — a
+    # dense lattice has thousands of targets and `:throw` would cost
+    # every target's coverage on the first failure.  `rng` controls the
+    # Stage-1 target processing order — `nothing` (the figure default)
+    # walks the radius-major lattice in order, an `AbstractRNG` shuffles
+    # it for the VC-10 double-run accuracy indicator (`surf_vc10_two_run`).
     walk = vector_path_network_solve(prob, targets;
-                                     order       = SURF_PN_ORDER,
-                                     h           = SURF_PN_H,
-                                     fine_grid   = grid_pts,
-                                     extrapolate = false,
-                                     tol         = SURF_PN_TOL,
-                                     rng         = rng)
+                                     order             = SURF_PN_ORDER,
+                                     h                 = SURF_PN_H,
+                                     fine_grid         = grid_pts,
+                                     extrapolate       = false,
+                                     tol               = SURF_PN_TOL,
+                                     rng               = rng,
+                                     on_target_failure = :skip)
     candidates = extract_poles_shared_q(walk;
                                         radius_t     = SURF_RADIUS_T,
                                         cluster_atol = SURF_CLUSTER_ATOL,
@@ -700,7 +863,13 @@ function surf_wedge_fill(bvp_sol::VectorBVPSolution,
     frontier = isempty(walk.visited_z) ? 0.0 :
                maximum(abs, walk.visited_z)
     cov_frac = isempty(u) ? 0.0 : count(covered) / length(u)
+    # The resilient-walk accounting (ADR-0026 D1): with
+    # `on_target_failure = :skip` the walk records one VectorWalkFailure
+    # per target it could not reach.  A non-empty `failed_targets` is the
+    # fail-loud-by-accounting signal — surface its count in `message`.
     msg = "wedge: $(length(walk.visited_z)) visited nodes, " *
+          "$(length(targets)) dense targets " *
+          "($(length(walk.failed_targets)) skipped), " *
           "$(length(candidates)) candidate poles → " *
           "$(length(poles)) VC-4-validated " *
           "($(vc4.n_pruned) pruned), " *
