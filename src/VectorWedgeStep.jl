@@ -240,8 +240,28 @@ Base.showerror(io::IO, e::VectorWalkError) = print(io, e.msg)
 # disc is genuinely smaller), and well clear of the `POLE_SAFETY = 0.5`
 # regime that the old law used, which would have placed `h` at ≈ 2× the
 # honest disc and re-opened the along-filament gaps Amendment 3 flagged
-# as bottleneck 1.  S5's coverage re-probe tunes this on measured
-# evidence; `0.25` is the reasoned starting point, not a final value.
+# as bottleneck 1.
+#
+# S6b (ADR-0026 Amendment 5) — *attempted* lowering 0.25 → 0.10 and
+# REVERTED.  The S6c inner-wedge sweep
+# (`external/probes/coverage-plateau-f4e/probe_s6_sweep.jl`) confirmed
+# Amendment 5's premise that a smaller `SAFETY` lifts honest coverage:
+# at order 36, `SAFETY` 0.25→0.15→0.10 lifts inner-wedge coverage
+# 0.232→0.289→0.314.  But lowering `SAFETY` *regresses the `src/`
+# pole-extraction test suite* — VPN.1.1 / VPN.3.1 / VPN.4.3 / VPO.4 all
+# go RED at both `SAFETY = 0.15` and `0.10` (verified by mutation: the
+# pristine `0.25` suite is GREEN).  Root cause (CLAUDE.md Rule 2): the
+# pole extractor `extract_poles_shared_q` filters denominator roots by a
+# `radius_t` window in the *rescaled* variable `t = Δz/h`, and a smaller
+# `SAFETY` shrinks the step `h`, so the *same physical pole* maps to a
+# larger `|t*|` and falls outside the `radius_t` window — fewer nodes
+# root it, so the `min_support ≥ 2` cross-node filter empties the field.
+# `SAFETY` and the `radius_t` `t`-window are therefore *coupled*: the
+# S5-diag premise that `SAFETY` is a free calibration knob is incomplete.
+# Lowering `SAFETY` is sound for coverage but needs `radius_t` (or the
+# extractor's `t`-window) to scale with the step law first — a separate
+# fix, outside the S6 calibration scope.  `SAFETY` is held at the
+# verified `0.25` until that coupling is addressed.
 const SAFETY = 0.25
 
 # The adaptive step floor, as a fraction of `h_max`: `h_min = H_MIN_RATIO

@@ -446,11 +446,38 @@ const SURF_FEM_NY = 88           # FEM mesh subdivisions, angular
 # Seed: a BVP-anchored on-tritronquée state at `z = -3` (V8b Stage A).
 const SURF_Z_SEED  = -3.0 + 0.0im
 
-# Taylor order of the path-network jets.  Order 24 is the A2-verified
-# value: A2 §5b.5 showed an order-48 *walk* degenerates the shared-`Q`
-# Padé linear solve outright (all-below-τ singular spectrum), so order
-# 24 is the senior-grade ceiling for the shared-`Q` route.
-const SURF_PN_ORDER = 24
+# Taylor order of the path-network jets.
+#
+# S6a (ADR-0026 Amendment 5) — raised 24 → 36.  Amendment 5's S5-diag
+# FW-lens investigation measured the honest B1 disc to be **100 %
+# truncation-limited**: across 4737 walk nodes the Jorba–Zou truncation
+# term binds 4737/4737 times and the pole-adjacency clamp never binds,
+# so the honest disc sits ~10× short of the nearest pole purely because
+# the jet is too short.  An inner-wedge order sweep measured coverage
+# climbing 13 %→23 %→29 %→29 % across order 24→36→48→72 — the knee is
+# order ~36–48 and order 72 is wasted.  ADR-0025's old "an order-48
+# *walk* degenerates the shared-`Q` solve" corner (v1, A2 §5b.5) was
+# measured on the *pre-`:skip` fixed-h* walk and is **superseded by
+# Amendment 5**: the resilient adaptive stack (`adaptive = true`,
+# `on_target_failure = :skip`) runs order 36/48/72 cleanly with 0
+# failures.
+#
+# Order 36 is the chosen S6 value — the start of the measured knee.  The
+# S6c full-wedge density sweep
+# (`external/probes/coverage-plateau-f4e/probe_s6_fullwedge.jl`) at order
+# 36 measured total honest wedge coverage **22.4 %** at target spacing
+# `s = 0.30` (2614 targets, 61.7 k nodes, 0.1 % skipped) — the plateau
+# peak.  Densifying targets does NOT lift it: `s = 0.22` gives 22.0 %
+# and `s = 0.16` *regresses* to 15.8 % — the dense outer-wedge lattice
+# makes the resilient walk re-chord covered ground (Amendment 3,
+# bottleneck 3) faster than the inner band fills.  Order 48 was measured
+# +6 pp better on the *inner* wedge (S6c sweep) but at ~1.9× the
+# runtime; order 36 is the chosen coverage-per-runtime point.  The
+# companion `SAFETY` lowering (Amendment 5's S6b) was *reverted* — it
+# regresses the `src/` pole-extraction tests through a `radius_t`/`h`
+# coupling (see the `const SAFETY` comment in `src/VectorWedgeStep.jl`);
+# the wedge walk therefore runs at the verified `SAFETY = 0.25`.
+const SURF_PN_ORDER = 36
 
 # The B2 adaptive-walk step *ceiling* `h_max`.  With `adaptive = true`
 # (the package default — ADR-0025 Amendment 4) `h` is capped per step
