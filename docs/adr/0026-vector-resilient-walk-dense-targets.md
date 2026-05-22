@@ -192,6 +192,57 @@ root-cause the crawl/collapse and decide the walk's step-size strategy
 decoupling the termination threshold from the collapsed `h`) on
 *measured* evidence, not assumption.
 
+## Amendment 2 (2026-05-22) — D3 diagnosis: the adaptive-`h` geometric sink; decision R1
+
+The D3 FW-lens investigation (bead `0ln.40.d`) root-caused the collapse
+with instrumented experiments. Diagnosis (full detail in
+`external/probes/vector-walk-collapse/`, reproducible, gitignored):
+
+**Root cause.** `VectorWedgeStep._adaptive_h` is a *geometric sink* for
+`h`. Its pole cap `POLE_SAFETY·h_prev·min|t*|` is proportional to
+`h_prev`, so the step recurrence is purely multiplicative:
+`h_next/h_prev = min(GROW, POLE_SAFETY·min|t*|) = min(1.5, 0.5·min|t*|)`.
+`h` grows only while `min|t*| > 3`; it shrinks geometrically whenever
+`min|t*| < 3` and **cannot recover** — `h = 0` is an attractor. The cap
+carries no *absolute* memory of the pole distance, only a ratio.
+Measured: 86.4 % of walk nodes have a collapsed `h < 0.05`. Worse, the
+FW-faithful nearest-visited chaining then propagates a collapsed `h`
+from a "poisoned" node into every later walk that chains off it — so
+denser targets *spread* the poison (Exp 5: a target the solver flagged
+`:step_collapse` walks cleanly in 111 steps at `h = 0.1` when started
+fresh from the seed — the target is not hard, the parent node was
+poisoned). The loop-termination test `|z−target| > visited_h[parent]`
+(`VectorPathNetwork.jl`) then inherits the collapsed `h` and forces the
+~70-steps-per-target crawl.
+
+**The FW lens.** FW 2011 §3.1 (FW-md:151–168) uses a *single fixed
+global `h`*; the 5-direction wedge picks only *direction*. A uniform
+`h` is what makes FW's nearest-node chaining sound. B2 (ADR-0025
+Amendment 4) made `visited_h` a per-node field varying 1000×, breaking
+that invariant.
+
+**The decisive finding.** The fixed-`h` "block past |x|≈8" that
+motivated B2 was *mis-attributed to the step size*. It is a rare
+on-pole chord; ADR-0026 **D1's `:skip` driver — which did not exist
+when B2 was designed — already converts it to a single
+`:all_candidates_failed` skip** and the run completes. Measured (inner
+wedge, 295 targets): fixed `h = 0.1` gives **0.18 coverage with 1152
+nodes**; adaptive `h_max = 0.1` gives **0.07 coverage with 5805 nodes**.
+Fixed `h` is FW-faithful, simpler, and measurably better.
+
+**Decision R1.** The headline-figure wedge walk runs at a **fixed `h`**:
+`surf_wedge_fill` passes `adaptive = false`. The package default of
+`vector_path_network_solve` (`adaptive = true`) is *unchanged* — the
+`_adaptive_h` geometric-sink defect is real but latent (it only
+catastrophises for a dense, cross-target-chained walk), so its proper
+redesign (an *absolute* non-ratcheting pole cap, "R2") is filed as a
+separate bead with that exact forcing condition, per Rule 9. The
+arrival-threshold decouple ("R3") is automatic under fixed `h`
+(`visited_h` is then uniform `= h`). The genuine open question — does a
+fixed `h` thread the *outer* wedge `|x| → 20` where pole density grows,
+or does the outer wedge force a finer global `h`? — is settled by
+*measurement* in the R1 re-probe over the full wedge, not assumed.
+
 ## References
 
 - `docs/worklog/059-headline-figure-honest-reassessment.md`
