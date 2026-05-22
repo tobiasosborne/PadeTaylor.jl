@@ -153,6 +153,45 @@ frontier" doctrine), never quietly deferred.
 - `0ln.40.e` — re-verify (VC suite + full `Pkg.test()`), worklog 060,
   ADR finalisation, epic bookkeeping.
 
+## Amendment 1 (2026-05-22) — the coverage probe falsifies the density-alone premise
+
+D1 (resilient walk) shipped and is sound. D2 (dense targets) shipped its
+generator — and a fast coverage probe (`figures/probe_wedge_coverage.jl`)
+then **falsified D2's premise that denser targets alone fill the wedge.**
+
+Probe, spacing 0.35, 1922 dense targets:
+
+| metric | value |
+|---|---|
+| visited nodes | 135 949 (≈ 70 per target) |
+| failed targets | 494 = **25.7 %**, almost all `:step_collapse` |
+| honest coverage | **1.7 %** — *worse* than the legacy 171-fan's 13–18 % |
+
+Density made coverage **regress**. The root cause is not target count: it
+is that the B2 adaptive-`h` controller (`VectorWedgeStep._adaptive_h`,
+ADR-0025 Amendment 4) **strangles the walk**. FW 2011's walk takes
+"less than a single step per target" (FW-md:163–164) at a *fixed*
+`h = 0.5`; ours takes ≈ 70 steps per target and tips 25.7 % of them into
+an `h < h_min` collapse. The adaptive controller appears to ratchet `h`
+down monotonically in a sustained dense pole field and cannot recover —
+and the walk-termination threshold `|z − target| > visited_h[parent]`
+inherits the collapsed `h`, forcing the walk to *crawl* to within
+≈ 10⁻⁴ of every target. Each collapsed-`h` node also carries a tiny B1
+disc, so 136 k nodes still tile almost nothing.
+
+**Consequence for the plan.** The blank wedge has *two* causes, not one;
+worklog 059 and this ADR's original framing saw only the target count.
+The walk's step-size strategy is the deeper bug. Decision **D3** (the
+FW-lens investigation, bead `0ln.40.d`) is therefore **promoted from a
+conditional follow-up to a hard prerequisite of the re-render** — per
+worklog 059's own lesson that "the deferral should have been a stop."
+Bead dependency re-wired: `0ln.40.c` (re-render) now depends on
+`0ln.40.d` (investigation), not the reverse. D3 must, with FW 2011 open,
+root-cause the crawl/collapse and decide the walk's step-size strategy
+(candidates: FW-faithful fixed `h`; a non-ratcheting adaptive law;
+decoupling the termination threshold from the collapsed `h`) on
+*measured* evidence, not assumption.
+
 ## References
 
 - `docs/worklog/059-headline-figure-honest-reassessment.md`
