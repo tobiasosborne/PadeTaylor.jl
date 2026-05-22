@@ -516,6 +516,55 @@ and is likely not reachable without violating the no-extrapolation
 contract — that limit, if it binds, will be measured and reported, not
 assumed.
 
+## Amendment 9 (2026-05-23) — S8: Amendment 8's mechanism withdrawn; the genuine cap is the honesty contract
+
+The S8 diagnostic (bead `padetaylor-roe`, instrumented, live repo)
+**falsifies Amendment 8's outer-wedge mechanism** and converges the
+investigation.
+
+**Amendment 8's "4.4× `h_v` collapse" is not reproducible.** S8 measured
+the *shipped* config (order 36, `SAFETY` 0.10, full-wedge walk): `h_v`
+median inner 0.0325 / outer 0.0350 — ratio **0.93×**; honest disc
+`R_gate` inner 0.049 / outer 0.052 — uniform. The `cfq` diagnostic left
+no reproducible probe; per Rule 3 (the live repo is authoritative) the
+uniform measurement stands. The likely reconciliation: `cfq` probed an
+*outer-targets-only* walk (threading unsupported from the seed straight
+to `|x|∈[14,20]`), which is not the figure's *full-wedge* walk —
+different walks, and only the full-wedge one is the figure.
+**Amendment 8's mechanism and step S8's Froissart premise are
+withdrawn.** S8 also established, on the code facts, that
+`SharedPade.shared_denominator_pade` *does* carry GGT-2013 SVD
+rank-count + degree-reduction + `padeapprox.m` QR-reweighting — i.e. it
+*does* suppress Froissart doublets; the "missing Froissart suppression"
+suspicion was wrong. (One minor hygiene item: `VectorStepper` builds the
+canonical `Q` at `default_tol = 1e-14` rather than the walk's `1e-8`
+noise floor — a frontier-only second-order effect, filed low-priority,
+not a coverage lever.)
+
+**The genuine, converged picture** (consistent across S5-diag, S6, S7,
+S8 — only `cfq`'s mechanism was the outlier):
+
+- The walk is **healthy** — ~0 % failures, no collapse, `h_v` uniform.
+- The honest B1 disc is **uniformly truncation-limited**; coverage is
+  ~22 % at order 36, ~29 % at order 48 (the order sweep saturates ~48).
+  Taylor order is the only walk-side lever, and it is nearly exhausted.
+- Denser targets do **not** lift total coverage (measured S5a, S6).
+
+**The real cap — the no-extrapolation honesty contract.** ADR-0025
+deleted the `extrapolate = true` corner for this figure: *no Padé is
+evaluated outside its verified B1 disc.* That is *stricter than FW
+2011* — FW's published pole-field figures FILL precisely because FW's
+Stage-2 evaluates each Padé over its full step **with no validity gate**
+(FW-md:395-397). Our headline figure is therefore honest-but-partial
+**by design**: ~22–29 % is the B1-gate-certified coverage, and a
+*completely* filled wedge is unreachable by any walk engineering while
+the no-extrapolation contract holds. This is not a bug and not a walk
+failure — it is a measured, principled tension between ADR-0025's
+honesty contract and a visually-filled figure. The resolution is a
+design decision (keep the strict gate and ship the honest ~29 %, or
+render FW-style with the certified region marked) — not further walk
+work. The investigation (D1–S8) is complete.
+
 ## References
 
 - `docs/worklog/059-headline-figure-honest-reassessment.md`
