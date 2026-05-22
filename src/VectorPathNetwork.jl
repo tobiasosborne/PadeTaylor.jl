@@ -228,6 +228,31 @@ export VectorPathNetworkSolution, vector_path_network_solve,
 # FW 2011 §3.1 ±22.5°/±45° wedge — the v0.1 `PathNetwork.DEFAULT_WEDGE`.
 const DEFAULT_WEDGE = [-π / 4, -π / 8, 0.0, π / 8, π / 4]
 
+# The skip-if-covered coverage fraction (ADR-0026 Amendment 3, S3).
+#
+# When `vector_path_network_solve` is called with `skip_covered = true`,
+# a target is skipped if it lies within `COVER_FRAC · real(visited_h[i])`
+# of some visited node `i` — i.e. inside that node's *covering disc*.
+# The disc radius is a fraction of the node's own step `visited_h[i]`,
+# never of an absolute constant: after step S2 (ADR-0026 Amendment 4)
+# the per-node step is scale-derived — sized near the node's honest B1
+# validity disc, small where the pole field is dense and large where it
+# is sparse — so a coverage disc tied to `visited_h[i]` is *scale-
+# covariant for free*, shrinking in dense pockets so the walk still lays
+# fresh nodes there (the property S3 wants — see the `skip_covered` doc).
+#
+# `COVER_FRAC` is deliberately `< 1` and conservative: a target only
+# *marginally* inside a node's step disc should still be walked to (the
+# Padé is honestly valid only out to roughly the B1 disc radius, itself
+# a fraction of `h`).  The starting value `0.85` reflects that after S2
+# `visited_h[i]` is already sized near the honest disc, so a target
+# within `0.85·h` of a node is genuinely inside verified ground; the
+# remaining 15 % rim is the conservative margin against skipping a
+# target the node only barely reaches.  It is a tuning knob — raise it
+# toward `1` for an aggressive skip (fewer nodes, sparser tiling),
+# lower it for a denser, more redundant-but-safer tiling.
+const COVER_FRAC = 0.85
+
 # -----------------------------------------------------------------------------
 # The skipped-target record (ADR-0026 D1)
 # -----------------------------------------------------------------------------
@@ -432,7 +457,8 @@ VectorPathNetworkSolution{T}(vz, vy, vh, vnum, vden, vpar, gz, gy,
                               extrapolate = false,
                               tol = 1e-8,
                               rng = nothing,
-                              on_target_failure = :throw)
+                              on_target_failure = :throw,
+                              skip_covered = false)
         -> VectorPathNetworkSolution
 
 Build the minimal Stage-1 vector path-network covering `targets` — a
@@ -538,6 +564,46 @@ Kwargs:
                          `VectorWalkError` (an unrecognised bug) is
                          re-thrown even under `:skip` — the walk never
                          skips an error it does not understand.
+  - `skip_covered`     — `Bool` (default `false`).  The skip-if-covered
+                         policy (ADR-0026 Amendment 3, S3).  With `false`
+                         (the default) a target is skipped only on
+                         *exact coincidence* with a visited node — the
+                         `abs(z − target) ≤ 10·eps` test — byte-identical
+                         to the pre-S3 walk.  With `true` a target is
+                         additionally skipped when it lies *inside the
+                         covering disc of any visited node*:
+                         `∃ i : abs(target − visited_z[i]) ≤
+                         COVER_FRAC · real(visited_h[i])`.  This kills
+                         the dense-target *chording regression*
+                         (ADR-0026 Amendment 3, bottleneck 3): with a
+                         dense space-filling target set most targets are
+                         already inside an existing node's coverage disc,
+                         yet the default walk still walks to each one —
+                         re-traversing covered ground and laying
+                         redundant bridging chords, and a redundant chord
+                         that clips a pole degenerates the shared-`Q`
+                         solve into an `:all_candidates_failed` skip.
+                         The probe measured coverage *regressing*
+                         (non-monotonic) as targets densified for exactly
+                         this reason; skipping covered targets removes
+                         the redundant chords.  This composes correctly
+                         with the S2 scale-derived step (ADR-0026
+                         Amendment 4): `visited_h[i]` is then sized near
+                         each node's honest validity disc — small where
+                         poles are dense, large where sparse — so the
+                         `COVER_FRAC·h` coverage disc *shrinks in dense
+                         regions*, fewer targets are skipped there, and
+                         more fresh nodes are laid exactly where the pole
+                         field is dense.  That is the scale-covariant
+                         coverage the headline figure needs.  The check
+                         is `O(N_visited)` per target — the same cost as
+                         the exact-coincidence test it subsumes (with
+                         `skip_covered = true` the `COVER_FRAC·h`
+                         coverage disc dwarfs the `10·eps` exact-match
+                         tolerance, so the coverage check alone suffices).
+                         `COVER_FRAC` (a module `const`, default `0.85`)
+                         is the conservative covering fraction — see its
+                         literate comment for the tuning rationale.
 
 Throws `ArgumentError` (Rule 1) for empty `targets`, non-positive `h`,
 a `wedge_angles` not of length 5, an unknown `step_policy`, an
@@ -564,7 +630,8 @@ function vector_path_network_solve(prob::VectorPadeTaylorProblem{F, CT},
                                    extrapolate::Bool = false,
                                    tol::Real = 1e-8,
                                    rng::Union{Nothing, AbstractRNG} = nothing,
-                                   on_target_failure::Symbol = :throw
+                                   on_target_failure::Symbol = :throw,
+                                   skip_covered::Bool = false
                                    ) where {F, CT}
     isempty(targets) && throw(ArgumentError(
         "vector_path_network_solve: targets is empty — there is nothing " *
@@ -637,8 +704,25 @@ function vector_path_network_solve(prob::VectorPadeTaylorProblem{F, CT},
     failed_targets = VectorWalkFailure{T}[]
 
     for target in target_list
-        # Skip a target we already sit on.
-        any(z -> abs(z - target) ≤ 10 * eps(T), visited_z) && continue
+        # The target-loop skip decision.  With `skip_covered = false`
+        # (the default) a target is skipped only on *exact coincidence*
+        # with a visited node — the `10·eps` test, byte-identical to the
+        # pre-S3 walk.  With `skip_covered = true` it is skipped when it
+        # lies inside the COVER_FRAC·h covering disc of ANY visited node
+        # (ADR-0026 Amendment 3, S3): a dense target already inside a
+        # node's verified ground needs no fresh walk, and walking to it
+        # would only re-traverse covered area and lay a redundant
+        # bridging chord that can clip a pole.  The coverage disc
+        # `COVER_FRAC·real(visited_h[i])` dwarfs `10·eps`, so it
+        # *subsumes* the exact-coincidence check — only the coverage
+        # test is needed in that branch.  Both are O(N_visited).
+        if skip_covered
+            any(i -> abs(target - visited_z[i]) ≤
+                     COVER_FRAC * real(visited_h[i]),
+                eachindex(visited_z)) && continue
+        else
+            any(z -> abs(z - target) ≤ 10 * eps(T), visited_z) && continue
+        end
 
         idx_v = _nearest_visited(visited_z, target)
         z_cur  = visited_z[idx_v]

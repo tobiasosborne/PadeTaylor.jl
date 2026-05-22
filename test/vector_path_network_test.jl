@@ -101,7 +101,7 @@ using PadeTaylor
 using Random: MersenneTwister
 using PadeTaylor.VectorPathNetwork: vector_path_network_solve,
                                     VectorPathNetworkSolution,
-                                    VectorWalkFailure
+                                    VectorWalkFailure, COVER_FRAC
 using PadeTaylor.VectorPoleField: extract_poles_shared_q
 using PadeTaylor.VectorWedgeStep: _select_wedge, _adaptive_h, H_MIN_RATIO,
                                   SAFETY, VectorWalkError
@@ -804,6 +804,108 @@ end
             @test sol.failed_targets[1].target == 40.0 + 0.0im
             @test sol.failed_targets[1].reason == :unreachable
         end
+
+        # ---- VPN.5.7 — skip-if-covered (ADR-0026 Amendment 3, S3). ---------
+        # `skip_covered = true` makes the target loop skip a target that
+        # already lies inside a visited node's `COVER_FRAC·real(visited_h)`
+        # covering disc, killing the dense-target chording regression
+        # (bottleneck 3).  `skip_covered = false` (the default) keeps the
+        # pre-S3 behaviour exactly: only an EXACT-coincidence (`10·eps`)
+        # skip.
+        #
+        # The skip is a *target-loop* decision taken BEFORE `_nearest_
+        # visited` runs.  It is distinct from — and stacks on top of — the
+        # per-target while-loop guard `|z−target| > visited_h[parent]`,
+        # which already declines to lay a node for a target inside the
+        # *nearest* node's step `h`.  The two coincide for a uniform fixed
+        # `h` (a covered target — within `COVER_FRAC·h < h` of some node —
+        # is then necessarily within `h` of its nearest node, so the loop
+        # guard alone skips it too).  Where `skip_covered` genuinely bites
+        # is the *adaptive* walk: there `visited_h` is per-node and varies,
+        # so a target can lie inside a sparse-field node's wide covering
+        # disc yet outside its (collapsed-`h`, smaller) nearest node's
+        # step — the default then crawls a redundant chord to it, S3 skips
+        # it.  Hence (d) below — the load-bearing strict-inequality test —
+        # runs on the *adaptive* default walk over a dense pole-region
+        # grid, the regime S3 was built for.
+        @testset "VPN.5.7 skip-if-covered (skip_covered, S3)" begin
+            h_fixed = 0.25
+            # The IC root node sits at z0; with adaptive=false its step is
+            # h_fixed, so its covering disc has radius COVER_FRAC·h_fixed.
+            r_cover = COVER_FRAC * h_fixed
+
+            # ---- (a) a target WELL INSIDE the IC node's covering disc is
+            # skipped when skip_covered = true — the walk lays NO new node
+            # for it, so the tree stays the lone IC root node. ------------
+            covered = ComplexF64[z0 + 0.5 * r_cover + 0.0im]
+            @test abs(covered[1] - z0) < r_cover          # genuinely inside
+            sol_cov = vector_path_network_solve(prob, covered; order = 24,
+                                                h = h_fixed, adaptive = false,
+                                                skip_covered = true)
+            @test length(sol_cov.visited_z) == 1          # IC root only
+            @test sol_cov.visited_z[1] == ComplexF64(z0)
+
+            # ---- (b) with skip_covered = false (default) the SAME target
+            # is NOT coverage-skipped: the default skip decision fires only
+            # on EXACT coincidence (`10·eps`).  A target exactly AT the IC
+            # node IS skipped (the pre-S3 `10·eps` path), but the merely
+            # *covered* target is processed by the walk machinery — the old
+            # behaviour S3 is opt-in over. -------------------------------
+            #   the covered target is not within 10·eps of z0 …
+            @test abs(covered[1] - z0) > 10 * eps(Float64)
+            #   … so under the default the walk DOES process it (it is the
+            #   `:max_q_root` selector + nearest-node lookup that run, not
+            #   a coverage skip).  An exactly-coincident target, by
+            #   contrast, is skipped by the surviving `10·eps` check.
+            exact = ComplexF64[ComplexF64(z0)]
+            sol_exact = vector_path_network_solve(prob, exact; order = 24,
+                                                  h = h_fixed,
+                                                  adaptive = false)
+            @test length(sol_exact.visited_z) == 1        # 10·eps skip held
+            #   and the covered target, default-mode, is NOT skipped by
+            #   coverage — running it skip_covered = true vs false changes
+            #   the target-loop decision (true → 1 node, false → processed).
+            sol_cov_default = vector_path_network_solve(prob, covered;
+                                                        order = 24,
+                                                        h = h_fixed,
+                                                        adaptive = false)
+            @test length(sol_cov_default.visited_z) ≥
+                  length(sol_cov.visited_z)
+            # omitting the kwarg is byte-identical to skip_covered = false.
+            sol_omit = vector_path_network_solve(prob, covered; order = 24,
+                                                 h = h_fixed,
+                                                 adaptive = false,
+                                                 skip_covered = false)
+            @test sol_omit.visited_z == sol_cov_default.visited_z
+
+            # ---- (c) a genuinely UNCOVERED target — well outside every
+            # visited node's COVER_FRAC·h disc — is still walked to even
+            # with skip_covered = true (S3 skips only *covered* targets). -
+            uncov = ComplexF64[z0 + 1.5 + 0.0im]
+            @test abs(uncov[1] - z0) > r_cover            # genuinely outside
+            sol_unc = vector_path_network_solve(prob, uncov; order = 24,
+                                                h = h_fixed, adaptive = false,
+                                                skip_covered = true)
+            @test length(sol_unc.visited_z) > 1           # the walk ran
+
+            # ---- (d) the LOAD-BEARING test: on a dense target set tiling
+            # the pole region, the *adaptive* default walk with
+            # skip_covered = true lays strictly FEWER visited nodes than
+            # with skip_covered = false — the redundant covered targets are
+            # skipped instead of re-walked along chording crawls.  Adaptive
+            # `h` is the regime S3 bites in (see the testset comment); a
+            # fixed-`h` walk would tie here by construction. --------------
+            dense = ComplexF64[x + y * im
+                               for x in -0.4:0.05:2.4 for y in -1.0:0.05:1.4]
+            sol_dense_skip = vector_path_network_solve(
+                prob, dense; order = 24, h = 0.5, adaptive = true,
+                skip_covered = true, on_target_failure = :skip)
+            sol_dense_full = vector_path_network_solve(
+                prob, dense; order = 24, h = 0.5, adaptive = true,
+                skip_covered = false, on_target_failure = :skip)
+            @test length(sol_dense_skip.visited_z) <
+                  length(sol_dense_full.visited_z)
+        end
     end
 
 end
@@ -912,6 +1014,27 @@ end
 #        h_max).  This proves the non-ratcheting recovery test genuinely
 #        catches a re-introduced geometric sink.  Restored to GREEN.
 #
+# -- S3 skip-if-covered mutation (bead padetaylor-0kx) --
+#
+#   M9 — VectorPathNetwork: flip the skip-if-covered inequality.  The S3
+#        target-loop coverage check (ADR-0026 Amendment 3) is
+#          any(i -> abs(target - visited_z[i]) ≤
+#                   COVER_FRAC * real(visited_h[i]), eachindex(visited_z))
+#        — a target INSIDE some node's covering disc is skipped.  This
+#        mutation flips `≤` to `≥`, so the walk instead skips any target
+#        OUTSIDE a node's disc — the exact inverse of the coverage
+#        semantics.
+#        Expected: VPN.5.7's case (c) — a genuinely UNCOVERED target must
+#        still be walked under `skip_covered = true` — bites: with the
+#        flipped test the uncovered target satisfies `abs ≥ COVER_FRAC·h`
+#        and is wrongly skipped, so the tree never grows past the lone IC
+#        root.
+#        Result: RED — VPN.5.7's `length(sol_unc.visited_z) > 1`
+#        assertion failed (`1 > 1`): the flipped check skipped the
+#        uncovered target, the walk laid no node.  This proves the
+#        coverage check's inequality direction is load-bearing — the test
+#        catches a reversed skip predicate.  Restored to GREEN.
+#
 # -- VC-10 target-ordering mutation (bead padetaylor-0ln.37.17) --
 #
 #   M7 — VectorPathNetwork: make the `rng` shuffle inert.  In
@@ -934,7 +1057,9 @@ end
 # 1 error), M5 → 3 RED (1 fail + 2 error), M6 → 6 RED (4 fail +
 # 2 error), M7 → 1 RED (VPN.4.3 different-tree assertion — VC-10
 # substrate), M8 → 4 RED (VPN.3.3 non-ratcheting recovery + near-pole
-# value assertions — the re-introduced geometric sink).  M2 superseded;
+# value assertions — the re-introduced geometric sink), M9 → 1 RED
+# (VPN.5.7 case (c) uncovered-target-still-walked — the flipped
+# skip-if-covered inequality).  M2 superseded;
 # M5/M6 describe the retired geometric-grow `_adaptive_h` (ADR-0026
 # Amendment 4) and are kept as the historical sink record.  Restored to
 # GREEN after each mutation.
