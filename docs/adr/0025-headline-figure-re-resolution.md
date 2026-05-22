@@ -1,9 +1,10 @@
 # ADR-0025 — Senior-grade re-resolution of the P_I⁽²⁾ tritronquée headline figure
 
-**Status**: Accepted (2026-05-21) — framework + validation suite locked;
-two parameters (the Stage-2 validity-gate criterion and the honest wedge
-frontier) are determined by the Phase-A exploration spikes and recorded
-here by amendment as they resolve.
+**Status**: Accepted (2026-05-21); **fully implemented 2026-05-22** —
+Phases A–F shipped, all six v1 corners retired or rigorously justified,
+the seven-criterion FW-style validation suite in place. Amendments 1–12
+record the exploration outcomes and every audition. Full suite
+5326/5326 GREEN. See worklog 058.
 **Bead**: `padetaylor-0ln.37` (this ADR + the child-bead plan below).
 **Plan**: `docs/v0p2_plan.md`; supersedes the v1-corner ledger of
 worklog 057 (`docs/worklog/057-whole-plane-kkg-surface-figure.md`).

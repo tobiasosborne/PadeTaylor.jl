@@ -65,38 +65,36 @@ docs/design_section_6_path_network.md scope), are all shipped:
 
 **2508 + 32 + 61 = 2601 expected GREEN** (61 new LD.X.* assertions verified in single-file isolation `lattice_dispatcher_test.jl`, 23.4 s; 32 new DG.* assertions verified in single-file isolation `diagnose_test.jl`, 18 s; full `Pkg.test()` not yet re-run — OOM-friction ongoing, see worklogs 048–049; existing 2508 assertions unchanged by additive `strict` kwarg and `:bvp_fail` tag with back-compat `strict = true` default).  Previously: **2508 / 2508 tests passing** as of worklog 047 (`HEAD = 1331755`, all committed; push pending).  The API audit (commit 9296731, worklog 050) made no source changes and adds no new assertions; test count is unchanged at 2601 expected GREEN.  The 12 spawned beads from the audit constitute the v1.0 normalisation work backlog.
 
-## 🔴 PRIORITY for the next agent — DEEP-DIVE: sharpen the headline figure
+## ✅ DONE — headline-figure re-resolution (bead `padetaylor-0ln.37`, worklog 058)
 
-**Bead `padetaylor-0ln.37`. This is the next substantive task, and it is a
-DEEP-DIVE — plan it properly (an ADR) before writing any code.**
+**The headline-figure deep-dive is complete** (ADR-0025, worklog 058,
+2026-05-22). The KKG 7.4/7.5 surface figure was re-resolved to
+senior-engineer grade across six phases (A exploration → B wedge levers →
+C sector → D validation → E Stokes strips → F integration), 20 child
+beads, serial Opus implementation. Outcome:
 
-The whole-plane KKG 7.4/7.5 surface figure
-(`figures/kkg_pi2_tritronquee_surface.jl`) is shipped but **low-resolution**,
-and its pole-wedge render is **coarse and blocky**. It carries v1 corners
-that are **not senior-grade for a headline figure** and must be retired:
-Padé approximants evaluated *outside their valid disc* (`extrapolate=true`);
-a path-network walk whose hull only reaches `|x| ≲ 8` while the figure window
-is `|x| ≤ 20`; a 121² grid; ±3° masked Stokes strips.
+- **All six v1 corners retired or rigorously justified** (`extrapolate=
+  true` gone — true-radius Stage-2 gate; adaptive `:max_q_root` walk;
+  401² grid; ±1° Stokes strip; exact-radius ray-fan voter; BVP-interior
+  inner-arc data).
+- **The wedge is a 266-pole FW-validated pole field** (was 21). The A2
+  spike proved a *filled* honest wedge surface is architecturally
+  infeasible — the honest deliverable is the pole *field* (FW Fig 4.7
+  idiom). KKG drew no poles, so the figure is certified by a manufactured
+  FW-style validation suite: VC-4 dominant-balance `A∈{−1,−3}` per pole,
+  VC-5 conjugate symmetry, VC-7 loop closure, VC-8 BVP consistency, VC-9
+  the Weierstrass-℘ vector-pipeline oracle, VC-10 the two-run indicator.
+- Full suite **5326 / 5326 GREEN**;
+  `figures/output/kkg_pi2_tritronquee_surface.png` re-rendered.
 
-**The blocker** (precise diagnosis in `docs/worklog/057-*.md` §"Required
-follow-up"): the pole-wedge walk's `surf_wedge_targets()` is 20 targets, all
-within `|x| ≤ 8` — copied verbatim from V8b's pole-*scatter* figure, which
-only needed pole *locations*. A dense *surface* needs the path-network walk
-to densely and accurately tile the wedge out to `|x| = 20`, through an
-increasingly dense pole field.
+`0ln.23` was absorbed (B2). Two deferred beads opened under the epic
+(each with a forcing condition): a 2D-lattice re-expansion fill for a
+filled wedge surface; an `n_terms ≥ 3` inner-arc asymptotic seed.
 
-**Do NOT just crank grid/target numbers.** This is a genuine
-numerical-analysis problem — faithfully rendering a meromorphic transcendent
-over a pole-dense region. Bead `0ln.37` lists the seven open questions the
-plan must resolve (chiefly: Stage-2 validity should gate at each Padé's
-*true* convergence radius — distance to the nearest shared-`Q` denominator
-root — not at the step `h`; that one change may be the biggest lever). The
-required workflow (senior-grade, CLAUDE.md Rule 9): deep-dive recon → **an
-ADR** with every v1 corner retired or rigorously justified → granular child
-beads → serial Opus implementation → re-verify. Bead `0ln.23` (the shared-`Q`
-root-distance wedge step criterion) is a near-certain prerequisite and folds
-into the plan. Ground truth: KKG 2015 Figs 7.4/7.5 + the FW figure
-conventions (`references/`).
+**The next substantive task is V9** (`padetaylor-0ln.19`) — v0.2 docs +
+release prep: README/CHANGELOG/RESEARCH v0.2 sections, ADR review
+(ADR-0023/0024/0025 are new), HANDOFF refresh, the `padetaylor-0ln` epic
+close-out.
 
 **Next pickup (2026-05-21 — whole-plane KKG surface session close)**: **the
 vector BVP solver, V8b, and the whole-plane headline figure are all done.**
