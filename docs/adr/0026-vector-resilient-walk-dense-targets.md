@@ -473,6 +473,49 @@ explicit coarse-Stage-1 / finer-Stage-2 fill split (FW-md:163-164,
 :395-397), to be measured. Cracking it is an open-ended investigation;
 the figure is otherwise complete and honest at ~22 %.
 
+## Amendment 8 (2026-05-22) — outer-wedge mechanism cracked; FW coarse/fine split rejected; step S8
+
+The outer-wedge regression (bead `padetaylor-cfq`) is **root-caused with
+measurements**:
+
+- The adaptive step `h_v` is **4.4× smaller** in the outer wedge
+  (median 0.012) than the inner (0.053).
+- The honest B1 disc `R_B1 = min(s·h_JZ·h_v, 0.5·h_v·min|t*|)` is
+  **proportional to `h_v`** — both terms carry an `h_v` factor — so
+  `R_B1` collapses 4.5× with it (outer 0.018 vs inner 0.081).
+- Tiny outer discs ⇒ they pile rather than tile: measured 62 % of the
+  outer disc-area is wasted on mutual overlap; outer coverage saturates
+  at ~0.26 *independent of node count* (29 k nodes → 0.259; 60 k nodes →
+  0.252). That is the "more targets, less coverage" paradox resolved —
+  coverage is node-count-bound and the discs are too small to tile.
+
+**This is scale non-covariance, again.** KKG theory (Amendment 3) gives
+the pole spacing as ∝|x|⁻¹ᐟ⁶ — only ~1.5× across the wedge — yet `h_v`
+collapses 4.4×. The adaptive law `h = SAFETY·D_local` drives `h_v` down
+far steeper than the physics warrants.
+
+**The FW coarse/fine split is NOT the fix — measured and rejected.** A
+uniform coarse Stage-1 grid feeding `_stage2_fill` saturates at the same
+~0.26 outer ceiling as the dense fan: coverage is a single monotone
+function of node count, independent of target placement. FW's split
+works for FW only because FW's Stage-2 reaches every fine point with
+*no validity test*; our honest B1 gate (Rule 1, no extrapolation) caps
+each node at `R_B1 ≈ 0.018` — the blocker is disc *size*, not target
+architecture. Bead `cfq` closed with this verdict.
+
+**Step S8.** Diagnose whether the 4.4× `h_v` collapse is driven by
+*genuinely* denser outer poles or by *spurious near-origin shared-`Q`
+roots* poisoning `min|t*|` (the vector shared-`Q` pipeline does GGT
+degree-reduction but, unlike scalar `RobustPade`, no explicit
+Froissart-doublet suppression — a prime suspect). Then fix the binding
+constraint so the honest disc tracks the *pole field*, not the
+over-collapsed step. Honest scoping (per the cfq diagnostic): S8 lifts
+the realistic full-wedge coverage toward the low-to-mid 30 %s; a
+*completely* filled wedge is bounded by the conservative honest B1 gate
+and is likely not reachable without violating the no-extrapolation
+contract — that limit, if it binds, will be measured and reported, not
+assumed.
+
 ## References
 
 - `docs/worklog/059-headline-figure-honest-reassessment.md`
