@@ -444,6 +444,35 @@ Pure target densification is exhausted for the outer wedge.
   (FW-md:163-164, :395-397) rather than denser walk targets — filed as
   its own bead, to be measured (not assumed) after S7.
 
+## Amendment 7 (2026-05-22) — S7 shipped; the outer wedge is the remaining blocker
+
+**S7 shipped.** The `radius_t` scale-fixing heresy is fixed — `extract_
+poles_shared_q` now accepts a shared-`Q` root by its z-plane distance
+`h_node·|t*| ≤ radius_t·h_max` (a scale-stable, h-independent window),
+and the cluster representative is chosen by z-plane distance, not `|t*|`
+(a second facet, root-caused while fixing the ℘-oracle). Both
+mutation-proven. With the coupling removed, `SAFETY` is lowered 0.25 →
+0.10 (sizes the step to the honest B1 disc); the `src/` suite is GREEN.
+
+**The coverage state.** Full-wedge honest coverage: ~5 % (original) →
+~8 % (S2–S5 corrected stack) → **~22 %** (S6a order 36) → **~22 %** (S7).
+S7's `SAFETY` gain is real on a dense-target sub-region (inner-wedge
++8 pp) but does **not** move the full-wedge total — at the s=0.30 target
+density the figure is target-limited, not step-limited, and denser
+targets *regress* the outer wedge. The figure is honest at every step
+(no Padé evaluated outside its verified disc) and is 4× less blank than
+the start — but it is not "filled."
+
+**The single remaining blocker — the outer wedge (bead `padetaylor-cfq`).**
+Banded coverage at order 36: inner ~31 % (climbs with target density),
+mid ~19 %, outer ~22 % (collapses to ~10 % as targets densify). The
+total is outer-area-dominated. This is *not* a ceiling and *not* a
+walk-failure (failures ≈ 0.1 %); it is an uncracked coverage-efficiency
+problem in the outer wedge — the working hypothesis is FW 2011's
+explicit coarse-Stage-1 / finer-Stage-2 fill split (FW-md:163-164,
+:395-397), to be measured. Cracking it is an open-ended investigation;
+the figure is otherwise complete and honest at ~22 %.
+
 ## References
 
 - `docs/worklog/059-headline-figure-honest-reassessment.md`
