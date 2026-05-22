@@ -752,30 +752,32 @@ points inside the wedge).
 
 Three honesty-defining choices:
 
-  * the walk runs at a **fixed `h = SURF_PN_H`** (`adaptive = false`) —
-    an FW-faithful uniform step, *not* the B2 `:max_q_root` adaptive
-    controller (ADR-0026 Amendment 2, Decision R1).  The B2 adaptive
-    law was designed to dodge a fixed-`h` "block" past `|x| ≈ 8`; the
-    D3 FW-lens investigation root-caused that block as a rare *on-pole
-    chord* — not a step-size deficit — and proved the adaptive
-    controller itself is a **geometric sink**: `VectorWedgeStep.
-    _adaptive_h`'s pole cap `POLE_SAFETY·h_prev·min|t*|` is purely
-    multiplicative, so `h` ratchets down geometrically in a sustained
-    pole field and `h = 0` is an attractor (Amendment 2; full diagnosis
-    in `external/probes/vector-walk-collapse/`).  On a dense,
-    cross-target-chained wedge walk that sink poisons whole filaments
-    and collapses coverage.  The on-pole chord that motivated B2 is
-    *already absorbed* by D1's `on_target_failure = :skip` (below) — it
-    became a single `:all_candidates_failed` skip, the run completes.
-    A fixed `h` is FW-faithful (FW 2011 §3.1 uses one global `h`; the
-    5-direction wedge picks only *direction*), simpler, and *measured
-    better*: the R1 re-probe found fixed `h = 0.1` gives materially
-    higher honest coverage with far fewer, fully-tiled nodes than the
-    adaptive walk (Amendment 2 inner-wedge figures: `0.18 / 1152` fixed
-    vs `0.07 / 5805` adaptive).  Only the figure opts out — the package
-    default `vector_path_network_solve(adaptive = true)` is unchanged
-    (the `_adaptive_h` defect is latent, catastrophising only for a
-    dense chained walk; its proper redesign is filed as bead "R2");
+  * the walk runs the **S2 scale-derived adaptive step law**
+    (`adaptive = true`) with the **S3 skip-if-covered** target gate
+    (`skip_covered = true`) — ADR-0026 Amendments 3–4.  This supersedes
+    the interim R1 fixed-`h` config (Amendment 2): R1 was the right
+    *interim* fix for the now-cured collapse, but a fixed `h` is itself
+    a scale heresy — `h = 0.1` is ~2× the honest B1 disc, so the walk
+    steps past where each Padé is honestly valid and leaves gaps along
+    every filament (Amendment 3, bottleneck 1).  Amendment 4's S1
+    diagnostic root-caused the *old* `_adaptive_h` collapse as a genuine
+    **geometric sink** — its pole cap `POLE_SAFETY·h_prev·min|t*|` was
+    purely multiplicative, so `h` ratcheted to zero in a sustained pole
+    field — and replaced it with the absolute, non-ratcheting law
+    `h = clamp(SAFETY·D_local, h_min, h_max)`, where `D_local =
+    h_prev·min|t*|` is the `h`-independent absolute pole-free disc
+    radius (S1 EXP D).  `h` now jumps straight to a fraction of the
+    *true* local disc each step — a node leaving a dense pocket recovers
+    to `h_max` in one step, there is no sink — and tracks the
+    `|x|⁻¹ᐟ⁶` pole-spacing scaling of the P_I⁽²⁾ field for free.
+    `adaptive = true` is therefore now *correct*, and FW-faithful in
+    spirit: the step is sized to the local pole field, not hand-tuned.
+    The **S3** `skip_covered = true` gate then skips any target already
+    inside a visited node's `COVER_FRAC·visited_h` covering disc, so the
+    dense lattice does not make the walk re-traverse covered ground —
+    that re-walking chorded across the wedge and clipped poles into the
+    non-monotonic `:all_candidates_failed` regression (Amendment 3,
+    bottleneck 3);
 
   * the walk runs with **`on_target_failure = :skip`** — the resilient
     Stage-1 walk (ADR-0026 D1).  A dense target lattice has thousands
@@ -843,34 +845,46 @@ function surf_wedge_fill(bvp_sol::VectorBVPSolution,
                                       ComplexF64(20.0 + 0.0im));
                                      order = SURF_PN_ORDER)
     targets = surf_wedge_dense_targets()
-    # Fixed-`h` FW-faithful `:max_q_root` walk — `adaptive = false`,
-    # `h = SURF_PN_H` is the uniform step (ADR-0026 Amendment 2,
-    # Decision R1).  The B2 adaptive controller is a geometric sink
-    # (`_adaptive_h`'s pole cap is purely multiplicative, so `h`
-    # ratchets to zero in a sustained pole field) and poisons whole
-    # filaments on a dense chained walk; D1's `:skip` already absorbs
-    # the rare on-pole chord that B2 was built to dodge.  The Stage-2
-    # fill is gated honest — `extrapolate = false`, B1 true-radius gate.
-    # `on_target_failure = :skip` (ADR-0026 D1) makes the dense walk
-    # resilient: a per-target walk failure is recorded in
-    # `walk.failed_targets` rather than aborting the whole solve — a
-    # dense lattice has thousands of targets and `:throw` would cost
-    # every target's coverage on the first failure.  `rng` controls the
-    # Stage-1 target processing order — `nothing` (the figure default)
-    # walks the radius-major lattice in order, an `AbstractRNG` shuffles
-    # it for the VC-10 double-run accuracy indicator (`surf_vc10_two_run`).
+    # S2 scale-derived adaptive `:max_q_root` walk — `adaptive = true`
+    # (ADR-0026 Amendments 3–4).  This supersedes the interim R1
+    # fixed-`h` config: Amendment 4's `_adaptive_h` is now the absolute,
+    # non-ratcheting law `h = clamp(SAFETY·D_local, h_min, h_max)`, with
+    # no multiplicative `h_prev` dependence — the geometric sink that
+    # forced R1 is gone by construction, so `adaptive = true` is correct
+    # and sizes each step to the *local* honest B1 disc rather than the
+    # scale-blind fixed `h = 0.1`.  `skip_covered = true` is the S3 gate:
+    # a target already inside a visited node's `COVER_FRAC·visited_h`
+    # covering disc is skipped, so the dense lattice does not re-walk
+    # covered ground (the chording that clipped poles — Amendment 3,
+    # bottleneck 3).  `h = SURF_PN_H` now seeds `h_max` (the step
+    # *ceiling*, not a fixed step).  The Stage-2 fill is gated honest —
+    # `extrapolate = false`, B1 true-radius gate.  `on_target_failure =
+    # :skip` (ADR-0026 D1) makes the dense walk resilient: a per-target
+    # walk failure is recorded in `walk.failed_targets` rather than
+    # aborting the whole solve — a dense lattice has thousands of targets
+    # and `:throw` would cost every target's coverage on the first
+    # failure.  `rng` controls the Stage-1 target processing order —
+    # `nothing` (the figure default) walks the radius-major lattice in
+    # order, an `AbstractRNG` shuffles it for the VC-10 double-run
+    # accuracy indicator (`surf_vc10_two_run`).
     walk = vector_path_network_solve(prob, targets;
                                      order             = SURF_PN_ORDER,
                                      h                 = SURF_PN_H,
-                                     adaptive          = false,
+                                     adaptive          = true,
+                                     skip_covered      = true,
                                      fine_grid         = grid_pts,
                                      extrapolate       = false,
                                      tol               = SURF_PN_TOL,
                                      rng               = rng,
                                      on_target_failure = :skip)
+    # S4 (ADR-0026 Amendment 3) — `cluster_atol = nothing` puts
+    # `extract_poles_shared_q` in scale-derived clustering mode: the
+    # cluster tolerance is a fraction of the *local* pole spacing rather
+    # than the absolute `SURF_CLUSTER_ATOL = 0.2`, which wrongly
+    # merged/split poles and corrupted the pole count.
     candidates = extract_poles_shared_q(walk;
                                         radius_t     = SURF_RADIUS_T,
-                                        cluster_atol = SURF_CLUSTER_ATOL,
+                                        cluster_atol = nothing,
                                         min_support  = SURF_MIN_SUPPORT)
     # Phase-D per-pole validation: VC-4 prunes the spurious candidates
     # (Froissart doublets / out-of-family / non-zero-residue), VC-5

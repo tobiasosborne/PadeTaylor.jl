@@ -27,25 +27,30 @@
 # so no Padé is evaluated outside its verified disc — an honest gap,
 # never an extrapolated lie).
 #
-# ## The R1 re-probe (ADR-0026 Amendment 2, Decision R1)
+# ## The S5a re-probe (ADR-0026 Amendments 3–4 — the full corrected stack)
 #
-# ADR-0026 Amendment 2 root-caused the dense-walk collapse: the B2
-# `_adaptive_h` controller is a *geometric sink* — its pole cap
-# `POLE_SAFETY·h_prev·min|t*|` is purely multiplicative, so `h` ratchets
-# to zero in a sustained pole field and never recovers, poisoning whole
-# filaments on a dense cross-target-chained walk.  Decision R1: the
-# headline-figure wedge walk runs at a **fixed `h`** (`adaptive = false`),
-# FW-faithful — FW 2011 §3.1 uses one global `h`; the 5-direction wedge
-# picks only direction.
+# ADR-0026 Amendment 2's Decision R1 (fixed `h`, `adaptive = false`) was
+# the *interim* fix for the dense-walk collapse.  Amendment 2 root-caused
+# that collapse: the old B2 `_adaptive_h` controller was a *geometric
+# sink* — its pole cap `POLE_SAFETY·h_prev·min|t*|` was purely
+# multiplicative, so `h` ratcheted to zero in a sustained pole field.
+# Amendment 4's S1 diagnostic confirmed the sink and replaced the law
+# with the absolute, non-ratcheting `h = clamp(SAFETY·D_local, h_min,
+# h_max)` (no multiplicative `h_prev` term).  `adaptive = true` is now
+# *correct*: the step is sized to the local honest B1 disc, tracking the
+# `|x|⁻¹ᐟ⁶` pole-spacing scaling, instead of the scale-blind fixed
+# `h = 0.1` (which is ~2× the honest disc — Amendment 3 bottleneck 1).
 #
-# This probe runs the **R1 re-probe**: fixed `h` (`adaptive = false`,
-# `h = SURF_PN_H = 0.1`) + dense targets over the *full* `|x| ≤ 20`
-# wedge, swept across spacings.  The decisive open question Amendment 2
-# leaves *for measurement* (not assumption): **does a fixed `h` thread
-# the OUTER wedge `|x| → 20` where pole density grows, or does coverage
-# collapse with `|x|`?**  So the probe reports, per spacing, the honest
-# coverage fraction **broken out by radial band** — inner `|x| ∈ [2,8]`,
-# mid `[8,14]`, outer `[14,20]`.  The banded numbers are the answer.
+# This probe runs the **S5a re-probe**: the *full corrected stack* —
+# `adaptive = true` (S2), `skip_covered = true` (S3, kills the
+# covered-ground re-walking that chorded poles), scale-derived clustering
+# (S4), dense targets over the *full* `|x| ≤ 20` wedge, swept across
+# spacings.  The decisive question (per ADR-0026 Amendment 3): does the
+# corrected stack climb coverage toward "filled" — the KKG Figs 7.4/7.5
+# surface — or does it plateau at the ~12 % R1 ceiling?  The probe
+# reports, per spacing, the honest coverage fraction **broken out by
+# radial band** — inner `|x| ∈ [2,8]`, mid `[8,14]`, outer `[14,20]` —
+# so a coverage that collapses with `|x|` is visible.
 #
 # ## What the probe answers (ADR-0026 D3)
 #
@@ -138,7 +143,7 @@ function banded_coverage(grid_pts, covered)
 end
 
 """
-    probe_one(bvp_sol, grid_pts, s; adaptive, h) -> NamedTuple
+    probe_one(bvp_sol, grid_pts, s; adaptive, skip_covered, h) -> NamedTuple
 
 Run the Region-2 wedge walk once at lattice spacing `s` and measure
 coverage.  Builds the `VectorPadeTaylorProblem` exactly as
@@ -147,14 +152,16 @@ the resilient `vector_path_network_solve` (`on_target_failure = :skip`)
 over `surf_wedge_dense_targets(; s = s)` with `grid_pts` as the Stage-2
 `fine_grid`, and returns the row data: target / node / skip counts, the
 `VectorWalkFailure.reason` breakdown, the honest coverage fraction (total
-AND banded by radius — the R1 re-probe), and the wall-time.
+AND banded by radius — the S5a re-probe), and the wall-time.
 
-`adaptive` / `h` select the walk's step strategy.  The R1 re-probe runs
-`adaptive = false, h = SURF_PN_H` — the fixed-`h` FW-faithful walk that
-ADR-0026 Amendment 2 Decision R1 mandates for the headline figure.
+`adaptive` / `skip_covered` / `h` select the walk's step strategy.  The
+S5a re-probe runs the *full corrected stack* — `adaptive = true` (S2),
+`skip_covered = true` (S3) — with `h = SURF_PN_H` seeding the adaptive
+step *ceiling* `h_max` (ADR-0026 Amendments 3–4).
 """
 function probe_one(bvp_sol, grid_pts, s;
-                   adaptive::Bool = false, h::Real = SURF_PN_H)
+                   adaptive::Bool = true, skip_covered::Bool = true,
+                   h::Real = SURF_PN_H)
     f      = painleve_hierarchy(:I, 2; t = SURF_T)
     y_seed = ComplexF64.(bvp_sol(ComplexF64(SURF_Z_SEED)))
     prob   = VectorPadeTaylorProblem(f, y_seed,
@@ -168,6 +175,7 @@ function probe_one(bvp_sol, grid_pts, s;
                                      order             = SURF_PN_ORDER,
                                      h                 = h,
                                      adaptive           = adaptive,
+                                     skip_covered       = skip_covered,
                                      step_policy        = :max_q_root,
                                      fine_grid          = grid_pts,
                                      extrapolate        = false,
@@ -188,7 +196,8 @@ function probe_one(bvp_sol, grid_pts, s;
         reasons[fail.reason] = get(reasons, fail.reason, 0) + 1
     end
 
-    return (s = s, adaptive = adaptive, h = h,
+    return (s = s, adaptive = adaptive, skip_covered = skip_covered,
+            h = h,
             n_targets = length(targets),
             n_nodes = length(walk.visited_z),
             n_failed = length(walk.failed_targets),
@@ -202,8 +211,10 @@ reasons_str(reasons) =
     join(["$k=$v" for (k, v) in sort(collect(reasons); by = first)], " ")
 
 function probe_print_row(r)
-    @printf("  s=%.2f h=%.2f%s | targets=%5d | nodes=%6d | failed=%5d (%.1f%%) | %s\n",
-            r.s, r.h, r.adaptive ? " adapt" : " fixed",
+    mode = (r.adaptive ? "adapt" : "fixed") *
+           (r.skip_covered ? "+skipcov" : "")
+    @printf("  s=%.2f h=%.2f %s | targets=%5d | nodes=%6d | failed=%5d (%.1f%%) | %s\n",
+            r.s, r.h, mode,
             r.n_targets, r.n_nodes, r.n_failed,
             100 * r.n_failed / max(r.n_targets, 1),
             reasons_str(r.reasons))
@@ -217,7 +228,7 @@ function probe_print_row(r)
 end
 
 function main()
-    println("ADR-0026 D2/D3 + Amendment 2 R1 — fixed-h dense-wedge coverage probe")
+    println("ADR-0026 D2/D3 + Amendments 3-4 — S5a full-corrected-stack coverage probe")
     println("=" ^ 72)
     println("Building the Region-2 BVP anchor (surf_anchor_bvp) ...")
     t_anchor = @elapsed bvp_sol = surf_anchor_bvp()
@@ -231,59 +242,26 @@ function main()
         @printf("    band %-13s : %d grid points\n", b.label, b.n_band)
     end
     println("-" ^ 72)
-    println("R1 re-probe — fixed h = $(SURF_PN_H), adaptive = false, FULL wedge.")
+    println("S5a re-probe — adaptive = true (S2), skip_covered = true (S3),")
+    println("scale-derived clustering (S4), h_max = $(SURF_PN_H), FULL wedge.")
     println("Sweeping spacings (coarsest first) ...")
 
     rows = NamedTuple[]
     for (k, s) in enumerate(PROBE_SPACINGS)
-        @printf("[%d/%d] spacing s = %.2f (fixed h = %.2f) ...\n",
+        @printf("[%d/%d] spacing s = %.2f (adaptive, skip_covered, h_max = %.2f) ...\n",
                 k, length(PROBE_SPACINGS), s, SURF_PN_H)
         flush(stdout)
         r = probe_one(bvp_sol, grid_pts, s;
-                      adaptive = false, h = SURF_PN_H)
+                      adaptive = true, skip_covered = true, h = SURF_PN_H)
         push!(rows, r)
         probe_print_row(r)
         flush(stdout)
     end
 
     println("-" ^ 72)
-    println("Summary — R1 re-probe (fixed h, full wedge, banded coverage):")
+    println("Summary — S5a re-probe (full corrected stack, banded coverage):")
     for r in rows
         probe_print_row(r)
-    end
-
-    # ADR-0026 Amendment 2 leaves one conditional follow-up: if the outer
-    # band stays poor even at the tightest spacing, a finer global `h`
-    # MAY be probed on the outer wedge to inform the recommendation.  Run
-    # ONE extra outer-wedge probe at h = 0.05 / tightest spacing iff the
-    # tightest-spacing outer band came in below this threshold.
-    outer_thresh = 0.50
-    tight = rows[end]
-    outer = tight.bands[end]
-    if outer.frac < outer_thresh
-        println("-" ^ 72)
-        @printf("Outer band at the tightest spacing s=%.2f is %.4f (< %.2f).\n",
-                tight.s, outer.frac, outer_thresh)
-        println("ADR-0026 Amendment 2 permits ONE extra outer-wedge probe at")
-        println("h = 0.05 to inform the recommendation.  Running it ...")
-        flush(stdout)
-        # Outer-wedge-only grid: |x| ∈ [14,20], the wedge, off the mask.
-        oxs = range(-SURF_XY_LIM, SURF_XY_LIM; length = PROBE_GRID_N)
-        oys = range(-SURF_XY_LIM, SURF_XY_LIM; length = PROBE_GRID_N)
-        ogrid = ComplexF64[]
-        for y in oys, x in oxs
-            z = ComplexF64(x, y)
-            (14.0 ≤ abs(z) ≤ SURF_XY_LIM) || continue
-            surf_in_mask(z)   && continue
-            surf_in_sector(z) && continue
-            push!(ogrid, z)
-        end
-        @printf("  outer-wedge grid: %d points\n", length(ogrid))
-        flush(stdout)
-        ro = probe_one(bvp_sol, ogrid, tight.s;
-                       adaptive = false, h = 0.05)
-        probe_print_row(ro)
-        push!(rows, ro)
     end
 
     return rows
