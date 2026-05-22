@@ -167,12 +167,33 @@ scatter-figure call sites are byte-unaffected.
 ## Fail-fast contract (CLAUDE.md Rule 1)
 
 Empty `targets`, non-positive `h`, a `wedge_angles` not of length 5,
-an unreachable target, and all-five-wedge-candidates-fail all throw
-with a `Suggestion`.  Numerical breakdowns inside
-`vector_pade_step_with_pade!` (a step landing on a pole — `Q(1) ≈ 0`)
-propagate unchanged; the wedge selection is *meant* to steer around
-them, and a thrown `DomainError` is the honest fail-loud signal that
-it could not.
+and an `on_target_failure` outside `(:throw, :skip)` throw an
+`ArgumentError` with a `Suggestion`.  An unreachable target, an
+all-five-wedge-candidates-fail, and an adaptive-step collapse throw a
+typed `VectorWalkError` carrying a `reason::Symbol` — and, under the
+default `on_target_failure = :throw`, abort the whole solve.
+Numerical breakdowns inside `vector_pade_step_with_pade!` (a step
+landing on a pole — `Q(1) ≈ 0`) propagate unchanged; the wedge
+selection is *meant* to steer around them, and a thrown `DomainError`
+is the honest fail-loud signal that it could not.
+
+## The resilient walk — `on_target_failure = :skip` (ADR-0026 D1)
+
+The default `on_target_failure = :throw` aborts the whole run the
+moment one target's walk fails.  For a dense space-filling target set
+(the headline-figure wedge) that is too brittle: one unreachable
+target costs every other target's coverage.  With
+`on_target_failure = :skip` the per-target walk is wrapped so a
+`VectorWalkError` is *caught*, recorded as a `VectorWalkFailure` in the
+solution's tenth field `failed_targets`, and the walk moves on to the
+next target.  This is fail-*loud-by-accounting*, never a silent
+swallow (Rule 1): `failed_targets` is first-class data the caller must
+surface.  An exception that is *not* a `VectorWalkError` — an
+unrecognised bug — is re-thrown even under `:skip`; the walk never
+skips an error it cannot classify.  Partial nodes a skipped walk laid
+down before it failed are kept (the walk pushes to `visited_*` only on
+an accepted step).  See `VectorWalkFailure` and the
+`on_target_failure` kwarg doc.
 
 ## References
 
@@ -199,12 +220,57 @@ using ..VectorCoefficients: vector_taylor_coefficients
 using ..VectorStepper:      VectorPadeStepperState, vector_pade_step_with_pade!
 using ..VectorPathNetworkStage2: _stage2_fill
 using ..VectorWedgeStep:    _select_wedge, _adaptive_h, WEDGE_STEP_POLICIES,
-                            H_MIN_RATIO
+                            H_MIN_RATIO, VectorWalkError
 
-export VectorPathNetworkSolution, vector_path_network_solve
+export VectorPathNetworkSolution, vector_path_network_solve,
+       VectorWalkFailure, VectorWalkError
 
 # FW 2011 §3.1 ±22.5°/±45° wedge — the v0.1 `PathNetwork.DEFAULT_WEDGE`.
 const DEFAULT_WEDGE = [-π / 4, -π / 8, 0.0, π / 8, π / 4]
+
+# -----------------------------------------------------------------------------
+# The skipped-target record (ADR-0026 D1)
+# -----------------------------------------------------------------------------
+
+"""
+    VectorWalkFailure{T}
+
+A first-class record of one target the resilient Stage-1 walk could
+**not** reach.  ADR-0026 D1 makes `vector_path_network_solve` skip a
+failed per-target walk and continue (`on_target_failure = :skip`)
+rather than aborting the whole run.  A skip is *not* a silent swallow
+— that would violate CLAUDE.md Rule 1.  It is fail-*loud-by-accounting*:
+every skipped target is captured as one of these records and surfaced
+to the caller in `VectorPathNetworkSolution.failed_targets`, so a
+non-empty list is an unmissable signal the caller must report.
+
+## Fields
+
+  - `target::Complex{T}`       — the target point the walk was trying
+                                 to reach;
+  - `reason::Symbol`           — the `VectorWalkError.reason` of the
+                                 failure (`:unreachable` |
+                                 `:all_candidates_failed` |
+                                 `:step_collapse`);
+  - `z_stuck::Complex{T}`      — the position the walk was at when it
+                                 failed (the `z_cur` in scope at the
+                                 throw — read directly from the walk
+                                 state, never parsed from the
+                                 exception message);
+  - `residual_dist::T`         — `|z_stuck − target|`, how far short of
+                                 the target the walk stopped.
+
+Partial nodes a failed walk laid down *before* it failed are kept in
+the `visited_*` arrays (the walk pushes only on an accepted step, so
+each is a valid solution node) — a `VectorWalkFailure` records "this
+target was not reached," never "discard the filament."
+"""
+struct VectorWalkFailure{T <: AbstractFloat}
+    target        :: Complex{T}
+    reason        :: Symbol
+    z_stuck       :: Complex{T}
+    residual_dist :: T
+end
 
 # -----------------------------------------------------------------------------
 # Solution container
@@ -280,8 +346,30 @@ The two Stage-2 fields carry the fine-grid fill (bead `padetaylor-0ln.20`):
 
 When `vector_path_network_solve` is called without a `fine_grid`, both
 Stage-2 fields are empty — the V7 scatter-figure call sites are
-byte-unaffected.  Two backward-compat constructors (6-arg Stage-1-only,
-8-arg Stage-1+Stage-2) default the trailing fields to empty vectors.
+byte-unaffected.
+
+The tenth field carries the resilient-walk accounting (ADR-0026 D1):
+
+  - `failed_targets::Vector{VectorWalkFailure{T}}` — one record per
+                                                 target the walk could
+                                                 not reach.  Empty
+                                                 unless the solve was
+                                                 called with
+                                                 `on_target_failure =
+                                                 :skip` *and* some
+                                                 per-target walk
+                                                 failed; a non-empty
+                                                 list is the
+                                                 fail-loud-by-accounting
+                                                 signal the caller must
+                                                 surface (see
+                                                 `VectorWalkFailure`).
+
+`failed_targets` is *additive* (ADR-0001) exactly as `visited_jets`
+was: three backward-compat constructors (6-arg Stage-1-only, 8-arg
+Stage-1+Stage-2, 9-arg pre-D1) default it — and the trailing Stage-2 /
+jet fields — to empty vectors, so every hand-built test fixture and
+every `on_target_failure = :throw` call site keeps its exact shape.
 """
 struct VectorPathNetworkSolution{T <: AbstractFloat}
     visited_z           :: Vector{Complex{T}}
@@ -293,26 +381,41 @@ struct VectorPathNetworkSolution{T <: AbstractFloat}
     grid_z              :: Vector{Complex{T}}
     grid_y              :: Vector{Vector{Complex{T}}}
     visited_jets        :: Vector{Vector{Vector{Complex{T}}}}
+    failed_targets      :: Vector{VectorWalkFailure{T}}
 end
 
 # Backward-compat 6-arg constructor: a Stage-1-only solution (no
-# fine-grid fill, no cached jets).  Defaults `grid_z`/`grid_y`/
-# `visited_jets` to empty vectors so the V7 scatter-figure call sites
-# and the hand-built test fixtures that predate Stage 2 (bead
-# padetaylor-0ln.20) keep their exact shape.
+# fine-grid fill, no cached jets, no failed-target accounting).
+# Defaults `grid_z`/`grid_y`/`visited_jets`/`failed_targets` to empty
+# vectors so the V7 scatter-figure call sites and the hand-built test
+# fixtures that predate Stage 2 (bead padetaylor-0ln.20) keep their
+# exact shape.
 VectorPathNetworkSolution{T}(vz, vy, vh, vnum, vden, vpar) where {T} =
     VectorPathNetworkSolution{T}(vz, vy, vh, vnum, vden, vpar,
                                  Complex{T}[], Vector{Complex{T}}[],
-                                 Vector{Vector{Complex{T}}}[])
+                                 Vector{Vector{Complex{T}}}[],
+                                 VectorWalkFailure{T}[])
 
 # Backward-compat 8-arg constructor: a Stage-1+Stage-2 solution built
 # before the B1 jet cache (ADR-0025 Amendment 1) added `visited_jets`.
 # Defaults `visited_jets` to empty — the Stage-2 true-radius gate then
 # recomputes each node's jet from its `(z, y)` state (the documented
-# fallback path in `VectorPathNetworkStage2._stage2_fill`).
+# fallback path in `VectorPathNetworkStage2._stage2_fill`) — and
+# `failed_targets` to empty (the pre-ADR-0026 non-resilient walk).
 VectorPathNetworkSolution{T}(vz, vy, vh, vnum, vden, vpar, gz, gy) where {T} =
     VectorPathNetworkSolution{T}(vz, vy, vh, vnum, vden, vpar, gz, gy,
-                                 Vector{Vector{Complex{T}}}[])
+                                 Vector{Vector{Complex{T}}}[],
+                                 VectorWalkFailure{T}[])
+
+# Backward-compat 9-arg constructor: a Stage-1+Stage-2+jet-cache
+# solution built before ADR-0026 D1 added the resilient-walk
+# `failed_targets` field.  Defaults it to empty — the non-resilient
+# `on_target_failure = :throw` walk skips no target, so it has nothing
+# to record.
+VectorPathNetworkSolution{T}(vz, vy, vh, vnum, vden, vpar, gz, gy,
+                             vjet) where {T} =
+    VectorPathNetworkSolution{T}(vz, vy, vh, vnum, vden, vpar, gz, gy, vjet,
+                                 VectorWalkFailure{T}[])
 
 # -----------------------------------------------------------------------------
 # Public driver
@@ -328,7 +431,8 @@ VectorPathNetworkSolution{T}(vz, vy, vh, vnum, vden, vpar, gz, gy) where {T} =
                               fine_grid = nothing,
                               extrapolate = false,
                               tol = 1e-8,
-                              rng = nothing)
+                              rng = nothing,
+                              on_target_failure = :throw)
         -> VectorPathNetworkSolution
 
 Build the minimal Stage-1 vector path-network covering `targets` — a
@@ -415,15 +519,36 @@ Kwargs:
                          estimate FW/FFW exploit.  The walk for a
                          **fixed** `rng` state stays fully deterministic
                          (same shuffle ⇒ same tree, bit-identical).
+  - `on_target_failure` — `Symbol` (default `:throw`).  The resilient-
+                         walk policy (ADR-0026 D1).  With `:throw` (the
+                         default) a per-target walk failure — an
+                         unreachable target, an all-five-candidates-fail,
+                         or an adaptive-step collapse — aborts the whole
+                         solve by propagating a `VectorWalkError`; this
+                         is byte-identical to the pre-ADR-0026 behaviour.
+                         With `:skip` the failing per-target walk is
+                         caught, recorded as a `VectorWalkFailure` in the
+                         returned solution's `failed_targets`, and the
+                         walk continues to the next target.  This is
+                         *not* a silent swallow (Rule 1): every skip is
+                         first-class accounting data the caller must
+                         surface.  Partial nodes a skipped walk laid
+                         down before it failed are kept — they are valid
+                         solution nodes.  An exception that is *not* a
+                         `VectorWalkError` (an unrecognised bug) is
+                         re-thrown even under `:skip` — the walk never
+                         skips an error it does not understand.
 
 Throws `ArgumentError` (Rule 1) for empty `targets`, non-positive `h`,
-a `wedge_angles` not of length 5, an unknown `step_policy`, or an empty
-`fine_grid` (an empty fine grid is a caller mistake — pass `nothing` to
-skip Stage 2); `ErrorException` if a target is unreachable in
-`max_steps_per_target` steps, all five wedge candidates fail, or (with
-`adaptive = true`) the pole field forces the step below `h_min`.  A
-numerical breakdown inside the stepper (step landed on a pole)
-propagates unchanged.
+a `wedge_angles` not of length 5, an unknown `step_policy`, an
+`on_target_failure` not in `(:throw, :skip)`, or an empty `fine_grid`
+(an empty fine grid is a caller mistake — pass `nothing` to skip
+Stage 2).  With `on_target_failure = :throw`, a `VectorWalkError` if a
+target is unreachable in `max_steps_per_target` steps, all five wedge
+candidates fail, or (with `adaptive = true`) the pole field forces the
+step below `h_min`; with `:skip` those become `failed_targets` records
+instead.  A numerical breakdown inside the stepper (step landed on a
+pole) propagates unchanged.
 """
 function vector_path_network_solve(prob::VectorPadeTaylorProblem{F, CT},
                                    targets::AbstractVector;
@@ -438,7 +563,8 @@ function vector_path_network_solve(prob::VectorPadeTaylorProblem{F, CT},
                                        nothing,
                                    extrapolate::Bool = false,
                                    tol::Real = 1e-8,
-                                   rng::Union{Nothing, AbstractRNG} = nothing
+                                   rng::Union{Nothing, AbstractRNG} = nothing,
+                                   on_target_failure::Symbol = :throw
                                    ) where {F, CT}
     isempty(targets) && throw(ArgumentError(
         "vector_path_network_solve: targets is empty — there is nothing " *
@@ -460,6 +586,12 @@ function vector_path_network_solve(prob::VectorPadeTaylorProblem{F, CT},
         "$(WEDGE_STEP_POLICIES) (got :$step_policy).  :max_q_root is the " *
         "principled shared-Q-root-distance selector (ADR-0025 B2); :min_y " *
         "is the V7 min-‖y‖ proxy."))
+    on_target_failure in (:throw, :skip) || throw(ArgumentError(
+        "vector_path_network_solve: on_target_failure must be :throw or " *
+        ":skip (got :$on_target_failure).  :throw (default) aborts the " *
+        "solve on the first unreachable target; :skip records it in " *
+        "failed_targets and continues (ADR-0026 D1).  Suggestion: pass " *
+        "one of those two symbols."))
 
     # Working float type: real part of the problem's element type.
     T  = float(real(CT))
@@ -498,6 +630,12 @@ function vector_path_network_solve(prob::VectorPadeTaylorProblem{F, CT},
     target_list = collect(C, targets)
     rng === nothing || (target_list = shuffle(rng, target_list))
 
+    # The resilient-walk accounting (ADR-0026 D1): one VectorWalkFailure
+    # per skipped target.  Stays empty under `on_target_failure = :throw`
+    # (a walk failure aborts before anything is recorded) and under
+    # `:skip` when every walk succeeds.
+    failed_targets = VectorWalkFailure{T}[]
+
     for target in target_list
         # Skip a target we already sit on.
         any(z -> abs(z - target) ≤ 10 * eps(T), visited_z) && continue
@@ -508,44 +646,70 @@ function vector_path_network_solve(prob::VectorPadeTaylorProblem{F, CT},
         parent = idx_v
         n_steps = 0
 
-        # Loop guard re-reads the *current* step magnitude each
-        # iteration — with adaptive `h` it shrinks/grows per step.
-        while abs(z_cur - target) > real(visited_h[parent])
-            n_steps += 1
-            n_steps > max_steps_per_target && throw(ErrorException(
-                "vector_path_network_solve: target $target unreachable in " *
-                "$max_steps_per_target steps; current z = $z_cur, " *
-                "|z - target| = $(abs(z_cur - target)).  Suggestion: raise " *
-                "max_steps_per_target, shorten h, or widen the wedge."))
+        # The per-target wedge walk.  Under `on_target_failure = :skip`
+        # it runs inside a try/catch: a `VectorWalkError` (an unreachable
+        # target, an all-candidates-fail, or an adaptive-step collapse)
+        # is recorded in `failed_targets` from the *live* `z_cur` — never
+        # parsed from the exception message — and the walk continues to
+        # the next target.  Any *other* exception is a bug we do not
+        # understand, so it is re-thrown (Rule 1 — never skip an error
+        # you cannot classify).  Under `:throw` (the default) no
+        # try/catch wraps the walk: a `VectorWalkError` propagates and
+        # aborts the solve, byte-identically to the pre-ADR-0026 walk.
+        try
+            # Loop guard re-reads the *current* step magnitude each
+            # iteration — with adaptive `h` it shrinks/grows per step.
+            while abs(z_cur - target) > real(visited_h[parent])
+                n_steps += 1
+                n_steps > max_steps_per_target && throw(VectorWalkError(
+                    :unreachable,
+                    "vector_path_network_solve: target $target unreachable " *
+                    "in $max_steps_per_target steps; current z = $z_cur, " *
+                    "|z - target| = $(abs(z_cur - target)).  Suggestion: " *
+                    "raise max_steps_per_target, shorten h, or widen the " *
+                    "wedge."))
 
-            goal_dir = angle(target - z_cur)
+                goal_dir = angle(target - z_cur)
 
-            # Adaptive step (B2): the parent's shared-Q caps `h` to the
-            # nearest-pole distance; `adaptive=false` pins it at h_max.
-            h_cur = adaptive ?
-                _adaptive_h(visited_denominator[parent],
-                            real(visited_h[parent]), h_max, h_min) :
-                h_max
+                # Adaptive step (B2): the parent's shared-Q caps `h` to
+                # the nearest-pole distance; `adaptive=false` pins it at
+                # h_max.
+                h_cur = adaptive ?
+                    _adaptive_h(visited_denominator[parent],
+                                real(visited_h[parent]), h_max, h_min) :
+                    h_max
 
-            z_new, y_new =
-                _select_wedge(prob.f, z_cur, y_cur, Int(order), h_cur,
-                              goal_dir, wedge_angles, step_policy)
+                z_new, y_new =
+                    _select_wedge(prob.f, z_cur, y_cur, Int(order), h_cur,
+                                  goal_dir, wedge_angles, step_policy)
 
-            # The node's CANONICAL shared-Q store: centred at z_new, real
-            # step h_cur, so its roots map to the z-plane correctly.
-            num, den, jet = _canonical_pade(prob.f, z_new, y_new, Int(order),
-                                            h_cur, C)
+                # The node's CANONICAL shared-Q store: centred at z_new,
+                # real step h_cur, so its roots map to the z-plane
+                # correctly.
+                num, den, jet = _canonical_pade(prob.f, z_new, y_new,
+                                                Int(order), h_cur, C)
 
-            push!(visited_z, z_new)
-            push!(visited_y, y_new)
-            push!(visited_h, C(h_cur))
-            push!(visited_numerators, num)
-            push!(visited_denominator, den)
-            push!(visited_parent, parent)
-            push!(visited_jets, jet)
+                push!(visited_z, z_new)
+                push!(visited_y, y_new)
+                push!(visited_h, C(h_cur))
+                push!(visited_numerators, num)
+                push!(visited_denominator, den)
+                push!(visited_parent, parent)
+                push!(visited_jets, jet)
 
-            parent = length(visited_z)     # next step chains off this node
-            z_cur, y_cur = z_new, y_new
+                parent = length(visited_z)   # next step chains off this node
+                z_cur, y_cur = z_new, y_new
+            end
+        catch e
+            # `:throw` mode (or a non-walk exception) → re-raise; `:skip`
+            # mode catching a genuine `VectorWalkError` → record and
+            # continue.  Partial nodes this walk already pushed stay in
+            # `visited_*` — they are valid solution nodes.
+            (on_target_failure === :skip && e isa VectorWalkError) || rethrow()
+            push!(failed_targets,
+                  VectorWalkFailure{T}(target, e.reason, z_cur,
+                                       T(abs(z_cur - target))))
+            continue
         end
     end
 
@@ -560,7 +724,7 @@ function vector_path_network_solve(prob::VectorPadeTaylorProblem{F, CT},
                                             visited_denominator,
                                             visited_parent,
                                             Complex{T}[], Vector{Complex{T}}[],
-                                            visited_jets)
+                                            visited_jets, failed_targets)
     end
 
     grid_z = collect(C, fine_grid)
@@ -572,7 +736,8 @@ function vector_path_network_solve(prob::VectorPadeTaylorProblem{F, CT},
     return VectorPathNetworkSolution{T}(visited_z, visited_y, visited_h,
                                         visited_numerators,
                                         visited_denominator, visited_parent,
-                                        grid_z, grid_y, visited_jets)
+                                        grid_z, grid_y, visited_jets,
+                                        failed_targets)
 end
 
 # -----------------------------------------------------------------------------

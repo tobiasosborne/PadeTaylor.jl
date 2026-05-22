@@ -96,9 +96,11 @@ using Test
 using PadeTaylor
 using Random: MersenneTwister
 using PadeTaylor.VectorPathNetwork: vector_path_network_solve,
-                                    VectorPathNetworkSolution
+                                    VectorPathNetworkSolution,
+                                    VectorWalkFailure
 using PadeTaylor.VectorPoleField: extract_poles_shared_q
-using PadeTaylor.VectorWedgeStep: _select_wedge, _adaptive_h, H_MIN_RATIO
+using PadeTaylor.VectorWedgeStep: _select_wedge, _adaptive_h, H_MIN_RATIO,
+                                  VectorWalkError
 using PadeTaylor.PainleveHierarchy: painleve_hierarchy, pI2_tritronquee_ic
 using PadeTaylor.VectorProblems: VectorPadeTaylorProblem
 using PadeTaylor.VectorStepper: VectorPadeStepperState,
@@ -513,7 +515,11 @@ end
         h_prev = 0.5; h_max = 0.5; h_min = 0.1
         t0     = 1.0e-4                              # pole right next door
         Q_near = ComplexF64[1.0, -1.0 / t0]          # root at t = t0
-        @test_throws ErrorException _adaptive_h(Q_near, h_prev, h_max, h_min)
+        # `_adaptive_h` now throws the typed `VectorWalkError` (reason
+        # :step_collapse) — a precision refinement of the old bare
+        # `ErrorException` (ADR-0026 D1; the typed exception lets the
+        # resilient driver classify a caught failure by `reason`).
+        @test_throws VectorWalkError _adaptive_h(Q_near, h_prev, h_max, h_min)
         # A Q whose root is far leaves the cap inert — h grows, no throw.
         Q_far  = ComplexF64[1.0, -1.0 / 50.0]        # root at t = 50
         h_ok   = _adaptive_h(Q_far, h_prev, h_max, h_min)
@@ -646,6 +652,125 @@ end
         qb = pb[argmin(abs.(pb .- p))]
         @info "VPN.4.3 two-run disagreement |q_a - q_b| = $(abs(qa - qb))"
         @test abs(qa - qb) < 1.0e-7
+    end
+
+    # =========================================================================
+    # VPN.5.* — the resilient Stage-1 walk (bead padetaylor-0ln.40.a,
+    # ADR-0026 D1).  `on_target_failure = :skip` makes a per-target walk
+    # failure record a `VectorWalkFailure` in `sol.failed_targets` and
+    # continue, rather than aborting the whole run; `:throw` (default) is
+    # byte-identical to the pre-ADR-0026 behaviour.  See the module
+    # docstring and `VectorWalkFailure`.
+    #
+    # The deterministically-reproducible failure used here is the
+    # :unreachable one: `max_steps_per_target = 1` with a far target — the
+    # walk cannot reach it in a single step, so the unreachable-target
+    # `VectorWalkError` fires on a known input every run.  The other two
+    # reasons (:all_candidates_failed, :step_collapse) are exercised
+    # indirectly: VPN.3.4 already pins the `:step_collapse` throw of
+    # `_adaptive_h`, and VPN.3.1 the `:all_candidates_failed` throw — both
+    # now as a `VectorWalkError`.  A *driver-level* deterministic trigger
+    # for those two would need a hand-tuned pole-on-the-chord geometry
+    # that is fragile to recreate; the :unreachable path exercises the
+    # identical catch/record/continue machinery, so the skip logic itself
+    # is fully covered.
+    # =========================================================================
+    @testset "VPN.5 resilient walk (on_target_failure, ADR-0026 D1)" begin
+        p   = 1.0 + 0.6im
+        z0  = -0.4 + 0.0im
+        cs  = ComplexF64[1.0, 0.7, -1.3]
+        prob = riccati_pole_problem(p, z0, cs; order = 24)
+
+        # A far target the walk provably cannot reach in ONE step — the
+        # deterministically-unreachable input.
+        far = ComplexF64[40.0 + 0.0im]
+
+        # ---- VPN.5.1 — :skip records the unreachable target and the run
+        # completes normally. -------------------------------------------------
+        @testset "VPN.5.1 :skip records the failure, run completes" begin
+            sol = vector_path_network_solve(prob, far; order = 24, h = 0.25,
+                                            max_steps_per_target = 1,
+                                            on_target_failure = :skip)
+            @test sol isa VectorPathNetworkSolution
+            # Exactly one skipped target, recorded as first-class data.
+            @test length(sol.failed_targets) == 1
+            rec = sol.failed_targets[1]
+            @test rec isa VectorWalkFailure
+            @test rec.reason == :unreachable
+            @test rec.target == far[1]
+            # `z_stuck` is the live walk position — finite, and the
+            # recorded residual is exactly |z_stuck - target| (not parsed
+            # from the exception string).
+            @test isfinite(rec.z_stuck)
+            @test rec.residual_dist == abs(rec.z_stuck - rec.target)
+        end
+
+        # ---- VPN.5.2 — :throw on the same input still throws (now a
+        # typed VectorWalkError, not a bare ErrorException). ------------------
+        @testset "VPN.5.2 :throw still aborts the run" begin
+            @test_throws VectorWalkError vector_path_network_solve(
+                prob, far; order = 24, h = 0.25,
+                max_steps_per_target = 1, on_target_failure = :throw)
+            # :throw is the default — omitting the kwarg behaves the same.
+            @test_throws VectorWalkError vector_path_network_solve(
+                prob, far; order = 24, h = 0.25, max_steps_per_target = 1)
+        end
+
+        # ---- VPN.5.3 — partial nodes from the failed walk are retained.
+        # A one-step walk toward `far` lands one node before giving up;
+        # that node is a valid solution node and must stay in visited_z. --
+        @testset "VPN.5.3 partial nodes from a failed walk are kept" begin
+            sol = vector_path_network_solve(prob, far; order = 24, h = 0.25,
+                                            max_steps_per_target = 1,
+                                            on_target_failure = :skip)
+            # The walk took one accepted step before the unreachable
+            # throw — so the tree grew past the lone IC root node.
+            @test length(sol.visited_z) > 1
+            # The tree stays well-formed: root parent 0, others earlier.
+            @test sol.visited_parent[1] == 0
+            for k in 2:length(sol.visited_parent)
+                @test 1 ≤ sol.visited_parent[k] < k
+            end
+        end
+
+        # ---- VPN.5.4 — a successful run has an empty failed_targets. --------
+        @testset "VPN.5.4 a successful run records no failures" begin
+            targets = ComplexF64[x + y * im
+                                 for x in 0.0:0.4:1.6 for y in -0.4:0.4:1.2]
+            sol = vector_path_network_solve(prob, targets; order = 24,
+                                            h = 0.25,
+                                            on_target_failure = :skip)
+            @test sol isa VectorPathNetworkSolution
+            @test isempty(sol.failed_targets)
+            # The default-mode solve carries the field too, also empty —
+            # the additive guarantee (ADR-0001).
+            sol_def = vector_path_network_solve(prob, targets; order = 24,
+                                                h = 0.25)
+            @test isempty(sol_def.failed_targets)
+        end
+
+        # ---- VPN.5.5 — an unknown on_target_failure is a caller mistake. ----
+        @testset "VPN.5.5 unknown on_target_failure throws ArgumentError" begin
+            @test_throws ArgumentError vector_path_network_solve(
+                prob, far; order = 24, h = 0.25,
+                on_target_failure = :ignore)
+        end
+
+        # ---- VPN.5.6 — :skip with a MIX of reachable and unreachable
+        # targets reaches the reachable ones and records only the bad one. --
+        @testset "VPN.5.6 :skip isolates the failure to its target" begin
+            # `max_steps_per_target = 1` makes the FAR target unreachable
+            # while a near target (within one step of the IC) succeeds.
+            mixed = ComplexF64[z0 + 0.2 + 0.0im, 40.0 + 0.0im]
+            sol = vector_path_network_solve(prob, mixed; order = 24,
+                                            h = 0.25,
+                                            max_steps_per_target = 1,
+                                            on_target_failure = :skip)
+            # Exactly the far target is recorded; the near one is not.
+            @test length(sol.failed_targets) == 1
+            @test sol.failed_targets[1].target == 40.0 + 0.0im
+            @test sol.failed_targets[1].reason == :unreachable
+        end
     end
 
 end

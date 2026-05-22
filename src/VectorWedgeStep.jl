@@ -99,12 +99,20 @@ without the `shared_denominator_pade` degeneration A2 documented.
 
 ## Fail-loud contract (Rule 1)
 
-`_adaptive_h` throws `ErrorException` with a `suggestion` when the
-pole cap forces `h` below `h_min` — the walk cannot make honest
-progress and must say so, not silently take a degenerate step.
-`_select_wedge_max_q_root` throws when *every* candidate failed (each
-either threw in the stepper or threw building its canonical `Q`) — the
-same all-five-wedge-candidates-fail condition the V7 selector throws on.
+`_adaptive_h` throws `VectorWalkError(:step_collapse, …)` with a
+`Suggestion` when the pole cap forces `h` below `h_min` — the walk
+cannot make honest progress and must say so, not silently take a
+degenerate step.  `_select_wedge` throws
+`VectorWalkError(:all_candidates_failed, …)` when *every* candidate
+failed (each either threw in the stepper or threw building its
+canonical `Q`) — the all-five-wedge-candidates-fail condition.
+
+Both were bare `ErrorException`s before ADR-0026 D1; the typed
+`VectorWalkError` (defined at the top of this module) lets the
+resilient driver classify a caught failure by `reason::Symbol` — see
+that struct's docstring.  An *uncaught* `VectorWalkError` (the
+`on_target_failure = :throw` default) prints byte-identically to the
+old `ErrorException` via the `showerror` method.
 
 ## References
 
@@ -134,7 +142,62 @@ using LinearAlgebra:        norm
 using Polynomials:          Polynomial, roots
 using ..VectorStepper:      VectorPadeStepperState, vector_pade_step_with_pade!
 
-export _select_wedge, _adaptive_h, WEDGE_STEP_POLICIES, H_MIN_RATIO
+export _select_wedge, _adaptive_h, WEDGE_STEP_POLICIES, H_MIN_RATIO,
+       VectorWalkError
+
+# -----------------------------------------------------------------------------
+# The typed walk-failure exception
+# -----------------------------------------------------------------------------
+
+"""
+    VectorWalkError <: Exception
+
+The typed exception a vector Stage-1 wedge walk throws when it cannot
+honestly reach a target.  It is the *classified* successor to the bare
+`ErrorException`s the walk used to throw — defined here, in the module
+`include`d before `VectorPathNetwork`, so both the wedge machinery
+(`_select_wedge`, `_adaptive_h`) and the driver
+(`vector_path_network_solve`'s unreachable-target site) can construct it.
+
+## Why a typed exception, not message-string parsing
+
+ADR-0026 D1 makes the Stage-1 walk *resilient*: with
+`on_target_failure = :skip` the driver catches a per-target walk
+failure, records it as first-class data, and continues to the next
+target.  To record *which kind* of failure occurred — and to be sure
+the caught exception is genuinely a walk failure and not some
+unrelated bug (Rule 1: never skip an error you do not understand) —
+the driver must classify the exception.  Classifying by `occursin`-ing
+substrings of the message string would be brittle and is exactly the
+anti-pattern CLAUDE.md Rule 2 warns against.  A `reason::Symbol` field
+is the genuinely correct design: the `catch` block reads `e.reason`
+directly and `isa VectorWalkError` is the unambiguous "this is a walk
+failure I understand" test.
+
+## Fields
+
+  - `reason::Symbol` — one of:
+      * `:unreachable`           — the per-target walk exceeded
+        `max_steps_per_target` without coming within `h` of the target;
+      * `:all_candidates_failed` — every one of the five wedge
+        candidates threw or had a degenerate canonical shared-`Q`
+        store (`_select_wedge`);
+      * `:step_collapse`         — the adaptive pole cap forced the
+        step magnitude below `h_min` (`_adaptive_h`).
+  - `msg::String` — the full human-readable message, retaining the
+    `Suggestion:` remediation line (Rule 1 — a fail-loud throw still
+    carries actionable advice even when it is later caught and skipped).
+
+`Base.showerror` prints `msg` verbatim, so an *uncaught*
+`VectorWalkError` (the `:throw` default) reads exactly as the old
+`ErrorException` did — byte-identical operator-facing text.
+"""
+struct VectorWalkError <: Exception
+    reason :: Symbol
+    msg    :: String
+end
+
+Base.showerror(io::IO, e::VectorWalkError) = print(io, e.msg)
 
 # The step-size growth / shrink constants and the pole-distance safety
 # factor.  GROW > 1 lets `h` climb toward `h_max` in pole-sparse
@@ -247,10 +310,10 @@ driver rebuilds that same canonical store at the landed node, so a
 candidate that cannot produce one is genuinely unusable and picking it
 would crash the driver.
 
-Throws `ErrorException` (Rule 1) when *every* candidate is unusable —
-no candidate stepped cleanly, or (under `:max_q_root`) every clean
-candidate's canonical store degenerates.  The all-five-wedge-
-candidates-fail condition.
+Throws `VectorWalkError(:all_candidates_failed, …)` (Rule 1) when
+*every* candidate is unusable — no candidate stepped cleanly, or
+(under `:max_q_root`) every clean candidate's canonical store
+degenerates.  The all-five-wedge-candidates-fail condition.
 """
 function _select_wedge(f, z_cur::Complex{T}, y_cur::Vector{Complex{T}},
                        order::Int, h_mag::T, goal_dir,
@@ -305,7 +368,7 @@ function _select_wedge(f, z_cur::Complex{T}, y_cur::Vector{Complex{T}},
             best_k, best_score = k, score
         end
     end
-    best_k == 0 && throw(ErrorException(
+    best_k == 0 && throw(VectorWalkError(:all_candidates_failed,
         "vector_path_network_solve: all 5 wedge candidates failed at " *
         "z = $z_cur; every candidate step threw or its canonical " *
         "shared-Q store degenerated (a pole of the local shared-Q " *
@@ -355,10 +418,10 @@ Stage-2 pole-adjacency clamp uses (`VectorPathNetworkStage2`).  A
 constant `Q` (`length ≤ 1`) has no roots — the cap is then absent and
 the grow rule governs.
 
-Throws `ErrorException` (Rule 1) when the pole cap forces `h` below
-`h_min`: a walk that needs a sub-`h_min` step to dodge a pole is
-genuinely wedged, and a fail-loud throw is the honest signal — never a
-silent degenerate step.
+Throws `VectorWalkError(:step_collapse, …)` (Rule 1) when the pole cap
+forces `h` below `h_min`: a walk that needs a sub-`h_min` step to dodge
+a pole is genuinely wedged, and a fail-loud throw is the honest signal
+— never a silent degenerate step.
 """
 function _adaptive_h(denominator::AbstractVector{C}, h_prev::T,
                      h_max::T, h_min::T) where {T, C}
@@ -377,7 +440,7 @@ function _adaptive_h(denominator::AbstractVector{C}, h_prev::T,
         end
     end
 
-    h < h_min && throw(ErrorException(
+    h < h_min && throw(VectorWalkError(:step_collapse,
         "vector_path_network_solve: adaptive step collapsed to h = $h " *
         "(< h_min = $h_min) — the shared-Q pole field is too dense here " *
         "for an honest step.  Suggestion: lower h_min if a finer walk is " *
