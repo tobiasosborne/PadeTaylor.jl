@@ -359,6 +359,54 @@ exceed what `h_min` can honestly resolve) — but it should now be rare,
 firing only on genuine density, never on a self-inflicted ratchet; the
 D1 `:skip` driver absorbs it.
 
+## Amendment 5 (2026-05-22) — S5-diag: the ~8 % plateau is NOT a ceiling
+
+The S5a re-probe (corrected S2/S3/S4 stack) cured the collapse (~0
+failures) but coverage plateaued at ~8 %; the S5a agent called it an
+"architectural ceiling." The S5-diag FW-lens investigation (bead
+`padetaylor-f4e`, instrumented) **falsifies that** — it is two fixable,
+measured, composable geometry problems.
+
+**H-B confirmed (hard).** The honest B1 disc is **100 %
+truncation-limited** — across 4737 walk nodes, the Jorba–Zou truncation
+term binds 4737/4737 times; the pole-adjacency clamp *never* binds. The
+disc sits at a constant `0.106 × D_local` (the nearest-pole distance) —
+it stops ~10× short of the nearest pole. `SURF_PN_ORDER = 24` is simply
+too low. Order sweep (inner wedge): order 24→36→48→72 lifts coverage
+13 %→23 %→29 %→29 % — the knee is order ~36–48; order 72 is wasted.
+(ADR-0025 Amendment 2's "an order-48 walk is not viable" was measured on
+the *pre-`:skip` fixed-h* walk and is superseded — the resilient
+adaptive stack runs order 48/72 cleanly, 0 failures.)
+
+**H-A refuted.** There is **no node pile-up** — the pile-up factor is
+1.1× (4737 nodes ≈ 4453 distinct disc-cells); the walk does not re-tread
+or wander (tree edge length = `h_v` exactly); 8.3 nodes/target. The
+orchestrator's interim "~40× pile-up" arithmetic was wrong (it used an
+over-large disc radius). The discs are genuinely too small to tile:
+4737 discs of r ≈ 0.013 sum to area 12 over an inner wedge of area 36.
+
+**Lever B (the genuine H-A residue).** The step `h` (median 0.032) is
+**2.4× the honest disc** (0.013) — the walk over-strides where each Padé
+is honestly valid, leaving NaN gaps along every filament (Amendment 3
+bottleneck 1, still live). Sizing `h` to the disc via `SAFETY` 0.25 →
+0.10 lifted coverage 23 %→31 % at fixed order 36 — measured.
+
+**Decision — step S6 (the fix).**
+
+- **S6a** — raise `SURF_PN_ORDER` 24 → ~36–48 (figure constant); the
+  measured knee. Widens the truncation-limited honest disc.
+- **S6b** — lower `SAFETY` (`src/VectorWedgeStep.jl`) from 0.25 toward
+  ~0.10–0.15 so the adaptive step is sized to the honest B1 disc, not
+  2.4× it. A measured sweep `SAFETY ∈ {0.25,0.15,0.10}` picks the value
+  (smaller `SAFETY` ⇒ more nodes / more runtime — a real trade).
+- **S6c** — re-probe the full wedge at the tuned (order, `SAFETY`),
+  *sweeping target density*, to resolve the residual: after A+B, is the
+  remaining shortfall a pure node-count limit (lay denser targets —
+  feasible) or does it need FW's explicit coarse-Stage-1 / 16×-finer-
+  Stage-2 fill split (FW-md:163-164, :395-397)? Measured, not assumed.
+
+Neither lever is exhausted; the ~8 % is not architectural.
+
 ## References
 
 - `docs/worklog/059-headline-figure-honest-reassessment.md`
