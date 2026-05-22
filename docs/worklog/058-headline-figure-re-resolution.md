@@ -1,5 +1,14 @@
 # Worklog 058 — senior-grade re-resolution of the P_I⁽²⁾ tritronquée headline figure
 
+> **⚠ Correction (2026-05-22) — see worklog 059.** This worklog reports
+> the figure "re-resolved … shipped". That overstates it: the figure is
+> honest and well-tested, but its pole-rich wedge is only ~5 % filled —
+> a sparse pole scatter, not the solution surface. The Phases A–F work
+> here is all real, but it was poured into a structurally inadequate
+> container: the vector path-network is a minimal ~156-LOC skeleton of
+> FW's full 1108-LOC driver. The real remaining work is bead
+> `padetaylor-0ln.40`. Worklog 059 carries the honest diagnosis.
+
 **Date**: 2026-05-22
 **Author**: Claude Opus 4.7 (orchestrator) + serial Opus coding subagents + Sonnet recon
 **Epic**: `padetaylor-0ln` (v0.2) · **Bead**: `padetaylor-0ln.37` (+ 20 children)

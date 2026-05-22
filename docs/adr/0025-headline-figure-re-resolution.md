@@ -1,10 +1,15 @@
 # ADR-0025 — Senior-grade re-resolution of the P_I⁽²⁾ tritronquée headline figure
 
-**Status**: Accepted (2026-05-21); **fully implemented 2026-05-22** —
-Phases A–F shipped, all six v1 corners retired or rigorously justified,
-the seven-criterion FW-style validation suite in place. Amendments 1–12
-record the exploration outcomes and every audition. Full suite
-5326/5326 GREEN. See worklog 058.
+**Status**: Accepted (2026-05-21); scoped work shipped 2026-05-22 —
+Phases A–F done, all six v1 corners retired or justified, the
+seven-criterion FW-style validation suite in place, full suite
+5326/5326 GREEN. **But the figure remains inadequate** — its pole wedge
+is only ~5 % filled (a sparse pole scatter, not the solution surface).
+ADR-0025's scope did not include bringing the vector path-network up to
+FW's full region-filling driver, which the figure actually needs. See
+**Amendment 13**, worklog 059, and bead `padetaylor-0ln.40` (the
+plan-first deep-dive that does that port). Amendments 1–12 record the
+Phase A–F exploration outcomes and auditions.
 **Bead**: `padetaylor-0ln.37` (this ADR + the child-bead plan below).
 **Plan**: `docs/v0p2_plan.md`; supersedes the v1-corner ledger of
 worklog 057 (`docs/worklog/057-whole-plane-kkg-surface-figure.md`).
@@ -1335,6 +1340,48 @@ residual `±1°` mask is retained with the explicit connection-formula
 forcing condition above. The v1-Corner Retirement Ledger row is updated
 accordingly. With C4 dispositioned, all six v1 corners are retired or
 rigorously justified.
+
+## Amendment 13 — honest reassessment: the figure is inadequate; the scope was wrong (2026-05-22)
+
+On inspection of the rendered figure the user judged it inadequate, and
+they are right. This amendment records the correction; worklog 059 is
+the full diagnosis.
+
+**The figure does not visualise the solution in the pole wedge.** It
+shows a sparse ~266-pole scatter over a ~95 %-blank region. Phases A–F
+of this ADR are all genuine — the v1 corners *are* retired, the
+validation suite *is* built and mutation-proven, the suite *is*
+5326/5326 GREEN — but they were applied to a structurally inadequate
+substrate.
+
+**The root cause is mis-scoped, not a bug.** `src/VectorPathNetwork.jl`
+is a deliberately **minimal ~156-LOC port** of v0.1's full **1108-LOC**
+`src/PathNetwork.jl` driver — its own docstring says so. The FW 2011
+§3.1 **5-direction wedge** and the **Stage-1 tree** were ported; the
+machinery that actually *fills a region* was not: a **resilient** walk
+(the minimal one `throw`-aborts the entire run on the first unreachable
+target), a **fine-grid** target set (the figure runs 171 coarse
+targets, not a tiling grid), and the **barycentric** Stage-2 fill. With
+pole-density-forced `h≈0.1` discs the wedge (area ~250) needs ~25 000
+tiling nodes; the minimal brittle walk places ~2 000, hence ~5 %.
+
+**ADR-0025's scope was wrong.** It scoped "retire the v1 corners +
+certify the result" *taking the vector path-network as given*. The
+prerequisite — bringing that path-network up to FW's full driver — was
+not in scope, and the Phase-A2 spike that measured the ~5–18 % coverage
+ceiling was wrongly recorded as a *deferred* bead (`0ln.38`) rather than
+treated as a **blocker**. That deferred bead's framing ("a 2D
+re-expansion lattice, a different architecture") was also wrong: it is
+not a different architecture — it is the full FW driver. `0ln.38` is
+superseded by **`padetaylor-0ln.40`**, the plan-first deep-dive that
+ports the full driver and re-does the figure's wedge as a genuine
+filled surface.
+
+**Reusable from this ADR**: the true-radius Stage-2 gate (B1), the
+adaptive `:max_q_root` walk (B2), and the entire VC-4…VC-10 validation
+suite (Phase D) are all sound and carry over to the re-done figure
+unchanged. This ADR stays Accepted for that work; ADR-0026 (under
+`0ln.40`) will govern the full-driver port.
 
 ## References
 

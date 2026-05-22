@@ -65,36 +65,44 @@ docs/design_section_6_path_network.md scope), are all shipped:
 
 **2508 + 32 + 61 = 2601 expected GREEN** (61 new LD.X.* assertions verified in single-file isolation `lattice_dispatcher_test.jl`, 23.4 s; 32 new DG.* assertions verified in single-file isolation `diagnose_test.jl`, 18 s; full `Pkg.test()` not yet re-run — OOM-friction ongoing, see worklogs 048–049; existing 2508 assertions unchanged by additive `strict` kwarg and `:bvp_fail` tag with back-compat `strict = true` default).  Previously: **2508 / 2508 tests passing** as of worklog 047 (`HEAD = 1331755`, all committed; push pending).  The API audit (commit 9296731, worklog 050) made no source changes and adds no new assertions; test count is unchanged at 2601 expected GREEN.  The 12 spawned beads from the audit constitute the v1.0 normalisation work backlog.
 
-## ✅ DONE — headline-figure re-resolution (bead `padetaylor-0ln.37`, worklog 058)
+## 🔴 PRIORITY — port the full FW path-network driver to the vector solver (bead `padetaylor-0ln.40`)
 
-**The headline-figure deep-dive is complete** (ADR-0025, worklog 058,
-2026-05-22). The KKG 7.4/7.5 surface figure was re-resolved to
-senior-engineer grade across six phases (A exploration → B wedge levers →
-C sector → D validation → E Stokes strips → F integration), 20 child
-beads, serial Opus implementation. Outcome:
+**The headline figure is not done.** Bead `0ln.37` (ADR-0025, worklog
+058) ran a six-phase deep-dive on the KKG 7.4/7.5 P_I⁽²⁾ tritronquée
+figure and *did* complete its scoped work — all six v1 corners retired
+or justified, a seven-criterion FW-style validation suite built, full
+suite 5326/5326 GREEN. **But the rendered figure is inadequate**: its
+pole-rich wedge is only ~5 % filled — a sparse 266-pole scatter over a
+~95 %-blank region, not the solution surface KKG plot. **Read worklog
+059 first** — it is the honest diagnosis.
 
-- **All six v1 corners retired or rigorously justified** (`extrapolate=
-  true` gone — true-radius Stage-2 gate; adaptive `:max_q_root` walk;
-  401² grid; ±1° Stokes strip; exact-radius ray-fan voter; BVP-interior
-  inner-arc data).
-- **The wedge is a 266-pole FW-validated pole field** (was 21). The A2
-  spike proved a *filled* honest wedge surface is architecturally
-  infeasible — the honest deliverable is the pole *field* (FW Fig 4.7
-  idiom). KKG drew no poles, so the figure is certified by a manufactured
-  FW-style validation suite: VC-4 dominant-balance `A∈{−1,−3}` per pole,
-  VC-5 conjugate symmetry, VC-7 loop closure, VC-8 BVP consistency, VC-9
-  the Weierstrass-℘ vector-pipeline oracle, VC-10 the two-run indicator.
-- Full suite **5326 / 5326 GREEN**;
-  `figures/output/kkg_pi2_tritronquee_surface.png` re-rendered.
+**Root cause (worklog 059).** `src/VectorPathNetwork.jl` is a
+deliberately **minimal ~156-LOC port** of v0.1's full **1108-LOC**
+`src/PathNetwork.jl` driver — its own docstring says so. The FW 2011
+§3.1 5-direction wedge and the Stage-1 tree were ported; the machinery
+that actually *fills a region* was not — a **resilient** walk (the
+minimal one `throw`-aborts the whole run on the first unreachable
+target), a **fine-grid** target set (the figure runs 171 coarse
+targets, not a tiling grid), and the **barycentric** Stage-2 fill. With
+pole-density-forced `h≈0.1` discs the wedge (area ~250) needs ~25 000
+tiling nodes; the brittle minimal walk places ~2 000 then aborts.
 
-`0ln.23` was absorbed (B2). Two deferred beads opened under the epic
-(each with a forcing condition): a 2D-lattice re-expansion fill for a
-filled wedge surface; an `n_terms ≥ 3` inner-arc asymptotic seed.
+**The work — bead `padetaylor-0ln.40`** (a plan-first DEEP-DIVE, the
+`0ln.37` pattern): recon → an ADR (ADR-0026) → child beads → serial
+implementation → re-verify. Bring `VectorPathNetwork` / `Vector
+PathNetworkStage2` up to v0.1 `PathNetwork.jl`'s full driver capability
+(resilient fine-grid walk + barycentric fill), then re-do the figure's
+wedge as a genuine filled honest surface. The deep-dive **must measure**
+the achieved coverage — do not assume the full driver succeeds (though
+the envelope says it should); report any genuinely-intractable residual
+honestly. The B1 true-radius gate, the B2 adaptive `:max_q_root` walk,
+and the entire VC-4…VC-10 validation suite from `0ln.37` are sound and
+carry over unchanged. `0ln.38` (the mis-framed "2D-lattice" deferral) is
+superseded by `0ln.40`.
 
-**The next substantive task is V9** (`padetaylor-0ln.19`) — v0.2 docs +
-release prep: README/CHANGELOG/RESEARCH v0.2 sections, ADR review
-(ADR-0023/0024/0025 are new), HANDOFF refresh, the `padetaylor-0ln` epic
-close-out.
+**After `0ln.40`**: V9 (`padetaylor-0ln.19`) — v0.2 docs + release prep
+(README/CHANGELOG/RESEARCH v0.2 sections, ADR review — ADRs 0023/0024/
+0025/0026 are new — and the `padetaylor-0ln` epic close-out).
 
 **Next pickup (2026-05-21 — whole-plane KKG surface session close)**: **the
 vector BVP solver, V8b, and the whole-plane headline figure are all done.**
