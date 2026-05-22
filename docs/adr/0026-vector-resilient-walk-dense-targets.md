@@ -243,6 +243,78 @@ fixed `h` thread the *outer* wedge `|x| → 20` where pole density grows,
 or does the outer wedge force a finer global `h`? — is settled by
 *measurement* in the R1 re-probe over the full wedge, not assumed.
 
+## Amendment 3 (2026-05-22) — full pole-field diagnosis; the corrected plan
+
+A four-workstream diagnosis (pole census + `src/` heresy audit + figure
+heresy audit + KKG-theory query) resolved the coverage question — and
+corrected Amendment 1/2's framing.
+
+**Theory (KKG 2015, cited via `references/tex/.../tritronquee_coeff.tex`).**
+The P_I⁽²⁾ tritronquée pole spacing scales as **|x|⁻¹ᐟ⁶** — a *very weak*
+power (Stokes exponent `(6/7)x⁷ᐟ⁶`). Over |x| ∈ [2,20] that is only a
+~1.5× scale variation. The uniform-scale coordinate is **ζ = x⁷ᐟ⁶** (the
+P_I⁽²⁾ analogue of FFW 2017's `log` map for PIII/PV).
+
+**Measurement (245 extracted poles).** Pole spacing is ~flat at **0.70**
+across |x| ∈ [5,20] — consistent with the weak |x|⁻¹ᐟ⁶ law within noise.
+The honest B1 disc radius is a **constant 0.106 × the local pole
+spacing**, uniformly across the wedge: the system already *behaves*
+scale-covariantly.
+
+**The correction.** Amendment 1/2 (and the orchestrator's interim
+"scale-mismatch ceiling" hypothesis) are **partly superseded**: the
+field is *nearly uniform-scale* over |x| ≤ 20, so a fixed `h = 0.1` is
+~14 % of the local pole spacing — roughly appropriate everywhere. The
+~12 % coverage is **not** dominantly a scale mismatch. There is no
+"architectural ceiling" either (Amendment 1's interim worry). R1 (fixed
+`h`) correctly fixed the *collapse*, but fixed `h` is itself a scale
+heresy and is not the coverage answer.
+
+**The real bottlenecks (measured, none architectural):**
+
+1. **`h` is ~2× too big.** The honest disc is ~0.044; the step `h` is
+   0.1. The walk steps past where each Padé is honestly valid → gaps
+   *along every filament*. `h` should be ≈ the honest disc.
+2. **Coverage is node-density-limited.** Honestly tiling the wedge needs
+   ~40–100 k well-spread discs of radius ~0.044; the runs lay ~8 k. Pure
+   node count — feasible (the collapsed adaptive run laid 135 k).
+3. **The walk re-walks covered ground.** It skips a target only on
+   *exact* coincidence (`VectorPathNetwork.jl` `10·eps` test), so dense
+   targets make it re-traverse covered area; the redundant chords clip
+   poles → the non-monotonic `:all_candidates_failed` regression.
+
+**The scale-fixing heresies are real** (`src/` audit: the `h = 0.5`
+default in `VectorPathNetwork.jl`/`PathNetwork.jl`; figure audit:
+`SURF_PN_H`, `cluster_atol = 0.2`, `radius_t = 5`). A general solver
+*must* be scale-covariant, so they are fixed on principle — but for this
+near-uniform field they are hygiene, not the coverage lever. The
+exception: `cluster_atol = 0.2` is an absolute cluster tolerance that
+wrongly merges/splits poles → it affects the pole *count*.
+
+**Unresolved — gates the fix.** The two audits *conflict* on the
+`_adaptive_h` collapse mechanism (D3 "geometric sink" vs the `src/`
+audit "the pole cap is a genuine absolute z-distance, legitimate").
+Working hypothesis: spurious near-origin shared-`Q` roots poison
+`min|t*|` (consistent with the 37 % Froissart-doublet VC-4 prune rate).
+This must be resolved first — any pole-distance-based `h` law is
+vulnerable to it.
+
+**The corrected plan (supersedes R1 as the endpoint):**
+
+- **S1** — resolve the `_adaptive_h` / spurious-root mechanism (focused
+  diagnostic) so the new `h` law rests on solid ground.
+- **S2** — make `h` *scale-derived*: from the local pole distance, sized
+  ≤ the honest B1 disc. Implements scale covariance, fixes bottleneck 1,
+  tracks |x|⁻¹ᐟ⁶ for free. (Re-scopes bead `cqk`/"R2".)
+- **S3** — *skip-if-covered*: the walk skips a target already inside a
+  visited node's disc → kills the chording regression (bottleneck 3).
+- **S4** — scale-derive `cluster_atol` (a fraction of the local pole
+  spacing) → correct pole count.
+- **S5** — dense targets + S1–S4 → re-probe, measure coverage climbing
+  toward full, then render.
+- ζ = x⁷ᐟ⁶ coordinate — principled, low payoff over |x| ≤ 20; deferred
+  to its own bead.
+
 ## References
 
 - `docs/worklog/059-headline-figure-honest-reassessment.md`
