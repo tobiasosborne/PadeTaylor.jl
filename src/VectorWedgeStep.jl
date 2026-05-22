@@ -234,35 +234,50 @@ Base.showerror(io::IO, e::VectorWalkError) = print(io, e.msg)
 # walk's step must stay ≲ that honest disc so adjacent filaments tile
 # without gaps.  `D_local` is the distance to the *nearest* pole, which
 # for a mid-field node is roughly half the local pole spacing — so the
-# honest disc is ≈ 0.106 × (2·D_local) ≈ 0.21 × D_local.  Setting
-# `SAFETY = 0.25` puts the step a touch above the honest disc (a small
-# overlap budget — the B1 Stage-2 gate still clips any node whose own
-# disc is genuinely smaller), and well clear of the `POLE_SAFETY = 0.5`
-# regime that the old law used, which would have placed `h` at ≈ 2× the
-# honest disc and re-opened the along-filament gaps Amendment 3 flagged
-# as bottleneck 1.
+# honest disc is ≈ 0.106 × (2·D_local) ≈ 0.21 × D_local.  `SAFETY` ≈ 0.21
+# sizes the step *at* the honest disc; a value below that gives a small
+# tiling-overlap budget.
 #
-# S6b (ADR-0026 Amendment 5) — *attempted* lowering 0.25 → 0.10 and
-# REVERTED.  The S6c inner-wedge sweep
-# (`external/probes/coverage-plateau-f4e/probe_s6_sweep.jl`) confirmed
-# Amendment 5's premise that a smaller `SAFETY` lifts honest coverage:
-# at order 36, `SAFETY` 0.25→0.15→0.10 lifts inner-wedge coverage
-# 0.232→0.289→0.314.  But lowering `SAFETY` *regresses the `src/`
-# pole-extraction test suite* — VPN.1.1 / VPN.3.1 / VPN.4.3 / VPO.4 all
-# go RED at both `SAFETY = 0.15` and `0.10` (verified by mutation: the
-# pristine `0.25` suite is GREEN).  Root cause (CLAUDE.md Rule 2): the
-# pole extractor `extract_poles_shared_q` filters denominator roots by a
-# `radius_t` window in the *rescaled* variable `t = Δz/h`, and a smaller
-# `SAFETY` shrinks the step `h`, so the *same physical pole* maps to a
-# larger `|t*|` and falls outside the `radius_t` window — fewer nodes
-# root it, so the `min_support ≥ 2` cross-node filter empties the field.
-# `SAFETY` and the `radius_t` `t`-window are therefore *coupled*: the
-# S5-diag premise that `SAFETY` is a free calibration knob is incomplete.
-# Lowering `SAFETY` is sound for coverage but needs `radius_t` (or the
-# extractor's `t`-window) to scale with the step law first — a separate
-# fix, outside the S6 calibration scope.  `SAFETY` is held at the
-# verified `0.25` until that coupling is addressed.
-const SAFETY = 0.25
+# S6b/S7 (ADR-0026 Amendment 5 / Amendment 6) — `SAFETY` lowered
+# 0.25 → 0.10.  The S6c inner-wedge sweep
+# (`external/probes/coverage-plateau-f4e/probe_s6_sweep.jl`) measured
+# that a smaller `SAFETY` lifts honest coverage: at order 36, `SAFETY`
+# 0.25→0.15→0.10 lifts inner-wedge coverage 0.232→0.289→0.314 (+9 pp) —
+# sizing the step to the honest B1 disc rather than ≈ 2.4× it closes the
+# along-filament gaps Amendment 3 flagged as bottleneck 1.
+#
+# Amendment 5's S6b *attempt* to lower `SAFETY` was reverted at the time
+# because it regressed the `src/` pole-extraction suite (VPN.1.1 /
+# VPN.3.1 / VPN.4.3 / VPO.4 went RED — empty pole fields).  That was NOT
+# a `SAFETY` defect: it was the `radius_t` *scale-fixing heresy* in
+# `extract_poles_shared_q`.  The old far-root filter kept denominator
+# roots by `|t*| ≤ radius_t` — a window in the *rescaled* variable
+# `t = Δz/h` — i.e. a window of a fixed number of *per-node steps*.  A
+# smaller `SAFETY` shrinks `h`, so the *same physical pole* at a fixed
+# z-distance maps to a larger `|t*| = D/h`, falls outside the window,
+# and is discarded — fewer nodes root it, the `min_support ≥ 2` filter
+# empties the field.  S7 (bead `padetaylor-gt1`, ADR-0026 Amendment 6)
+# fixed that: `extract_poles_shared_q` now filters by the root's
+# **z-plane distance** `h_node·|t*|` against a scale-STABLE z-radius
+# `radius_t·h_max` (`h_max` = the walk's step ceiling, `h`-independent).
+# The filter no longer shrinks with the per-node `h`, so lowering
+# `SAFETY` keeps `min_support` voting healthy and the `src/` suite
+# GREEN — the coupling Amendment 5 hit is gone.  `SAFETY = 0.10` is the
+# measured coverage-best value, now unblocked.
+#
+# S7 also surfaced — and fixed — a *second* facet of the same
+# `|t*|`-heresy: `extract_poles_shared_q` chose each cluster's
+# representative as the smallest-`|t*|` candidate, which under the
+# adaptive per-node `h` is a coarse-`h` *far* node, not the accurate
+# z-plane-closest one.  The representative is now ordered by z-plane
+# node-to-pole distance (see `VectorPoleField.extract_poles_shared_q`).
+# With the finer `SAFETY = 0.10` step the `:max_q_root` selector steers
+# the walk to wider-of-the-pole nodes, so the VPO.4 ℘-oracle's lone far
+# target was additionally given a near-pole companion so the walk
+# genuinely threads *past* the pole — the FW-faithful "walk past the
+# pole to extract it" (the test's stated intent), not a tolerance
+# relaxation.
+const SAFETY = 0.10
 
 # The adaptive step floor, as a fraction of `h_max`: `h_min = H_MIN_RATIO
 # · h_max`.  A walk threading a dense pole field legitimately takes small

@@ -38,19 +38,63 @@ For every visited node `k`:
      — the local approximant lives in the rescaled variable
      `t = (z - z_node)/h_node`, so a denominator root `t*` is a pole at
      `z_node + t*·h_node` (`src/PoleField.jl`, "z = z_v + h·t*").
-  3. Discard far roots — keep only `|t*| ≤ radius_t`; a local Padé
-     built from a Taylor jet of radius `~|h|` reliably places only
-     singularities within a few steps of its centre.
+  3. Discard far roots — keep only roots whose **z-plane distance**
+     `h_node·|t*|` from the node is within a scale-stable z-radius; a
+     local Padé built from a Taylor jet of radius `~|h|` reliably
+     places only singularities within a few steps of its centre.  The
+     z-radius is `radius_t · h_max` — a few steps measured at the
+     walk's step *ceiling* `h_max`, NOT at the per-node adaptive `h`
+     (see "The `radius_t` scale-covariance fix" below).
+
+## The `radius_t` scale-covariance fix (ADR-0026 Amendment 6 §S7)
+
+The far-root filter used to keep roots by `|t*| ≤ radius_t` — `|t*|`
+being the root magnitude in the *rescaled* variable `t = Δz/h_node`.
+That is a window of "a fixed number of *steps*."  It is a **scale-
+fixing heresy**: when the adaptive step `h_node` shrinks (a smaller
+`SAFETY`, a denser pole pocket), the *same physical pole* at a fixed
+z-distance `D` from a node maps to a *larger* `|t*| = D/h_node`, falls
+outside the `radius_t` window, and is discarded.  Fewer nodes then
+root it, and the `min_support ≥ 2` cross-node filter empties the pole
+field — measured: lowering `SAFETY` 0.25→0.10 emptied four `src/`
+test fields (ADR-0026 Amendment 6).
+
+The fix accepts a root by its **z-plane distance** `h_node·|t*|`
+against a z-radius tied to a **scale-stable** quantity that does *not*
+shrink with the per-node `h`: `h_max = maximum(|visited_h|)`, the
+walk's step ceiling.  `h_max` is `h`-independent — the walk's `h`
+ceiling is set once by the caller and the root node always carries
+exactly `C(h_max)` (`VectorPathNetwork.jl`), so `maximum(|visited_h|)`
+recovers it exactly.  The acceptance test becomes
+
+    h_node · |t*|  ≤  radius_t · h_max
+
+— "the pole is within `radius_t` steps *at the ceiling scale*."  This
+is genuinely scale-covariant: it is a pure z-plane-distance test and
+contains no absolute length (`radius_t` is dimensionless, `h_max`
+carries the problem's scale, so `radius_t·h_max` rescales with the
+problem — poles spaced 0.01 or 100 are treated identically).  For a
+default near-uniform-`h` walk every `h_node ≈ h_max`, so the test
+reduces to the old `|t*| ≤ radius_t` — **legacy behaviour is exactly
+preserved** for the default-`h` case.  When `h_node` shrinks, the
+`t*`-window correspondingly widens (`|t*| ≤ radius_t·h_max/h_node`),
+so the same physical pole keeps being rooted and `min_support` voting
+stays healthy.
 
 Then **cluster across nodes** (the cross-node support filter v0.1's
 `_extract_poles_core` uses): many neighbouring nodes each "see" the
-same physical pole; greedy clustering in increasing `|t*|` makes the
-best-placed (smallest-`|t*|`) candidate the cluster representative,
-and a cluster is reported as a physical pole only when at least
-`min_support` *distinct* nodes independently place a root in it.  A
-node-local linear-system artefact does not recur at the same `z` from
-independent nodes, so the cross-node filter is the load-bearing
-spurious-pole guard — exactly as in the scalar `PoleField`.
+same physical pole; greedy clustering in increasing **z-plane
+node-to-pole distance** makes the best-placed candidate — the one
+whose birthing node is physically closest to the pole — the cluster
+representative, and a cluster is reported as a physical pole only when
+at least `min_support` *distinct* nodes independently place a root in
+it.  (v0.1's scalar `PoleField` ordered by `|t*|`; the vector walk's
+per-node adaptive `h` makes `|t*|` an unreliable proxy for node
+proximity — see "Why the representative is the z-plane-closest node"
+in `extract_poles_shared_q`'s docstring.)  A node-local linear-system
+artefact does not recur at the same `z` from independent nodes, so the
+cross-node filter is the load-bearing spurious-pole guard — exactly as
+in the scalar `PoleField`.
 
 ## Fail-fast / fail-soft
 
@@ -120,20 +164,36 @@ Pole locations of the vector system carried by `sol`, in the z-plane.
 
 For every visited node the roots of the stored **shared** denominator
 `Q` are mapped back to the z-plane (`z = z_node + t*·h_node`), filtered
-by `radius_t`, and clustered across nodes:
+by their z-plane distance, and clustered across nodes:
 
-  - `radius_t`     — keep only roots with `|t*| ≤ radius_t`; a local
-                     shared-`Q` Padé does not reliably place distant
-                     singularities (default `5.0`, a few steps).  `t`
-                     is the *dimensionless* rescaled variable `Δz/h`,
-                     and post-S2 `h` is itself scale-derived (sized
-                     near the local pole-free disc), so `radius_t` as
-                     "a few steps" is **already scale-covariant** —
-                     `radius_t · h` is a genuine local-scale z-distance.
-                     It needs no change post-S2 (ADR-0026 Amendment 3
-                     §S4): the audit-flag on `radius_t` is discharged
-                     because the heresy was an *absolute* length, and
-                     `radius_t` was never one.
+  - `radius_t`     — the far-root filter, in units of "steps at the
+                     walk's step *ceiling* `h_max`".  A root `t*` from
+                     a node with step `h_node` is kept iff its z-plane
+                     distance from the node satisfies
+
+                         h_node · |t*|  ≤  radius_t · h_max
+
+                     where `h_max = maximum(|visited_h|)` is the
+                     walk's step ceiling — a fixed, `h`-independent
+                     scale.  A local shared-`Q` Padé does not reliably
+                     place distant singularities (default `5.0`, a few
+                     steps at the ceiling scale).
+
+                     This is the ADR-0026 Amendment 6 §S7 scale-
+                     covariance fix.  The *old* filter kept roots by
+                     `|t*| ≤ radius_t` — a window of a fixed number of
+                     *per-node* steps `h_node` — which discarded a
+                     fixed-z-distance pole as soon as the adaptive
+                     `h_node` shrank (`|t*| = D/h_node` grew past the
+                     window).  Filtering on the z-plane distance
+                     against the `h`-independent `h_max` cures that:
+                     the test is a pure z-distance comparison with no
+                     absolute length, so it is genuinely scale-
+                     covariant, and for a default near-uniform-`h`
+                     walk (`h_node ≈ h_max`) it reduces *exactly* to
+                     the legacy `|t*| ≤ radius_t` — backward
+                     compatible.  See the module docstring, "The
+                     `radius_t` scale-covariance fix".
   - `cluster_atol` — the across-node merge tolerance.  Two regimes:
       * `nothing` (default) — **scale-derived** mode.  Two candidates
         from nodes `i`, `j` merge iff their z-plane separation is
@@ -155,25 +215,63 @@ by `radius_t`, and clustered across nodes:
 Because the denominator `Q` is *shared* across all `d` components, the
 returned poles are every component's poles at once — a single
 consistent estimate of the vector system's movable singularities.
-Each reported pole is its cluster representative — the candidate seen
-at the smallest `|t*|`, i.e. by the closest node.  Returns one
-`Complex{T}` per physical pole, in order of discovery.
+Each reported pole is its cluster representative — the candidate
+placed by the **node closest to it in the z-plane** (the smallest
+node-to-pole z-distance `h_node·|t*|`).  Returns one `Complex{T}` per
+physical pole, in order of discovery.
+
+## Why the representative is the z-plane-closest node, not min-`|t*|`
+
+The greedy clustering picks each cluster's representative as the
+*first* candidate to land in it; the candidates are visited in an
+order that must put the **best-placed** one first.  v0.1's scalar
+`PoleField` ordered by `|t*|` — under a *uniform* step `h` the
+smallest-`|t*|` root is the one from the node physically closest to
+the pole, hence the most reliably placed (a Padé places a near pole
+better than a far one).  But the vector walk has a **per-node adaptive
+`h`** (ADR-0026 Amendment 4): a node *closer* in the z-plane but with
+a *smaller* `h` carries a *larger* `|t*| = z_dist/h`.  Ordering by
+`|t*|` would then crown a coarse-`h` *far* node over a fine-`h` *near*
+one — and the near node's placement is the accurate one (measured: a
+℘-pole walk placed the pole at `4·10⁻⁵` from its min-`|t*|` node but
+`6·10⁻⁷` from the z-plane-closest node — ADR-0026 Amendment 6 §S7).
+`|t*|` is a per-node-step-relative quantity, not scale-stable — the
+same heresy as the old `radius_t` filter.  The clustering therefore
+orders candidates by the **z-plane node-to-pole distance**
+`h_node·|t*|`, the genuinely scale-covariant "which node is closest"
+measure.
 """
 function extract_poles_shared_q(sol::VectorPathNetworkSolution{T};
                                 radius_t::Real               = 5.0,
                                 cluster_atol::Union{Nothing,Real} = nothing,
                                 min_support::Integer         = 2) where {T}
-    C      = Complex{T}
-    radius = T(radius_t)
+    C = Complex{T}
+
+    # The far-root filter is a z-plane-distance test against a
+    # scale-STABLE z-radius (ADR-0026 Amendment 6 §S7).  The scale is
+    # `h_max` — the walk's step ceiling — recovered as the largest
+    # per-node step `|visited_h|`.  `h_max` is `h`-independent: the
+    # caller sets the ceiling once and the root node always carries
+    # exactly `C(h_max)`, so the maximum recovers it.  A root `t*` from
+    # a node with step `h_node` is kept iff `h_node·|t*| ≤ radius_z`.
+    # For an empty solution there are no nodes — `radius_z` is unused
+    # (the loop below is empty) — so a `0` placeholder is harmless.
+    h_max    = isempty(sol.visited_h) ? zero(T) :
+               maximum(abs, sol.visited_h)
+    radius_z = T(radius_t) * h_max
 
     # Legacy absolute mode iff the caller pinned a `Real`; the
     # scale-derived mode (the default) is signalled by `nothing`.
     legacy_atol = cluster_atol === nothing ? nothing : T(cluster_atol)
 
-    # (pole_z, |t*|, node-index, local-h) candidates gathered from every
-    # node.  `local_h` — the magnitude of the birthing node's step — is
-    # the per-candidate local scale the scale-derived cluster tolerance
-    # is a fraction of (ADR-0026 Amendment 3 §S4).
+    # (pole_z, z_dist, node-index, local-h) candidates gathered from
+    # every node.  `z_dist = |h_node·t*|` is the z-plane distance from
+    # the birthing node to the pole — the scale-covariant "how close is
+    # this node" measure the greedy clustering orders by (see the
+    # docstring, "Why the representative is the z-plane-closest node").
+    # `local_h` — the magnitude of the birthing node's step — is the
+    # per-candidate local scale the scale-derived cluster tolerance is a
+    # fraction of (ADR-0026 Amendment 3 §S4).
     candidates = Tuple{C, T, Int, T}[]
     for k in eachindex(sol.visited_denominator)
         Q      = sol.visited_denominator[k]
@@ -186,19 +284,32 @@ function extract_poles_shared_q(sol::VectorPathNetworkSolution{T};
 
         for t in roots(Polynomial(Q))
             t_C = C(t)
-            abs(t_C) ≤ radius || continue          # far-root artefact
-            # Map the rescaled-variable root to the z-plane.  The h
-            # factor is load-bearing: t lives in t = (z - z_node)/h.
+            # Far-root filter — ADR-0026 Amendment 6 §S7.  Accept by
+            # the root's z-plane DISTANCE `|h_node·t*|` against the
+            # scale-stable z-radius `radius_z = radius_t·h_max`, NOT by
+            # `|t*|` (a window of a fixed number of per-node steps,
+            # which discards a fixed-z-distance pole when `h_node`
+            # shrinks).  The h factor is load-bearing: t lives in
+            # t = (z - z_node)/h, so the pole sits at z-distance
+            # |h_node·t*|.
+            z_pole   = C(z_node + h_node * t_C)
+            z_dist   = abs(z_pole - C(z_node))      # = |h_node·t*|
+            z_dist ≤ radius_z || continue
             push!(candidates,
-                  (C(z_node + h_node * t_C), T(abs(t_C)), k, T(abs(h_node))))
+                  (z_pole, T(z_dist), k, T(abs(h_node))))
         end
     end
 
-    # Greedy clustering in increasing |t*|: the best-placed (smallest
-    # |t*|) candidate to land in a cluster becomes its representative;
-    # later candidates only add cross-node support.  A cluster is a
-    # physical pole only when ≥ min_support distinct nodes land a root
-    # in it — node-local artefacts never accrue cross-node support.
+    # Greedy clustering in increasing z-plane node-to-pole distance
+    # `z_dist`: the best-placed candidate — the one whose birthing node
+    # is *physically closest* to the pole — lands first and becomes the
+    # cluster representative; later candidates only add cross-node
+    # support.  Ordering by `z_dist` (not the per-node-step-relative
+    # `|t*|`) is the ADR-0026 Amendment 6 §S7 scale-covariance fix — see
+    # the docstring, "Why the representative is the z-plane-closest
+    # node".  A cluster is a physical pole only when ≥ min_support
+    # distinct nodes land a root in it — node-local artefacts never
+    # accrue cross-node support.
     #
     # The merge test compares a candidate against each representative.
     # In scale-derived mode the tolerance for a (candidate, rep) pair is
@@ -206,7 +317,7 @@ function extract_poles_shared_q(sol::VectorPathNetworkSolution{T};
     # smaller-step choice, so a candidate born at a fine local scale is
     # never absorbed into a rep born at a coarse one (and vice versa).
     # In legacy mode it is the fixed absolute `legacy_atol`.
-    sort!(candidates; by = c -> c[2])
+    sort!(candidates; by = c -> c[2])    # c[2] = z_dist — closest first
     reps     = C[]
     support  = Vector{Set{Int}}()
     rep_h    = T[]                       # local-h of each rep's birth node

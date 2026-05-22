@@ -34,6 +34,12 @@ asserts an invariant against a known-correct value (Rule 5):
     VPN.1.3  pole-extraction     — roots of a hand-built shared Q map
                                    correctly via z = z_node + root·h;
                                    cross-node clustering merges dupes.
+                                   VPN.1.3b — scale-covariant cluster
+                                   tolerance.  VPN.1.3c — scale-covariant
+                                   far-root filter: `radius_t` gates by
+                                   z-distance against the stable `h_max`,
+                                   not `|t*|` against a per-node step
+                                   (ADR-0026 Amendment 6 §S7).
     VPN.1.4  wedge avoidance     — on VPN.1.1's system the walk steers
                                    around the pole (no visited node
                                    lands inside a small disc of p).
@@ -335,6 +341,99 @@ end
                                         cluster_atol = 0.1, min_support = 2)
         @test length(legacy) == 1                 # legacy absolute merge
         @test abs(legacy[1] - 2.5) < 1.0e-12
+    end
+
+    # -------------------------------------------------------------------------
+    # VPN.1.3c — scale-covariant far-root filter (ADR-0026 Amendment 6
+    # §S7, bead padetaylor-gt1).
+    #
+    # `extract_poles_shared_q`'s `radius_t` filter must accept a shared-`Q`
+    # root by its **z-plane distance** `h_node·|t*|` against a
+    # scale-STABLE z-radius `radius_t · h_max` (`h_max =
+    # maximum(|visited_h|)`, the walk's step ceiling) — NOT by `|t*|`
+    # against `radius_t` (a window of a fixed number of *per-node* steps).
+    #
+    # The heresy of the OLD `|t*| ≤ radius_t` filter: when the adaptive
+    # step `h_node` shrinks (a smaller `SAFETY`, a denser pocket), the
+    # *same physical pole* at a fixed z-distance `D` maps to a larger
+    # `|t*| = D/h_node`, falls outside `radius_t`, and is discarded — so
+    # fewer nodes root it and the `min_support ≥ 2` cross-node filter
+    # empties the field.  These hand-built fixtures pin the two
+    # behaviours: (a) a small-`h` field the OLD filter would empty is
+    # KEPT by the new z-distance filter; (b) a default near-uniform-`h`
+    # field is byte-identical under the new filter (legacy preserved).
+    # -------------------------------------------------------------------------
+    @testset "VPN.1.3c scale-covariant far-root filter" begin
+        # --- (a) the small-`h` field the OLD `|t*|`-cutoff empties -------
+        #
+        # A 3-node network.  Node 1 (the root) carries the walk's step
+        # ceiling h_max = 0.5 and a CONSTANT Q (a pole-free seed node —
+        # no root, contributes only the h_max scale).  Nodes 2 and 3 are
+        # downstream adaptive nodes with a SMALL local step h = 0.02 —
+        # each roots the SAME physical pole at z-plane distance D = 0.3
+        # from itself: Q(t) = 1 - t/15 has root t* = 15, so the pole sits
+        # at z_node + 15·h = z_node + 0.3.
+        #
+        #   * OLD filter `|t*| ≤ radius_t = 5`:  |t*| = 15 > 5  →  BOTH
+        #     downstream roots discarded → 0 candidates → EMPTY field.
+        #   * NEW filter `h_node·|t*| ≤ radius_t·h_max`:
+        #     0.02·15 = 0.3 ≤ 5·0.5 = 2.5  →  both kept → min_support = 2
+        #     reports the one physical pole.
+        h_ceiling = 0.5 + 0.0im                  # the walk's h_max
+        h_fine    = 0.02 + 0.0im                 # a shrunk adaptive step
+        Qconst    = ComplexF64[1.0]              # constant Q — no root
+        # Q(t) = 1 - t/15  ⇒  root t* = 15  ⇒  pole at z_node + 0.3.
+        Qfar      = ComplexF64[1.0, -1.0 / 15.0]
+        N1        = [ComplexF64[1.0]]
+        # node 2 at z = 1.00, node 3 at z = 1.0003 — both root the SAME
+        # physical pole at ≈ 1.30 (node 3 offset is sub-h walk noise).
+        sol_small_h = VectorPathNetworkSolution{Float64}(
+            ComplexF64[0.0, 1.00, 1.0003],
+            [ComplexF64[1.0], ComplexF64[1.0], ComplexF64[1.0]],
+            [h_ceiling, h_fine, h_fine],
+            [N1, N1, N1], [Qconst, Qfar, Qfar], [0, 1, 1])
+        # NEW z-distance filter: the small-`h` pole is KEPT — two nodes
+        # root it, the min_support = 2 cross-node filter reports it.
+        kept = extract_poles_shared_q(sol_small_h; radius_t = 5.0,
+                                      cluster_atol = 0.1, min_support = 2)
+        @test length(kept) == 1
+        @test abs(kept[1] - 1.30) < 1.0e-2
+        # Mirror-check the OLD heresy explicitly: with `radius_t` small
+        # enough that even `radius_t·h_max` cannot reach the pole
+        # (radius_t = 0.5 ⇒ radius_z = 0.25 < D = 0.3) the root IS
+        # filtered — proving `radius_t` still genuinely gates by
+        # z-distance, it is not a no-op.
+        gated = extract_poles_shared_q(sol_small_h; radius_t = 0.5,
+                                       cluster_atol = 0.1, min_support = 2)
+        @test isempty(gated)
+
+        # --- (b) legacy default-`h` behaviour is preserved ---------------
+        #
+        # A uniform-`h` two-node network — every node steps at the
+        # ceiling h_max = 0.5, so `h_node ≈ h_max` and the new test
+        # `h_node·|t*| ≤ radius_t·h_max` reduces EXACTLY to the old
+        # `|t*| ≤ radius_t`.  Q(t) = 1 - t/3 has root t* = 3; with
+        # h = 0.5 the pole sits at z_node + 1.5.
+        Qmid = ComplexF64[1.0, -1.0 / 3.0]       # root t* = 3
+        sol_uniform = VectorPathNetworkSolution{Float64}(
+            ComplexF64[0.0, 0.0003],
+            [ComplexF64[1.0], ComplexF64[1.0]],
+            [h_ceiling, h_ceiling],
+            [N1, N1], [Qmid, Qmid], [0, 1])
+        # `|t*| = 3 ≤ radius_t = 5` AND `h·|t*| = 1.5 ≤ radius_t·h_max
+        # = 2.5` — both filters agree, the pole is reported.
+        in_window = extract_poles_shared_q(sol_uniform; radius_t = 5.0,
+                                           cluster_atol = 0.1,
+                                           min_support = 2)
+        @test length(in_window) == 1
+        @test abs(in_window[1] - 1.5) < 1.0e-2
+        # `|t*| = 3 > radius_t = 2` AND `h·|t*| = 1.5 > radius_t·h_max
+        # = 1.0` — both filters agree the root is OUT.  The legacy
+        # "a few steps" semantics is unchanged for a uniform-`h` walk.
+        out_window = extract_poles_shared_q(sol_uniform; radius_t = 2.0,
+                                            cluster_atol = 0.1,
+                                            min_support = 2)
+        @test isempty(out_window)
     end
 
     # -------------------------------------------------------------------------
@@ -1048,6 +1147,23 @@ end
 #        distinct poles), and the `minimum(abs(p - 1.12))` location
 #        assert failed (with the two poles merged, the surviving rep is
 #        at 1.00, so no candidate sits at 1.12).  Restored to GREEN.
+#
+#   M3c — VectorPoleField: revert the scale-covariant far-root filter
+#        (bead padetaylor-gt1, ADR-0026 Amendment 6 §S7).  In
+#        `extract_poles_shared_q`'s root loop, replace the z-distance
+#        test
+#          abs(z_pole - C(z_node)) ≤ radius_z
+#        with the old rescaled-variable cutoff
+#          abs(t_C) ≤ T(radius_t)
+#        (revert to the scale-fixing `|t*|`-window heresy).
+#        Expected: VPN.1.3c case (a) — the small-`h` field whose pole
+#        sits at |t*| = 15 (> radius_t = 5) — has both downstream roots
+#        discarded, so `length(kept) == 1` bites and the field empties.
+#        Result: RED — VPN.1.3c bit (1 fail + 1 error): `length(kept)
+#        == 1` failed (got 0 — the |t*| = 15 cutoff discarded both
+#        small-`h` roots, the min_support = 2 filter emptied the field),
+#        and the `abs(kept[1] - 1.30)` location assert errored on the
+#        empty result.  Restored to GREEN.
 #
 # -- B2 dense-wedge walk mutations (bead padetaylor-0ln.37.6) --
 #

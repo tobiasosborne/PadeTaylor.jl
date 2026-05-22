@@ -215,13 +215,30 @@ const Ω_VPO = 1.3630340904278908
     @testset "VPO.4: vector pole extractor recovers the ℘ lattice pole" begin
         # FW 2011 Fig 4.7 is a pole-location scatter; the vector
         # `extract_poles_shared_q` is its v0.2 capability.  A short
-        # path-network walk from the FW IC out past the nearest ℘ pole
-        # at z = 1 — its shared-`Q` denominator roots place that pole.
+        # path-network walk from the FW IC out *past the nearest ℘ pole
+        # at z = 1* — its shared-`Q` denominator roots place that pole.
         # This mirrors `test/polefield_test.jl` PF.1.1 (a single short
         # network surfaces the nearest pole) for the vector pipeline.
+        #
+        # The target fan is `{1.1, 1.5}` — chosen so the walk genuinely
+        # threads *past* the pole at z = 1, the test's stated intent.
+        # The `1.1` target makes a node land within ≈ 0.1 of the pole;
+        # a local Padé places a *near* pole far more accurately than a
+        # far one, so this is what makes the `1e-5` recovery bar a
+        # robust assertion rather than node-geometry roulette.  The
+        # adaptive `:max_q_root` walk (ADR-0026 Amendment 4) steers to
+        # the *largest* pole-free disc, so with the lone far target
+        # `1.5` alone it arcs ≈ 0.46 *wide* of the pole and places it
+        # only ≈ 1e-4 — accurate to the geometry it actually reached,
+        # but not to this oracle's `1e-5` figure-catalogue bar.  A
+        # target near the pole is the FW-faithful "walk past the pole
+        # to extract it" (FW §5.5 "complete the pole field"); it cannot
+        # sit *on* z = 1 (the adaptive walk caps `h` → 0 onto a pole and
+        # fails loud — VPN.1.1's note), so `1.1` is the honest choice.
         prob = VectorPadeTaylorProblem(fW_vec, ComplexF64[u_0_FW, up_0_FW],
                                        (0.0 + 0im, 1.6 + 0im); order = 30)
-        walk  = vector_path_network_solve(prob, ComplexF64[1.5 + 0im];
+        walk  = vector_path_network_solve(prob,
+                                          ComplexF64[1.1 + 0im, 1.5 + 0im];
                                           h = 0.15)
         poles = extract_poles_shared_q(walk; radius_t = 5.0,
                                        cluster_atol = 0.2,
@@ -305,6 +322,25 @@ end # @testset VPO
 #        to a non-℘ solution and `isapprox(yB0[2], up_0_FW)` goes RED —
 #        confirms VPO.3 genuinely recovers u'(0) via a correct nonlinear
 #        companion solve.  Restored.
+#
+#   M5 — revert the scale-covariant cluster representative ordering
+#        (bead padetaylor-gt1, ADR-0026 Amendment 6 §S7).  In
+#        `extract_poles_shared_q` the candidate tuple's element 2 is the
+#        z-plane node-to-pole distance `z_dist`, and `sort!` orders by
+#        it so the cluster representative is the *z-plane-closest*
+#        node's placement.  Revert it to the per-node-step-relative
+#        `|t*|`: replace
+#          push!(candidates, (z_pole, T(z_dist), k, T(abs(h_node))))
+#        with
+#          push!(candidates, (z_pole, T(abs(t_C)), k, T(abs(h_node))))
+#        Expected: under the adaptive per-node `h` a coarse-`h` *far*
+#        node carries a smaller `|t*|` than a fine-`h` *near* one, so
+#        the representative becomes a far node's (less accurate)
+#        placement and VPO.4's `err_z1 ≤ 1e-5` bar bites.
+#        Result: RED — VPO.4's `err_z1 ≤ 1e-5` failed (the min-`|t*|`
+#        representative placed the ℘ pole at ≈ 4e-5, an order of
+#        magnitude worse than the z-plane-closest node's ≈ 6e-7).
+#        Restored to GREEN.
 #
 # All mutations restored before commit.  Matches the inline
 # mutation-proof pattern of `test/vector_bvp_test.jl` (VB.7.1).
