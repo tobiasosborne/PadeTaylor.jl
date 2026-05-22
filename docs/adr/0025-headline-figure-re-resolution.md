@@ -136,7 +136,7 @@ condition rather than scheduled.)
 | C1 inner-arc asymptotic datum | **Retired** (Amendment 10) — each sector ray BVP extends inward to `R_INNER_BC = 1.05 < R_MIN`, so the inner arc is a BVP-*interior* datum (`~1·10⁻⁴`, vs the series' `~5·10⁻⁴`); voters 2/3 source all four `w`-rectangle edges from the ray fan, the asymptotic series gone from the voter-boundary path | C2 (`0ln.37.10`) |
 | C2 `extrapolate=true` | **Retired** — Lever-1 true-radius gate; no out-of-disc evaluation | B1 |
 | C3 hand-tuned `h=0.1` | **Retired** — Lever-2 adaptive / shared-Q-root step | B2 |
-| C4 `±3°` Stokes mask | **Audition** (Phase E) — fill via overlap, or justify as masked with a forcing condition | E1 |
+| C4 `±3°` Stokes mask | **Retired-or-justified** (Amendment 12) — Phase-E1 audition: the sector ODE solve is healthy *at* the 36° Stokes line and the triple-method vote stays inside the figure's honesty envelope down to a `1°` fan margin, so `SURF_SECTOR_MARGIN_DEG`/`SURF_STITCH_MASK_DEG` are narrowed `4°/3° → 1°/1°` — the grey strip shrinks `6° → 2°` (3× filled with audited-honest harmonic vote); the residual `±1°` mask is retained with a connection-formula forcing condition (deferred bead) | E1 (`0ln.37.18`) |
 | C5 bilinear ray-fan voter | **Retired** (Amendment 10) — audition outcome: a harmonic voter 1 `≡ voter 2` (rejected — collapses ADR-0024 independence), plain bilinear materially too lossy (rejected); voter 1 reconstructed exact-radius (barycentric) + cubic-angular (Catmull-Rom), keeping it a direct ODE solve | C3 (`0ln.37.11`) |
 | C6 `121²` grid / `6°` rays | **Retired** (Amendment 11) — C1 (`0ln.37.9`) lifts the Cartesian raster `121² → 401²` and the ray fan `6° → 2°` (≈ 141 rays); both inside the Phase-F runtime gate (figure test `2m22s`). The coupled "raise the Laplace `N` too" instruction was *not* taken speculatively — the C1 convergence probe falsified the Amendment-10 under-resolution hypothesis (the inner-arc spread is the asymptotic-seed truncation floor, irreducible by any `N`); `SURF_LAP_NX/NY` set to the measured `48/64` spectral knee | C1 (`0ln.37.9`) |
 
@@ -1204,6 +1204,136 @@ in-scope; the figure does not force the v2 seed.
 
 C2, C3, C1 are all shipped; v1 corners C1 (Amendment 10), C5
 (Amendment 10), C6 (this amendment) retired. Phase C is closed.
+
+## Amendment 12 — Phase-E1 C4 audition: the Stokes-strip mask narrowed `±3° → ±1°` (2026-05-22)
+
+Bead `padetaylor-0ln.37.18` (Phase E1) auditions the last open v1
+corner — **C4**, the `±3°`-wide NaN mask straddling each `±36°` Stokes
+line (`surf_in_mask`). The mask exists because the sector ray fan is
+inset `SURF_SECTOR_MARGIN_DEG = 4°` from the Stokes line (the sector
+solver covers `arg x > 40°`) and the wedge B1-gated underlay is sparse
+below `|arg| ≈ 34°` — so the band `arg x ∈ (34°, 40°)` is covered by
+neither region and renders grey. The audition question (Rule 9): is the
+`4°` inset + `3°` mask a genuine numerical limit, or a conservative
+cushion?
+
+### The audition — evidence (`external/probes/stokes-strip-audition/`)
+
+The probe rebuilds the production sector pipeline (`surf_ray_fan` +
+`surf_laplace_voters` — the identical BVP recipe, the identical two
+Laplace solvers, the C3 reconstruction) parametrised on the fan margin,
+sweeping `margin ∈ {4°, 3°, 2°, 1°, 0.5°}`. For each it measures, in
+1°-wide angular bands marching toward the 36° Stokes line: the
+triple-method `surf_vote` spread, and — the independent oracle — the
+voted value's error against a dedicated through-the-point BVP straight
+along the query ray (the same oracle idiom as the PI2S.11 C2/C3
+audition). Two findings:
+
+**1. The sector ODE solve does NOT degrade at the Stokes line.** A
+dedicated through-the-point BVP walked from `arg x = 30°` to `36°`:
+
+| `arg x` | Newton residual | companion-consistency |
+|---------|-----------------|------------------------|
+| 30.0°   | `1.8·10⁻¹¹`     | `4.2·10⁻¹²`            |
+| 33.0°   | `1.3·10⁻¹¹`     | `4.4·10⁻¹²`            |
+| 35.0°   | `1.6·10⁻¹¹`     | `1.1·10⁻¹¹`            |
+| 35.9°   | `1.8·10⁻¹¹`     | `1.3·10⁻¹⁰`            |
+| **36.0°** | **`1.7·10⁻¹¹`** | **`1.8·10⁻¹⁰`**      |
+
+The BVP is as healthy *at* the Stokes line as mid-sector — no blow-up.
+The pole-free sector solution is analytic (harmonic) right up to the
+line; the `4°` inset was a cushion, not a numerical limit. (This is
+expected: the Stokes line is a feature of the *asymptotics* — where the
+recessive exponential of the connection problem switches dominance —
+not a singularity of `V₀`, which is analytic on the whole pole-free
+sector.)
+
+**2. The triple-method vote stays honest down to a `1°` margin.** The
+near-Stokes vote spread + oracle error degrade smoothly toward 36° but
+stay bounded. Measured (upper Stokes line; the lower is the mirror):
+
+| margin | band toward 36° | vote spread med / max | oracle err med / max |
+|--------|-----------------|----------------------|----------------------|
+| 4° | `[40°,41°]` (fan edge) | `8.7·10⁻⁵` / `3.0·10⁻⁴` | `6.3·10⁻⁵` / `1.9·10⁻⁴` |
+| 1° | `[39°,40°]` | `5.2·10⁻⁴` / `1.0·10⁻³` | `1.2·10⁻⁴` / `6.8·10⁻⁴` |
+| 1° | `[38°,39°]` | `9.8·10⁻⁴` / `2.1·10⁻³` | `2.9·10⁻⁴` / `6.9·10⁻⁴` |
+| 1° | `[37°,38°]` (fan edge) | `1.8·10⁻³` / `3.3·10⁻³` | `6.6·10⁻⁴` / `2.2·10⁻³` |
+| 0.5° | `[36.5°,37°]` (fan edge) | `1.9·10⁻³` / `4.3·10⁻³` | `1.3·10⁻³` / `4.1·10⁻³` |
+
+The figure's bulk honesty envelope (PI2S.2) is vote spread median
+`< 3·10⁻³`, max `< 1·10⁻²`, and it already accepts an inner-arc
+seed-floor max of `~6.7·10⁻³` (Amendment 11) as honest. At `margin = 1°`
+the worst near-Stokes band `[37°,38°]` sits at spread max `3.3·10⁻³`,
+oracle error max `2.2·10⁻³` — comfortably inside that envelope and
+below the inner-arc floor. At `margin = 0.5°` the `[36.5°,37°]` band
+oracle error climbs to max `4.1·10⁻³` (still inside the `< 1·10⁻²`
+envelope, but the C3 voter-1 boundary-cell linear fallback is steeply
+`2°`-under-sampled there and the error is climbing fast).
+
+### Decision — narrow the mask `±3° → ±1°` (fill 3× of the grey strip)
+
+`margin = 1°` is the honest frontier; `margin = 0.5°` is rejected (its
+oracle error nearly doubles to `4.1·10⁻³` — the senior-grade call keeps
+`1°` of headroom against the boundary-cell under-sampling). So:
+
+- `SURF_SECTOR_MARGIN_DEG`: **`4° → 1°`** — the sector solver now
+  covers `arg x > 37°`;
+- `SURF_STITCH_MASK_DEG`: **`3° → 1°`** — the mask is `[35°, 37°]`.
+
+The mask half-width is set **equal to the fan margin** — the tightest
+honest choice: the mask covers exactly the band the sector fan does not
+reach (`arg x ∈ (36°, 36°+margin)`), so no in-sector cell the fan
+misses escapes the mask, and no cell the fan reaches is masked. The
+headline figure's grey Stokes strip shrinks from `6°` wide
+(`[33°,39°]`) to `2°` (`[35°,37°]`) — a **3× reduction** — and every
+newly-filled cell is the harmonic triple-method vote, backed by the
+audition's measured spread / oracle-error evidence (no Padé out of
+disc, vote spread controlled).
+
+### Retained — the residual `±1°` mask, with a forcing condition
+
+A *full* fill (mask `→ 0`) is **not** senior-grade-reachable with the
+two-region architecture. The sector ray fan is a *sector* solver — its
+BVP rays are pinned by the `pI2_tritronquee_ic` asymptotic seed and the
+C3 four-ray Catmull-Rom stencil degenerates in the boundary angular
+cell — it cannot straddle the 36° Stokes line itself; and the wedge
+region is disjoint, with the B1-gated underlay sparse near `|arg| ≈
+36°`. The residual `[35°, 37°]` strip is retained.
+
+**Forcing condition for the residual `±1°` mask:** a uniform connection
+formula across the Stokes line (the asymptotics that switch dominance
+*at* the line) would let the sector and wedge solutions be stitched
+continuously through it, closing the last `2°`. That is a genuine new
+piece of mathematics (the KKG 2015 connection problem), not a tuning
+knob — recorded as a **deferred bead** under the v0.2 epic; forcing
+condition: a figure requirement for a gapless Stokes-line stitch.
+
+### Mutation-proven (Rule 4)
+
+`figures/test_kkg_pi2_surface.jl` PI2S.12 pins the audition outcome:
+the narrowed parameters (`SURF_SECTOR_MARGIN_DEG == 1.0`,
+`SURF_STITCH_MASK_DEG == 1.0`, half-width `==` margin), the
+`surf_in_mask` geometry (`[35°,37°]` masked, `≥37°` not), and the
+load-bearing deliverable — the band `arg x ∈ (37.5°,39°)`, left grey by
+the shipped `4°/3°` figure, is now `98.9 %` filled (1036 of 1048 cells)
+by the harmonic triple-method vote, with band vote spread median
+`9.9·10⁻⁴` / max `4.3·10⁻³` (inside the bulk envelope). Reverting
+`SURF_SECTOR_MARGIN_DEG`/`SURF_STITCH_MASK_DEG` to the retired `4°/3°`
+turns PI2S.12 **RED** (16 failed + 1 errored): the newly-filled band
+collapses to all-`NaN`, the parameter pins and the `surf_in_mask`
+geometry checks all fail. The narrowing is genuinely load-bearing.
+With the narrowed values the full `figures/test_kkg_pi2_surface.jl`
+suite is **GREEN at 249344 / 249344** (figure testset wall time
+`2m14s`).
+
+### C4 ledger row — updated
+
+C4 is **Retired-or-justified**: the mask is narrowed `±3° → ±1°` (3×
+of the grey strip filled with audited-honest harmonic vote), and the
+residual `±1°` mask is retained with the explicit connection-formula
+forcing condition above. The v1-Corner Retirement Ledger row is updated
+accordingly. With C4 dispositioned, all six v1 corners are retired or
+rigorously justified.
 
 ## References
 

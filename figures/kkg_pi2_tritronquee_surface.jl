@@ -61,9 +61,11 @@
 #     supplies an honest `|u|` underlay only where the verified node
 #     discs cover.  The rest of the wedge is `NaN` (an honest gap).
 #
-#   The `±36°` Stokes-line strips are `NaN`-masked (the asymptotic seed
-#   and both region solvers degrade there).  Cells outside the `|x| ≤ 20`
-#   disc are `NaN`.  `NaN` cells render in a neutral grey.
+#   A thin `±1°` strip straddling each `±36°` Stokes line is `NaN`-masked
+#   — the band the sector fan does not reach and the wedge underlay does
+#   not honestly cover (ADR-0025 Amendment 12's Phase-E1 audition
+#   narrowed it `±3° → ±1°`).  Cells outside the `|x| ≤ 20` disc are
+#   `NaN`.  `NaN` cells render in a neutral grey.
 #
 # ## Rendering choices (this script's only decisions)
 #
@@ -118,10 +120,15 @@
 #      shared-`Q` pole and `h` adapts to the local density, threading
 #      the B3 extended fan to `|x| ≈ 18-20`.
 #
-#   4. **Stokes-strip masking.**  `±3°` of arc on each `±36°` Stokes line
-#      is `NaN`-masked — both region solvers degrade at the boundary.
-#      *Forcing condition for v2:* a uniform connection formula across the
-#      Stokes line would close the gap (Phase E).
+#   4. **NARROWED (C4) — Stokes-strip masking.**  ADR-0025 Amendment 12's
+#      Phase-E1 audition (bead `padetaylor-0ln.37.18`) narrowed the
+#      masked strip `±3° → ±1°`: the audition measured the sector ODE
+#      solve healthy right up to the 36° Stokes line and the
+#      triple-method vote honest down to a `1°` fan margin.  The grey
+#      strip shrinks 3× (`6° → 2°` total).  *Forcing condition for the
+#      residual `±1°` mask:* a uniform connection formula across the
+#      Stokes line would close the last `2°` (an Amendment-12 deferred
+#      bead).
 #
 # The deferred fully-filled honest wedge *surface* (a 2D-fill
 # architecture) is recorded as a deferred bead under ADR-0025
@@ -283,8 +290,8 @@ const FIGNOTE = string(
     @sprintf("%d extracted poles (black dots) — over an honest partial ",
              length(res.poles)),
     "|u| underlay, B1-gated (no Padé out of disc); display clamped ",
-    @sprintf("to ±%.0f.  Grey: NaN — outside |x|≤20 disc, ±3° Stokes ",
-             SURF_CLAMP),
+    @sprintf("to ±%.0f.  Grey: NaN — outside |x|≤20 disc, ±%.0f° Stokes ",
+             SURF_CLAMP, SURF_STITCH_MASK_DEG),
     "strips, and the wedge gaps the honest B1 gate leaves unfilled.")
 Label(fig[3, 1:3], FIGNOTE; fontsize = 9, padding = (0, 0, 8, 0))
 

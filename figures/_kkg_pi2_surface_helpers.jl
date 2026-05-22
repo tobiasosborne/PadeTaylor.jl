@@ -135,10 +135,12 @@
 # ### The stitch
 #
 # Region 1 (voted) + Region 2 are written onto one `[-20,20]²`
-# Cartesian grid for `Re u` and `Im u`.  The thin strips straddling the
-# sector/wedge boundary (`||arg x| − 36°| < STITCH_MASK_DEG`) are masked
-# with `NaN`: the asymptotic seed degrades near the Stokes lines and
-# neither region's solver is trustworthy there (Rule 9 v1 corner).
+# Cartesian grid for `Re u` and `Im u`.  A thin `±1°` strip straddling
+# the sector/wedge boundary (`||arg x| − 36°| < SURF_STITCH_MASK_DEG`)
+# is masked with `NaN`: it is the band the sector fan does not reach
+# (`arg x < 36° + margin`) and the wedge B1-gated underlay does not
+# honestly cover.  ADR-0025 Amendment 12's Phase-E1 audition narrowed
+# this strip `±3° → ±1°` (v1 corner C4 — see corner 4 below).
 #
 # ## v1 corners (CLAUDE.md Rule 9 — each with its forcing condition)
 #
@@ -172,12 +174,25 @@
 #      The fixed-`h = 0.1` V8b walk *blocks* the extended fan past
 #      `|x| ≈ 8` (A2 §3.1); the B2 walk threads it to `|x| ≈ 18-20`.
 #
-#   4. **Boundary-strip masking.**  `STITCH_MASK_DEG` of arc on each
-#      side of the `±36°` Stokes lines is `NaN`-masked: the asymptotic
-#      seed and both region solvers degrade at the sector boundary.
-#      *Forcing condition for v2:* a uniform connection formula across
-#      the Stokes line would let the two regions be stitched without a
-#      gap (Phase E).
+#   4. **NARROWED (C4) — boundary-strip masking.**  ADR-0025
+#      Amendment 12's Phase-E1 audition (bead `padetaylor-0ln.37.18`)
+#      retires the conservative cushion: `SURF_SECTOR_MARGIN_DEG` and
+#      `SURF_STITCH_MASK_DEG` are narrowed `4° → 1°` and `3° → 1°`.  The
+#      audition (`external/probes/stokes-strip-audition/`) measured the
+#      triple-method vote spread + an independent dedicated-BVP oracle
+#      error in 1°-wide bands marching toward the 36° Stokes line: the
+#      sector ODE solve does NOT degrade at the line (Newton residual
+#      `1.7·10⁻¹¹`, companion-consistency `1.8·10⁻¹⁰` *at* `36°`), and
+#      pushed to a `1°` margin the near-Stokes band `[37°,38°]` stays
+#      inside the figure's bulk honesty envelope (vote spread max
+#      `3.3·10⁻³`, oracle error max `2.2·10⁻³` — both below the
+#      already-accepted `~6.7·10⁻³` inner-arc seed floor).  The grey
+#      Stokes strip shrinks from `6°` (`[33°,39°]`) to `2°`
+#      (`[35°,37°]`) — a 3× reduction.  *Forcing condition for the
+#      residual `±1°` mask:* the sector fan is a *sector* solver and the
+#      wedge a disjoint region — neither can straddle the Stokes line
+#      itself; a uniform connection formula across the line would close
+#      the last `2°` (Amendment-12 deferred bead).
 #
 #   5. **RETIRED — bilinear ray-fan voter (C5).**  Voter 1 sampled the
 #      ray fan onto a `40`-row polar raster and *bilinearly*
@@ -305,9 +320,37 @@ const SURF_GRID_N = 401          # 401×401 — odd so a node sits on 0.
 # the negative real axis (arg x = 180°).  So the sector is
 # arg x ∈ (36°, 324°); the wedge is |arg x| < 36°.
 const SURF_WEDGE_HALF_DEG = 36.0
-# The ray fan stays a few degrees inside the Stokes lines — the seed
-# degrades at the boundary (v1 corner 4).
-const SURF_SECTOR_MARGIN_DEG = 4.0
+# The ray fan stays `SURF_SECTOR_MARGIN_DEG` inside each Stokes line, so
+# the sector solver covers `arg x > 36° + margin`.
+#
+# C4 (ADR-0025 Amendment 12, bead `padetaylor-0ln.37.18`) — the Phase-E1
+# Stokes-strip audition.  The shipped figure used `margin = 4°` (a
+# conservative cushion).  The audition (`external/probes/stokes-strip-
+# audition/`) measured the triple-method vote spread + an independent
+# dedicated-BVP oracle error in 1°-wide angular bands marching toward the
+# 36° Stokes line, for a margin sweep `4° → 0.5°`.  Two findings forced
+# the narrowing:
+#
+#   * the sector ODE solve does NOT degrade at the Stokes line — a
+#     dedicated through-the-point BVP at `arg x = 36.0°` has Newton
+#     residual `1.7·10⁻¹¹` and companion-consistency `1.8·10⁻¹⁰`, as
+#     healthy as a mid-sector ray.  The pole-free sector solution is
+#     analytic (harmonic) right up to the Stokes line; the 4° inset was
+#     a cushion, not a numerical limit;
+#   * pushed to `margin = 1°` (fan edge at `37°`), the near-Stokes band
+#     `[37°,38°]` has vote spread median `1.8·10⁻³` / max `3.3·10⁻³` and
+#     oracle error median `6.6·10⁻⁴` / max `2.2·10⁻³` — comfortably
+#     inside the figure's bulk honesty envelope (PI2S.2: median `< 3·10⁻³`,
+#     max `< 1·10⁻²`) and below the inner-arc seed floor (`~6.7·10⁻³`,
+#     Amendment 11) the figure already accepts as honest.
+#
+# `margin = 1°` is the honest frontier: `margin = 0.5°` (fan edge `36.5°`)
+# was probed and rejected — its `[36.5°,37°]` band oracle error climbs to
+# max `4.1·10⁻³` (still inside the `< 1·10⁻²` envelope, but the C3
+# voter-1 boundary-cell linear fallback is steeply 2°-under-sampled there;
+# the senior-grade call keeps `1°` of headroom).  The mask narrows in
+# lockstep (`SURF_STITCH_MASK_DEG`).
+const SURF_SECTOR_MARGIN_DEG = 1.0
 
 # Ray-fan radii.  r_min ≈ 2 (the inner arc of the conformal rectangle),
 # r_max = 20 (the grid corner radius is 20√2 ≈ 28, but the sector pins
@@ -456,7 +499,28 @@ const SURF_MIN_SUPPORT  = 2
 
 # --- The stitch ----------------------------------------------------------
 # Half-width (degrees) of the NaN-masked strip on each Stokes line.
-const SURF_STITCH_MASK_DEG = 3.0
+#
+# C4 (ADR-0025 Amendment 12, bead `padetaylor-0ln.37.18`) — the Phase-E1
+# Stokes-strip audition narrows the mask `3° → 1°` in lockstep with
+# `SURF_SECTOR_MARGIN_DEG` (`4° → 1°`).  The mask must cover exactly the
+# band NEITHER region honestly carries: the sector solver reaches down to
+# `arg x = 36° + margin`, and the wedge B1-gated underlay is sparse below
+# `|arg| ≈ 34°` (the wedge fan tops out at `±28.6°`), so the genuinely
+# uncovered band straddling each Stokes line is `[36°−margin, 36°+margin]`
+# — half-width `= SURF_SECTOR_MARGIN_DEG`.  Setting the mask half-width
+# equal to the margin is the tightest honest choice: every in-sector cell
+# the fan does NOT reach (`arg x ∈ (36°, 36°+margin)`) is caught by the
+# mask, and every cell the fan DOES reach (`arg x > 36°+margin`) is
+# voted, not masked.  The headline figure's grey Stokes strip shrinks
+# from `6°` wide (`[33°,39°]`) to `2°` (`[35°,37°]`) — a 3× reduction —
+# with every newly-filled cell backed by the audition's measured
+# spread / oracle-error evidence (Amendment 12).  The residual `±1°`
+# mask is retained with a forcing condition: the sector fan cannot
+# straddle the Stokes line itself (the fan is a *sector* solver, the
+# wedge a disjoint region), and the wedge underlay is sparse there; a
+# uniform connection formula across the Stokes line would close the
+# last `2°` (the deferred-bead forcing condition, Amendment 12).
+const SURF_STITCH_MASK_DEG = 1.0
 
 # ======================================================================
 # Geometry helpers

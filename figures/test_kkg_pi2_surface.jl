@@ -121,6 +121,19 @@
 #      fully deterministic (PI2F.1.6 reproducibility, lifted to the
 #      seeded vector walk).
 #
+#   12. **C4 — the Stokes-strip mask narrowed (ADR-0025 Amendment 12).**
+#      The Phase-E1 audition (bead `padetaylor-0ln.37.18`) measured the
+#      sector ODE solve healthy right up to the 36° Stokes line and the
+#      triple-method vote honest down to a `1°` fan margin, so the `4°`
+#      ray-fan inset + `3°` mask (a conservative cushion) are narrowed to
+#      `1°` / `1°`.  PI2S.12 pins the narrowed parameters, the
+#      `surf_in_mask` geometry (`[35°,37°]`), and the load-bearing
+#      audition deliverable: the band `arg x ∈ (37°,39°)` — left grey by
+#      the shipped `4°/3°` figure — is now genuinely filled by the
+#      harmonic triple-method vote, with the vote spread there inside the
+#      figure's bulk honesty envelope.  Re-widening the mask leaves that
+#      band all `NaN` (RED) — the mutation-proof.
+#
 # This test does NOT assert "did not throw" anywhere — every block pins
 # an invariant against a known-correct value (Rule 5).  Where a method
 # is unreliable (the inner arc) the `spread` map exposes it and the test
@@ -1218,5 +1231,122 @@ const SURF2 = kkg_pi2_surface()      # second run, for reproducibility
               " (retired bilinear: ~3.6e-4)" *
               "\n  C3 inter-ray error      = $(round(c3_inter_max; sigdigits = 3))" *
               " (retired bilinear: ~1.3e-3)"
+    end
+
+    @testset "PI2S.12 — C4 Stokes-strip mask narrowed (Amendment 12)" begin
+        # ADR-0025 Amendment 12 (Phase-E1 audition; bead
+        # `padetaylor-0ln.37.18`).  v1 corner C4 — the `±3°` Stokes-strip
+        # NaN mask — is narrowed `±3° → ±1°`.  The audition
+        # (`external/probes/stokes-strip-audition/`) measured: the sector
+        # ODE solve does NOT degrade at the 36° Stokes line (a dedicated
+        # through-the-point BVP at `arg x = 36.0°` has Newton residual
+        # `1.7·10⁻¹¹`, companion-consistency `1.8·10⁻¹⁰` — as healthy as
+        # a mid-sector ray), and pushed to a `1°` fan margin the
+        # near-Stokes triple-method vote stays inside the figure's bulk
+        # honesty envelope.  So the `4°` ray-fan inset + `3°` mask were a
+        # conservative cushion, not a numerical limit — the mask narrows
+        # and the grey Stokes strip shrinks 3× (`6° → 2°` total).
+        #
+        # This testset pins the narrowed parameters AND verifies the
+        # figure genuinely FILLS the band `arg x ∈ (37°,39°)` that the
+        # shipped `4°/3°` figure left grey — the audition's deliverable.
+
+        # --- (a) the narrowed parameters ---------------------------------
+        # `SURF_SECTOR_MARGIN_DEG` and `SURF_STITCH_MASK_DEG` are both the
+        # Amendment-12 audition value `1°`.  A regression to the old `4°`
+        # / `3°` cushion (re-widening the grey strip) is RED here.  The
+        # mask half-width MUST equal the fan margin: the mask covers
+        # exactly the band the sector fan does not reach
+        # (`arg x ∈ (36°, 36°+margin)`), so no in-sector cell the fan
+        # misses escapes the mask and no cell the fan reaches is masked.
+        @test SURF_SECTOR_MARGIN_DEG == 1.0
+        @test SURF_STITCH_MASK_DEG  == 1.0
+        @test SURF_STITCH_MASK_DEG == SURF_SECTOR_MARGIN_DEG
+        # ...and the mask is genuinely narrower than the retired `±3°`.
+        @test SURF_STITCH_MASK_DEG < 3.0
+
+        # --- (b) the mask geometry — `surf_in_mask` covers `[35°,37°]` ----
+        # The narrowed mask straddles each 36° Stokes line at half-width
+        # 1°: a point at `arg x = 36.5°` is masked, one at `arg x = 38°`
+        # is not.  Verify the predicate directly (both Stokes lines).
+        for r in (6.0, 12.0, 18.0)
+            @test surf_in_mask(ComplexF64(r * cis(deg2rad( 36.0))))
+            @test surf_in_mask(ComplexF64(r * cis(deg2rad( 36.5))))
+            @test surf_in_mask(ComplexF64(r * cis(deg2rad(-36.5))))
+            # Just outside the `±1°` mask — NOT masked (the old `±3°`
+            # mask WOULD have caught these — the load-bearing negation).
+            @test !surf_in_mask(ComplexF64(r * cis(deg2rad( 37.5))))
+            @test !surf_in_mask(ComplexF64(r * cis(deg2rad( 38.5))))
+            @test !surf_in_mask(ComplexF64(r * cis(deg2rad(-38.5))))
+        end
+
+        # --- (c) the newly-filled band `arg x ∈ (37°,39°)` ---------------
+        # THE LOAD-BEARING AUDITION DELIVERABLE.  The shipped `4°/3°`
+        # figure left the whole band `arg x ∈ (36°,40°)` grey (the fan
+        # stopped at `40°`, the mask ran to `39°`).  The narrowed `1°/1°`
+        # figure: the fan reaches `37°`, the mask stops at `37°`, so the
+        # sector cells in `arg x ∈ (37°,39°)` must now be FILLED — finite,
+        # genuinely voted.  Count them on the assembled grid: a
+        # regression that re-widened the mask/margin leaves this band all
+        # `NaN` (RED).
+        newband = Tuple{Int,Int}[]
+        for j in 1:n, i in 1:n
+            z = ComplexF64(SURF.xs[i], SURF.ys[j])
+            abs(z) <= SURF_XY_LIM || continue
+            a = abs(rad2deg(angle(z)))
+            (37.5 ≤ a ≤ 39.0) || continue       # strictly inside the
+                                                 # band the old figure
+                                                 # masked, off the new mask
+            push!(newband, (i, j))
+        end
+        @test length(newband) > 200             # the band is well-sampled
+        n_filled = count(ij -> !isnan(SURF.Re_u[ij...]), newband)
+        # The overwhelming majority of the newly-uncovered band carries a
+        # genuine voted datum — the audition fill landed.  (A few cells
+        # at large `|x|` near the disc edge can still be `NaN` from the
+        # `|x| ≤ 20` clip; `> 0.9` is the honest bar.)
+        @test n_filled / length(newband) > 0.9
+
+        # Every newly-filled band cell is a SECTOR vote (it carries a
+        # `sector_method` entry — three voters) — it is the harmonic
+        # triple-method surface extended toward the Stokes line, not a
+        # wedge datum leaking across.
+        n_sector_voted = count(ij -> haskey(SURF.sector_method, ij), newband)
+        @test n_sector_voted / length(newband) > 0.9
+
+        # --- (d) the fill stays HONEST — the vote spread is bounded ------
+        # The audition measured the triple-method vote spread in the
+        # near-Stokes band `[37°,38°]` at median `1.8·10⁻³` / max
+        # `3.3·10⁻³` — inside the figure's bulk envelope (PI2S.2: median
+        # `< 3·10⁻³`, max `< 1·10⁻²`).  Assert the assembled figure's
+        # `spread` map agrees: the newly-filled band's spread is bounded,
+        # so the fill is honest (not a grey strip papered over with a
+        # silently-degraded value).
+        band_sp = Float64[]
+        for (i, j) in newband
+            s = SURF.spread[i, j]
+            isnan(s) || push!(band_sp, s)
+        end
+        @test !isempty(band_sp)
+        sort!(band_sp)
+        band_med = band_sp[cld(length(band_sp), 2)]
+        band_max = band_sp[end]
+        # Within the figure's bulk honesty envelope (PI2S.2 bounds).  The
+        # near-Stokes band is steeper than mid-sector, so it sits a touch
+        # above the whole-sector median — `< 5e-3` median is the honest
+        # envelope (audition: ~1.8e-3 at `[37°,38°]`, rising toward 36°).
+        @test band_med < 5e-3
+        @test band_max < 1e-2                    # the PI2S.2 max bound
+
+        @info "PI2S.12 — C4 Stokes-strip mask narrowed (Amendment 12)" *
+              "\n  SURF_SECTOR_MARGIN_DEG = $(SURF_SECTOR_MARGIN_DEG)°" *
+              " (was 4°);  SURF_STITCH_MASK_DEG = $(SURF_STITCH_MASK_DEG)°" *
+              " (was 3°)" *
+              "\n  newly-uncovered band arg x∈(37.5°,39°): " *
+              "$(length(newband)) cells, $(n_filled) filled " *
+              "($(round(100 * n_filled / length(newband); digits = 1))%)" *
+              "\n  band vote spread median = $(round(band_med; sigdigits = 4))" *
+              " / max = $(round(band_max; sigdigits = 4))" *
+              " (figure bulk envelope: median < 3e-3, max < 1e-2)"
     end
 end
