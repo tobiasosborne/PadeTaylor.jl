@@ -252,6 +252,92 @@ end
     end
 
     # -------------------------------------------------------------------------
+    # VPN.1.3b — scale-covariant cluster tolerance (ADR-0026 Amendment 3
+    # §S4, bead padetaylor-2vv).
+    #
+    # `extract_poles_shared_q`'s default `cluster_atol = nothing` derives
+    # the across-node merge tolerance from the local step `visited_h`:
+    # two candidates merge iff their separation is
+    # `≤ CLUSTER_FRAC · min(|h_i|, |h_j|)`.  An *absolute* cluster
+    # tolerance is a scale heresy — it wrongly merges distinct poles
+    # where the field is dense.  These hand-built fixtures pin the three
+    # behaviours: (a) distinct poles kept separate; (b) noise-separated
+    # duplicates merged; (c) the legacy `Real` path is byte-identical.
+    # -------------------------------------------------------------------------
+    @testset "VPN.1.3b scale-covariant cluster tolerance" begin
+        # Fixture: a *fine-scale* two-node network.  Both nodes use a
+        # small local step h = 0.05 (post-S2 a fine local scale ⇒ a
+        # dense local pole field).  Node 1's shared-Q places a pole at
+        # z = 1.00, node 2's at z = 1.12 — a genuine 0.12 separation,
+        # i.e. > 2 local steps apart, two *distinct* physical poles.
+        #
+        # The OLD absolute default (cluster_atol ≈ 0.1, and the figure's
+        # 0.2) would wrongly MERGE these into one pole.  The scale-
+        # derived tolerance is 0.4·0.05 = 0.02 ≪ 0.12 — they stay
+        # separate, the correct count.
+        h_fine = 0.05 + 0.0im
+        # Q(t) = 1 - t has root t = 1; mapped pole = z_node + h·1.
+        Qroot1 = ComplexF64[1.0, -1.0]
+        N1     = [ComplexF64[1.0]]
+        # node 1 at z = 0.95, h = 0.05 → pole at 0.95 + 0.05 = 1.00
+        # node 2 at z = 1.07, h = 0.05 → pole at 1.07 + 0.05 = 1.12
+        sol_distinct = VectorPathNetworkSolution{Float64}(
+            ComplexF64[0.95, 1.07],
+            [ComplexF64[1.0], ComplexF64[1.0]],
+            [h_fine, h_fine],
+            [N1, N1], [Qroot1, Qroot1], [0, 1])
+        # (a) scale-derived mode keeps the two distinct poles SEPARATE.
+        sep = extract_poles_shared_q(sol_distinct; radius_t = 5.0,
+                                     min_support = 1)        # default atol
+        @test length(sep) == 2
+        @test minimum(abs(p - 1.00) for p in sep) < 1.0e-12
+        @test minimum(abs(p - 1.12) for p in sep) < 1.0e-12
+        # The OLD absolute tolerance (≥ 0.1, e.g. the figure's 0.2)
+        # WRONGLY merges them — proving the heresy is real and the
+        # scale-derived mode is what fixes it.
+        wrong = extract_poles_shared_q(sol_distinct; radius_t = 5.0,
+                                       cluster_atol = 0.2, min_support = 1)
+        @test length(wrong) == 1
+
+        # (b) Two NOISE-separated copies of ONE pole are still merged.
+        # Both nodes step at h = 0.5 (a coarse local scale); their
+        # shared-Q roots place the *same* physical pole, separated only
+        # by walk noise ~5e-4 ≪ h.  The scale-derived tolerance
+        # 0.4·0.5 = 0.2 swallows the noise → one reported pole.
+        h_coarse = 0.5 + 0.0im
+        # node 1 at z = 1.0, h = 0.5 → pole at 1.5000
+        # node 2 at z = 1.0005, h = 0.5 → pole at 1.5005 (noise 5e-4)
+        sol_dup = VectorPathNetworkSolution{Float64}(
+            ComplexF64[1.0, 1.0005],
+            [ComplexF64[1.0], ComplexF64[1.0]],
+            [h_coarse, h_coarse],
+            [N1, N1], [Qroot1, Qroot1], [0, 1])
+        merged = extract_poles_shared_q(sol_dup; radius_t = 5.0,
+                                        min_support = 2)      # default atol
+        @test length(merged) == 1     # noise-separated duplicates merged
+        @test abs(merged[1] - 1.5) < 1.0e-2
+
+        # (c) the legacy `Real` cluster_atol path is byte-identical to
+        # the old behaviour.  Re-run the VPN.1.3 two-node merge under an
+        # explicit absolute cluster_atol = 0.1 — the fixture there has
+        # two estimates of z = 2.5 at h = 0.5 / 0.25; an absolute 0.1
+        # tolerance merges them, exactly as before this change.
+        z_n  = 2.0 + 0.0im
+        z2   = 2.25 + 0.0im
+        Qm   = ComplexF64[1.0, -1.0]
+        Nm   = [ComplexF64[1.0]]
+        sol_legacy = VectorPathNetworkSolution{Float64}(
+            ComplexF64[z_n, z2],
+            [ComplexF64[1.0], ComplexF64[1.0]],
+            ComplexF64[0.5, 0.25],
+            [Nm, Nm], [Qm, Qm], [0, 1])
+        legacy = extract_poles_shared_q(sol_legacy; radius_t = 5.0,
+                                        cluster_atol = 0.1, min_support = 2)
+        @test length(legacy) == 1                 # legacy absolute merge
+        @test abs(legacy[1] - 2.5) < 1.0e-12
+    end
+
+    # -------------------------------------------------------------------------
     # VPN.1.4 — wedge pole-avoidance.  The min-‖y‖ wedge selection steers
     # the walk around the pole; no visited node lands ON p.
     # -------------------------------------------------------------------------
@@ -946,6 +1032,22 @@ end
 #        (with the filter disabled the lone-node spurious root at z = 3
 #        leaks through, so the pole count is 2 not 1).  Restored to
 #        GREEN.
+#
+#   M3b — VectorPoleField: break the scale-derived cluster tolerance
+#        (bead padetaylor-2vv, ADR-0026 Amendment 3 §S4).  In
+#        `extract_poles_shared_q`'s scale-derived branch, replace
+#          tol = T(CLUSTER_FRAC) * min(h_cand, rep_h[r])
+#        with the absolute constant
+#          tol = T(0.2)
+#        (revert to the audit-flagged absolute cluster tolerance).
+#        Expected: VPN.1.3b's case (a) — two genuinely-distinct poles
+#        0.12 apart at a fine local scale h = 0.05 — is wrongly merged,
+#        so `length(sep) == 2` bites.
+#        Result: RED — 2 assertions bit in VPN.1.3b: `length(sep) == 2`
+#        failed (got 1 — the absolute 0.2 tolerance merged the two
+#        distinct poles), and the `minimum(abs(p - 1.12))` location
+#        assert failed (with the two poles merged, the surviving rep is
+#        at 1.00, so no candidate sits at 1.12).  Restored to GREEN.
 #
 # -- B2 dense-wedge walk mutations (bead padetaylor-0ln.37.6) --
 #

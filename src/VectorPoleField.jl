@@ -78,10 +78,42 @@ using ..VectorPathNetwork: VectorPathNetworkSolution
 
 export extract_poles_shared_q
 
+# --- Scale-covariant cluster tolerance (ADR-0026 Amendment 3 §S4) ---------
+#
+# `CLUSTER_FRAC` is the *one* free knob of the scale-derived clustering
+# mode: two pole candidates born from nodes `i`, `j` are merged into one
+# reported pole iff their z-plane separation is `≤ CLUSTER_FRAC · (the
+# smaller of the two nodes' local steps)` — i.e. within a fraction of a
+# local step.
+#
+# Why a fraction of the local step `h`, not an absolute length.  An
+# absolute cluster tolerance is a *scale heresy* (project memory
+# `scale-covariance-core-principle`; ADR-0026 Amendment 3 §S4): in a
+# varying-scale pole field it wrongly *merges* distinct poles where the
+# field is dense and *splits* one pole where it is sparse.  After step
+# S2 each node's step `visited_h[i]` is *scale-adaptive* — sized near
+# the local pole-free disc, hence near the local scale — so a tolerance
+# tied to `visited_h` tracks the local scale for free.
+#
+# Why `CLUSTER_FRAC ≈ 0.4`.  Two regimes must be separated:
+#   * Distinct physical poles are ~one pole-spacing apart.  ADR-0026
+#     Amendment 3 measured the honest pole-free disc at ≈ 0.106 × the
+#     local pole spacing, and S2 sizes `h` near that honest disc — so a
+#     pole spacing is *several* `h`.  A tolerance of `0.4·h` is well
+#     under one spacing and never collapses two distinct poles.
+#   * Numerical duplicates of ONE pole, seen by two neighbouring nodes,
+#     are separated only by walk noise — far below `h`.  A tolerance of
+#     `0.4·h` (≈ half a local step) comfortably swallows that noise.
+# `0.4` sits inside the reasoned 0.3–0.5 band: large enough to merge the
+# noise-separated duplicates, small enough to never merge two distinct
+# poles.  TUNABLE — the one knob; revisit if a pole census shows the
+# extractor over- or under-merging.
+const CLUSTER_FRAC = 0.4
+
 """
     extract_poles_shared_q(sol::VectorPathNetworkSolution{T};
                            radius_t     = 5.0,
-                           cluster_atol = 1.0e-1,
+                           cluster_atol = nothing,
                            min_support  = 2) -> Vector{Complex{T}}
 
 Pole locations of the vector system carried by `sol`, in the z-plane.
@@ -92,11 +124,28 @@ by `radius_t`, and clustered across nodes:
 
   - `radius_t`     — keep only roots with `|t*| ≤ radius_t`; a local
                      shared-`Q` Padé does not reliably place distant
-                     singularities (default `5.0`, a few steps).
-  - `cluster_atol` — surviving roots within this z-plane distance of
-                     each other are the same physical pole; the
-                     cluster radius must be below the inter-pole
-                     spacing.
+                     singularities (default `5.0`, a few steps).  `t`
+                     is the *dimensionless* rescaled variable `Δz/h`,
+                     and post-S2 `h` is itself scale-derived (sized
+                     near the local pole-free disc), so `radius_t` as
+                     "a few steps" is **already scale-covariant** —
+                     `radius_t · h` is a genuine local-scale z-distance.
+                     It needs no change post-S2 (ADR-0026 Amendment 3
+                     §S4): the audit-flag on `radius_t` is discharged
+                     because the heresy was an *absolute* length, and
+                     `radius_t` was never one.
+  - `cluster_atol` — the across-node merge tolerance.  Two regimes:
+      * `nothing` (default) — **scale-derived** mode.  Two candidates
+        from nodes `i`, `j` merge iff their z-plane separation is
+        `≤ CLUSTER_FRAC · min(|visited_h[i]|, |visited_h[j]|)` — a
+        fraction of the *local* step.  Because `visited_h` is itself
+        scale-adaptive after step S2, this tolerance tracks the local
+        pole scale and never wrongly merges/splits (ADR-0026
+        Amendment 3 §S4; see `CLUSTER_FRAC`).
+      * a `Real` — **legacy absolute** mode.  Surviving roots within
+        this fixed z-plane distance of each other are the same
+        physical pole.  Kept for backward compatibility — existing
+        callers that pin an explicit `cluster_atol` are byte-identical.
   - `min_support`  — a cluster is reported only when at least this many
                      *distinct* visited nodes independently place a
                      root in it — the cross-node spurious-pole filter
@@ -111,15 +160,21 @@ at the smallest `|t*|`, i.e. by the closest node.  Returns one
 `Complex{T}` per physical pole, in order of discovery.
 """
 function extract_poles_shared_q(sol::VectorPathNetworkSolution{T};
-                                radius_t::Real       = 5.0,
-                                cluster_atol::Real   = 1.0e-1,
-                                min_support::Integer = 2) where {T}
+                                radius_t::Real               = 5.0,
+                                cluster_atol::Union{Nothing,Real} = nothing,
+                                min_support::Integer         = 2) where {T}
     C      = Complex{T}
     radius = T(radius_t)
-    catol  = T(cluster_atol)
 
-    # (pole_z, |t*|, node-index) candidates gathered from every node.
-    candidates = Tuple{C, T, Int}[]
+    # Legacy absolute mode iff the caller pinned a `Real`; the
+    # scale-derived mode (the default) is signalled by `nothing`.
+    legacy_atol = cluster_atol === nothing ? nothing : T(cluster_atol)
+
+    # (pole_z, |t*|, node-index, local-h) candidates gathered from every
+    # node.  `local_h` — the magnitude of the birthing node's step — is
+    # the per-candidate local scale the scale-derived cluster tolerance
+    # is a fraction of (ADR-0026 Amendment 3 §S4).
+    candidates = Tuple{C, T, Int, T}[]
     for k in eachindex(sol.visited_denominator)
         Q      = sol.visited_denominator[k]
         z_node = sol.visited_z[k]
@@ -134,7 +189,8 @@ function extract_poles_shared_q(sol::VectorPathNetworkSolution{T};
             abs(t_C) ≤ radius || continue          # far-root artefact
             # Map the rescaled-variable root to the z-plane.  The h
             # factor is load-bearing: t lives in t = (z - z_node)/h.
-            push!(candidates, (C(z_node + h_node * t_C), T(abs(t_C)), k))
+            push!(candidates,
+                  (C(z_node + h_node * t_C), T(abs(t_C)), k, T(abs(h_node))))
         end
     end
 
@@ -143,14 +199,28 @@ function extract_poles_shared_q(sol::VectorPathNetworkSolution{T};
     # later candidates only add cross-node support.  A cluster is a
     # physical pole only when ≥ min_support distinct nodes land a root
     # in it — node-local artefacts never accrue cross-node support.
+    #
+    # The merge test compares a candidate against each representative.
+    # In scale-derived mode the tolerance for a (candidate, rep) pair is
+    # `CLUSTER_FRAC · min(local-h of the two)` — the conservative
+    # smaller-step choice, so a candidate born at a fine local scale is
+    # never absorbed into a rep born at a coarse one (and vice versa).
+    # In legacy mode it is the fixed absolute `legacy_atol`.
     sort!(candidates; by = c -> c[2])
-    reps    = C[]
-    support = Vector{Set{Int}}()
-    for (p, _, k) in candidates
-        j = findfirst(r -> abs(p - r) ≤ catol, reps)
+    reps     = C[]
+    support  = Vector{Set{Int}}()
+    rep_h    = T[]                       # local-h of each rep's birth node
+    for (p, _, k, h_cand) in candidates
+        j = findfirst(eachindex(reps)) do r
+            tol = legacy_atol === nothing ?
+                  T(CLUSTER_FRAC) * min(h_cand, rep_h[r]) :
+                  legacy_atol
+            abs(p - reps[r]) ≤ tol
+        end
         if j === nothing
             push!(reps, p)
             push!(support, Set{Int}((k,)))
+            push!(rep_h, h_cand)
         else
             push!(support[j], k)
         end
