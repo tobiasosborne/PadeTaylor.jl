@@ -315,6 +315,50 @@ vulnerable to it.
 - ζ = x⁷ᐟ⁶ coordinate — principled, low payoff over |x| ≤ 20; deferred
   to its own bead.
 
+## Amendment 4 (2026-05-22) — S1 verdict: the geometric sink, and the S2 step law
+
+The S1 diagnostic (bead `padetaylor-4q6`, instrumented) resolved the
+`_adaptive_h` collapse definitively.
+
+**Verdict — a genuine geometric sink.** The recurrence is
+`h_next = h_prev · min(GROW, POLE_SAFETY·min|t*|)` — *both* terms are
+proportional to `h_prev`, so there is no `h`-independent floor and
+`h = 0` is an attractor whenever `min|t*| < GROW/POLE_SAFETY = 3` is
+sustained. The two prior audits were a *false dichotomy*: D3 was right
+that it is a sink; the `src/` audit was right that the cap
+`POLE_SAFETY·h_prev·min|t*|` is a genuine *scale-covariant absolute
+z-distance* (S1 EXP D: `h·min|t*|` constant to 5 sig figs across a 16×
+span of `h`). Both hold — a true absolute cap can still be a sink,
+because the cap is `POLE_SAFETY × (the parent's disc)` and the parent's
+disc tracks `h_prev` downward.
+
+**The spurious-root hypothesis is killed.** S1 EXP B rebuilt the
+cap-driving shared-`Q` root at orders 16–30 and build-steps 0.25–4×:
+the root maps to a z-plane pole stable to 3 decimals — a *real* pole,
+not a Froissart artefact. **`min|t*|` from the shared-`Q` is
+trustworthy**; S2 may build on it directly, no separate Froissart-safe
+pole indicator needed.
+
+**Decision — the S2 step law.** `h` must be an *absolute* function of
+the local pole field with **no multiplicative dependence on `h_prev`**:
+
+```
+h_next = clamp( SAFETY · D_local ,  h_min ,  h_max )
+```
+
+where `D_local = h · min|t*|` is the `h`-independent absolute pole-free
+disc radius (any `h` at a fixed node yields the same `D` — S1 EXP D).
+The `min(GROW·h_prev, …)` ratchet is **dropped entirely**: `h` jumps
+straight to a fraction of the *true* local disc each step, with no
+memory of how small `h_prev` became — a node leaving a dense pocket
+recovers to `h_max` in one step. `GROW` may be retained *only* as an
+optional rate-limiter on *increases* (`h_next ≤ GROW·h_prev`), never on
+decreases. The `:step_collapse` throw is kept for the genuine case
+`SAFETY·D_local < h_min` (the true local pole density really does
+exceed what `h_min` can honestly resolve) — but it should now be rare,
+firing only on genuine density, never on a self-inflicted ratchet; the
+D1 `:skip` driver absorbs it.
+
 ## References
 
 - `docs/worklog/059-headline-figure-honest-reassessment.md`
