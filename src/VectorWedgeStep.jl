@@ -60,49 +60,64 @@ The min-‖y‖ selector is kept available (`step_policy = :min_y`) as the
 verified V7 behaviour, but `:max_q_root` is the **default** for vector
 walks: it is the principled method ADR-0025 commits to.
 
-## Adaptive step size
+## Adaptive step size — the scale-derived, non-ratcheting law
 
-Fixed `h` is the A2 failure.  The adaptive controller threads the
-pole field by two coupled rules:
+Fixed `h` is the A2 failure.  The first adaptive controller (B2) was a
+**geometric grow / geometric shrink** pair — and ADR-0026 Amendment 4's
+S1 diagnostic proved it a *geometric sink*: its recurrence
+`h_next = h_prev · min(GROW, POLE_SAFETY·min|t*|)` multiplied `h_prev`
+in *both* branches, so once `h` shrank in a sustained pole field it
+could never recover, `h = 0` was an attractor, and 86 % of walk nodes
+collapsed below `h < 0.05`.  Worse, the FW-faithful nearest-node
+chaining propagated a collapsed `h` into every later walk that chained
+off the poisoned node.
 
-  1. **Pole cap (never overshoot a pole).**  Before a step, the
-     parent node already carries its canonical shared-`Q` (the walk
-     recomputes it at every landed node).  Its roots `t*` are the
-     local poles; the *nearest*, `min|t*|`, sits at z-plane distance
-     `h_node·min|t*|` (the canonical `Q` lives in `t = (z' -
-     z_node)/h_node`).  The step is capped at `POLE_SAFETY·h_node·
-     min|t*|` — landing *short* of that pole.
+The current controller (ADR-0026 Amendment 4, the S2 step law) replaces
+the recurrence with a step that is an **absolute** function of the
+local pole field, with *no multiplicative dependence on `h_prev`*:
 
-     The cap is **direction-agnostic** — the nearest pole in *any*
-     direction, not the FW 2011 §3.1 `step_pade_root` forward
-     projection ADR-0021 anticipated.  This is a deliberate B2
-     deviation: the `:max_q_root` selector picks the step *direction*
-     to dodge poles, so a directional cap would shrink `h` for a pole
-     the walk steers around — needlessly stalling the walk (it stalled
-     the figure walk to `h ≈ 3·10⁻⁶` in testing).  Capping by the
-     closest pole in any direction keeps the step short enough that
-     whatever direction the selector chooses still lands short — the
-     honest coupling of the cap with the selector.
+    h = clamp( SAFETY · D_local ,  h_min ,  h_max )
 
-  2. **Geometric grow / shrink.**  Where the pole field is sparse the
-     cap is inert and `h` grows geometrically toward `h_max` (a clean
-     step ⇒ `h ← min(h_max, GROW · h)`); where it is dense the cap
-     binds and `h` is pulled down to it.  `h` is never allowed below
-     `h_min` (a hard floor — a walk that needs a sub-`h_min` step to
-     dodge a pole is genuinely wedged, and a fail-loud throw is the
-     honest signal, Rule 1).
+  - `D_local = h_prev · min|t*|` is the **`h`-independent absolute
+    z-plane distance to the nearest pole**.  The parent's canonical
+    shared-`Q` lives in `t = (z' - z_parent)/h_prev`, so a denominator
+    root `t*` is a pole at z-plane distance `h_prev·|t*|`; the
+    *nearest* root gives `D_local`.  S1 EXP D verified `D_local` is
+    invariant to `h_prev` to 5 significant figures — it is a property
+    of the node and the field, not of the path that reached it.
 
-The net effect, measured against the A2 probe: a single filament
-threads to `|x| = 20`, and an adaptive walk shrinks `h` exactly where
-the fixed-`h = 0.1` walk landed on a pole — the wedge is threaded
-without the `shared_denominator_pade` degeneration A2 documented.
+  - `SAFETY < 1` sizes the step to ≲ the honest B1 validity disc, so
+    adjacent path-network filaments tile the wedge gap-free (ADR-0026
+    Amendment 3, bottleneck 1: a step larger than the honest disc opens
+    gaps *along every filament*).
+
+  - The pole measure `min|t*|` is **direction-agnostic** — the nearest
+    pole in *any* direction, not the FW 2011 §3.1 `step_pade_root`
+    forward projection ADR-0021 anticipated.  Deliberate B2 deviation:
+    the `:max_q_root` selector already picks the step *direction* to
+    dodge poles, so a directional cap would shrink `h` for a pole the
+    walk steers around.
+
+Because `h` jumps straight to `SAFETY·D_local` with no memory of how
+small `h_prev` became, **a node leaving a dense pocket recovers to
+`h_max` in a single step** — the geometric sink is gone by
+construction.  The old `GROW` grow-rate limiter is deleted outright:
+`SAFETY·D_local` is already a parent-safe absolute distance, so there
+is no unsafe increase left for a rate-limiter to gate (Rule 9 — no
+unused machinery).  `h` is never allowed below `h_min`: a step whose
+`SAFETY·D_local` is genuinely sub-`h_min` means the *true* local pole
+density exceeds what `h_min` can honestly resolve, and a fail-loud
+throw is the honest signal (Rule 1).
 
 ## Fail-loud contract (Rule 1)
 
 `_adaptive_h` throws `VectorWalkError(:step_collapse, …)` with a
-`Suggestion` when the pole cap forces `h` below `h_min` — the walk
-cannot make honest progress and must say so, not silently take a
-degenerate step.  `_select_wedge` throws
+`Suggestion` when the *genuine* local pole density forces
+`SAFETY·D_local` below `h_min` — the walk cannot make honest progress
+and must say so, not silently take a degenerate step.  Under the
+non-ratcheting law this fires only on genuine density, never on a
+self-inflicted geometric ratchet (the retired sink fired it
+constantly).  `_select_wedge` throws
 `VectorWalkError(:all_candidates_failed, …)` when *every* candidate
 failed (each either threw in the stepper or threw building its
 canonical `Q`) — the all-five-wedge-candidates-fail condition.
@@ -143,7 +158,7 @@ using Polynomials:          Polynomial, roots
 using ..VectorStepper:      VectorPadeStepperState, vector_pade_step_with_pade!
 
 export _select_wedge, _adaptive_h, WEDGE_STEP_POLICIES, H_MIN_RATIO,
-       VectorWalkError
+       SAFETY, VectorWalkError
 
 # -----------------------------------------------------------------------------
 # The typed walk-failure exception
@@ -199,12 +214,35 @@ end
 
 Base.showerror(io::IO, e::VectorWalkError) = print(io, e.msg)
 
-# The step-size growth / shrink constants and the pole-distance safety
-# factor.  GROW > 1 lets `h` climb toward `h_max` in pole-sparse
-# regions; POLE_SAFETY < 1 makes a capped step land *short* of the pole
-# (FW 2011 §3.1 — never step onto the singularity the Padé flagged).
-const GROW        = 1.5
-const POLE_SAFETY = 0.5
+# The step-size safety factor for the scale-derived adaptive law.
+#
+# ADR-0026 Amendment 4 retired the old geometric-grow / geometric-shrink
+# pair (`GROW`, `POLE_SAFETY`): that recurrence,
+# `h_next = h_prev · min(GROW, POLE_SAFETY·min|t*|)`, made *both* terms
+# proportional to `h_prev` — a genuine geometric sink with `h = 0` an
+# attractor (S1 verdict).  The new law has no `h_prev` factor at all:
+# `h` is set as an *absolute* fraction of the local pole-free disc
+# `D_local`, so a node leaving a dense pocket recovers to `h_max` in a
+# single step.  `GROW` is therefore deleted outright — there is nothing
+# left for a grow rate-limiter to limit (S1's "may be retained" option
+# is declined: `SAFETY·D_local` is already a parent-safe absolute
+# distance, so an increase gate would be dead code, and Rule 9 forbids
+# carrying unused machinery).
+#
+# `SAFETY` is the one free knob.  ADR-0026 Amendment 3 measured the
+# honest B1 validity disc at ≈ 0.106 × the local pole *spacing*, and the
+# walk's step must stay ≲ that honest disc so adjacent filaments tile
+# without gaps.  `D_local` is the distance to the *nearest* pole, which
+# for a mid-field node is roughly half the local pole spacing — so the
+# honest disc is ≈ 0.106 × (2·D_local) ≈ 0.21 × D_local.  Setting
+# `SAFETY = 0.25` puts the step a touch above the honest disc (a small
+# overlap budget — the B1 Stage-2 gate still clips any node whose own
+# disc is genuinely smaller), and well clear of the `POLE_SAFETY = 0.5`
+# regime that the old law used, which would have placed `h` at ≈ 2× the
+# honest disc and re-opened the along-filament gaps Amendment 3 flagged
+# as bottleneck 1.  S5's coverage re-probe tunes this on measured
+# evidence; `0.25` is the reasoned starting point, not a final value.
+const SAFETY = 0.25
 
 # The adaptive step floor, as a fraction of `h_max`: `h_min = H_MIN_RATIO
 # · h_max`.  A walk threading a dense pole field legitimately takes small
@@ -384,67 +422,119 @@ end
 """
     _adaptive_h(denominator, h_prev, h_max, h_min) -> Real
 
-The next step magnitude for the adaptive wedge walk (see the module
-docstring, "Adaptive step size").
+The next step magnitude for the adaptive wedge walk: a **scale-derived,
+non-ratcheting** step law (see the module docstring, "Adaptive step
+size").
 
 `denominator` is the *parent* node's canonical shared-`Q` polynomial
 (low-to-high coefficients, in the rescaled variable `t = (z' -
 z_parent)/h_parent`).  `h_prev` is the step that *reached* the parent;
 `h_max` / `h_min` bound the adaptive range.
 
-Two coupled rules:
+## Why the old geometric-grow / geometric-shrink law was retired
 
-  1. **Geometric grow.**  Start from `h_grow = min(h_max, GROW·h_prev)`
-     — a clean previous step earns a larger next one, capped at `h_max`.
-  2. **Pole cap.**  The shared `Q`'s roots `t*` are the system's local
-     poles; the *nearest* — `min|t*|` — sits at z-plane distance
-     `h_prev·min|t*|` (the canonical `Q` is scaled by `h_prev`).  The
-     capped step is `POLE_SAFETY·h_prev·min|t*|`, landing *short* of
-     that pole; `h = min(h_grow, pole_cap)`.
+The previous `_adaptive_h` was a **geometric sink** (ADR-0026
+Amendment 4, the S1 diagnostic verdict).  Its recurrence was
 
-The cap is **direction-agnostic** (`min|t*|`, not `step_pade_root`'s
-forward-projected distance).  ADR-0021 anticipated reusing the FW 2011
-§3.1 *directional* `step_pade_root` on the shared `Q`; B2 deviates
-deliberately and the reason is the coupling with the `:max_q_root`
-selector.  `_select_wedge` picks the step *direction* to dodge a pole —
-so capping `h` by the pole on the goal direction alone would shrink `h`
-for a pole the walk then steers around, needlessly stalling the walk
-(it stalled the figure walk to `h ≈ 3·10⁻⁶` in testing).  Capping by
-the nearest pole in *any* direction is the honest coupling: it keeps
-the step short enough that whatever direction `_select_wedge` chooses
-still lands short of the closest pole, while letting `h` grow wherever
-the closest pole is far.  This is the same `min|t*|` measure the B1
-Stage-2 pole-adjacency clamp uses (`VectorPathNetworkStage2`).  A
-constant `Q` (`length ≤ 1`) has no roots — the cap is then absent and
-the grow rule governs.
+    h_next = h_prev · min(GROW, POLE_SAFETY·min|t*|)
 
-Throws `VectorWalkError(:step_collapse, …)` (Rule 1) when the pole cap
-forces `h` below `h_min`: a walk that needs a sub-`h_min` step to dodge
-a pole is genuinely wedged, and a fail-loud throw is the honest signal
-— never a silent degenerate step.
+— *both* branches multiply `h_prev`, so the step has no `h`-independent
+floor.  Whenever `min|t*| < GROW/POLE_SAFETY = 3` was sustained (a
+mid-density pole field — exactly the P_I⁽²⁾ tritronquée wedge), `h`
+shrank geometrically and `h = 0` was an attractor it could never climb
+back from.  Measured: 86 % of walk nodes collapsed to `h < 0.05`, and
+the FW-faithful nearest-node chaining then *propagated* a collapsed `h`
+into every later walk that chained off the poisoned node — a walk once
+stalled to `h ≈ 3·10⁻⁶` and could not recover.  The S1 diagnostic
+confirmed the cap `POLE_SAFETY·h_prev·min|t*|` *is* a genuine absolute
+z-distance (the two prior audits were a false dichotomy: a true
+absolute cap can still be a sink, because the cap is a fraction of the
+*parent's* disc and the parent's disc shrank with `h_prev`).
+
+## The scale-derived law
+
+`h` is now an **absolute** function of the local pole field with **no
+multiplicative dependence on `h_prev`**:
+
+    h = clamp( SAFETY · D_local ,  h_min ,  h_max )
+
+where `D_local = h_prev · min|t*|` is the `h`-independent absolute
+z-plane distance to the nearest pole.  The canonical shared-`Q` lives
+in `t = (z' - z_parent)/h_prev`, so a denominator root `t*` is a pole
+at z-plane distance `h_prev·|t*|`; the *nearest* root gives `D_local`.
+S1 EXP D verified `D_local` is invariant to `h_prev` to 5 significant
+figures across a 16× span of `h` — it is a property of the node and the
+field, not of the path that reached it.  Because `h` jumps straight to
+`SAFETY·D_local` with no memory of how small `h_prev` became, **a node
+leaving a dense pocket recovers to `h_max` in a single step** — the
+geometric sink is gone by construction.
+
+`SAFETY` (the one free knob) sizes the step to ≲ the honest B1 validity
+disc so adjacent filaments tile gap-free — see the `const SAFETY`
+comment for the disc-spacing reasoning.  The old `GROW` grow-rate
+limiter is **deleted entirely**: `SAFETY·D_local` is already a
+parent-safe absolute distance, so there is no unsafe increase for a
+rate-limiter to gate.
+
+The pole measure is **direction-agnostic** (`min|t*|`, the nearest pole
+in *any* direction, not `step_pade_root`'s forward projection).
+ADR-0021 anticipated a *directional* cap; B2 deviates deliberately:
+`_select_wedge` picks the step *direction* to dodge a pole, so a
+directional measure would shrink `h` for a pole the walk then steers
+around.  Capping by the nearest pole in any direction keeps the step
+short enough that whatever direction the selector chooses still lands
+short.  This is the same `min|t*|` measure the B1 Stage-2
+pole-adjacency clamp uses (`VectorPathNetworkStage2`).
+
+When the shared `Q` has **no roots** — a constant `Q` (`length ≤ 1`),
+or `roots` returns an empty set — there is no nearby pole, `D_local` is
+unbounded, and `h` is set to `h_max`.
+
+## Fail-loud (Rule 1)
+
+Throws `VectorWalkError(:step_collapse, …)` when `SAFETY·D_local`
+falls below `h_min` — the case where the *true* local pole density
+genuinely exceeds what `h_min` can honestly resolve.  Under the old
+geometric-sink law this fired constantly as a *self-inflicted* ratchet
+artefact; under the non-ratcheting law it fires only on genuine
+density, so it should be rare.  The ADR-0026 D1 `:skip` driver catches
+it and records the point as a `failed_targets` record — a fail-loud
+throw is still the honest signal, never a silent degenerate step.
 """
 function _adaptive_h(denominator::AbstractVector{C}, h_prev::T,
                      h_max::T, h_min::T) where {T, C}
-    h_grow = min(h_max, T(GROW) * h_prev)
-
-    # Pole cap: the nearest root of the canonical shared-Q (in the
-    # t-variable) is a pole at z-distance h_prev·min|t*|.  Cap `h` short
-    # of it by POLE_SAFETY so whatever wedge direction is chosen lands
-    # short of the closest pole.
-    h = h_grow
+    # D_local — the h-independent absolute z-plane distance to the
+    # nearest pole.  The canonical shared-Q lives in t = Δz/h_prev, so a
+    # root t* is a pole at z-distance h_prev·|t*|.  No nearby pole (a
+    # constant Q, or an empty root set) ⇒ the step is unconstrained from
+    # below ⇒ h = h_max.
+    h_target = h_max
     if length(denominator) > 1
         rs = roots(Polynomial(collect(denominator)))
         if !isempty(rs)
-            pole_cap = T(POLE_SAFETY) * h_prev * T(minimum(abs, rs))
-            h = min(h, pole_cap)
+            D_local  = h_prev * T(minimum(abs, rs))
+            # The scale-derived step: an *absolute* fraction of the
+            # local pole-free disc, with no h_prev factor — so a node
+            # leaving a dense pocket jumps straight back to h_max.
+            h_target = T(SAFETY) * D_local
         end
     end
 
-    h < h_min && throw(VectorWalkError(:step_collapse,
-        "vector_path_network_solve: adaptive step collapsed to h = $h " *
-        "(< h_min = $h_min) — the shared-Q pole field is too dense here " *
-        "for an honest step.  Suggestion: lower h_min if a finer walk is " *
-        "acceptable, or accept this point as the walk's honest frontier."))
+    h = clamp(h_target, h_min, h_max)
+
+    # The :step_collapse throw now fires only for the genuine case:
+    # SAFETY·D_local is itself below h_min, i.e. the true local pole
+    # density exceeds what h_min can honestly resolve.  (Under clamp,
+    # `h == h_min` whenever h_target ≤ h_min, so the genuine-collapse
+    # test is on h_target, not the clamped `h`.)
+    h_target < h_min && throw(VectorWalkError(:step_collapse,
+        "vector_path_network_solve: adaptive step collapsed to " *
+        "SAFETY·D_local = $h_target (< h_min = $h_min) — the shared-Q " *
+        "pole field is genuinely too dense here for an honest step " *
+        "(the nearest pole sits within $(h_target / SAFETY) of the node). " *
+        " Suggestion: lower h_min if a finer walk is acceptable, or " *
+        "accept this point as the walk's honest frontier (the :skip " *
+        "driver records it as a failed target)."))
     return h
 end
 

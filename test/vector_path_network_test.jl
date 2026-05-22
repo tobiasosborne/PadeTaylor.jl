@@ -55,11 +55,15 @@ adaptive.  The `VPN.3.*` testset asserts the real B2 wins:
     VPN.3.2  selector picks the  — `_select_wedge(:max_q_root)` chooses
              pole-free disc        the candidate with the larger
                                    shared-Q-root distance, demonstrably.
-    VPN.3.3  no pole overshoot   — every adaptive-walk node sits a
-                                   safe margin from the known pole; the
-                                   adaptive cap never overshoots.
+    VPN.3.3  scale-derived step  — the non-ratcheting `_adaptive_h`
+                                   law `h = clamp(SAFETY·D_local, …)`:
+                                   a near pole gives a small step, a
+                                   far pole `h_max`, a node recovers in
+                                   ONE step (no geometric sink), and no
+                                   adaptive-walk node overshoots a pole.
     VPN.3.4  fail-loud           — unknown step_policy throws; the
-                                   wedged-walk h-floor throws (Rule 1).
+                                   wedged-walk h-floor throws on a
+                                   genuinely sub-h_min disc (Rule 1).
     VPN.3.5  fixed-walk fallback — adaptive=false + :min_y reproduces
                                    the verified V7 fixed-step walk.
 
@@ -100,7 +104,7 @@ using PadeTaylor.VectorPathNetwork: vector_path_network_solve,
                                     VectorWalkFailure
 using PadeTaylor.VectorPoleField: extract_poles_shared_q
 using PadeTaylor.VectorWedgeStep: _select_wedge, _adaptive_h, H_MIN_RATIO,
-                                  VectorWalkError
+                                  SAFETY, VectorWalkError
 using PadeTaylor.PainleveHierarchy: painleve_hierarchy, pI2_tritronquee_ic
 using PadeTaylor.VectorProblems: VectorPadeTaylorProblem
 using PadeTaylor.VectorStepper: VectorPadeStepperState,
@@ -448,30 +452,53 @@ end
     end
 
     # -------------------------------------------------------------------------
-    # VPN.3.3 — the adaptive step never overshoots a pole.  The pole cap
-    # `POLE_SAFETY·h_prev·min|t*|` (POLE_SAFETY = 1/2) caps each step at
-    # half the nearest-pole distance, so a step always lands short.  This
-    # asserts the cap's *quantitative* contract directly on `_adaptive_h`
-    # (a known shared-Q with a root at a chosen t-distance), and the
-    # walk-level consequence (no node overshoots a known pole).
+    # VPN.3.3 — the scale-derived, non-ratcheting `_adaptive_h` law
+    # (ADR-0026 Amendment 4, the S2 step law; bead `padetaylor-cqk`).
+    # `h = clamp(SAFETY·D_local, h_min, h_max)` where
+    # `D_local = h_prev·min|t*|` is the h-independent absolute distance
+    # to the nearest pole.  This testset pins the law's quantitative
+    # contract directly on `_adaptive_h` — a near pole, a far pole, and
+    # the LOAD-BEARING non-ratcheting recovery — plus the walk-level
+    # consequence (no node overshoots a known pole).
     # -------------------------------------------------------------------------
-    @testset "VPN.3.3 adaptive step never overshoots a pole" begin
-        # The cap's exact value.  A shared-Q `Q(t) = 1 - t/t0` has its
-        # single root at `t = t0`; with `t0` placed so the cap
-        # `0.5·h_prev·t0` binds below the grow ceiling `min(h_max,
-        # GROW·h_prev)`, `_adaptive_h` must return exactly that cap.
+    @testset "VPN.3.3 scale-derived non-ratcheting adaptive step" begin
+        # (a) A mid-range pole gives `h = SAFETY·D_local`.  A shared-Q
+        # `Q(t) = 1 - t/t0` has its single root at `t = t0`; with `t0`
+        # placed so `SAFETY·h_prev·t0` lands strictly inside [h_min,
+        # h_max], `_adaptive_h` must return exactly that value.
         h_prev, h_max, h_min = 0.3, 0.6, 1.0e-4
         t0   = 0.5                                   # mid-range Q-root
         Q    = ComplexF64[1.0, -1.0 / t0]            # root at t = t0
         h_ad = _adaptive_h(Q, h_prev, h_max, h_min)
-        # Grow ceiling here is min(0.6, 1.5·0.3) = 0.45; the cap
-        # 0.5·0.3·0.5 = 0.075 binds well below it.
-        @test h_ad ≈ 0.5 * h_prev * t0  rtol = 1.0e-12
-        @test h_ad < min(h_max, 1.5 * h_prev)        # the cap genuinely bound
-        # The capped step is strictly short of the pole: a step of
-        # length `h_ad` from the parent reaches `h_ad/(h_prev·t0) = 0.5`
-        # of the way to the pole — never onto it.
-        @test h_ad / (h_prev * t0) ≈ 0.5  rtol = 1.0e-12
+        D_local = h_prev * t0                        # = 0.15
+        # h = clamp(SAFETY·0.15, 1e-4, 0.6) = SAFETY·0.15, in-range.
+        @test h_ad ≈ SAFETY * D_local  rtol = 1.0e-12
+        @test h_min < h_ad < h_max                   # clamp did not bind
+        # The step lands strictly short of the pole — a step of length
+        # `h_ad` reaches a fraction `SAFETY` (< 1) of the way there.
+        @test h_ad / D_local ≈ SAFETY  rtol = 1.0e-12
+
+        # (b) LOAD-BEARING — non-ratcheting recovery.  A node deep in a
+        # collapsed pocket (`h_prev` tiny) but whose nearest pole is now
+        # FAR must jump back to `h_max` in this SINGLE call.  The old
+        # geometric-grow law would crawl up by `GROW·h_prev = 1.5·1e-4`;
+        # the scale-derived law has no `h_prev` factor, so `h` is set
+        # purely by the (large) `D_local`.  We place the Q-root far
+        # enough that `SAFETY·D_local ≥ h_max` and the clamp pins `h_max`.
+        h_tiny = 1.0e-4                              # a near-collapsed step
+        # D_local = h_tiny·t_far; want SAFETY·D_local ≥ h_max ⇒
+        # t_far ≥ h_max/(SAFETY·h_tiny).  Pick comfortably above that.
+        t_far  = 4.0 * h_max / (SAFETY * h_tiny)
+        Q_far_root = ComplexF64[1.0, -1.0 / t_far]   # root at t = t_far
+        h_recover  = _adaptive_h(Q_far_root, h_tiny, h_max, h_min)
+        @test h_recover ≈ h_max  rtol = 1.0e-12      # full recovery, ONE step
+        # And it genuinely jumped — not a `GROW·h_prev` crawl.
+        @test h_recover > 100 * h_tiny
+
+        # (c) A constant / rootless shared-Q means no nearby pole ⇒
+        # `h = h_max` (D_local unbounded, the clamp upper bound governs).
+        @test _adaptive_h(ComplexF64[1.0], h_tiny, h_max, h_min) ≈ h_max
+        @test _adaptive_h(ComplexF64[], h_tiny, h_max, h_min) ≈ h_max
 
         # The walk-level consequence: a B2 adaptive walk threading around
         # the Riccati pole never lands a node on it.
@@ -509,18 +536,24 @@ end
             prob, ComplexF64[0.5 + 0.0im]; order = 24, h = 0.25,
             step_policy = :min_u)
 
-        # `_adaptive_h` throws when the pole cap forces h below h_min.
-        # A shared-Q with a root very close in the t-variable (Q = 1 - t/t0,
-        # root at t = t0) drives the cap 0.5·h_prev·t0 below h_min.
+        # `_adaptive_h` throws `:step_collapse` only for the GENUINE
+        # case — the true local pole density exceeds what h_min can
+        # honestly resolve, i.e. `SAFETY·D_local < h_min`.  A shared-Q
+        # with a root very close in the t-variable (Q = 1 - t/t0, root
+        # at t = t0) places the nearest pole right next door, so
+        # D_local = h_prev·t0 is tiny and SAFETY·D_local falls below
+        # h_min.  Under the new non-ratcheting law this is the *only*
+        # way the throw fires — never a self-inflicted geometric ratchet.
         h_prev = 0.5; h_max = 0.5; h_min = 0.1
         t0     = 1.0e-4                              # pole right next door
         Q_near = ComplexF64[1.0, -1.0 / t0]          # root at t = t0
-        # `_adaptive_h` now throws the typed `VectorWalkError` (reason
-        # :step_collapse) — a precision refinement of the old bare
-        # `ErrorException` (ADR-0026 D1; the typed exception lets the
-        # resilient driver classify a caught failure by `reason`).
+        # SAFETY·D_local = SAFETY·0.5·1e-4 = 1.25e-5 ≪ h_min = 0.1.
+        # `_adaptive_h` throws the typed `VectorWalkError` (reason
+        # :step_collapse) — ADR-0026 D1; the typed exception lets the
+        # resilient driver classify a caught failure by `reason`.
         @test_throws VectorWalkError _adaptive_h(Q_near, h_prev, h_max, h_min)
-        # A Q whose root is far leaves the cap inert — h grows, no throw.
+        # A Q whose root is far ⇒ D_local large ⇒ SAFETY·D_local well
+        # above h_min — no throw; the clamp returns a valid step.
         Q_far  = ComplexF64[1.0, -1.0 / 50.0]        # root at t = 50
         h_ok   = _adaptive_h(Q_far, h_prev, h_max, h_min)
         @test h_min ≤ h_ok ≤ h_max
@@ -856,6 +889,29 @@ end
 #        errored (the uncapped walk blocks), VPN.3.4 failed (no throw on
 #        `Q_near`).  Restored to GREEN.
 #
+# -- S2 scale-derived step-law mutation (bead padetaylor-cqk) --
+#
+#   M8 — VectorWedgeStep: re-introduce the h_prev ratchet.  The S2 step
+#        law (ADR-0026 Amendment 4) replaced the geometric sink with
+#        `h_target = SAFETY·D_local` — an absolute step with no h_prev
+#        factor.  This mutation restores the sink by reverting that line
+#        to the old geometric form
+#          h_target = min(1.5·h_prev, 0.5·D_local)
+#        — `h` can again only crawl up by `GROW·h_prev` from a collapsed
+#        h_prev, and the absolute-value contract is broken.
+#        Expected: VPN.3.3's LOAD-BEARING non-ratcheting recovery test
+#        (a tiny h_prev + a FAR pole must jump straight to h_max in ONE
+#        call) bites — the mutant returns `1.5·h_tiny`, a slow crawl,
+#        not h_max; and the near-pole `h ≈ SAFETY·D_local` value
+#        assertions bite (the mutant returns the `0.5·D_local` branch).
+#        Result: RED — 4 VPN.3.3 assertions failed: the near-pole value
+#        `h_ad ≈ SAFETY·D_local` + the `h_ad/D_local ≈ SAFETY` ratio
+#        (line 475, 479 — mutant uses 0.5 not SAFETY), and the
+#        non-ratcheting recovery `h_recover ≈ h_max` + `h_recover >
+#        100·h_tiny` (line 494, 496 — mutant crawls to 1.5·h_tiny ≪
+#        h_max).  This proves the non-ratcheting recovery test genuinely
+#        catches a re-introduced geometric sink.  Restored to GREEN.
+#
 # -- VC-10 target-ordering mutation (bead padetaylor-0ln.37.17) --
 #
 #   M7 — VectorPathNetwork: make the `rng` shuffle inert.  In
@@ -877,5 +933,9 @@ end
 # Certified bites: M1 → 6 RED, M3 → 1 RED, M4 → 17 RED (16 fail +
 # 1 error), M5 → 3 RED (1 fail + 2 error), M6 → 6 RED (4 fail +
 # 2 error), M7 → 1 RED (VPN.4.3 different-tree assertion — VC-10
-# substrate).  M2 superseded.  Restored to GREEN after each mutation.
+# substrate), M8 → 4 RED (VPN.3.3 non-ratcheting recovery + near-pole
+# value assertions — the re-introduced geometric sink).  M2 superseded;
+# M5/M6 describe the retired geometric-grow `_adaptive_h` (ADR-0026
+# Amendment 4) and are kept as the historical sink record.  Restored to
+# GREEN after each mutation.
 # =============================================================================
