@@ -752,11 +752,30 @@ points inside the wedge).
 
 Three honesty-defining choices:
 
-  * the walk runs with the **B2 adaptive `:max_q_root`** policy (the
-    package default) — `h = SURF_PN_H` is the step *ceiling*, not a
-    hand-tuned fixed step; the controller dodges poles and adapts `h`
-    to the local density, threading the fan to `|x| ≈ 18-20` where the
-    fixed-`h = 0.1` V8b walk *blocks* past `|x| ≈ 8` (A2 §3.1);
+  * the walk runs at a **fixed `h = SURF_PN_H`** (`adaptive = false`) —
+    an FW-faithful uniform step, *not* the B2 `:max_q_root` adaptive
+    controller (ADR-0026 Amendment 2, Decision R1).  The B2 adaptive
+    law was designed to dodge a fixed-`h` "block" past `|x| ≈ 8`; the
+    D3 FW-lens investigation root-caused that block as a rare *on-pole
+    chord* — not a step-size deficit — and proved the adaptive
+    controller itself is a **geometric sink**: `VectorWedgeStep.
+    _adaptive_h`'s pole cap `POLE_SAFETY·h_prev·min|t*|` is purely
+    multiplicative, so `h` ratchets down geometrically in a sustained
+    pole field and `h = 0` is an attractor (Amendment 2; full diagnosis
+    in `external/probes/vector-walk-collapse/`).  On a dense,
+    cross-target-chained wedge walk that sink poisons whole filaments
+    and collapses coverage.  The on-pole chord that motivated B2 is
+    *already absorbed* by D1's `on_target_failure = :skip` (below) — it
+    became a single `:all_candidates_failed` skip, the run completes.
+    A fixed `h` is FW-faithful (FW 2011 §3.1 uses one global `h`; the
+    5-direction wedge picks only *direction*), simpler, and *measured
+    better*: the R1 re-probe found fixed `h = 0.1` gives materially
+    higher honest coverage with far fewer, fully-tiled nodes than the
+    adaptive walk (Amendment 2 inner-wedge figures: `0.18 / 1152` fixed
+    vs `0.07 / 5805` adaptive).  Only the figure opts out — the package
+    default `vector_path_network_solve(adaptive = true)` is unchanged
+    (the `_adaptive_h` defect is latent, catastrophising only for a
+    dense chained walk; its proper redesign is filed as bead "R2");
 
   * the walk runs with **`on_target_failure = :skip`** — the resilient
     Stage-1 walk (ADR-0026 D1).  A dense target lattice has thousands
@@ -824,7 +843,13 @@ function surf_wedge_fill(bvp_sol::VectorBVPSolution,
                                       ComplexF64(20.0 + 0.0im));
                                      order = SURF_PN_ORDER)
     targets = surf_wedge_dense_targets()
-    # B2 adaptive `:max_q_root` walk (the package default); the Stage-2
+    # Fixed-`h` FW-faithful `:max_q_root` walk — `adaptive = false`,
+    # `h = SURF_PN_H` is the uniform step (ADR-0026 Amendment 2,
+    # Decision R1).  The B2 adaptive controller is a geometric sink
+    # (`_adaptive_h`'s pole cap is purely multiplicative, so `h`
+    # ratchets to zero in a sustained pole field) and poisons whole
+    # filaments on a dense chained walk; D1's `:skip` already absorbs
+    # the rare on-pole chord that B2 was built to dodge.  The Stage-2
     # fill is gated honest — `extrapolate = false`, B1 true-radius gate.
     # `on_target_failure = :skip` (ADR-0026 D1) makes the dense walk
     # resilient: a per-target walk failure is recorded in
@@ -837,6 +862,7 @@ function surf_wedge_fill(bvp_sol::VectorBVPSolution,
     walk = vector_path_network_solve(prob, targets;
                                      order             = SURF_PN_ORDER,
                                      h                 = SURF_PN_H,
+                                     adaptive          = false,
                                      fine_grid         = grid_pts,
                                      extrapolate       = false,
                                      tol               = SURF_PN_TOL,
