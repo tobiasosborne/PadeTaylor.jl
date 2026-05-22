@@ -407,6 +407,43 @@ bottleneck 1, still live). Sizing `h` to the disc via `SAFETY` 0.25 →
 
 Neither lever is exhausted; the ~8 % is not architectural.
 
+## Amendment 6 (2026-05-22) — S6 outcome: order 36 ships (8 %→22 %); `radius_t` heresy blocks `SAFETY`
+
+**S6a shipped.** `SURF_PN_ORDER` 24 → 36 (the measured knee). Full-wedge
+honest coverage rose from the ~8 % plateau to **~22 %** (s=0.30) — a
+real 2.7× gain, every covered cell genuinely valid.
+
+**S6b blocked.** The sweep confirmed `SAFETY` 0.25→0.10 lifts inner-wedge
+coverage +9 pp — but lowering `SAFETY` *regresses the `src/` test suite*
+(4 fail / 3 error: empty pole fields). Root-caused: `extract_poles_
+shared_q` filters shared-`Q` roots by `radius_t` in the **rescaled
+variable `t = Δz/h`** — i.e. it keeps poles within a fixed number of
+*steps*. A smaller `SAFETY` ⇒ smaller `h` ⇒ the same physical pole maps
+to a larger `|t*|` ⇒ it falls outside the `radius_t` window ⇒ the
+`min_support ≥ 2` cross-node filter empties the field. **`radius_t` is a
+scale-fixing heresy** — and the S4 review ("`radius_t` is fine post-S2")
+was *reasoned, not measured*, and is wrong (Rule 5: measurement wins).
+`SAFETY` stays 0.25 until `radius_t` is fixed.
+
+**Outer-wedge regression noted.** The full-wedge target-density sweep
+(order 36): coverage is 22 %/22 %/16 % at spacing 0.30/0.22/0.16 — it
+*regresses* as targets densify. Banded: the inner band climbs
+monotonically (31→34→37 %) but mid and outer collapse (outer 22→17→10 %).
+Pure target densification is exhausted for the outer wedge.
+
+**Decision — step S7 + the outer-wedge question.**
+
+- **S7** — fix the `radius_t` heresy: `extract_poles_shared_q` must
+  accept a shared-`Q` root by its **z-plane distance** `h·|t*|` against a
+  scale-stable z-radius (tied to a fixed scale such as `h_max` / the
+  local pole spacing — not the per-node shrinking `h`). TDD +
+  mutation-proof. Then lower `SAFETY` toward ~0.10 (now unblocked),
+  confirm the `src/` suite GREEN, re-probe.
+- **The outer-wedge regression** is characterised honestly as remaining
+  work — likely FW's explicit coarse-Stage-1 / finer-Stage-2 fill split
+  (FW-md:163-164, :395-397) rather than denser walk targets — filed as
+  its own bead, to be measured (not assumed) after S7.
+
 ## References
 
 - `docs/worklog/059-headline-figure-honest-reassessment.md`
