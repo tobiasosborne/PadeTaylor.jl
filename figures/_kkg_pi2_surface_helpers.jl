@@ -79,40 +79,46 @@
 # maximum pairwise disagreement per point — a figure-quality diagnostic
 # of where the three methods concur (and, honestly, where they do not).
 #
-# ### Region 2 — the pole-rich wedge (ADR-0025 Amendment 2)
+# ### Region 2 — the pole-rich wedge (ADR-0025 Amendment 14 / ADR-0026 Amendment 10)
 #
-# The wedge is **not** a filled surface.  ADR-0025 Amendment 2 rescopes
-# it after the A2 tractability probe (`external/probes/wedge-
-# tractability/REPORT.md`) measured the *honest* coverage achievable by
-# a path-network walk + per-node A1-gated disc and found it saturates
-# at ~8.6 % (solver tol) — ~18 % even at display tol with order-48 jets.
-# A filled honest wedge *surface* is numerically unreachable with the
-# local-Padé-tiling architecture.  The wedge panel is therefore the
-# **validated pole FIELD** — the extracted pole *locations* in the FW
-# 2011 Fig 4.7 idiom — plus an **honest partial `|u|` surface underlay**
-# only where the B1-gated node discs genuinely cover.
+# The headline figure's wedge renders **FW-faithful filled** with
+# **honest provenance marking** — the ADR-0025 Amendment 14 / ADR-0026
+# Amendment 10 dual-fill design (`tf9`).  The earlier "honest partial
+# underlay only, ~5–22 % of the wedge `NaN` elsewhere" rendering
+# (Amendment 2 → Amendment 9) shipped technically-honest but visually-
+# inadequate figures — a ~95 %-blank wedge that did not visualise the
+# tritronquée solution at all.  The D1–S8 investigation arc (ADR-0026)
+# proved the no-extrapolation contract is *stricter than FW 2011 itself*:
+# FW's published pole-field figures FILL precisely because FW's Stage-2
+# evaluates each Padé over its full step with no validity gate
+# (FW-md:395-397).  Amendment 14 keeps the strict contract as the
+# package default for every non-headline figure and the public solver
+# API, and grants the headline figure a per-figure override — render
+# FW-style filled, mark provenance.
 #
 # Concretely Region 2 is:
 #
-#   1. **Pole field — the primary deliverable.**  An extended threading
-#      fan (`surf_wedge_targets`) drives the B2 `:max_q_root` adaptive
-#      walk through the *whole* wedge out to `|x| = 20`, so the walk's
-#      nodes pass near every pole; `extract_poles_shared_q` with
-#      cross-node `min_support ≥ 2` (VC-6) roots the per-node shared `Q`
-#      and clusters the roots into the validated pole field.  The walk
-#      is the B2 default (the fixed-`h = 0.1` V8b walk *blocks* past
-#      `|x| ≈ 8` — A2 §3.1); the adaptive walk threads to `|x| ≈ 18-20`.
+#   1. **Pole field — the primary deliverable.**  A dense Cartesian
+#      lattice (`surf_wedge_dense_targets`) drives the resilient
+#      `:max_q_root` adaptive walk through the *whole* wedge out to
+#      `|x| = 20`, so the walk's nodes pass near every pole;
+#      `extract_poles_shared_q` with cross-node `min_support ≥ 2`
+#      (VC-6) roots the per-node shared `Q` and clusters the roots into
+#      the validated pole field.  Order 48 is the measured saturation
+#      knee (ADR-0026 Amendment 5).
 #
-#   2. **Honest partial surface underlay.**  The F2 Stage-2 `fine_grid`
-#      fill runs with `extrapolate = false`, so the B1 true-radius gate
-#      (ADR-0025 Amendment 1, gate v-b) applies: a grid point outside
-#      the nearest node's verified disc of validity gets `NaN` — no
-#      Padé is ever evaluated outside its disc.  The kernel returns a
-#      `covered` mask flagging exactly the (~13-18 %) cells the gated
-#      discs honestly carry; everywhere else in the wedge is `NaN` and
-#      renders neutral grey.  The partial surface is honest; the gaps
-#      are explicit (Rule 1 fail-loud — an honest gap, never an
-#      extrapolated lie).
+#   2. **Dual-fill `|u|` surface.**  One walk, two Stage-2 evaluations:
+#      a **certified fill** (`extrapolate = false`, B1 true-radius
+#      gate, ~29 % of the wedge at order 48 — the measured Amendment 9
+#      figure) and an **FW-style filled overlay** (`extrapolate = true`,
+#      every cell finite, identical to FW 2011's published rendering).
+#      The walk is shared (the expensive part); the second fill is a
+#      Horner sweep against the same `visited_*` tree.  The figure
+#      script composites both with the `wedge_covered` mask: certified
+#      cells render at full opacity, extrapolated cells at reduced
+#      alpha.  A reader can tell certified from extrapolated by the
+#      alpha channel — the figure SHOWS the full surface but LABELS
+#      its provenance.
 #
 # Per-pole validation **VC-4** (dominant-balance `A ∈ {-1,-3}`) and
 # **VC-5** (conjugate-symmetry pairing) are wired in: the candidate
@@ -158,14 +164,22 @@
 #      not a re-route of the same pinned data.  Detail:
 #      `figures/_kkg_pi2_sector.jl`, `external/probes/c2-arc-data/`.
 #
-#   2. **RETIRED — wedge Stage-2 extrapolation.**  The shipped figure
-#      called the Stage-2 fill with `extrapolate = true`, evaluating the
-#      shared-`Q` Padé approximants far outside their verified disc (the
-#      A4 baseline probe measured midpoints 50× outside the disc; ~70 %
-#      of loop closures catastrophic).  ADR-0025 Amendment 1's B1
-#      true-radius gate retires it: `surf_wedge_fill` now runs the fill
-#      with `extrapolate = false`, so no Padé is evaluated outside its
-#      B1-gated disc and the honest gaps render as `NaN`/grey.
+#   2. **RETIRED (then narrowed-with-provenance) — wedge Stage-2
+#      extrapolation.**  The shipped V8b figure called the Stage-2 fill
+#      with `extrapolate = true`, evaluating the shared-`Q` Padé
+#      approximants far outside their verified disc (the A4 baseline
+#      probe measured midpoints 50× outside the disc; ~70 % of loop
+#      closures catastrophic).  ADR-0025 Amendment 1's B1 true-radius
+#      gate retired the blanket `extrapolate = true`.  ADR-0025
+#      Amendment 14 (this figure's `tf9` closeout) then re-introduces
+#      `extrapolate = true` as a **per-figure, provenance-marked
+#      overlay** — `surf_wedge_fill` runs the Stage-2 fill twice on the
+#      same walk (once `extrapolate = false` for the certified core,
+#      once `extrapolate = true` for the FW-2011-style filled overlay),
+#      and the figure script paints certified cells at full opacity and
+#      extrapolated cells at reduced alpha so the reader can read
+#      provenance off the alpha channel.  The strict B1 gate remains the
+#      *package default* and applies to every non-headline figure.
 #
 #   3. **RETIRED — hand-tuned wedge step `h = 0.1`.**  ADR-0025
 #      Amendment 4's B2 adaptive `:max_q_root` walk (the package
@@ -448,36 +462,50 @@ const SURF_Z_SEED  = -3.0 + 0.0im
 
 # Taylor order of the path-network jets.
 #
-# S6a (ADR-0026 Amendment 5) — raised 24 → 36.  Amendment 5's S5-diag
-# FW-lens investigation measured the honest B1 disc to be **100 %
-# truncation-limited**: across 4737 walk nodes the Jorba–Zou truncation
-# term binds 4737/4737 times and the pole-adjacency clamp never binds,
-# so the honest disc sits ~10× short of the nearest pole purely because
-# the jet is too short.  An inner-wedge order sweep measured coverage
-# climbing 13 %→23 %→29 %→29 % across order 24→36→48→72 — the knee is
-# order ~36–48 and order 72 is wasted.  ADR-0025's old "an order-48
-# *walk* degenerates the shared-`Q` solve" corner (v1, A2 §5b.5) was
-# measured on the *pre-`:skip` fixed-h* walk and is **superseded by
-# Amendment 5**: the resilient adaptive stack (`adaptive = true`,
-# `on_target_failure = :skip`) runs order 36/48/72 cleanly with 0
-# failures.
+# **`tf9` (ADR-0026 Amendment 10, ADR-0025 Amendment 14) — raised 36 → 48,
+# the measured order-saturation knee.**  The Amendment-9 converged finding
+# (the D1–S8 investigation arc) is that the honest B1 disc is **100 %
+# truncation-limited**; the *only* walk-side lever on coverage is the
+# Taylor order.  ADR-0026 Amendment 5's S5-diag order sweep measured the
+# certified coverage knee directly:
 #
-# Order 36 is the chosen S6 value — the start of the measured knee.  The
-# S6c full-wedge density sweep
-# (`external/probes/coverage-plateau-f4e/probe_s6_fullwedge.jl`) at order
-# 36 measured total honest wedge coverage **22.4 %** at target spacing
-# `s = 0.30` (2614 targets, 61.7 k nodes, 0.1 % skipped) — the plateau
-# peak.  Densifying targets does NOT lift it: `s = 0.22` gives 22.0 %
-# and `s = 0.16` *regresses* to 15.8 % — the dense outer-wedge lattice
-# makes the resilient walk re-chord covered ground (Amendment 3,
-# bottleneck 3) faster than the inner band fills.  Order 48 was measured
-# +6 pp better on the *inner* wedge (S6c sweep) but at ~1.9× the
-# runtime; order 36 is the chosen coverage-per-runtime point.  The
-# companion `SAFETY` lowering (Amendment 5's S6b) was *reverted* — it
-# regresses the `src/` pole-extraction tests through a `radius_t`/`h`
+#     order 24 → 36 → 48 → 72   :   coverage 13 % → 23 % → 29 % → 29 %
+#
+# Order 48 is the **measured saturation knee** — the biggest honest
+# certified core (~29 %) at ~2× the order-36 runtime; order 72 is wasted
+# (coverage flat).  The order-48 *walk*'s pre-resilient A2 §5b.5
+# regression (the fixed-`h` shared-`Q` SVD degeneration that motivated the
+# earlier "order 48 not viable" claim) is **superseded by ADR-0026
+# Amendment 5**: the resilient adaptive stack (`adaptive = true`,
+# `on_target_failure = :skip`, `skip_covered = true`) runs order 48
+# cleanly with ~0 failures.
+#
+# The shipped figure renders the wedge in **dual-fill provenance form**
+# (ADR-0025 Amendment 14 / ADR-0026 Amendment 10):
+#
+#   * a **certified core** — the B1-gate-honest cells, ~29 % of the
+#     wedge at order 48 — rendered at full opacity.  This is the senior-
+#     grade region: no Padé evaluated outside its truncation-bounded
+#     disc;
+#
+#   * an **FW-2011-style filled overlay** — every Padé evaluated over
+#     its full step with no validity gate, exactly the rendering FW's
+#     published pole-field figures use (FW-md:395-397).  Filled to the
+#     wedge boundary; rendered at reduced opacity to mark it as
+#     extrapolated.
+#
+# The certified-coverage progression across the D1–S8 arc:
+# `~5 % → 8 % → 22 % → 29 %` at order 24 → corrected stack → order 36 →
+# order 48.  Beyond order 48 the certified-core ceiling is the
+# no-extrapolation honesty contract itself (ADR-0025), not the Taylor
+# order; closing the remaining ~71 % visually is the FW-faithful
+# extrapolated overlay, marked accordingly.
+#
+# The companion `SAFETY` lowering (Amendment 5's S6b) was *reverted* —
+# it regresses the `src/` pole-extraction tests through a `radius_t`/`h`
 # coupling (see the `const SAFETY` comment in `src/VectorWedgeStep.jl`);
 # the wedge walk therefore runs at the verified `SAFETY = 0.25`.
-const SURF_PN_ORDER = 36
+const SURF_PN_ORDER = 48
 
 # The B2 adaptive-walk step *ceiling* `h_max`.  With `adaptive = true`
 # (the package default — ADR-0025 Amendment 4) `h` is capped per step
@@ -767,17 +795,65 @@ end
 """
     surf_wedge_fill(bvp_sol, grid_pts) -> NamedTuple
 
-Region 2 — the validated pole field + the honest partial `|u|` underlay
-(ADR-0025 Amendment 2).
+Region 2 — the validated pole field + a **dual-provenance** `|u|` surface
+(ADR-0025 Amendment 14 / ADR-0026 Amendment 10, `tf9`).
 
 Seed a `VectorPadeTaylorProblem` from the BVP-anchored on-tritronquée
 state `bvp_sol(SURF_Z_SEED)`, run the `vector_path_network_solve` wedge
 walk over the **dense disc-spaced** target lattice
-`surf_wedge_dense_targets()` (ADR-0026 D2), and use the F2 Stage-2
-`fine_grid` fill to evaluate `u = V_0` on `grid_pts` (the Cartesian grid
-points inside the wedge).
+`surf_wedge_dense_targets()` (ADR-0026 D2) **once**, and evaluate the F2
+Stage-2 `fine_grid` fill on `grid_pts` (the Cartesian grid points inside
+the wedge) **twice** — both fills read the same Stage-1 walk so the
+second one costs only the per-cell Padé evaluation.
 
-Three honesty-defining choices:
+The dual fill is the ADR-0026 Amendment 9 closeout decision: the
+D1–S8 investigation arc proved the no-extrapolation honesty contract
+(ADR-0025) is **stricter than FW 2011 itself** — FW's published pole-
+field figures FILL precisely because FW's Stage-2 evaluates each Padé
+over its full step with no validity gate (FW-md:395-397).  Rendering the
+wedge FW-faithful (filled) without lying about provenance demands two
+fills, not one.
+
+Three provenance-defining choices:
+
+  * the **certified** Stage-2 fill runs with **`extrapolate = false`** —
+    the B1 true-radius gate (ADR-0025 Amendment 1) applies, so a grid
+    point outside the nearest node's verified disc gets `NaN`.  **No
+    Padé is ever evaluated outside its disc.**  `tol = SURF_PN_TOL`
+    selects the gate's `s(tol)` safety factor.  This is the honest core
+    of the figure — the set of grid points the B1 gate certifies — and
+    it is what `covered` flags.  The certified fraction (~29 % at order
+    48 — the measured knee, ADR-0026 Amendment 9) is the figure's
+    *senior-grade* deliverable: a region where no Padé is evaluated
+    beyond its truncation-bounded disc;
+
+  * the **display** Stage-2 fill runs with **`extrapolate = true`** —
+    the legacy ADR-0015 fill mode, identical to what FW 2011's published
+    figures use.  Every Padé is evaluated over its full step, with no
+    validity gate, so every wedge cell is finite.  This is the
+    FW-faithful filled-wedge rendering — what KKG 2015 Figs 7.4/7.5
+    visualise.  ADR-0025's strict no-extrapolation rule **remains the
+    package default** and applies to every non-headline figure; this is
+    a per-figure override, justified by FW precedent and honest *only
+    when* the figure marks provenance (the figure script must visually
+    distinguish certified from extrapolated cells — reduced alpha,
+    hatch, or desaturation — so the reader can tell which is which);
+
+  * **the walk itself is shared.**  One Stage-1 walk + two Stage-2
+    re-evaluations, not two walks: the resilient adaptive `:max_q_root`
+    walk is the expensive part, and both fills read the same visited
+    tree.  The second fill calls
+    `PadeTaylor.VectorPathNetworkStage2._stage2_fill` directly with
+    `extrapolate = true` (and the walk's cached `visited_jets`,
+    `visited_numerators`, `visited_denominator`).  This is the additive
+    helper ADR-0026 Amendment 10 introduces; it adds no `src/` API
+    surface — the figure helper reaches into the existing internal
+    function rather than the package re-exporting it, since the dual
+    fill is a *figure-specific* pattern (the legitimate scope of an
+    `extrapolate = true` override).
+
+Three further honesty-defining choices (unchanged from the pre-`tf9`
+pipeline):
 
   * the walk runs the **S2 scale-derived adaptive step law**
     (`adaptive = true`) with the **S3 skip-if-covered** target gate
@@ -816,11 +892,12 @@ Three honesty-defining choices:
     Rule 1): the count of skipped targets is surfaced in `message`, and
     `walk.failed_targets` carries one first-class record per skip;
 
-  * the Stage-2 fill runs with **`extrapolate = false`** — the B1
-    true-radius gate (ADR-0025 Amendment 1) applies, so a grid point
-    outside the nearest node's verified disc gets `NaN`.  **No Padé is
-    ever evaluated outside its disc.**  `tol = SURF_PN_TOL` selects the
-    gate's `s(tol)` safety factor.
+  * the **certified Stage-2 fill** runs with **`extrapolate = false`** —
+    the B1 true-radius gate (ADR-0025 Amendment 1) applies; the
+    **display Stage-2 fill** runs with **`extrapolate = true`** —
+    FW-2011-style filled (see the dual-fill rationale above).
+    `tol = SURF_PN_TOL` selects the certified fill's gate `s(tol)`
+    safety factor.  The two fills share the Stage-1 walk.
 
 The **pole field** — `extract_poles_shared_q` with cross-node
 `min_support ≥ 2` (VC-6) — produces a *candidate* field (~380 poles
@@ -843,15 +920,29 @@ field is then passed through the **Phase-D per-pole validation**:
     never *constructs* a pole from its mirror, so the residual stays a
     genuine accuracy cross-check (FFW 2017 `:120-124`).
 
-Returns `(walk, poles, u, covered, vc4, vc5, message)`:
+Returns `(walk, poles, u, u_extrap, covered, vc4, vc5, message)`:
   - `walk`     : the `VectorPathNetworkSolution`;
   - `poles`    : the **VC-4-validated** pole field — the figure's final
                  field (the FW Fig 4.7 pole-location scatter);
-  - `u`        : `Vector{ComplexF64}` of `V_0` at `grid_pts` — finite
-                 only where a B1-gated node disc honestly covers,
-                 `NaN + NaN·im` everywhere else (no extrapolation);
-  - `covered`  : `Vector{Bool}`, `true` iff that grid point is honestly
-                 covered (`u[k]` finite) — the honest-coverage mask;
+  - `u`        : `Vector{ComplexF64}` of `V_0` at `grid_pts` — the
+                 **B1-certified** fill (`extrapolate = false`): finite
+                 only where the verified node disc covers, `NaN +
+                 NaN·im` everywhere else.  The senior-grade honest core
+                 of the figure;
+  - `u_extrap` : `Vector{ComplexF64}` of `V_0` at `grid_pts` — the
+                 **FW-2011-style filled** display surface
+                 (`extrapolate = true`): every Padé evaluated over its
+                 full step with no validity gate, every cell finite.
+                 Paired with `u` so the figure script can composite the
+                 two and visually mark provenance (full opacity on
+                 certified, reduced alpha on extrapolated — ADR-0026
+                 Amendment 10);
+  - `covered`  : `Vector{Bool}`, `true` iff that grid point is B1-gate
+                 certified (`u[k]` finite) — the honest-coverage mask.
+                 Note that `covered ⟺ isfinite(u)` (the certified
+                 contract is unchanged); `u_extrap` is finite
+                 *everywhere*, so `covered` is the **provenance** mask
+                 the figure paints alpha by;
   - `vc4`      : the `vc4_validate` diagnostics — per-candidate `A`,
                  `B`, `dA`, `pass`, `family`, the pruned count and
                  per-pruned-pole failure reason;
@@ -884,16 +975,19 @@ function surf_wedge_fill(bvp_sol::VectorBVPSolution,
     # covering disc is skipped, so the dense lattice does not re-walk
     # covered ground (the chording that clipped poles — Amendment 3,
     # bottleneck 3).  `h = SURF_PN_H` now seeds `h_max` (the step
-    # *ceiling*, not a fixed step).  The Stage-2 fill is gated honest —
-    # `extrapolate = false`, B1 true-radius gate.  `on_target_failure =
-    # :skip` (ADR-0026 D1) makes the dense walk resilient: a per-target
-    # walk failure is recorded in `walk.failed_targets` rather than
-    # aborting the whole solve — a dense lattice has thousands of targets
-    # and `:throw` would cost every target's coverage on the first
-    # failure.  `rng` controls the Stage-1 target processing order —
-    # `nothing` (the figure default) walks the radius-major lattice in
-    # order, an `AbstractRNG` shuffles it for the VC-10 double-run
-    # accuracy indicator (`surf_vc10_two_run`).
+    # *ceiling*, not a fixed step).  This first solve produces the
+    # **certified** Stage-2 fill (`extrapolate = false`, B1 true-radius
+    # gate); the **display** fill is then re-evaluated from the same
+    # walk with `extrapolate = true` (the dual-fill design — see the
+    # docstring above).  `on_target_failure = :skip` (ADR-0026 D1) makes
+    # the dense walk resilient: a per-target walk failure is recorded in
+    # `walk.failed_targets` rather than aborting the whole solve — a
+    # dense lattice has thousands of targets and `:throw` would cost
+    # every target's coverage on the first failure.  `rng` controls the
+    # Stage-1 target processing order — `nothing` (the figure default)
+    # walks the radius-major lattice in order, an `AbstractRNG` shuffles
+    # it for the VC-10 double-run accuracy indicator
+    # (`surf_vc10_two_run`).
     walk = vector_path_network_solve(prob, targets;
                                      order             = SURF_PN_ORDER,
                                      h                 = SURF_PN_H,
@@ -904,6 +998,38 @@ function surf_wedge_fill(bvp_sol::VectorBVPSolution,
                                      tol               = SURF_PN_TOL,
                                      rng               = rng,
                                      on_target_failure = :skip)
+    # ----------------------------------------------------------------------
+    # Dual-fill provenance evaluation (ADR-0025 Amendment 14 / ADR-0026
+    # Amendment 10, `tf9`).  The first `vector_path_network_solve` call
+    # ran the Stage-2 fill once with `extrapolate = false` — the
+    # B1-certified core stored in `walk.grid_y`.  We now re-evaluate the
+    # same fine grid against the same visited tree with
+    # `extrapolate = true` to produce the FW-faithful filled display
+    # surface.  The walk is the expensive part (every visited node, every
+    # shared-Q Padé construction); the second fill is a Horner sweep over
+    # the cached `visited_numerators` / `visited_denominator` and costs
+    # only the per-cell Padé evaluation — no new walk, no rebuild.
+    #
+    # Reaching into `PadeTaylor.VectorPathNetworkStage2._stage2_fill`
+    # (and the sibling private `_nearest_visited`) is the legitimate
+    # figure-side override of the no-extrapolation rule: ADR-0025
+    # Amendment 14 keeps `extrapolate = false` the package default for
+    # every non-headline figure and the public solver API, and ADR-0026
+    # Amendment 10 explicitly scopes `extrapolate = true` to the
+    # headline figure's display overlay — a per-figure provenance-marked
+    # exception, justified by FW 2011 precedent (FW's published pole-
+    # field figures evaluate each Stage-2 Padé over its full step with
+    # no validity gate, FW-md:395-397).
+    grid_y_extrap = PadeTaylor.VectorPathNetworkStage2._stage2_fill(
+        walk.grid_z,
+        walk.visited_z, walk.visited_h,
+        walk.visited_numerators, walk.visited_denominator,
+        walk.visited_jets,
+        true,                   # extrapolate = true — the FW-style overlay
+        Float64(SURF_PN_TOL),
+        prob.f, walk.visited_y, Int(SURF_PN_ORDER),
+        ComplexF64,
+        PadeTaylor.VectorPathNetwork._nearest_visited)
     # S4 (ADR-0026 Amendment 3) — `cluster_atol = nothing` puts
     # `extract_poles_shared_q` in scale-derived clustering mode: the
     # cluster tolerance is a fraction of the *local* pole spacing rather
@@ -920,16 +1046,31 @@ function surf_wedge_fill(bvp_sol::VectorBVPSolution,
     vc4   = vc4_validate(walk, ComplexF64.(candidates))
     poles = vc4.kept
     vc5   = vc5_pair(poles)
-    # The Stage-2 grid_y is ordered as grid_pts; u is its first
-    # component.  A `NaN` slot is an honest B1 gate gap (a grid point
-    # outside every node's verified disc) — never an extrapolated lie.
+    # The B1-certified Stage-2 grid_y is ordered as grid_pts; `u` is its
+    # first component (the `V_0` value at each wedge grid point).  A
+    # `NaN` slot is an honest B1 gate gap (a grid point outside every
+    # node's verified disc) — never an extrapolated lie.  This is the
+    # certified core: `covered ⟺ isfinite(u)` is the figure's honesty
+    # contract (ADR-0025 Amendment 1/14).
     u = ComplexF64[any(isnan, gy) ? ComplexF64(NaN, NaN) : gy[1]
                    for gy in walk.grid_y]
     covered = Bool[!isnan(real(uz)) for uz in u]
+    # The FW-style display fill, evaluated over the same grid against the
+    # same walk with no validity gate — every cell finite, the wedge
+    # filled.  `u_extrap[k]` is the FW-2011-style rendering of `V_0` at
+    # `grid_pts[k]`; the figure script paints `covered[k]` cells at full
+    # opacity (using `u[k]`) and `!covered[k]` cells at reduced opacity
+    # (using `u_extrap[k]`), so the reader can read provenance off the
+    # alpha channel.
+    u_extrap = ComplexF64[any(isnan, gy) ? ComplexF64(NaN, NaN) : gy[1]
+                          for gy in grid_y_extrap]
     # The |x| frontier the walk's node filament reached.
     frontier = isempty(walk.visited_z) ? 0.0 :
                maximum(abs, walk.visited_z)
     cov_frac = isempty(u) ? 0.0 : count(covered) / length(u)
+    n_extrap_finite = count(uz -> !isnan(real(uz)), u_extrap)
+    extrap_frac = isempty(u_extrap) ? 0.0 :
+                  n_extrap_finite / length(u_extrap)
     # The resilient-walk accounting (ADR-0026 D1): with
     # `on_target_failure = :skip` the walk records one VectorWalkFailure
     # per target it could not reach.  A non-empty `failed_targets` is the
@@ -941,12 +1082,15 @@ function surf_wedge_fill(bvp_sol::VectorBVPSolution,
           "$(length(poles)) VC-4-validated " *
           "($(vc4.n_pruned) pruned), " *
           "|x|-frontier $(round(frontier; digits=1)), " *
-          "$(count(covered))/$(length(u)) grid points honestly covered " *
-          "($(round(100 * cov_frac; digits=1))%), " *
+          "$(count(covered))/$(length(u)) grid points B1-certified " *
+          "($(round(100 * cov_frac; digits=1))%) — full opacity; " *
+          "FW-style overlay $(n_extrap_finite)/$(length(u_extrap)) " *
+          "filled ($(round(100 * extrap_frac; digits=1))%) — reduced " *
+          "alpha; " *
           "VC-5 conjugate-pair residual median " *
           "$(round(vc5.median_resid; digits=4))"
-    return (walk = walk, poles = poles, u = u, covered = covered,
-            vc4 = vc4, vc5 = vc5, message = msg)
+    return (walk = walk, poles = poles, u = u, u_extrap = u_extrap,
+            covered = covered, vc4 = vc4, vc5 = vc5, message = msg)
 end
 
 # VC-10 — the FW/FFW two-run pole-field accuracy indicator (ADR-0025
@@ -1006,22 +1150,45 @@ Construction (see the file docstring):
      (ray-fan BVP / in-house 2D-Chebyshev Laplace / Gridap FEM Laplace)
      and **majority-voted per grid point** (median); an agreement /
      spread map records the max pairwise disagreement.
-  2. **Region 2 — the pole-rich wedge** (ADR-0025 Amendment 2) is the
-     validated pole *field* (`extract_poles_shared_q`, the primary
-     deliverable) plus an honest partial `|u|` surface underlay — the
-     B2 adaptive walk + the B1-gated Stage-2 fill, finite only where the
-     verified node discs cover (~13-18 % of the wedge), `NaN` elsewhere.
+  2. **Region 2 — the pole-rich wedge** (ADR-0025 Amendment 14 /
+     ADR-0026 Amendment 10) is the validated pole *field* + a **dual-
+     fill** Re/Im surface: the certified fill (`extrapolate = false`,
+     B1-honest, ~29 % of the wedge) in `Re_u` / `Im_u` and the FW-
+     2011-style filled overlay (`extrapolate = true`, every cell finite,
+     identical to FW's published rendering — FW-md:395-397) in
+     `Re_u_extrap` / `Im_u_extrap`.  The figure script composites the
+     two with `wedge_covered` to mark provenance via alpha.
   3. The two regions are stitched onto one grid; the `±36°` Stokes-line
      strips are `NaN`-masked.
 
 Returns a `NamedTuple`:
   - `xs`, `ys`            : the `SURF_GRID_N`-point axes of `[-20,20]`;
-  - `Re_u`, `Im_u`        : `SURF_GRID_N × SURF_GRID_N` matrices,
+  - `Re_u`, `Im_u`        : `SURF_GRID_N × SURF_GRID_N` matrices, the
+                            **B1-certified** rendering —
                             `Re_u[i,j] = Re V_0(xs[i] + im·ys[j])`
                             (`NaN` outside the disc `|x| ≤ 20`, in the
                             masked strips, in the wedge wherever the B1
                             gate found no honest datum, and where no
-                            sector method has a datum);
+                            sector method has a datum).  In the sector
+                            this is the triple-method vote; in the
+                            wedge the no-extrapolation honesty contract
+                            applies — every finite cell is B1-gate-
+                            certified, every uncovered cell is `NaN`;
+  - `Re_u_extrap`,
+    `Im_u_extrap`         : `SURF_GRID_N × SURF_GRID_N` matrices, the
+                            **FW-2011-style filled overlay** — in the
+                            wedge every cell finite (every Padé
+                            evaluated over its full step with no
+                            validity gate, the rendering FW 2011 itself
+                            uses for its published pole-field figures);
+                            in the sector identical to `Re_u`/`Im_u`
+                            (the sector is voted, not Padé-evaluated —
+                            provenance marking applies only to the
+                            wedge).  Paired with `Re_u`/`Im_u` so the
+                            figure script can composite the two and
+                            paint extrapolated cells at reduced alpha
+                            (ADR-0025 Amendment 14 / ADR-0026
+                            Amendment 10);
   - `spread`              : the agreement map — per sector grid point,
                             the max pairwise disagreement of the three
                             methods (`max(Re-spread, Im-spread)`);
@@ -1070,6 +1237,16 @@ function kkg_pi2_surface()
 
     Re_u   = fill(NaN, n, n)
     Im_u   = fill(NaN, n, n)
+    # The FW-style extrapolated overlay matrices (ADR-0025 Amendment 14 /
+    # ADR-0026 Amendment 10).  In the wedge they carry the FW-faithful
+    # filled rendering — every Padé evaluated over its full step with no
+    # validity gate, the rendering FW 2011 itself uses.  In the sector
+    # and outside the wedge they mirror Re_u/Im_u (the sector is voted,
+    # not Padé-evaluated; the dual-fill provenance applies only to the
+    # wedge underlay).  The figure script composites them with `Re_u`/
+    # `Im_u` and the `wedge_covered` mask to mark provenance via alpha.
+    Re_u_extrap = fill(NaN, n, n)
+    Im_u_extrap = fill(NaN, n, n)
     spread = fill(NaN, n, n)
     wedge_covered = fill(false, n, n)
     sector_method = Dict{Tuple{Int,Int},
@@ -1096,7 +1273,8 @@ function kkg_pi2_surface()
     end
     wedge = isempty(wedge_pts) ?
         (walk = nothing, poles = ComplexF64[], u = ComplexF64[],
-         covered = Bool[], vc4 = nothing, vc5 = nothing,
+         u_extrap = ComplexF64[], covered = Bool[],
+         vc4 = nothing, vc5 = nothing,
          message = "wedge: no grid points") :
         surf_wedge_fill(anchor, wedge_pts)
 
@@ -1120,21 +1298,60 @@ function kkg_pi2_surface()
             vim, sim = surf_vote(im1, im2, im3)
             Re_u[i, j]   = vre
             Im_u[i, j]   = vim
+            # The sector is voted, not Padé-evaluated — the extrapolated
+            # overlay simply mirrors the certified vote here.  Provenance
+            # marking (the alpha override) applies only to the wedge
+            # underlay; the sector is always full-opacity.
+            Re_u_extrap[i, j] = vre
+            Im_u_extrap[i, j] = vim
             spread[i, j] = max(sre, sim)
             sector_method[(i, j)] =
                 (re1, im1, re2, im2, re3, im3)
         end
     end
 
-    # ---- write Region 2's honest partial underlay into the grid -----------
-    # Only the B1-gated covered cells carry a datum; everywhere else in
-    # the wedge stays `NaN` — an honest gap, never an extrapolation
-    # (ADR-0025 Amendment 1/2: the Stage-2 fill ran `extrapolate=false`).
+    # ---- write Region 2's dual-fill underlay into the grid ----------------
+    # ADR-0025 Amendment 14 / ADR-0026 Amendment 10 — the headline figure
+    # renders the wedge with TWO provenance-distinguished fills:
+    #
+    #   * the **certified** fill (`extrapolate = false`, B1 true-radius
+    #     gate) — written into `Re_u` / `Im_u`.  A cell finite in these
+    #     matrices is B1-gate-honest: no Padé evaluated outside its
+    #     truncation-bounded disc.  The figure script paints these cells
+    #     at full opacity.  `wedge_covered[i,j] == true` ⟺ both matrices
+    #     finite here ⟺ certified.
+    #
+    #   * the **FW-style extrapolated** fill (`extrapolate = true`,
+    #     identical to FW 2011's published pole-field figures — FW-
+    #     md:395-397) — written into `Re_u_extrap` / `Im_u_extrap`.
+    #     Every wedge cell is finite (no validity gate); cells the
+    #     certified fill leaves `NaN` get a value here too.  The figure
+    #     script paints `!wedge_covered[i,j]` cells from these matrices
+    #     at reduced opacity — the alpha drop marks them as evaluated
+    #     past the verified disc.
+    #
+    # This dual provenance is FW-faithful (the wedge fills as FW renders
+    # it) AND honest (the certified core is visually distinguishable
+    # from the extrapolated overlay).  The certified rule remains the
+    # package default and applies to every non-headline figure
+    # (ADR-0025); this is a per-figure override justified by FW
+    # precedent.
     if wedge.walk !== nothing
         for (k, (i, j)) in enumerate(wedge_idx)
-            uz = wedge.u[k]
+            uz       = wedge.u[k]
+            uz_extra = wedge.u_extrap[k]
+            # FW-style overlay first — every wedge cell where the Padé
+            # evaluation produced a finite number.  This is the always-
+            # filled, FW-faithful surface; reduced alpha at render time
+            # marks it as extrapolated.
+            if !isnan(real(uz_extra))
+                Re_u_extrap[i, j] = real(uz_extra)
+                Im_u_extrap[i, j] = imag(uz_extra)
+            end
+            # Certified core: only B1-gated covered cells.  An uncovered
+            # cell stays `NaN` in `Re_u` / `Im_u` — an honest gap; the
+            # display surface above carries the extrapolated rendering.
             if isnan(real(uz))
-                # B1 gate found no honest datum here — leave NaN, honest.
                 continue
             end
             Re_u[i, j] = real(uz)
@@ -1144,6 +1361,7 @@ function kkg_pi2_surface()
     end
 
     return (xs = xs, ys = ys, Re_u = Re_u, Im_u = Im_u,
+            Re_u_extrap = Re_u_extrap, Im_u_extrap = Im_u_extrap,
             spread = spread, poles = wedge.poles,
             vc4 = wedge.vc4, vc5 = wedge.vc5,
             wedge_walk = wedge.walk,

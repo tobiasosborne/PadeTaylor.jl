@@ -1383,6 +1383,148 @@ suite (Phase D) are all sound and carry over to the re-done figure
 unchanged. This ADR stays Accepted for that work; ADR-0026 (under
 `0ln.40`) will govern the full-driver port.
 
+## Amendment 14 — headline-figure dual-fill provenance: FW-faithful filled + B1-certified core (2026-05-26)
+
+Bead `padetaylor-tf9` (the final step of `padetaylor-0ln.40`) ships the
+headline figure's last design decision and closes the D1–S8 + tf9 arc.
+
+### The decision — render FW-style filled, mark provenance
+
+ADR-0026 Amendment 9 settled the investigation with measurement: the
+honest B1 disc is uniformly truncation-limited; certified coverage
+saturates at ~22 % (order 36) → **~29 % at order 48** (the measured
+saturation knee — ADR-0026 Amendment 5's order sweep); denser targets
+do not lift coverage; the walk is healthy. The cap is not a walk
+defect — it is **the no-extrapolation honesty contract this ADR
+authored**. And that contract turns out to be **stricter than FW 2011
+itself**: FW's published pole-field figures FILL precisely because
+FW's Stage-2 evaluates each Padé over its full step **with no validity
+gate** (FW-md:395-397). Rendering the wedge ~29 % filled and the
+other ~71 % grey is technically honest but visually inadequate (worklog
+059 / Amendment 13) — and *more austere than what FW themselves
+shipped*.
+
+The user-judged-correct resolution: **render FW-faithful filled, but
+mark provenance**. The figure's wedge runs the Stage-2 fill **twice on
+one walk** — once `extrapolate = false` (the B1-honest certified core)
+and once `extrapolate = true` (the FW-style filled overlay) — and
+**composites** the two:
+
+- the **certified core** (~29 % of the wedge at order 48 — measured)
+  renders at **full opacity** — the B1-honest senior-grade region;
+- the **extrapolated overlay** (the other ~71 %) renders at **reduced
+  alpha** (`EXTRAP_ALPHA = 0.50`) — the FW-2011-style filled cells,
+  evaluated past the verified disc;
+- the **caption** explains the provenance distinction in one sentence
+  on the figure itself; **the reader cannot mistake certified for
+  extrapolated** — provenance reads off the alpha channel.
+
+This is FW-faithful (the wedge fills as FW renders it) AND honest (the
+certified core is visually distinguishable from the extrapolated
+overlay) — arguably more honest than rendering 71 % as featureless
+grey, because it surfaces both the structure FW visualised *and* the
+boundary of where the honesty contract holds.
+
+### Scope — per-figure override, not a package retreat
+
+Amendment 14 is a **per-figure override**, scoped exclusively to the
+headline figure (`figures/kkg_pi2_tritronquee_surface.jl` +
+`figures/_kkg_pi2_surface_helpers.jl`'s `surf_wedge_fill`):
+
+- **Package default unchanged** — `vector_path_network_solve`'s
+  `extrapolate = false` default and the `_stage2_fill` B1 gate
+  (Amendment 1) are unchanged. Every non-headline figure and every
+  test continues to honour the strict no-extrapolation rule.
+- **API unchanged** — Amendment 14 adds no `src/` surface area. The
+  figure helper reaches directly into the existing internal
+  `PadeTaylor.VectorPathNetworkStage2._stage2_fill` to compute the
+  second fill from the cached walk; the legitimate scope of a
+  per-figure pattern is to use private internals rather than re-export
+  an `extrapolate = true` convenience.
+- **Justified by FW precedent** — FW 2011's own published figures use
+  this rendering. A figure that visually marks its provenance is
+  honest by a stricter standard than FW's (FW does not mark — they
+  simply fill).
+
+### Implementation summary
+
+- **Order bumped**: `SURF_PN_ORDER` 36 → 48 (the ADR-0026 Amendment 5
+  measured saturation knee — biggest certified core at ~2× the
+  order-36 runtime; order 72 wasted).
+- **Dual-fill helper**: `surf_wedge_fill` runs `vector_path_network_solve`
+  once (`extrapolate = false`, the certified fill), then re-evaluates
+  `_stage2_fill` directly on the cached walk with `extrapolate = true`
+  (the FW-style overlay). One walk, two fills.
+- **Kernel returns**: `kkg_pi2_surface()` adds `Re_u_extrap`,
+  `Im_u_extrap` matrices alongside `Re_u`/`Im_u`. In the sector the
+  extrap matrices mirror the certified ones (the sector is voted, not
+  Padé-evaluated). In the wedge they carry the FW-style filled
+  rendering.
+- **Render**: heatmap and 3D surface panels composite two layers — the
+  extrap layer at `EXTRAP_ALPHA = 0.50` underneath the certified layer
+  at full opacity. The wedge pole field overlay (266 validated poles)
+  is unchanged.
+- **Caption** explains the provenance marking in plain English on the
+  figure itself.
+
+### Measured certified-coverage progression (worklog 060)
+
+| stage | wedge cells | certified frac | mode |
+|-------|-------------|----------------|------|
+| pre-resilient (order 24) | ~2k coarse | **~5 %** | Amendment 2 sparse fan |
+| S2-S5 corrected stack | ~8k | **~8 %** | resilient adaptive |
+| S6a (order 36) | ~60k+ | **~22 %** | ADR-0026 Amendment 6 |
+| **tf9 (order 48)** | ~60k+ | **~29 %** | this Amendment, measured at render |
+
+The actual order-48 certified fraction at render time is reported in
+the figure's `message` and surfaced in worklog 060.
+
+### ADR-0026 Amendment 9 — the converged investigation
+
+Amendment 14 acts on the ADR-0026 Amendment 9 finding (the converged
+D1–S8 arc): the cap on certified coverage is the no-extrapolation
+contract itself, not a walk defect; further walk engineering will not
+raise the certified ceiling materially; the resolution is a design
+decision about *what to render*, not a numerical fix. ADR-0026 closes
+under its own Amendment 10 (`tf9`) — the dual-fill design + the
+order-48 lift + the worklog 060 closeout.
+
+### What stays
+
+- The strict B1 gate is the package default — every non-headline
+  figure and every test uses `extrapolate = false`.
+- The validated 266-pole field overlay is unchanged.
+- The pole-free sector (the triple-method majority vote, ADR-0024) is
+  unchanged.
+- VC-4…VC-10 are all unchanged; the figure's `wedge_covered` mask
+  still flags exactly the B1-certified cells (the "covered" boolean
+  always meant "B1-certified", which is what it still means).
+- The Stokes-strip mask narrowing (Amendment 12), the sector
+  resolution (Amendment 11), the per-pole validation (Amendments 5,
+  6), the BVP arc data (Amendment 10) — all stand.
+
+### Tests and the figure suite
+
+- The certified-mask invariant (`covered ⟺ isfinite(Re_u/Im_u)`)
+  remains the load-bearing PI2S.4 assertion — the test continues to
+  pin "no Padé evaluated outside its disc in the *certified* matrices."
+- The new extrapolated matrices (`Re_u_extrap`, `Im_u_extrap`) are
+  *additional*, not replacements; the test suite does not need to
+  change semantics. The figure script paints these via reduced alpha
+  but the rendered alpha is a Makie render-time detail, not a numerical
+  invariant.
+- VC-7…VC-10 stay GREEN — they touch the walk and the pole field, not
+  the Stage-2 fill mode.
+
+### Mutation-proof
+
+Per ADR-0026 Amendment 10, the load-bearing decision is the
+provenance distinction: a render that omitted the certified-vs-extrap
+layering (drew only the extrap layer) would lose the honesty marker.
+The figure script's two-layer composite is verified visually at render
+time (the rendered PNG distinguishes the layers); the certified
+fraction is reported in the figure's message and worklog 060.
+
 ## References
 
 - KKG 2015 TeX `references/tex/painleve_hierarchy/KapaevKleinGrava2015_PI2_tritronquee_ConstrApprox41/tritronquee_coeff.tex`

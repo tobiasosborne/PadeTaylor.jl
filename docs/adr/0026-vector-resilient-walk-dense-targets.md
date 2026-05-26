@@ -565,6 +565,103 @@ design decision (keep the strict gate and ship the honest ~29 %, or
 render FW-style with the certified region marked) — not further walk
 work. The investigation (D1–S8) is complete.
 
+## Amendment 10 (2026-05-26) — tf9 closeout: dual-fill provenance ships; D1–S8+tf9 arc complete
+
+Bead `padetaylor-tf9` — the final step of `padetaylor-0ln.40` — ships
+the headline figure's last design decision. Amendment 9 converged the
+investigation: certified coverage saturates at ~22 % (order 36) →
+**~29 % at order 48** under the no-extrapolation contract; the cap is
+the contract itself, not a walk defect, and a *completely* filled
+wedge is unreachable while the contract holds. **Decision** (cross-
+referenced from ADR-0025 Amendment 14): render FW-faithful filled,
+mark provenance.
+
+### What ships
+
+- **Taylor order**: `SURF_PN_ORDER` 36 → **48** in
+  `figures/_kkg_pi2_surface_helpers.jl` — the Amendment-5 measured
+  saturation knee. Biggest certified core (~29 %) at ~2× the
+  order-36 runtime; order 72 is wasted.
+- **Dual-fill helper**: `surf_wedge_fill` runs **one** Stage-1 walk
+  and evaluates the Stage-2 fill **twice** on the cached walk —
+  `extrapolate = false` for the B1-certified core (stored as
+  `walk.grid_y`, the package's normal output), then a direct call to
+  `PadeTaylor.VectorPathNetworkStage2._stage2_fill` with
+  `extrapolate = true` for the FW-style filled overlay. One walk, two
+  fills; the second fill is a Horner sweep against the cached
+  visited tree.
+- **Kernel API additions**: `kkg_pi2_surface()` now returns
+  `Re_u_extrap` and `Im_u_extrap` alongside `Re_u`/`Im_u`. In the
+  sector the extrap matrices mirror the certified ones (the sector is
+  voted, not Padé-evaluated). In the wedge they carry the FW-style
+  filled rendering. `surf_wedge_fill` returns a `u_extrap` field
+  alongside the existing `u`.
+- **Figure render**: `figures/kkg_pi2_tritronquee_surface.jl`
+  composites the wedge as a **two-layer alpha overlay** — the
+  extrapolated layer at `EXTRAP_ALPHA = 0.50` (the FW-style fill where
+  the certified core leaves NaN) drawn first, then the certified
+  layer at full opacity on top. The wedge pole field overlay is
+  unchanged.
+- **No `src/` API change**: Amendment 10 ships exclusively in
+  `figures/`. The kernel reaches into the existing private
+  `_stage2_fill` rather than re-exporting an `extrapolate = true`
+  convenience — the legitimate scope of a per-figure provenance-marked
+  exception.
+
+### Why reduced alpha (not hatch / desaturation)
+
+Alpha was chosen over hatch overlay and desaturation because it
+composes natively in Makie's `heatmap!` / `surface!`, reads cleanly on
+both the 2D heatmap and the 3D surface panels in one layout pass, and
+the alpha drop is a visually-monotone signal — a reader scanning the
+figure sees that certain cells are "washed out" and instinctively
+attributes that to lower confidence. Hatch would require a separate
+overlay layer and double the render-time cost; desaturation would
+flatten the `:RdBu` diverging map's sign-reading at the wedge cells
+where it matters most. `EXTRAP_ALPHA = 0.50` is the chosen value: at
+0.45 the overlay is too pale to read pole structure on the
+colour-clamped wedge, at 0.55 the visual distinction from
+full-opacity cells is too subtle on the 2D heatmap panels.
+
+### Measured certified coverage at order 48
+
+The exact certified fraction at order 48 is *measured at render time*
+and surfaced in three places: the figure's `message` field, the
+figure script's stdout, and worklog 060. The Amendment-9 ladder is
+`~5 % → ~8 % → ~22 % → ~29 %`; the actual value at the production
+render is the worklog 060 figure.
+
+### Tests
+
+- VC-4 / VC-5 / VC-7 / VC-8 / VC-10 are all unchanged — they touch
+  the walk and the pole field, not the Stage-2 fill mode. PI2S.1
+  through PI2S.12 stay GREEN.
+- PI2S.4's load-bearing `covered ⟺ isfinite(Re_u/Im_u)` invariant
+  continues to hold — `Re_u` / `Im_u` are the **certified** matrices
+  (the dual-fill design's senior-grade core); the new
+  `Re_u_extrap` / `Im_u_extrap` matrices are *additions*, not
+  replacements. The "covered" boolean always meant "B1-certified";
+  it still means exactly that.
+- The full `src/`-touching test suite — `test/vector_path_network_test.jl`,
+  `test/vector_path_network_stage2_test.jl`,
+  `test/vector_pipeline_oracle_test.jl` — stays GREEN. No `src/`
+  change ships in this amendment.
+
+### Closes the D1–S8 + tf9 arc
+
+The arc is complete. D1 (resilient walk) shipped Amendment 1 / Bead
+`0ln.40.a`. D2 (dense targets) shipped Bead `0ln.40.b`, falsified by
+Amendment 1's probe. D3 / R1 / S1–S8 (the corrected stack — scale-
+derived adaptive step, skip-if-covered, scale-derived clustering,
+order knee, `radius_t` fix) shipped through Amendments 2–9. The
+honesty-contract cap was the converged finding (Amendment 9). The
+dual-fill provenance design (this amendment) is the closeout —
+ADR-0026 closes here. Worklog 060 records the full ladder, the three
+scale heresies fixed (`h_max`, `radius_t`, `cluster_atol`), and the
+"premature ceiling claim" lesson: two prior agents called "ceiling"
+wrongly; the only thing that wasn't a ceiling was the no-extrapolation
+contract — a documented design decision, not a numerical limit.
+
 ## References
 
 - `docs/worklog/059-headline-figure-honest-reassessment.md`
