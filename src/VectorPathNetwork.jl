@@ -215,6 +215,8 @@ an accepted step).  See `VectorWalkFailure` and the
 module VectorPathNetwork
 
 using Random:               AbstractRNG, shuffle
+using LinearAlgebra:        norm
+using Printf:               @sprintf, @printf
 using ..VectorProblems:     VectorPadeTaylorProblem
 using ..VectorCoefficients: vector_taylor_coefficients
 using ..VectorStepper:      VectorPadeStepperState, vector_pade_step_with_pade!
@@ -458,7 +460,9 @@ VectorPathNetworkSolution{T}(vz, vy, vh, vnum, vden, vpar, gz, gy,
                               tol = 1e-8,
                               rng = nothing,
                               on_target_failure = :throw,
-                              skip_covered = false)
+                              skip_covered = false,
+                              verbose = false,
+                              progress_every = 500)
         -> VectorPathNetworkSolution
 
 Build the minimal Stage-1 vector path-network covering `targets` — a
@@ -604,6 +608,25 @@ Kwargs:
                          `COVER_FRAC` (a module `const`, default `0.85`)
                          is the conservative covering fraction — see its
                          literate comment for the tuning rationale.
+  - `verbose::Bool`     — when `true`, emit eager-flushed progress lines
+                         to `stdout`: one line at Stage-1 begin, one per
+                         per-target start (after the skip-coverage
+                         filter, so the printed `start_z` is the live
+                         nearest-visited node), one every
+                         `progress_every` aggregate inner steps with
+                         elapsed wall, current `z_cur`, `‖y_cur‖`,
+                         distance to target, and steps/second, one at
+                         Stage-1 done, and (when `fine_grid` is supplied)
+                         a pair around the Stage-2 fill.  Default `false`
+                         (silent — byte-identical to the pre-verbose
+                         walk; the verbose path is pure stdout side-
+                         effect, no state change).  Mirrors the v0.1
+                         `path_network_solve` verbose API
+                         (`src/PathNetwork.jl:349-355`) — the vector
+                         twist is `‖y‖` (vector state) where the scalar
+                         driver prints `|u|`.
+  - `progress_every::Integer` — Stage-1-inner-step granularity for the
+                         `verbose` progress lines.  Defaults to 500.
 
 Throws `ArgumentError` (Rule 1) for empty `targets`, non-positive `h`,
 a `wedge_angles` not of length 5, an unknown `step_policy`, an
@@ -631,7 +654,9 @@ function vector_path_network_solve(prob::VectorPadeTaylorProblem{F, CT},
                                    tol::Real = 1e-8,
                                    rng::Union{Nothing, AbstractRNG} = nothing,
                                    on_target_failure::Symbol = :throw,
-                                   skip_covered::Bool = false
+                                   skip_covered::Bool = false,
+                                   verbose::Bool = false,
+                                   progress_every::Integer = 500
                                    ) where {F, CT}
     isempty(targets) && throw(ArgumentError(
         "vector_path_network_solve: targets is empty — there is nothing " *
@@ -703,7 +728,27 @@ function vector_path_network_solve(prob::VectorPadeTaylorProblem{F, CT},
     # `:skip` when every walk succeeds.
     failed_targets = VectorWalkFailure{T}[]
 
-    for target in target_list
+    # Verbose-mode progress instrumentation.  The Stage-1 begin marker,
+    # per-target start lines (printed after the skip-coverage filter so
+    # the live `z_cur` is meaningful), per-step throttled progress lines,
+    # and the Stage-1 done summary mirror the scalar `path_network_solve`
+    # API (`src/PathNetwork.jl:483-657`) verbatim — only `‖y‖` replaces
+    # `|u|` for vector state.  `t_start_stage1` and `total_n_steps` are
+    # initialised unconditionally so the per-step throttle check is a
+    # single integer compare; emission itself is gated on `verbose`, so
+    # the silent path's only overhead is an `Int += 1` per accepted step
+    # (no allocation, no I/O — determinism preserved bit-identically).
+    if verbose
+        println(@sprintf(
+          "vector_path_network_solve: Stage 1 begin — %d targets, h=%s, order=%d, on_target_failure=:%s",
+          length(target_list), string(Float64(h_max)), Int(order),
+          on_target_failure))
+        flush(stdout)
+    end
+    t_start_stage1 = time()
+    total_n_steps  = 0
+
+    for (target_idx, target) in enumerate(target_list)
         # The target-loop skip decision.  With `skip_covered = false`
         # (the default) a target is skipped only on *exact coincidence*
         # with a visited node — the `10·eps` test, byte-identical to the
@@ -729,6 +774,13 @@ function vector_path_network_solve(prob::VectorPadeTaylorProblem{F, CT},
         y_cur  = visited_y[idx_v]
         parent = idx_v
         n_steps = 0
+
+        # Verbose per-target start: emitted AFTER the skip-coverage
+        # filter (which `continue`s above) so `z_cur` is the live nearest-
+        # visited node, and BEFORE the wedge walk begins so the reader
+        # sees one line per actually-attempted target.
+        verbose && _verbose_target_start_v(target_idx, length(target_list),
+                                            target, z_cur, t_start_stage1)
 
         # The per-target wedge walk.  Under `on_target_failure = :skip`
         # it runs inside a try/catch: a `VectorWalkError` (an unreachable
@@ -783,6 +835,18 @@ function vector_path_network_solve(prob::VectorPadeTaylorProblem{F, CT},
 
                 parent = length(visited_z)   # next step chains off this node
                 z_cur, y_cur = z_new, y_new
+
+                # Aggregate-step counter for verbose throttling.  Incremented
+                # AFTER the `z_cur, y_cur = z_new, y_new` update so the
+                # printed state is the freshly-pushed node, matching the
+                # scalar `path_network_solve` convention.  The Int += 1 is
+                # unconditional (a few ns); emission is `verbose && …`.
+                total_n_steps += 1
+                if verbose && total_n_steps % progress_every == 0
+                    _verbose_step_v(total_n_steps, target_idx,
+                                    length(target_list),
+                                    z_cur, y_cur, target, t_start_stage1)
+                end
             end
         catch e
             # `:throw` mode (or a non-walk exception) → re-raise; `:skip`
@@ -795,6 +859,16 @@ function vector_path_network_solve(prob::VectorPadeTaylorProblem{F, CT},
                                        T(abs(z_cur - target))))
             continue
         end
+    end
+
+    if verbose
+        elapsed = time() - t_start_stage1
+        @printf(stdout,
+          "vector_path_network_solve: Stage 1 done — %d visited, %d steps, %.2f s (%.1f steps/s), %d failed\n",
+          length(visited_z), total_n_steps, elapsed,
+          total_n_steps / max(elapsed, eps()),
+          length(failed_targets))
+        flush(stdout)
     end
 
     # Stage 2 — the fine-grid fill (bead padetaylor-0ln.20).  When no
@@ -812,10 +886,23 @@ function vector_path_network_solve(prob::VectorPadeTaylorProblem{F, CT},
     end
 
     grid_z = collect(C, fine_grid)
+    t_start_stage2 = time()
+    if verbose
+        @printf(stdout,
+          "vector_path_network_solve: Stage 2 begin — %d grid points (extrapolate=%s)\n",
+          length(grid_z), extrapolate)
+        flush(stdout)
+    end
     grid_y = _stage2_fill(grid_z, visited_z, visited_h, visited_numerators,
                           visited_denominator, visited_jets, extrapolate,
                           real(tol), prob.f, visited_y, Int(order), C,
                           _nearest_visited)
+    if verbose
+        @printf(stdout,
+          "vector_path_network_solve: Stage 2 done — %.2f s\n",
+          time() - t_start_stage2)
+        flush(stdout)
+    end
 
     return VectorPathNetworkSolution{T}(visited_z, visited_y, visited_h,
                                         visited_numerators,
@@ -879,5 +966,40 @@ end
 # `include`d before this file (CLAUDE.md Rule 6 200-LOC split) and
 # pulled in via the `using`s at the top; neither has a reverse
 # dependency on this module.
+
+# Verbose-mode progress helpers — Float64-truncate BigFloat coords for
+# human-readable single-line output.  Eager-flushed so progress remains
+# visible under stdout buffering.  Pattern lifted from the scalar twin
+# (`src/PathNetwork.jl:960-984`); the vector twist is that node state
+# carries `y::Vector{Complex{T}}` not scalar `u`, so the per-step line
+# prints `‖y‖` (the Euclidean norm of the vector state) where the scalar
+# helper prints `|u|`.  Both helpers are `verbose &&`-gated at every
+# call site (no allocation, no I/O on the silent path).
+function _verbose_target_start_v(target_idx::Int, n_targets::Int,
+                                  target::Complex{T}, z_start::Complex{T},
+                                  t_start::Float64) where T
+    elapsed = time() - t_start
+    println(@sprintf("[%7.1fs] target %4d/%-4d  z=%s  start_z=%s",
+                     elapsed, target_idx, n_targets,
+                     _fmt_v(target), _fmt_v(z_start)))
+    flush(stdout)
+end
+
+function _verbose_step_v(total_n_steps::Int, target_idx::Int, n_targets::Int,
+                          z_cur::Complex{T}, y_cur::AbstractVector,
+                          target::Complex{T}, t_start::Float64) where T
+    elapsed = time() - t_start
+    sps     = total_n_steps / max(elapsed, eps())
+    ny      = Float64(norm(y_cur))
+    println(@sprintf("[%7.1fs]   step %7d  tgt %d/%d  z=%s  ‖y‖=%.3e  |Δ|=%.3e  %.1f steps/s",
+                     elapsed, total_n_steps, target_idx, n_targets,
+                     _fmt_v(z_cur), ny,
+                     Float64(abs(z_cur - target)), sps))
+    flush(stdout)
+end
+
+# Truncate Complex{<:AbstractFloat} to a 5-digit fixed-format string —
+# BigFloats would print ~75 digits per coordinate otherwise.
+_fmt_v(z::Complex) = @sprintf("(%+.4e,%+.4e)", Float64(real(z)), Float64(imag(z)))
 
 end # module VectorPathNetwork

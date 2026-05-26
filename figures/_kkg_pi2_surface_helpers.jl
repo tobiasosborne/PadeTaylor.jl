@@ -1004,7 +1004,8 @@ function surf_wedge_fill(bvp_sol::VectorBVPSolution,
                                      extrapolate       = false,
                                      tol               = SURF_PN_TOL,
                                      rng               = rng,
-                                     on_target_failure = :skip)
+                                     on_target_failure = :skip,
+                                     verbose           = true)
     # ----------------------------------------------------------------------
     # Dual-fill provenance evaluation (ADR-0025 Amendment 14 / ADR-0026
     # Amendment 10, `tf9`).  The first `vector_path_network_solve` call
@@ -1042,17 +1043,39 @@ function surf_wedge_fill(bvp_sol::VectorBVPSolution,
     # cluster tolerance is a fraction of the *local* pole spacing rather
     # than the absolute `SURF_CLUSTER_ATOL = 0.2`, which wrongly
     # merged/split poles and corrupted the pole count.
+    #
+    # The `[wedge ...]` phase markers around the post-walk validation are
+    # the same "verbose mode + eager flush" discipline as the existing
+    # `[kernel ...]` markers in `kkg_pi2_surface()` (memory
+    # `long-julia-agents-verbose-flush`): each validation phase emits a
+    # stdout line and `flush(stdout)` so the log file streams progress
+    # live under background-redirection.  `t_validate` is local to the
+    # validation block — the surface kernel's `tphase` is not in scope
+    # inside `surf_wedge_fill`.  Bead `padetaylor-dqu`.
+    t_validate = time()
+    @printf("  [wedge %5.1fs] extract_poles_shared_q (radius_t=%.1f, min_support=%d)...\n",
+            time() - t_validate, SURF_RADIUS_T, SURF_MIN_SUPPORT); flush(stdout)
     candidates = extract_poles_shared_q(walk;
                                         radius_t     = SURF_RADIUS_T,
                                         cluster_atol = nothing,
                                         min_support  = SURF_MIN_SUPPORT)
+    @printf("  [wedge %5.1fs] extract_poles_shared_q → %d candidates\n",
+            time() - t_validate, length(candidates)); flush(stdout)
     # Phase-D per-pole validation: VC-4 prunes the spurious candidates
     # (Froissart doublets / out-of-family / non-zero-residue), VC-5
     # pairs the survivors by conjugate symmetry.  `poles` is the
     # VC-4-validated field — the field the figure renders.
+    @printf("  [wedge %5.1fs] vc4_validate (%d candidates)...\n",
+            time() - t_validate, length(candidates)); flush(stdout)
     vc4   = vc4_validate(walk, ComplexF64.(candidates))
+    @printf("  [wedge %5.1fs] vc4_validate → %d kept (%d pruned)\n",
+            time() - t_validate, length(vc4.kept), vc4.n_pruned); flush(stdout)
     poles = vc4.kept
+    @printf("  [wedge %5.1fs] vc5_pair (%d poles)...\n",
+            time() - t_validate, length(poles)); flush(stdout)
     vc5   = vc5_pair(poles)
+    @printf("  [wedge %5.1fs] vc5_pair done\n",
+            time() - t_validate); flush(stdout)
     # The B1-certified Stage-2 grid_y is ordered as grid_pts; `u` is its
     # first component (the `V_0` value at each wedge grid point).  A
     # `NaN` slot is an honest B1 gate gap (a grid point outside every
