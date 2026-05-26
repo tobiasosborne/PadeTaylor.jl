@@ -192,7 +192,7 @@ module KKGSurfaceKernel
 include(joinpath(@__DIR__, "_kkg_pi2_surface_helpers.jl"))
 end
 using .KKGSurfaceKernel: kkg_pi2_surface, SURF_GRID_N, SURF_XY_LIM,
-                         SURF_STITCH_MASK_DEG
+                         SURF_STITCH_MASK_DEG, SURF_PN_ORDER
 
 const OUTPNG = joinpath(@__DIR__, "output",
                         "kkg_pi2_tritronquee_surface.png")
