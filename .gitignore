@@ -39,6 +39,14 @@ docs/Manifest.toml
 # The output PNGs ARE committed: they are the figure deliverables.
 figures/Manifest.toml
 
+# Headline-figure kernel cache — the persistent `res` NamedTuple for
+# `figures/kkg_pi2_tritronquee_surface.jl`.  Skipping a render-only
+# re-run costs ~3.5 h of CPU; the JLD2 blob saves that.  Regenerable
+# via `julia --project=figures figures/kkg_pi2_tritronquee_surface.jl`
+# (with `KKG_FORCE_RECOMPUTE=1` to override staleness logic).  The
+# output PNGs are committed; the binary cache is not.
+figures/output/kkg_pi2_kernel_cache.jld2
+
 # Local scheduling lockfiles.
 .claude/scheduled_tasks.lock
 external/probes/heun-oracle/capture.log

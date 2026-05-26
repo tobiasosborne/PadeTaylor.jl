@@ -180,6 +180,7 @@
 
 using CairoMakie
 using Printf
+using JLD2
 
 # The F3 kernel `include`s the Gridap-backed Laplace voter, whose
 # `_kkg_pi2_gridap_helper.jl` uses an unqualified `Point`.  Pulled into
@@ -196,6 +197,17 @@ using .KKGSurfaceKernel: kkg_pi2_surface, SURF_GRID_N, SURF_XY_LIM,
 
 const OUTPNG = joinpath(@__DIR__, "output",
                         "kkg_pi2_tritronquee_surface.png")
+
+# Kernel-output persistence layer.  The 2026-05-26 render crashed in the
+# Makie `@sprintf` caption-build step after `kkg_pi2_surface()` had spent
+# 3 h 26 min producing a complete `res` NamedTuple — all of which was lost
+# because nothing had been serialised.  Caching `res` to JLD2 means a
+# render-only re-run (e.g. fixing a caption typo) is seconds, not hours.
+# The cache lives in `figures/output/` (gitignored — binary, regenerable).
+# Bumping `CACHE_VERSION` is the explicit invalidation knob; helper-file
+# mtime checks + key parameter equality are the implicit ones.
+const CACHE_PATH = joinpath(@__DIR__, "output", "kkg_pi2_kernel_cache.jld2")
+const CACHE_VERSION = "v1"
 
 # Display clamp — a few × the smooth-sector amplitude (see header).  The
 # kernel's matrices are NOT modified; this is applied only to display
@@ -227,10 +239,74 @@ const EXTRAP_ALPHA = 0.50
 @printf("  grid: %d×%d over [-%.0f,%.0f]²\n",
         SURF_GRID_N, SURF_GRID_N, SURF_XY_LIM, SURF_XY_LIM); flush(stdout)
 
+# Cache layer for the 3h+ kernel run.  Persists `res` to JLD2; a re-run
+# that only fixes the render step is seconds, not hours.  Invalidated
+# if any `figures/_kkg_pi2*.jl` helper is newer than the cache, OR if
+# the header (CACHE_VERSION + key SURF_* parameters) differs, OR if
+# the env var KKG_FORCE_RECOMPUTE is set.  Anything that goes wrong
+# on load falls through to a fresh kernel run — the cache is an
+# optimisation, never a source of truth.
+function _kernel_cache_header()
+    (version    = CACHE_VERSION,
+     grid_n     = SURF_GRID_N,
+     xy_lim     = SURF_XY_LIM,
+     pn_order   = SURF_PN_ORDER,
+     # SURF_R_MAX, SURF_PN_H pulled via the kernel module
+     r_max      = KKGSurfaceKernel.SURF_R_MAX,
+     pn_h       = KKGSurfaceKernel.SURF_PN_H)
+end
+
+function _cache_is_fresh(path)
+    isfile(path) || return false
+    haskey(ENV, "KKG_FORCE_RECOMPUTE") && return false
+    cache_mtime = mtime(path)
+    helper_dir  = @__DIR__
+    for f in readdir(helper_dir; join = true)
+        endswith(f, ".jl") || continue
+        name = basename(f)
+        # The render script itself + every kkg_pi2 helper must be older
+        # than the cache.  Mtime-newer ⇒ stale ⇒ recompute.
+        if name == basename(@__FILE__) || startswith(name, "_kkg_pi2")
+            mtime(f) > cache_mtime && return false
+        end
+    end
+    return true
+end
+
+function _load_or_compute_kernel()
+    if _cache_is_fresh(CACHE_PATH)
+        try
+            cached_header, cached_res = JLD2.load(CACHE_PATH, "header", "res")
+            if cached_header == _kernel_cache_header()
+                @printf("  cache: HIT (%s)\n", CACHE_PATH); flush(stdout)
+                return cached_res
+            end
+            @printf("  cache: header mismatch, recomputing\n"); flush(stdout)
+        catch err
+            @printf("  cache: load failed (%s), recomputing\n", err); flush(stdout)
+        end
+    else
+        @printf("  cache: MISS (%s); KKG_FORCE_RECOMPUTE=%s\n",
+                CACHE_PATH, get(ENV, "KKG_FORCE_RECOMPUTE", "unset"));
+        flush(stdout)
+    end
+    res = kkg_pi2_surface()
+    try
+        mkpath(dirname(CACHE_PATH))
+        JLD2.save(CACHE_PATH, "header", _kernel_cache_header(), "res", res)
+        @printf("  cache: wrote %s\n", CACHE_PATH); flush(stdout)
+    catch err
+        # Caching failure is non-fatal — we have the live `res`.
+        @printf("  cache: write failed (%s) — continuing without persistence\n",
+                err); flush(stdout)
+    end
+    return res
+end
+
 t0  = time()
 @printf("  kernel: starting kkg_pi2_surface (order=%d, expect tens of minutes at order 48)...\n",
         SURF_PN_ORDER); flush(stdout)
-res = kkg_pi2_surface()
+res = _load_or_compute_kernel()
 @printf("  kernel: %.1f s — %s\n", time() - t0, res.message); flush(stdout)
 
 xs, ys = res.xs, res.ys
@@ -427,16 +503,11 @@ const FIGNOTE = string(
     "Smooth ~270° sector: triple-method majority vote (ray-fan BVP / ",
     "2D-Chebyshev + Gridap FEM Laplace, ADR-0024).  Wedge |arg x|<36° ",
     "(ADR-0025 Amend. 14 / ADR-0026 Amend. 10): dual-fill provenance — ",
-    @sprintf("FULL OPACITY cells are B1-honest (no Padé evaluated past " *
-             "its verified disc, %.1f%% of grid); REDUCED ALPHA " *
-             "(α = %.2f) cells are evaluated past their verified disc, " *
-             "FW-2011-style (%.1f%% additional).  ",
+    @sprintf("FULL OPACITY cells are B1-honest (no Padé evaluated past its verified disc, %.1f%% of grid); REDUCED ALPHA (α = %.2f) cells are evaluated past their verified disc, FW-2011-style (%.1f%% additional).  ",
              100.0 * n_certified / length(res.Re_u),
              EXTRAP_ALPHA,
              100.0 * n_extrapolated / length(res.Re_u)),
-    @sprintf("%d validated wedge poles (black dots); display clamped " *
-             "to ±%.0f.  Grey: NaN — outside |x|≤20 disc, ±%.0f° " *
-             "Stokes strips.",
+    @sprintf("%d validated wedge poles (black dots); display clamped to ±%.0f.  Grey: NaN — outside |x|≤20 disc, ±%.0f° Stokes strips.",
              length(res.poles), SURF_CLAMP, SURF_STITCH_MASK_DEG))
 Label(fig[3, 1:3], FIGNOTE; fontsize = 9, padding = (0, 0, 8, 0))
 

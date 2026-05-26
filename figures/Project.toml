@@ -16,6 +16,7 @@ DelaunayTriangulation = "927a84f5-c5f4-47a5-9785-b46e178433df"
 # stack (it broke `Pkg.test()` — see ADR-0024).  Gridap 0.20 dropped
 # that pin and resolves clean here alongside CairoMakie on Julia 1.12.
 Gridap = "56d4f2e9-7ea1-5844-9cf6-b9c51ca7ce8e"
+JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 PadeTaylor = "00000000-0000-0000-0000-000000000001"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 
@@ -23,5 +24,6 @@ SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 CairoMakie = "0.12, 0.13, 0.14, 0.15"
 DelaunayTriangulation = "1"
 Gridap = "0.20"
+JLD2 = "0.4, 0.5, 0.6"
 SpecialFunctions = "2"
 julia = "1.10"
