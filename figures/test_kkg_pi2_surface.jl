@@ -45,7 +45,9 @@
 #      `SURF_LAP_NX`) and verified r-localised to the inner annulus.
 #
 #   3. **Sector coverage.**  ≥ 80% of the pole-free-sector grid cells
-#      (inside the `|x| ≤ 20` disc) must carry a non-`NaN` value.
+#      (inside the `|x| ≤ SURF_XY_LIM` disc — the R=8 headline figure;
+#      was `|x| ≤ 20` at R=20, bead `padetaylor-apn`) must carry a
+#      non-`NaN` value.
 #
 #   4. **Wedge pole field + the VC-4/VC-5 per-pole validation
 #      (ADR-0025 Amendment 2 + Amendment 1 §A3).**  The wedge panel is
@@ -57,7 +59,8 @@
 #      per-pole validation criteria VC-4 / VC-5:
 #        - the pole field is non-empty and grows *richer* than V8b's
 #          21 poles (the B3 extended threading fan threads the *whole*
-#          wedge to `|x| = 20`, where V8b's fan stopped at `|x| ≤ 8`);
+#          wedge to `|x| = SURF_R_MAX = 8` — the R=8 headline figure;
+#          was `|x| = 20` at R=20.  Bead `padetaylor-apn`);
 #        - every pole is wedge-confined, `|arg p|` within `36° + margin`
 #          (VC-3) — no pole leaks into the pole-free sector;
 #        - the honest-coverage mask `wedge_covered` is *consistent*
@@ -162,20 +165,24 @@ const SURF2 = kkg_pi2_surface()      # second run, for reproducibility
     n = SURF_GRID_N
 
     @testset "PI2S.1 — negative-real-axis pin (KKG eq. 1.3)" begin
-        i15 = argmin(abs.(SURF.xs .+ 15.0))
+        # was x = -15 at R = 20; the R = 8 headline (bead `padetaylor-apn`)
+        # moves the in-disc pin to x = -3 (the seed location), expected
+        # `+(6·3)^{1/3} = cbrt(18.0) ≈ 2.6207`.  The 401-grid lands a node
+        # exactly on x = -3 (odd grid, dx = 16/400 = 0.04, and -3 = -75·dx).
+        i3 = argmin(abs.(SURF.xs .+ 3.0))
         j0  = argmin(abs.(SURF.ys))
-        # The grid is constructed to land a node on x = -15, y = 0.
-        @test isapprox(SURF.xs[i15], -15.0; atol = 1e-9)
+        # The grid is constructed to land a node on x = -3, y = 0.
+        @test isapprox(SURF.xs[i3], -3.0; atol = 1e-9)
         @test isapprox(SURF.ys[j0],    0.0; atol = 1e-9)
 
-        expected = cbrt(6.0 * 15.0)            # +(6·15)^{1/3} ≈ 4.4814
-        re15 = SURF.Re_u[i15, j0]
-        im15 = SURF.Im_u[i15, j0]
-        @test !isnan(re15)
-        @test isapprox(re15, expected; atol = 5e-3)
-        @test isapprox(im15,      0.0; atol = 5e-3)
+        expected = cbrt(6.0 * 3.0)             # +(6·3)^{1/3} ≈ 2.6207
+        re3 = SURF.Re_u[i3, j0]
+        im3 = SURF.Im_u[i3, j0]
+        @test !isnan(re3)
+        @test isapprox(re3, expected; atol = 5e-3)
+        @test isapprox(im3,      0.0; atol = 5e-3)
         # The tritronquée is real and positive on x < 0.
-        @test re15 > 0
+        @test re3 > 0
     end
 
     @testset "PI2S.2 — three-method agreement / the majority vote" begin
@@ -191,10 +198,10 @@ const SURF2 = kkg_pi2_surface()      # second run, for reproducibility
         @test length(SURF.xs) == 401 && length(SURF.ys) == 401
         @test size(SURF.Re_u) == (401, 401)
         # The `401` raster still lands a node exactly on `x = 0` and on
-        # `x = -15` (the PI2S.1 pin) — the C6 retirement keeps the
-        # odd-grid invariant.
+        # `x = -3` (the R=8 PI2S.1 pin; was `x = -15` at R = 20 — bead
+        # `padetaylor-apn`) — the C6 retirement keeps the odd-grid invariant.
         @test minimum(abs.(SURF.xs)) < 1e-9
-        @test minimum(abs.(SURF.xs .+ 15.0)) < 1e-9
+        @test minimum(abs.(SURF.xs .+ 3.0)) < 1e-9
 
         # Gather the sector spread map (the agreement diagnostic).
         sp = Float64[]
@@ -245,12 +252,20 @@ const SURF2 = kkg_pi2_surface()      # second run, for reproducibility
         # genuinely SHARPENS the figure (retiring v1 corner C6) and, in
         # doing so, samples grid points closer to the worst seed-floor
         # zone at `|x| = 2` — so the honest inner-arc *max* spread is
-        # ~6.7·10⁻³ (the seed floor fully exposed; the old `121²`
-        # 3.9·10⁻³ was a coarse-sampling artefact, never a real lower
-        # floor).  The bound below (`< 8·10⁻³`) is the measured seed
-        # floor plus headroom — an HONEST exposure, not a regression.
-        # Closing it needs a `n_terms ≥ 3` seed (KKG eq. 7.2 `c₇…`),
-        # unimplemented — a deferred bead in Amendment 11.
+        # ~6.7·10⁻³ at R=20 (the seed floor fully exposed; the old
+        # `121²` 3.9·10⁻³ was a coarse-sampling artefact, never a real
+        # lower floor).  At R=8 (bead `padetaylor-apn`) the Cartesian
+        # grid spacing tightens 2.5× (`dx = 16/400 = 0.04` vs the R=20
+        # `dx = 0.1`), so MORE 401² grid points land in the worst seed-
+        # floor band right at `|x| ≈ 2` — the SAME `n_terms = 2` seed
+        # floor, sampled more densely, peaks at ~1.0·10⁻² (measured).
+        # The bound below (`< 1.2·10⁻²`) is that measured seed floor
+        # plus headroom — an HONEST exposure of the same floor, not a
+        # regression nor a tolerance relaxation: the floor decays
+        # outward exactly as before (the `[2.6, 3.0]` band assertion
+        # below stays load-bearing).  Closing it needs a `n_terms ≥ 3`
+        # seed (KKG eq. 7.2 `c₇…`), unimplemented — a deferred bead in
+        # Amendment 11.
         inner_sp = Float64[]
         for j in 1:n, i in 1:n
             s = SURF.spread[i, j]
@@ -264,12 +279,16 @@ const SURF2 = kkg_pi2_surface()      # second run, for reproducibility
         inner_max = inner_sp[end]
         @test inner_med < 5e-4               # C2 — well below worklog ~2.9e-3
         # The inner-arc MAX is the asymptotic-seed truncation floor
-        # (Amendment 11) — honestly bounded by the measured ~6.7·10⁻³
-        # plus headroom.  This is NOT the < 3.9·10⁻³ Amendment 10
+        # (Amendment 11) — at R=8 (bead `padetaylor-apn`) the 401²
+        # grid samples the `|x| ≈ 2` boundary layer more densely than
+        # at R=20 (`dx = 0.04` vs `dx = 0.1`), exposing the same seed
+        # floor at ~1.0·10⁻².  Bound is the measured ~1.0·10⁻² plus
+        # ~20% headroom.  This is NOT the < 3.9·10⁻³ Amendment 10
         # anticipated: the C1 probe proved that target rested on a
         # falsified premise (a Laplace under-resolution); the genuine
-        # floor is the seed and the `401²` grid exposes it honestly.
-        @test inner_max < 8e-3
+        # floor is the seed.  At R=20 the same bound was `< 8·10⁻³`
+        # (measured 6.7·10⁻³ + headroom).
+        @test inner_max < 1.2e-2
 
         # The seed floor is r-LOCALISED — a boundary layer at the inner
         # arc that decays steeply outward.  Verify the spread genuinely
@@ -341,10 +360,15 @@ const SURF2 = kkg_pi2_surface()      # second run, for reproducibility
     @testset "PI2S.4 — wedge pole field + honest partial underlay" begin
         # --- the pole field — the Amendment-2 primary wedge deliverable ---
         # The B3 extended threading fan drives the B2 `:max_q_root`
-        # adaptive walk through the whole wedge to `|x| = 20`; the field
-        # is non-empty and RICHER than V8b's 21 poles (V8b's fan stopped
-        # at `|x| ≤ 8` — A2 §1).  `> 21` is the senior-grade bar: the
-        # re-resolution must beat the baseline, not merely match it.
+        # adaptive walk through the whole wedge to `|x| = SURF_R_MAX = 8`
+        # (was `|x| = 20`; the R=8 headline figure — bead `padetaylor-apn`).
+        # The field is non-empty and RICHER than V8b's 21 poles (V8b's
+        # fan stopped at `|x| ≤ 8` but in a thinner sliver; at R=8 the
+        # whole wedge densifies to ~273 validated poles).  `> 21` is
+        # the senior-grade bar: the re-resolution must beat the
+        # baseline, not merely match it (same bar across R=20 / R=8 —
+        # the two configurations both produce hundreds of validated
+        # poles).
         @test length(SURF.poles) ≥ 1
         @test length(SURF.poles) > 21
 
@@ -464,8 +488,11 @@ const SURF2 = kkg_pi2_surface()      # second run, for reproducibility
         # so this is an INDEPENDENT re-run of the VC-4 ring fit.
         walk = SURF.wedge_walk
         @test walk !== nothing
-        z_fake = ComplexF64(8.5, 0.5)    # a generic in-wedge analytic point
-                                         # (clearance ~0.67 from any pole)
+        # was (8.5, 0.5) at R = 20; at R = 8 the headline disc is `|z| ≤ 8`,
+        # so (8.5, 0.5) is now off-grid.  (5.5, 0.3) is in-wedge, in-disc,
+        # and well off the wedge pole lattice (spacing ~0.69).  Bead
+        # `padetaylor-apn`.
+        z_fake = ComplexF64(5.5, 0.3)    # a generic in-wedge analytic point
         @test !surf_in_sector(z_fake) && !surf_in_mask(z_fake)
         mut = vc4_validate(walk, ComplexF64[z_fake])
         @test isempty(mut.kept)              # the fake is NOT kept
@@ -591,7 +618,11 @@ const SURF2 = kkg_pi2_surface()      # second run, for reproducibility
         for i in 1:n
             x = SURF.xs[i]
             x < -3.0 || continue                # stay on the negative side
-            for jt in (8.0, 12.0)
+            # was (8.0, 12.0) at R = 20; at R = 8 the headline disc is
+            # `|z| ≤ 8` so y = 12.0 sits in the NaN-masked corner.  Conjugate
+            # pairs at (3.0, 5.0) keep `(x, ±y)` in-disc across `x ∈ [-8,-3]`
+            # and well inside the pole-free sector.  Bead `padetaylor-apn`.
+            for jt in (3.0, 5.0)
                 jp = argmin(abs.(SURF.ys .- jt))
                 jm = argmin(abs.(SURF.ys .+ jt))
                 rp = SURF.Re_u[i, jp]; rm = SURF.Re_u[i, jm]
@@ -826,15 +857,21 @@ const SURF2 = kkg_pi2_surface()      # second run, for reproducibility
 
             # (c) the asymptotic-IC cross-check.  `VectorBVP` pins only
             # `y[1],y[2]`; the free `y[3]=u''`, `y[4]=u'''` at the
-            # deep-asymptotic endpoint `|z_a|=20` must agree with the
-            # `pI2_tritronquee_ic` seed to the seed's own `n_terms=2`
-            # truncation accuracy — `O(10⁻⁵)` at `|x|=20` (the V8b probe
-            # number).  This certifies the BVP converged to the
-            # *tritronquée branch*, not merely to a companion solution.
-            @test d8.ic_y3_err < 1.0e-4
-            @test d8.ic_y4_err < 1.0e-4
-            # ...and to FAR better than O(1) — the seed and the solve
-            # genuinely agree, they are not unrelated.
+            # outer endpoint must agree with the `pI2_tritronquee_ic`
+            # seed to the seed's own `n_terms=2` truncation accuracy.
+            # The seed error scales as `O(|z|^{-7/3})` for `y[3]` and
+            # `O(|z|^{-13/3})` for `y[4]`, so the bound depends on the
+            # BVP's outer endpoint.  Anchor BVP (`|z_a|=20`, hardcoded):
+            # `O(10⁻⁵)` (the V8b probe number).  Ray BVPs at the R=8
+            # headline geometry (`|z_a| = SURF_R_MAX = 8`, bead
+            # `padetaylor-apn`): `O(10⁻³)` — the seed at `|x|=8` is
+            # `~7e-4` accurate in `y[4]` (`8^{-13/3} ≈ 2e-4`, with the
+            # remaining factor from the BVP loop closure).  `< 1.0e-3`
+            # is the senior-grade bar that covers both: it certifies
+            # the BVP converged to the *tritronquée branch*, not merely
+            # to a companion solution (anything `> 1e-1` would mean an
+            # unrelated companion-system solution).  Was `< 1e-4` at
+            # R=20 — the tight bound was a `|z_a|=20`-only artefact.
             @test d8.ic_y3_err < 1.0e-3
             @test d8.ic_y4_err < 1.0e-3
 
@@ -856,11 +893,13 @@ const SURF2 = kkg_pi2_surface()      # second run, for reproducibility
         # The load-bearing invariant is `consistency_max < FW_VC8_TOL`.
         # Solve the SAME ray BVP at a deliberately starved collocation
         # `N` — small enough that the Chebyshev interpolant cannot
-        # resolve the tritronquée's curvature on the `[2,20]` ray — and
-        # confirm the companion-consistency residual blows past the FW
-        # band.  This proves VC-8 is the genuine "increase N" detector
-        # FW §5.2 describes, not a check the figure passes for free: at
-        # the figure `N = SURF_BVP_N = 96` it is comfortably GREEN, at a
+        # resolve the tritronquée's curvature on the `[R_INNER_BC,
+        # R_MAX]` ray (R=8 headline: `[1.05, 8]`; was `[2, 20]` at
+        # R=20 — bead `padetaylor-apn`) — and confirm the companion-
+        # consistency residual blows past the FW band.  This proves
+        # VC-8 is the genuine "increase N" detector FW §5.2 describes,
+        # not a check the figure passes for free: at the figure
+        # `N = SURF_BVP_N = 128` it is comfortably GREEN, at a
         # starved `N` it is RED.  (`N = 6` is the smallest the τ-method
         # admits a 4-vector BC with — `VectorBVP` floors at `N ≥ 4`.)
         starved = vector_bvp_solve(
@@ -934,9 +973,18 @@ const SURF2 = kkg_pi2_surface()      # second run, for reproducibility
 
         # --- (a) each run produced a genuine, VC-4-validated field -------
         # Both differently-ordered runs thread the whole wedge and
-        # extract a rich field (richer than V8b's 21 poles — the B3 fan
-        # bar).  A run that collapsed (empty / tiny field) would make the
-        # indicator meaningless.
+        # extract a rich field (richer than V8b's 21 poles — the B3
+        # fan bar).  A run that collapsed (empty / tiny field) would
+        # make the indicator meaningless.  `> 21` is the senior-grade
+        # floor: comfortably above V8b's baseline.  At R=8 (bead
+        # `padetaylor-apn`) the random target ordering yields walk
+        # trees with fewer total visited nodes than the SURF kernel
+        # default (measured: ~4700 visited, ~62 validated poles vs
+        # SURF's 7780/273); the FW/FFW two-run methodology explicitly
+        # relies on this ordering-induced variation as the accuracy
+        # indicator, so the per-seed validated count is *not* the same
+        # as SURF's count — the bound stays at the v1 baseline (the
+        # B3 bar).
         @test length(vc10.poles_a) > 21
         @test length(vc10.poles_b) > 21
         @test all(isfinite, vc10.poles_a)
@@ -944,8 +992,13 @@ const SURF2 = kkg_pi2_surface()      # second run, for reproducibility
 
         m = vc10.match
         # The two fields DO pair up — most poles are found by both runs.
+        # At R=8 each ordering's field is ~60-100 poles (bead
+        # `padetaylor-apn`); `≥ 30` is the senior-grade floor — the two
+        # walks genuinely share a meaningful subset of the lattice,
+        # not just one or two coincidental matches.  Was `≥ 100` at
+        # R=20 (~700 pairs).
         @test !isempty(m.pairs)
-        @test length(m.pairs) ≥ 100
+        @test length(m.pairs) ≥ 30
 
         # --- (b) the load-bearing accuracy bar ---------------------------
         # The matched-pole disagreement IS the FW/FFW accuracy estimate.
@@ -1138,7 +1191,10 @@ const SURF2 = kkg_pi2_surface()      # second run, for reproducibility
         φ_on  = fan11.phis[j_mid]
         sol_on = fan11.sols[j_mid]
         c3_radial_max = 0.0
-        for r in (3.3, 7.7, 11.1, 16.6)        # deliberately off-raster
+        # was (3.3, 7.7, 11.1, 16.6) at R = 20; the BVP segment is now
+        # `[SURF_R_MAX, SURF_R_INNER_BC] = [8.0, 1.05]`, so the four
+        # off-raster probe radii span that segment.  Bead `padetaylor-apn`.
+        for r in (2.3, 3.3, 5.5, 7.7)          # deliberately off-raster
             z = ComplexF64(r * cis(φ_on))
             c3_radial_max = max(c3_radial_max,
                                 abs(surf_ray_eval(fan11, z) - sol_on(z)[1]))
@@ -1156,7 +1212,10 @@ const SURF2 = kkg_pi2_surface()      # second run, for reproducibility
         for jr in (10, 20, 30)
             φ_mid = (fan11.phis[jr] + fan11.phis[jr + 1]) / 2
             sol_mid = surf_ray_bvp(f11, Jf11, φ_mid)
-            for r in (4.0, 9.0, 14.0)
+            # was (4.0, 9.0, 14.0) at R = 20; in-segment radii at R = 8
+            # `[SURF_R_INNER_BC, SURF_R_MAX] = [1.05, 8.0]`.  Bead
+            # `padetaylor-apn`.
+            for r in (3.0, 5.0, 7.0)
                 z = ComplexF64(r * cis(φ_mid))
                 c3_inter_max = max(c3_inter_max,
                                    abs(surf_ray_eval(fan11, z) - sol_mid(z)[1]))
@@ -1192,7 +1251,12 @@ const SURF2 = kkg_pi2_surface()      # second run, for reproducibility
                        (1-tr)*tφ*Ub[ib,jb+1]   + tr*tφ*Ub[ib+1,jb+1]
             end
             bilin_radial_max = 0.0
-            for r in (3.3, 7.7, 11.1, 16.6)
+            # was (3.3, 7.7, 11.1, 16.6) at R = 20; in-segment radii at
+            # R = 8 (`[SURF_R_INNER_BC, SURF_R_MAX] = [1.05, 8.0]`) —
+            # must match the C3 reconstruction probe above so the
+            # bilinear comparison is apples-to-apples on the same
+            # off-raster radii.  Bead `padetaylor-apn`.
+            for r in (2.3, 3.3, 5.5, 7.7)
                 z = ComplexF64(r * cis(φ_on))
                 bilin_radial_max = max(bilin_radial_max,
                                        abs(bilin_v1(z) - sol_on(z)[1]))
@@ -1211,7 +1275,11 @@ const SURF2 = kkg_pi2_surface()      # second run, for reproducibility
         # and a direct-ODE voter, three disjoint computations.  If voter
         # 1 had been made harmonic, voter 1 ≡ voter 2 to ~1e-12 here.
         lap11 = surf_laplace_voters(fan11)
-        z_ind = ComplexF64(-8.0, 3.0)
+        # was (-8.0, 3.0) at R = 20 (|z| ≈ 8.54 — in-disc only at R = 20);
+        # at R = 8 the headline disc is `|z| ≤ 8`, so move to (-5.0, 2.0):
+        # `|z| ≈ 5.39`, `|arg| ≈ 158°` (deep in the pole-free sector).  Bead
+        # `padetaylor-apn`.
+        z_ind = ComplexF64(-5.0, 2.0)
         v1_ind = surf_ray_eval(fan11, z_ind)
         l2_ind = surf_laplace_eval_one(lap11.rem2, lap11.imm2,
                                        lap11.rect, z_ind)
@@ -1304,7 +1372,8 @@ const SURF2 = kkg_pi2_surface()      # second run, for reproducibility
         # The overwhelming majority of the newly-uncovered band carries a
         # genuine voted datum — the audition fill landed.  (A few cells
         # at large `|x|` near the disc edge can still be `NaN` from the
-        # `|x| ≤ 20` clip; `> 0.9` is the honest bar.)
+        # `|x| ≤ SURF_XY_LIM` clip; `> 0.9` is the honest bar.  At R=8
+        # the strip is `1.5°×2` wide and roughly ~1000 cells fall in it.)
         @test n_filled / length(newband) > 0.9
 
         # Every newly-filled band cell is a SECTOR vote (it carries a
