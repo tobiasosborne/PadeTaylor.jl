@@ -3,7 +3,7 @@
 # F3 — the whole-plane compute kernel for the KKG 2015 P_I^(2)
 # tritronquée surface figure (bead `padetaylor-0ln.33`, v0.2 plan).
 # Makie-free: this file assembles `Re u` and `Im u` of the tritronquée
-# `V_0(x, 0)` over the complex `x`-plane square `[-4,4]²` and returns
+# `V_0(x, 0)` over the complex `x`-plane square `[-8,8]²` and returns
 # the matrices ready for rendering; the figure script and the
 # acceptance test `figures/test_kkg_pi2_surface.jl` both `include` it so
 # they exercise the identical computation.
@@ -140,7 +140,7 @@
 #
 # ### The stitch
 #
-# Region 1 (voted) + Region 2 are written onto one `[-4,4]²`
+# Region 1 (voted) + Region 2 are written onto one `[-8,8]²`
 # Cartesian grid for `Re u` and `Im u`.  A thin `±1°` strip straddling
 # the sector/wedge boundary (`||arg x| − 36°| < SURF_STITCH_MASK_DEG`)
 # is masked with `NaN`: it is the band the sector fan does not reach
@@ -322,19 +322,28 @@ const SURF_T = 0.0
 # Companion-system order: d = 2m = 4 for P_I^(2) (m = 2).
 const SURF_D = 4
 
-# The Cartesian render grid: [-4,4]² (KKG Figs 7.4/7.5, headline-figure
+# The Cartesian render grid: [-8,8]² (KKG Figs 7.4/7.5, headline-figure
 # wedge shrink — bead `padetaylor-apn`).
 #
 # The shipped headline figure rendered the wedge at `SURF_XY_LIM = 20.0`,
 # which yielded a 3528-pole wedge field — visual noise, too many for a
-# headline figure.  Shrinking to `R = 4.0` gives a wedge area scaling as
-# `R²-4` (the inner arc is `|x| ≥ 2`), so the pole field drops by a
-# factor of `(16-4)/(400-4) = 12/396 ≈ 1/33` to ~100–300 poles —
-# legible for a headline figure.  This is a **figure-config change
-# only**: every solver knob (Taylor order, walk step ceiling,
-# scale-covariant tolerances) stays unchanged, and the kernel is
-# scale-covariant by construction (`SURF_RADIUS_T` is dimensionless,
-# `h_max = SURF_PN_H` independent of R).
+# headline figure.  A naive density-uniform scaling (`R²-4` wedge area)
+# would suggest `R = 4` for ~100 poles; the first empirical calibration
+# (commit `0c6355b`, `R = 4`) actually produced only **21 validated
+# poles** — pole *density* in the wedge is not uniform (spacing varies
+# as `|x|^(-1/6)`, slowly; the inner wedge `|x| ∈ [2, 4]` has
+# significantly thinner pole field than the [11, 20] band the historical
+# 3528-pole count was dominated by).  Empirically calibrated to
+# **`R = 8`** to land in the target 100–300 band: at `R = 8` the
+# wedge area is `(64-4) = 60` (5× the `R = 4` area) and the larger
+# `|x|` band picks up the higher per-area density; the actual pole
+# count is measured at render time and reported in worklog 061.
+#
+# This is a **figure-config change only**: every solver knob (Taylor
+# order, walk step ceiling, scale-covariant tolerances) stays unchanged,
+# and the kernel is scale-covariant by construction
+# (`SURF_RADIUS_T` is dimensionless, `h_max = SURF_PN_H` independent
+# of R).
 #
 # C1 (ADR-0025 Amendment 11, bead `padetaylor-0ln.37.9`) — retires v1
 # corner C6.  The shipped figure rendered a `121²` raster; that was
@@ -346,7 +355,7 @@ const SURF_D = 4
 # `O(N²)` evaluation; the C1 runtime probe (`bead 0ln.37.9`) measured
 # the full `kkg_pi2_surface()` comfortably inside the Phase-F runtime
 # gate at `401²`.
-const SURF_XY_LIM = 4.0
+const SURF_XY_LIM = 8.0
 const SURF_GRID_N = 401          # 401×401 — odd so a node sits on 0.
 
 # --- Region 1: the pole-free sector --------------------------------------
@@ -387,13 +396,14 @@ const SURF_WEDGE_HALF_DEG = 36.0
 const SURF_SECTOR_MARGIN_DEG = 1.0
 
 # Ray-fan radii.  r_min ≈ 2 (the inner arc of the conformal rectangle),
-# r_max = 4 (the grid corner radius is 4√2 ≈ 5.66, but the sector pins
-# are set at 4 and the corners outside the disc |x| ≤ 4 are
+# r_max = 8 (the grid corner radius is 8√2 ≈ 11.31, but the sector pins
+# are set at 8 and the corners outside the disc |x| ≤ 8 are
 # NaN-masked — see SURF_R_MAX use).  `r_max` is the wedge outer radius
-# (bead `padetaylor-apn`); shrinking from 20 → 4 cuts the wedge area
-# by ~33× and so cuts the pole field from ~3528 to ~100–300 poles.
+# (bead `padetaylor-apn`); shrinking from 20 → 8 cuts the wedge area
+# from ~396 to ~60 (`R²-4`) and the pole field from ~3528 to the target
+# 100–300 band (empirically calibrated — see SURF_XY_LIM rationale).
 const SURF_R_MIN = 2.0
-const SURF_R_MAX = 4.0
+const SURF_R_MAX = 8.0
 
 # C2 (ADR-0025 Amendment 10) — the ray BVP's *inner boundary-condition*
 # radius.  Each sector ray BVP solves over `[SURF_R_MAX, SURF_R_INNER_BC]`
@@ -576,7 +586,7 @@ const SURF_PN_TOL = 1.0e-8
 #
 # Targets are ordered radius-major so the walk completes inner shells
 # before reaching out — the threading order the B2 walk extends from.
-const SURF_TARGET_RADII  = Tuple(2.0:1.0:4.0)              # radial shells
+const SURF_TARGET_RADII  = Tuple(2.0:1.0:8.0)              # radial shells
 const SURF_TARGET_ANGLES = Tuple(range(-0.5, 0.5; length = 9))  # rad
 
 # Pole-extraction filter (`extract_poles_shared_q`).  `min_support = 2`
@@ -801,7 +811,7 @@ wedge.
                        `SURF_DENSE_R_INNER = 2.0` (`= SURF_R_MIN`).
   - `half_deg::Real` — angular half-extent in degrees.  Default
                        `SURF_DENSE_HALF_DEG = 34.0`.
-  - `r_outer::Real`  — outer radius.  Default `SURF_R_MAX = 4.0`.
+  - `r_outer::Real`  — outer radius.  Default `SURF_R_MAX = 8.0`.
 
 Throws `ArgumentError` (CLAUDE.md Rule 1) for a non-positive `s`, a
 non-positive `r_inner`, an `r_outer ≤ r_inner`, or a `half_deg` outside
@@ -822,7 +832,7 @@ function surf_wedge_dense_targets(; s::Real = SURF_DENSE_SPACING,
     r_outer > r_inner || throw(ArgumentError(
         "surf_wedge_dense_targets: r_outer ($r_outer) must exceed " *
         "r_inner ($r_inner) — the kept annulus would be empty.  " *
-        "Suggestion: pass r_outer = SURF_R_MAX = 4.0."))
+        "Suggestion: pass r_outer = SURF_R_MAX = 8.0."))
     (0 < half_deg ≤ 90) || throw(ArgumentError(
         "surf_wedge_dense_targets: half_deg must lie in (0, 90] (got " *
         "$half_deg); it is the wedge angular half-extent in degrees.  " *
@@ -1227,7 +1237,7 @@ end
 
 Assemble `Re u` / `Im u` of the `P_I^(2)` tritronquée `V_0(x, 0)` over
 the Cartesian square `[-SURF_XY_LIM, SURF_XY_LIM]²` (the headline
-figure renders `SURF_XY_LIM = 4.0`; bead `padetaylor-apn`).
+figure renders `SURF_XY_LIM = 8.0`; bead `padetaylor-apn`).
 
 Construction (see the file docstring):
   1. **Region 1 — the pole-free sector** is computed three ways
