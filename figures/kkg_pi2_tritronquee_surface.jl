@@ -222,14 +222,16 @@ const EXTRAP_ALPHA = 0.50
 # ----------------------------------------------------------------------
 # Compute — the exact F3 pipeline the acceptance test reproduces.
 # ----------------------------------------------------------------------
-@printf("KKG 2015 Figs 7.4/7.5 — P_I^(2) tritronquée V₀(x,0) surface\n")
-@printf("  triple-method majority-vote sector + path-network wedge (ADR-0024)\n")
+@printf("KKG 2015 Figs 7.4/7.5 — P_I^(2) tritronquée V₀(x,0) surface\n"); flush(stdout)
+@printf("  triple-method majority-vote sector + path-network wedge (ADR-0024)\n"); flush(stdout)
 @printf("  grid: %d×%d over [-%.0f,%.0f]²\n",
-        SURF_GRID_N, SURF_GRID_N, SURF_XY_LIM, SURF_XY_LIM)
+        SURF_GRID_N, SURF_GRID_N, SURF_XY_LIM, SURF_XY_LIM); flush(stdout)
 
 t0  = time()
+@printf("  kernel: starting kkg_pi2_surface (order=%d, expect tens of minutes at order 48)...\n",
+        SURF_PN_ORDER); flush(stdout)
 res = kkg_pi2_surface()
-@printf("  kernel: %.1f s — %s\n", time() - t0, res.message)
+@printf("  kernel: %.1f s — %s\n", time() - t0, res.message); flush(stdout)
 
 xs, ys = res.xs, res.ys
 
@@ -239,17 +241,17 @@ let iy0 = argmin(abs.(ys)),               # the y ≈ 0 row
     ix  = argmin(abs.(xs .- (-15.0)))     # x ≈ -15 column
     ridge = res.Re_u[ix, iy0]
     @printf("  ridge check: Re V₀(-15, 0) = %+.4f  (KKG (6·15)^(1/3) = +%.4f)\n",
-            ridge, cbrt(90.0))
+            ridge, cbrt(90.0)); flush(stdout)
 end
 
 nfin     = count(isfinite, res.Re_u)
 nfin_ext = count(isfinite, res.Re_u_extrap)
 @printf("  certified filled grid cells: %d / %d (%.1f%%)\n",
-        nfin, length(res.Re_u), 100 * nfin / length(res.Re_u))
+        nfin, length(res.Re_u), 100 * nfin / length(res.Re_u)); flush(stdout)
 @printf("  FW-style filled grid cells:  %d / %d (%.1f%%)\n",
         nfin_ext, length(res.Re_u_extrap),
-        100 * nfin_ext / length(res.Re_u_extrap))
-@printf("  wedge poles: %d\n", length(res.poles))
+        100 * nfin_ext / length(res.Re_u_extrap)); flush(stdout)
+@printf("  wedge poles: %d\n", length(res.poles)); flush(stdout)
 
 # ----------------------------------------------------------------------
 # Display matrices — clamped copies for the colour/z range.  NaN cells
@@ -438,9 +440,10 @@ const FIGNOTE = string(
              length(res.poles), SURF_CLAMP, SURF_STITCH_MASK_DEG))
 Label(fig[3, 1:3], FIGNOTE; fontsize = 9, padding = (0, 0, 8, 0))
 
+@printf("  building Makie figure + saving PNG...\n"); flush(stdout)
 mkpath(dirname(OUTPNG))
 save(OUTPNG, fig)
-@printf("  wrote %s\n", OUTPNG)
+@printf("  wrote %s\n", OUTPNG); flush(stdout)
 
 # Light render-sanity check (F4 is the render; the F3 kernel is already
 # pinned by `figures/test_kkg_pi2_surface.jl`).  Assert the PNG was
@@ -449,5 +452,5 @@ save(OUTPNG, fig)
 let bytes = filesize(OUTPNG)
     @assert isfile(OUTPNG) "render produced no PNG at $OUTPNG"
     @assert bytes > 10_000 "render PNG suspiciously small ($bytes bytes)"
-    @printf("  render-sanity: PNG present, %d bytes\n", bytes)
+    @printf("  render-sanity: PNG present, %d bytes\n", bytes); flush(stdout)
 end

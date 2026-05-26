@@ -1252,11 +1252,25 @@ function kkg_pi2_surface()
     sector_method = Dict{Tuple{Int,Int},
                          NTuple{6,Float64}}()
 
+    # The phase markers below use the "verbose mode + eager flush"
+    # discipline (memory `long-julia-agents-verbose-flush`): each
+    # major boundary inside this kernel emits a stdout line and
+    # `flush(stdout)` so the log file streams progress live under
+    # background-redirection.  Without these, the order-48 render's
+    # ~hour-long single call would log nothing until completion.
+    tphase = time()
+    @printf("  [kernel %5.1fs] Region 1.1 — surf_ray_fan...\n",
+            time() - tphase); flush(stdout)
+
     # ---- Region 1: the three sector voters --------------------------------
     fan  = surf_ray_fan()
+    @printf("  [kernel %5.1fs] Region 1.2 — surf_laplace_voters (2D Cheb + Gridap FEM)...\n",
+            time() - tphase); flush(stdout)
     lap  = surf_laplace_voters(fan)
 
     # ---- Region 2: the wedge BVP anchor + path-network fill ---------------
+    @printf("  [kernel %5.1fs] Region 2.1 — surf_anchor_bvp...\n",
+            time() - tphase); flush(stdout)
     anchor = surf_anchor_bvp()
     # Collect the wedge grid points (inside the disc, in the wedge, not in
     # the masked strip) into a flat list for the Stage-2 fine_grid call.
@@ -1271,14 +1285,22 @@ function kkg_pi2_surface()
         push!(wedge_idx, (i, j))
         push!(wedge_pts, z)
     end
+    @printf("  [kernel %5.1fs] Region 2.2 — surf_wedge_fill (%d wedge grid points, order=%d, the big one)...\n",
+            time() - tphase, length(wedge_pts), SURF_PN_ORDER); flush(stdout)
     wedge = isempty(wedge_pts) ?
         (walk = nothing, poles = ComplexF64[], u = ComplexF64[],
          u_extrap = ComplexF64[], covered = Bool[],
          vc4 = nothing, vc5 = nothing,
          message = "wedge: no grid points") :
         surf_wedge_fill(anchor, wedge_pts)
+    @printf("  [kernel %5.1fs] surf_wedge_fill done — %s\n",
+            time() - tphase,
+            wedge === nothing ? "nothing" :
+            (wedge.walk === nothing ? "empty" : "$(length(wedge.walk.visited_z)) nodes, $(length(wedge.poles)) poles")); flush(stdout)
 
     # ---- assemble the grid ------------------------------------------------
+    @printf("  [kernel %5.1fs] Region 1.3 — per-cell sector voting loop (%d×%d grid)...\n",
+            time() - tphase, n, n); flush(stdout)
     for j in 1:n, i in 1:n
         z = ComplexF64(xs[i], ys[j])
         # Outside the |x| ≤ 20 disc: leave NaN (the figure is the disc).
