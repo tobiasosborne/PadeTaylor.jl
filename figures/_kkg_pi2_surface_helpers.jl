@@ -281,6 +281,13 @@ if !isdefined(@__MODULE__, :laplace2d_solve_gridap)
     include(joinpath(@__DIR__, "_kkg_pi2_gridap_helper.jl"))
 end
 
+# `Printf` for the verbose-flush kernel phase markers inside
+# `kkg_pi2_surface` (memory `long-julia-agents-verbose-flush`).  This
+# file is `include`d inside the `KKGSurfaceKernel` module of the render
+# script, which has no Printf in scope; declare it here so the helpers
+# remain self-contained.
+using Printf
+
 # VC-4 (dominant-balance per-pole certificate) and VC-5 (conjugate-
 # symmetry pairing) — the Phase-D per-pole validation that certifies the
 # genuine wedge poles and prunes the spurious ones (ADR-0025 Amendment 1
