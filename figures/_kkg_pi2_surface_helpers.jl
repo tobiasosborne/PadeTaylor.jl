@@ -3,7 +3,7 @@
 # F3 — the whole-plane compute kernel for the KKG 2015 P_I^(2)
 # tritronquée surface figure (bead `padetaylor-0ln.33`, v0.2 plan).
 # Makie-free: this file assembles `Re u` and `Im u` of the tritronquée
-# `V_0(x, 0)` over the complex `x`-plane square `[-20,20]²` and returns
+# `V_0(x, 0)` over the complex `x`-plane square `[-4,4]²` and returns
 # the matrices ready for rendering; the figure script and the
 # acceptance test `figures/test_kkg_pi2_surface.jl` both `include` it so
 # they exercise the identical computation.
@@ -101,7 +101,7 @@
 #   1. **Pole field — the primary deliverable.**  A dense Cartesian
 #      lattice (`surf_wedge_dense_targets`) drives the resilient
 #      `:max_q_root` adaptive walk through the *whole* wedge out to
-#      `|x| = 20`, so the walk's nodes pass near every pole;
+#      `|x| = 4`, so the walk's nodes pass near every pole;
 #      `extract_poles_shared_q` with cross-node `min_support ≥ 2`
 #      (VC-6) roots the per-node shared `Q` and clusters the roots into
 #      the validated pole field.  Order 48 is the measured saturation
@@ -140,7 +140,7 @@
 #
 # ### The stitch
 #
-# Region 1 (voted) + Region 2 are written onto one `[-20,20]²`
+# Region 1 (voted) + Region 2 are written onto one `[-4,4]²`
 # Cartesian grid for `Re u` and `Im u`.  A thin `±1°` strip straddling
 # the sector/wedge boundary (`||arg x| − 36°| < SURF_STITCH_MASK_DEG`)
 # is masked with `NaN`: it is the band the sector fan does not reach
@@ -322,18 +322,31 @@ const SURF_T = 0.0
 # Companion-system order: d = 2m = 4 for P_I^(2) (m = 2).
 const SURF_D = 4
 
-# The Cartesian render grid: [-20,20]² (KKG Figs 7.4/7.5).
+# The Cartesian render grid: [-4,4]² (KKG Figs 7.4/7.5, headline-figure
+# wedge shrink — bead `padetaylor-apn`).
+#
+# The shipped headline figure rendered the wedge at `SURF_XY_LIM = 20.0`,
+# which yielded a 3528-pole wedge field — visual noise, too many for a
+# headline figure.  Shrinking to `R = 4.0` gives a wedge area scaling as
+# `R²-4` (the inner arc is `|x| ≥ 2`), so the pole field drops by a
+# factor of `(16-4)/(400-4) = 12/396 ≈ 1/33` to ~100–300 poles —
+# legible for a headline figure.  This is a **figure-config change
+# only**: every solver knob (Taylor order, walk step ceiling,
+# scale-covariant tolerances) stays unchanged, and the kernel is
+# scale-covariant by construction (`SURF_RADIUS_T` is dimensionless,
+# `h_max = SURF_PN_H` independent of R).
 #
 # C1 (ADR-0025 Amendment 11, bead `padetaylor-0ln.37.9`) — retires v1
 # corner C6.  The shipped figure rendered a `121²` raster; that was
 # resolution-limited (worklog 057).  `401` lifts it to a genuinely sharp
-# raster — odd so a node still sits on `x = 0` and on `x = -15` (the
-# PI2S.1 pin).  Voters 2/3 are spectrally callable at any point and
-# voter 1 (post-C3) is exact-in-radius + cubic-angular, so the finer
-# raster is mostly cheap `O(N²)` evaluation; the C1 runtime probe
-# (`bead 0ln.37.9`) measured the full `kkg_pi2_surface()` comfortably
-# inside the Phase-F runtime gate at `401²`.
-const SURF_XY_LIM = 20.0
+# raster — odd so a node still sits on `x = 0` and on `x = -3` (the
+# PI2S.1 ridge-check pin, originally `x = -15` at `R = 20`).  Voters
+# 2/3 are spectrally callable at any point and voter 1 (post-C3) is
+# exact-in-radius + cubic-angular, so the finer raster is mostly cheap
+# `O(N²)` evaluation; the C1 runtime probe (`bead 0ln.37.9`) measured
+# the full `kkg_pi2_surface()` comfortably inside the Phase-F runtime
+# gate at `401²`.
+const SURF_XY_LIM = 4.0
 const SURF_GRID_N = 401          # 401×401 — odd so a node sits on 0.
 
 # --- Region 1: the pole-free sector --------------------------------------
@@ -374,11 +387,13 @@ const SURF_WEDGE_HALF_DEG = 36.0
 const SURF_SECTOR_MARGIN_DEG = 1.0
 
 # Ray-fan radii.  r_min ≈ 2 (the inner arc of the conformal rectangle),
-# r_max = 20 (the grid corner radius is 20√2 ≈ 28, but the sector pins
-# are set at 20 and the corners outside the disc |x| ≤ 20 are
-# NaN-masked — see SURF_R_MAX use).
+# r_max = 4 (the grid corner radius is 4√2 ≈ 5.66, but the sector pins
+# are set at 4 and the corners outside the disc |x| ≤ 4 are
+# NaN-masked — see SURF_R_MAX use).  `r_max` is the wedge outer radius
+# (bead `padetaylor-apn`); shrinking from 20 → 4 cuts the wedge area
+# by ~33× and so cuts the pole field from ~3528 to ~100–300 poles.
 const SURF_R_MIN = 2.0
-const SURF_R_MAX = 20.0
+const SURF_R_MAX = 4.0
 
 # C2 (ADR-0025 Amendment 10) — the ray BVP's *inner boundary-condition*
 # radius.  Each sector ray BVP solves over `[SURF_R_MAX, SURF_R_INNER_BC]`
@@ -410,7 +425,11 @@ const SURF_RAY_DPHI_DEG = 2.0
 # segment to `[SURF_R_MAX, SURF_R_INNER_BC]` (ADR-0025 Amendment 10);
 # the wider segment has more curvature near its inner end, so `N = 128`
 # (the C2 probe: companion-consistency `~1·10⁻¹¹` at `N = 128` for
-# `[20, 1.05]`, vs a marginal `~1·10⁻⁷` at `N = 96`).
+# `[20, 1.05]`, vs a marginal `~1·10⁻⁷` at `N = 96`).  At the
+# headline-figure `SURF_R_MAX = 4` (bead `padetaylor-apn`) the segment
+# `[4, 1.05]` is *shorter* and so even less curvature-demanding;
+# `N = 128` is well past converged for that shorter span and is
+# retained unchanged.
 #
 # C1 (ADR-0025 Amendment 11) — `N = 128` is *already converged*: the C1
 # probe measured the ray BVP interior value at `N = 128` agrees with an
@@ -530,31 +549,50 @@ const SURF_PN_TOL = 1.0e-8
 # --- The extended threading fan (the B3 production fan) ------------------
 # ADR-0025 Amendment 2 rescopes B3 from "tile the wedge area" to "thread
 # the walk through the *whole* wedge to extract the pole field densely
-# and accurately to `|x| = 20`".  The fan is designed so the B2
+# and accurately to `|x| = SURF_R_MAX`".  The fan is designed so the B2
 # `:max_q_root` adaptive walk threads a node filament past every pole.
 #
 # Design (A2 §5.2 recommends a 9-angle `dr = 1` fan as the densest that
-# threads; B2's adaptive walk threads it to `|x| ≈ 18-20` — Amendment 4):
+# threads; B2's adaptive walk threads it across the wedge — Amendment 4):
 #
 #   * **Angles** — 9 rays fanned across `±0.5 rad ≈ ±28.6°`.  The wedge
 #     half-width is `36°`; `±28.6°` keeps a `~7°` margin inside the
 #     Stokes line so the fan stays well within the pole region and the
 #     walk does not stray into the masked boundary strip.
-#   * **Radii** — `dr = 1` spacing from `|x| = 2` out to `|x| = 20`,
-#     i.e. 19 radial shells.  `9 × 19 = 171` targets — the A2 §5.2
-#     "densest-completing" fan.  Denser fans (13-angle / `dr = 0.5`)
-#     BLOCK (A2 §3.3): the extra inter-target bridging walks each get a
-#     fresh chance to step onto a pole.
+#   * **Radii** — `dr = 1` spacing from `|x| = 2` out to
+#     `|x| = SURF_R_MAX`.  At the headline-figure `R = 4`, that is 3
+#     radial shells (`2.0, 3.0, 4.0`); at the historical `R = 20`, 19
+#     shells × 9 angles = 171 targets, the A2 §5.2 "densest-completing"
+#     fan.  Denser fans (13-angle / `dr = 0.5`) BLOCK (A2 §3.3): the
+#     extra inter-target bridging walks each get a fresh chance to step
+#     onto a pole.
+#
+# **NOT in the live kernel path.**  `surf_wedge_targets()` (the
+# constructor that uses these constants) is the *legacy* sparse polar
+# fan; the live `surf_wedge_fill` calls `surf_wedge_dense_targets()`
+# (the ADR-0026 D2 dense Cartesian lattice).  These constants are kept
+# in lockstep with `SURF_R_MAX` for correctness so a future change of
+# generator path stays consistent.
 #
 # Targets are ordered radius-major so the walk completes inner shells
 # before reaching out — the threading order the B2 walk extends from.
-const SURF_TARGET_RADII  = Tuple(2.0:1.0:20.0)             # 19 shells
+const SURF_TARGET_RADII  = Tuple(2.0:1.0:4.0)              # radial shells
 const SURF_TARGET_ANGLES = Tuple(range(-0.5, 0.5; length = 9))  # rad
 
 # Pole-extraction filter (`extract_poles_shared_q`).  `min_support = 2`
 # is VC-6: a cluster is a physical pole only when ≥ 2 *distinct* nodes
 # independently root it — keeps Froissart doublets (spurious
 # single-node roots) out of the field.
+#
+# `SURF_RADIUS_T = 5.0` is **dimensionless** — the ADR-0026 Amendment 6
+# §S7 scale-covariance fix.  The filter keeps a root iff its z-plane
+# distance from the node satisfies `h_node·|t*| ≤ SURF_RADIUS_T·h_max`,
+# i.e. "within `SURF_RADIUS_T` steps at the walk's step ceiling
+# `h_max = SURF_PN_H`".  Because `h_max` is independent of the render
+# disc radius `SURF_R_MAX`, this constant does **not** change when we
+# shrink the wedge from `R = 20` to `R = 4` (bead `padetaylor-apn`):
+# the absolute z-radius `5.0·SURF_PN_H = 0.5` is the same in both
+# configurations, exactly as the scale-covariance memory mandates.
 const SURF_RADIUS_T     = 5.0
 const SURF_CLUSTER_ATOL = 0.2
 const SURF_MIN_SUPPORT  = 2
@@ -639,15 +677,22 @@ end
 The B3 extended threading fan for the wedge walk (ADR-0025 Amendment 2).
 The Cartesian product `SURF_TARGET_RADII × SURF_TARGET_ANGLES` — 9 rays
 fanned across `±0.5 rad` (`±28.6°`, a `~7°` margin inside the `36°`
-Stokes line), `dr = 1` radial spacing from `|x| = 2` out to `|x| = 20`
-— `9 × 19 = 171` targets.
+Stokes line), `dr = 1` radial spacing from `|x| = 2` out to
+`|x| = SURF_R_MAX`.  At the headline-figure `R = 4` that is `9 × 3 =
+27` targets; at the historical `R = 20`, `9 × 19 = 171`.
+
+**Legacy / not in the live kernel path.**  The live `surf_wedge_fill`
+calls `surf_wedge_dense_targets()` (the ADR-0026 D2 dense Cartesian
+lattice).  This sparse polar fan is kept available for legacy callers
+and parity tests; the docstring rationale below predates the dense
+lattice and is retained for context.
 
 Unlike V8b's 20-target `|x| ≤ 8` fan (copied from the pole-scatter
 figure), this fan threads the B2 `:max_q_root` adaptive walk through the
 *whole* wedge so the walk's node filament passes near every pole out to
-`|x| = 20`.  Targets are emitted **radius-major** (inner shells first):
-the walk completes the inner field before reaching out, the threading
-order the adaptive walk extends along.
+`|x| = SURF_R_MAX`.  Targets are emitted **radius-major** (inner shells
+first): the walk completes the inner field before reaching out, the
+threading order the adaptive walk extends along.
 """
 surf_wedge_targets() =
     ComplexF64[r * cis(θ) for r in SURF_TARGET_RADII
@@ -689,17 +734,19 @@ The legacy `surf_wedge_targets` is a sparse polar fan — 19 radial
 shells × 9 angular rays = 171 points.  Two structural problems make it
 unable to *tile* the pole-rich wedge:
 
-  1. **It is sparse.**  171 filament-endpoints over the wedge area
-     (`≈ 235` square units out to `|x| = 20`) leave wide gaps between
-     adjacent path-network filaments — the headline figure's wedge is
-     `~95 %` blank (worklog 059).
+  1. **It is sparse.**  At the historical `R = 20`, 171
+     filament-endpoints over the wedge area (`≈ 235` square units out
+     to `|x| = 20`) leave wide gaps between adjacent path-network
+     filaments — the headline figure's wedge was `~95 %` blank
+     (worklog 059).
   2. **A polar fan has non-uniform areal density.**  A constant-`dθ`
      fan crowds targets near the origin and thins them outward: the
      ring at `|x| = 2` carries the same 9 rays as the ring at
-     `|x| = 20`, so the outer arc length per target is `10×` the inner.
-     The path-network's validity discs are roughly `|x|`-independent
-     in size (the B1 honest radius is `median ≈ 0.06`), so a fan
-     *over-tiles* the inner wedge and *under-tiles* the outer.
+     `|x| = SURF_R_MAX`, so the outer arc length per target is
+     `SURF_R_MAX/2 ×` the inner.  The path-network's validity discs
+     are roughly `|x|`-independent in size (the B1 honest radius is
+     `median ≈ 0.06`), so a fan *over-tiles* the inner wedge and
+     *under-tiles* the outer.
 
 FW 2011's analogue tiles its domain with a **uniform `40×40 = 1600`
 Cartesian grid** of Stage-1 nodes feeding a `161×161` fine grid
@@ -727,7 +774,7 @@ A lattice point `x = (i·s, j·s)` is kept iff it lies in the wedge
 annulus:
 
   * `r_inner ≤ |x| ≤ r_outer` — inside the rendered window
-    (`r_inner ≈ SURF_R_MIN = 2`, `r_outer = SURF_R_MAX = 20`);
+    (`r_inner ≈ SURF_R_MIN = 2`, `r_outer = SURF_R_MAX = 4`);
   * `|arg x| ≤ half_deg` — inside the wedge sector.  The default
     `half_deg = SURF_DENSE_HALF_DEG = 34°` fills up to `2°` shy of the
     `36°` Stokes line; the residual `35°–37°` band is the `±1°`
@@ -754,7 +801,7 @@ wedge.
                        `SURF_DENSE_R_INNER = 2.0` (`= SURF_R_MIN`).
   - `half_deg::Real` — angular half-extent in degrees.  Default
                        `SURF_DENSE_HALF_DEG = 34.0`.
-  - `r_outer::Real`  — outer radius.  Default `SURF_R_MAX = 20.0`.
+  - `r_outer::Real`  — outer radius.  Default `SURF_R_MAX = 4.0`.
 
 Throws `ArgumentError` (CLAUDE.md Rule 1) for a non-positive `s`, a
 non-positive `r_inner`, an `r_outer ≤ r_inner`, or a `half_deg` outside
@@ -775,7 +822,7 @@ function surf_wedge_dense_targets(; s::Real = SURF_DENSE_SPACING,
     r_outer > r_inner || throw(ArgumentError(
         "surf_wedge_dense_targets: r_outer ($r_outer) must exceed " *
         "r_inner ($r_inner) — the kept annulus would be empty.  " *
-        "Suggestion: pass r_outer = SURF_R_MAX = 20.0."))
+        "Suggestion: pass r_outer = SURF_R_MAX = 4.0."))
     (0 < half_deg ≤ 90) || throw(ArgumentError(
         "surf_wedge_dense_targets: half_deg must lie in (0, 90] (got " *
         "$half_deg); it is the wedge angular half-extent in degrees.  " *
@@ -965,9 +1012,15 @@ function surf_wedge_fill(bvp_sol::VectorBVPSolution,
                          rng = nothing)
     f      = painleve_hierarchy(:I, 2; t = SURF_T)
     y_seed = ComplexF64.(bvp_sol(ComplexF64(SURF_Z_SEED)))
+    # `zspan` carries (start, nominal endpoint).  Only `zspan[1]` is
+    # load-bearing — the path-network walk seeds at `zspan[1]` and walks
+    # to user-supplied `targets`, not to `zspan[2]`.  The endpoint
+    # `ComplexF64(SURF_R_MAX + 0im)` records the outer reach of the
+    # render disc; it tracks `SURF_R_MAX` in lockstep (bead
+    # `padetaylor-apn`).
     prob   = VectorPadeTaylorProblem(f, y_seed,
                                      (ComplexF64(SURF_Z_SEED),
-                                      ComplexF64(20.0 + 0.0im));
+                                      ComplexF64(SURF_R_MAX + 0.0im));
                                      order = SURF_PN_ORDER)
     targets = surf_wedge_dense_targets()
     # S2 scale-derived adaptive `:max_q_root` walk — `adaptive = true`
@@ -1173,7 +1226,8 @@ end
     kkg_pi2_surface() -> NamedTuple
 
 Assemble `Re u` / `Im u` of the `P_I^(2)` tritronquée `V_0(x, 0)` over
-the Cartesian square `[-20,20]²`.
+the Cartesian square `[-SURF_XY_LIM, SURF_XY_LIM]²` (the headline
+figure renders `SURF_XY_LIM = 4.0`; bead `padetaylor-apn`).
 
 Construction (see the file docstring):
   1. **Region 1 — the pole-free sector** is computed three ways
@@ -1192,12 +1246,14 @@ Construction (see the file docstring):
      strips are `NaN`-masked.
 
 Returns a `NamedTuple`:
-  - `xs`, `ys`            : the `SURF_GRID_N`-point axes of `[-20,20]`;
+  - `xs`, `ys`            : the `SURF_GRID_N`-point axes of
+                            `[-SURF_XY_LIM, SURF_XY_LIM]`;
   - `Re_u`, `Im_u`        : `SURF_GRID_N × SURF_GRID_N` matrices, the
                             **B1-certified** rendering —
                             `Re_u[i,j] = Re V_0(xs[i] + im·ys[j])`
-                            (`NaN` outside the disc `|x| ≤ 20`, in the
-                            masked strips, in the wedge wherever the B1
+                            (`NaN` outside the disc `|x| ≤ SURF_XY_LIM`,
+                            in the masked strips, in the wedge wherever
+                            the B1
                             gate found no honest datum, and where no
                             sector method has a datum).  In the sector
                             this is the triple-method vote; in the
@@ -1333,7 +1389,7 @@ function kkg_pi2_surface()
             time() - tphase, n, n); flush(stdout)
     for j in 1:n, i in 1:n
         z = ComplexF64(xs[i], ys[j])
-        # Outside the |x| ≤ 20 disc: leave NaN (the figure is the disc).
+        # Outside the |x| ≤ SURF_XY_LIM disc: leave NaN (the figure is the disc).
         abs(z) > SURF_XY_LIM && continue
         # The masked Stokes-line strips: leave NaN (v1 corner 4).
         surf_in_mask(z) && continue

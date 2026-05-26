@@ -2,7 +2,9 @@
 #
 # THE HEADLINE FIGURE of the v0.2 vector solver (bead `padetaylor-0ln.28`,
 # v0.2 plan row "V8b+", F4).  It renders the full complex-plane surface of
-# the P_I^(2) tritronquée `V_0(x, 0)` over the square `[-20,20]²`,
+# the P_I^(2) tritronquée `V_0(x, 0)` over the square
+# `[-SURF_XY_LIM, SURF_XY_LIM]²` (the headline figure renders
+# `SURF_XY_LIM = 4`; bead `padetaylor-apn`),
 # reproducing Kapaev–Klein–Grava (KKG) 2015 Figs 7.4 (`Re V_0`) and 7.5
 # (`Im V_0`) — as **both 2D heatmaps and 3D surfaces**, in the visual
 # idiom of the Fornberg–Weideman pole-field figures (`figutil.jl`).
@@ -37,7 +39,8 @@
 # This script ONLY renders — it `include`s the kernel and calls
 # `kkg_pi2_surface()`.
 #
-# The kernel stitches two regions onto one `[-20,20]²` Cartesian grid:
+# The kernel stitches two regions onto one `[-SURF_XY_LIM, SURF_XY_LIM]²`
+# Cartesian grid:
 #
 #   * **Region 1 — the pole-free sector** (`arg x ∈ (36°,324°)`): `V_0`
 #     is analytic, so `Re u`/`Im u` are harmonic and are computed THREE
@@ -57,7 +60,7 @@
 #
 #       - the `:max_q_root` resilient adaptive walk threads a dense
 #         disc-spaced Cartesian lattice through the whole wedge to
-#         `|x| = 20`, `extract_poles_shared_q` (`min_support ≥ 2`,
+#         `|x| = SURF_R_MAX`, `extract_poles_shared_q` (`min_support ≥ 2`,
 #         VC-6) extracts the validated pole *locations* (the FW 2011
 #         Fig 4.7 idiom);
 #       - the Stage-2 fine-grid fill runs **twice on the same walk** —
@@ -80,8 +83,8 @@
 #   A thin `±1°` strip straddling each `±36°` Stokes line is `NaN`-masked
 #   — the band the sector fan does not reach and the wedge underlay does
 #   not honestly cover (ADR-0025 Amendment 12's Phase-E1 audition
-#   narrowed it `±3° → ±1°`).  Cells outside the `|x| ≤ 20` disc are
-#   `NaN`.  `NaN` cells render in a neutral grey.
+#   narrowed it `±3° → ±1°`).  Cells outside the `|x| ≤ SURF_XY_LIM` disc
+#   are `NaN`.  `NaN` cells render in a neutral grey.
 #
 # ## Rendering choices (this script's only decisions)
 #
@@ -92,8 +95,9 @@
 #     un-clamped colour/`z` range would wash the smooth ~270° sector to a
 #     flat single colour.  Re/Im are therefore clamped to `±SURF_CLAMP`
 #     for display, chosen as a few × the smooth-sector amplitude (the
-#     negative-axis ridge `u(-20) ≈ +4.9`; the sector excursions stay
-#     within ~±10).  `SURF_CLAMP = 15.0` keeps the smooth sector fully
+#     negative-axis ridge `u(-SURF_XY_LIM) ≈ +(6·SURF_XY_LIM)^(1/3)`,
+#     ~+2.88 at `SURF_XY_LIM = 4`; the sector excursions stay within
+#     ~±10).  `SURF_CLAMP = 15.0` keeps the smooth sector fully
 #     resolved while the clamped wedge still shows the characteristic KKG
 #     "jagged" pole structure (clamped peaks read as a sawtooth plateau).
 #     This is a *display* clamp only — the kernel's matrices are untouched.
@@ -312,12 +316,16 @@ res = _load_or_compute_kernel()
 xs, ys = res.xs, res.ys
 
 # Quantitative sanity readout — the negative-real-axis ridge must be
-# positive (the sign-bug regression guard; KKG eq. (1.3)).
+# positive (the sign-bug regression guard; KKG eq. (1.3)).  At
+# `SURF_XY_LIM = 4` (bead `padetaylor-apn`) the in-disc pin is `x = -3`
+# (the seed location), expected `Re V₀(-3, 0) ≈ +(6·3)^(1/3) =
+# cbrt(18.0) ≈ +2.6207`.  `(6x)^(1/3)` is real-positive on the
+# tritronquée's negative real ridge per KKG eq. (1.3).
 let iy0 = argmin(abs.(ys)),               # the y ≈ 0 row
-    ix  = argmin(abs.(xs .- (-15.0)))     # x ≈ -15 column
+    ix  = argmin(abs.(xs .- (-3.0)))      # x ≈ -3 column
     ridge = res.Re_u[ix, iy0]
-    @printf("  ridge check: Re V₀(-15, 0) = %+.4f  (KKG (6·15)^(1/3) = +%.4f)\n",
-            ridge, cbrt(90.0)); flush(stdout)
+    @printf("  ridge check: Re V₀(-3, 0) = %+.4f  (KKG (6·3)^(1/3) = +%.4f)\n",
+            ridge, cbrt(18.0)); flush(stdout)
 end
 
 nfin     = count(isfinite, res.Re_u)
@@ -414,8 +422,8 @@ n_extrapolated = count(!isnan, Re_extrap_only)
 fig = Figure(size = (1320, 1180))
 
 Label(fig[0, 1:2],
-      "P_I⁽²⁾ tritronquée V₀(x, 0) over the complex x-plane [-20,20]²  " *
-      "—  KKG 2015 Figs 7.4 (Re) / 7.5 (Im)";
+      @sprintf("P_I⁽²⁾ tritronquée V₀(x, 0) over the complex x-plane [-%.0f,%.0f]²  —  KKG 2015 Figs 7.4 (Re) / 7.5 (Im)",
+               SURF_XY_LIM, SURF_XY_LIM);
       fontsize = 16, padding = (0, 0, 6, 10))
 
 """
@@ -433,9 +441,9 @@ Amendment 10):
     cells) is drawn on top at full opacity.
 
 The wedge pole field is then overlaid as small black dots.  Square data
-aspect; cells outside `|x| ≤ 20` and inside the masked Stokes strips
-render in `NANGREY` (the certified layer's neutral grey shows through
-where both layers are NaN).
+aspect; cells outside `|x| ≤ SURF_XY_LIM` and inside the masked Stokes
+strips render in `NANGREY` (the certified layer's neutral grey shows
+through where both layers are NaN).
 """
 function heatmap_panel(gp, M_cert, M_extrap, title)
     ax = Axis(gp; title = title, xlabel = "Re x", ylabel = "Im x",
@@ -507,8 +515,9 @@ const FIGNOTE = string(
              100.0 * n_certified / length(res.Re_u),
              EXTRAP_ALPHA,
              100.0 * n_extrapolated / length(res.Re_u)),
-    @sprintf("%d validated wedge poles (black dots); display clamped to ±%.0f.  Grey: NaN — outside |x|≤20 disc, ±%.0f° Stokes strips.",
-             length(res.poles), SURF_CLAMP, SURF_STITCH_MASK_DEG))
+    @sprintf("%d validated wedge poles (black dots); display clamped to ±%.0f.  Grey: NaN — outside |x|≤%.0f disc, ±%.0f° Stokes strips.",
+             length(res.poles), SURF_CLAMP, SURF_XY_LIM,
+             SURF_STITCH_MASK_DEG))
 Label(fig[3, 1:3], FIGNOTE; fontsize = 9, padding = (0, 0, 8, 0))
 
 @printf("  building Makie figure + saving PNG...\n"); flush(stdout)
