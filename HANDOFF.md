@@ -65,40 +65,203 @@ docs/design_section_6_path_network.md scope), are all shipped:
 
 **2508 + 32 + 61 = 2601 expected GREEN** (61 new LD.X.* assertions verified in single-file isolation `lattice_dispatcher_test.jl`, 23.4 s; 32 new DG.* assertions verified in single-file isolation `diagnose_test.jl`, 18 s; full `Pkg.test()` not yet re-run — OOM-friction ongoing, see worklogs 048–049; existing 2508 assertions unchanged by additive `strict` kwarg and `:bvp_fail` tag with back-compat `strict = true` default).  Previously: **2508 / 2508 tests passing** as of worklog 047 (`HEAD = 1331755`, all committed; push pending).  The API audit (commit 9296731, worklog 050) made no source changes and adds no new assertions; test count is unchanged at 2601 expected GREEN.  The 12 spawned beads from the audit constitute the v1.0 normalisation work backlog.
 
-## 🔴 PRIORITY — port the full FW path-network driver to the vector solver (bead `padetaylor-0ln.40`)
+## 🔴 PRIORITY — headline-figure render crashed at the figure-build step (3h 26m of valid kernel data lost); three pickup items
 
-**The headline figure is not done.** Bead `0ln.37` (ADR-0025, worklog
-058) ran a six-phase deep-dive on the KKG 7.4/7.5 P_I⁽²⁾ tritronquée
-figure and *did* complete its scoped work — all six v1 corners retired
-or justified, a seven-criterion FW-style validation suite built, full
-suite 5326/5326 GREEN. **But the rendered figure is inadequate**: its
-pole-rich wedge is only ~5 % filled — a sparse 266-pole scatter over a
-~95 %-blank region, not the solution surface KKG plot. **Read worklog
-059 first** — it is the honest diagnosis.
+**Status (handoff written 2026-05-26).** Bead `padetaylor-0ln.40` was
+prosecuted to a deep finish in the session 2026-05-22 → 2026-05-26 — see
+`docs/adr/0026-vector-resilient-walk-dense-targets.md` (10 amendments,
+the full arc D1 → S8 + tf9), `docs/adr/0025-headline-figure-re-resolution.md`
+(new Amendment 14 — the headline-figure-only relaxation of the
+no-extrapolation rule), and `docs/worklog/060-headline-figure-completion.md`
+(196 lines, the sober summary). **Every algorithmic piece is shipped and
+the kernel computation succeeded.** What is left is purely the
+render-step crash and the three carryover items below.
 
-**Root cause (worklog 059).** `src/VectorPathNetwork.jl` is a
-deliberately **minimal ~156-LOC port** of v0.1's full **1108-LOC**
-`src/PathNetwork.jl` driver — its own docstring says so. The FW 2011
-§3.1 5-direction wedge and the Stage-1 tree were ported; the machinery
-that actually *fills a region* was not — a **resilient** walk (the
-minimal one `throw`-aborts the whole run on the first unreachable
-target), a **fine-grid** target set (the figure runs 171 coarse
-targets, not a tiling grid), and the **barycentric** Stage-2 fill. With
-pole-density-forced `h≈0.1` discs the wedge (area ~250) needs ~25 000
-tiling nodes; the brittle minimal walk places ~2 000 then aborts.
+### What happened — the crash
 
-**The work — bead `padetaylor-0ln.40`** (a plan-first DEEP-DIVE, the
-`0ln.37` pattern): recon → an ADR (ADR-0026) → child beads → serial
-implementation → re-verify. Bring `VectorPathNetwork` / `Vector
-PathNetworkStage2` up to v0.1 `PathNetwork.jl`'s full driver capability
-(resilient fine-grid walk + barycentric fill), then re-do the figure's
-wedge as a genuine filled honest surface. The deep-dive **must measure**
-the achieved coverage — do not assume the full driver succeeds (though
-the envelope says it should); report any genuinely-intractable residual
-honestly. The B1 true-radius gate, the B2 adaptive `:max_q_root` walk,
-and the entire VC-4…VC-10 validation suite from `0ln.37` are sound and
-carry over unchanged. `0ln.38` (the mis-framed "2D-lattice" deferral) is
-superseded by `0ln.40`.
+`figures/kkg_pi2_tritronquee_surface.jl` ran for **12 354 s = 3h 25m**
+and produced **valid, complete kernel output** before crashing in the
+Makie caption-building step with `ArgumentError: First argument to
+@sprintf must be a format string.` Crash sites — **lines 430 and 437**
+of the render script (two consecutive `@sprintf` calls in the `FIGNOTE`
+caption). The format string in each is a Julia string concatenation —
+`"FULL OPACITY ..." * "..." * "..."` — built with `*` at runtime; Julia
+1.12 tightened `@sprintf` to require a literal format string at
+macro-expansion time, so the string-concat now fails (it used to be
+accepted). Pure render-time bug, after all the compute. Trivial fix
+(collapse the `*`-concatenations into a single literal string per
+`@sprintf`) but DO NOT just patch and re-run — see the three pickup
+items below; running the kernel again from scratch costs another ~3.5 h.
+
+### What the kernel produced (THE VALUABLE DATA — see also `docs/handoff_artifacts/060_render_v3_crash.log`)
+
+The log streamed cleanly thanks to the new `flush(stdout)` + `stdbuf -oL`
+instrumentation:
+
+```
+KKG 2015 Figs 7.4/7.5 — P_I^(2) tritronquée V₀(x,0) surface
+  triple-method majority-vote sector + path-network wedge (ADR-0024)
+  grid: 401×401 over [-20,20]²
+  kernel: starting kkg_pi2_surface (order=48, expect tens of minutes at order 48)...
+  [kernel   0.0s] Region 1.1 — surf_ray_fan...
+  [kernel  12.5s] Region 1.2 — surf_laplace_voters (2D Cheb + Gridap FEM)...
+  [kernel  74.6s] Region 2.1 — surf_anchor_bvp...
+  [kernel  74.6s] Region 2.2 — surf_wedge_fill (24440 wedge grid points,
+                  order=48, the big one)...
+  [kernel 12303.4s] surf_wedge_fill done — 117 213 nodes, 3528 poles
+  [kernel 12303.6s] Region 1.3 — per-cell sector voting loop (401×401 grid)...
+  kernel: 12354.3 s — wedge: 117 213 visited nodes, 3755 dense targets
+                  (10 skipped), 96 251 candidate poles → 3528
+                  VC-4-validated (92 723 pruned), |x|-frontier 20.0,
+                  5344/24 440 grid points B1-certified (21.9 %) — full
+                  opacity; FW-style overlay 24 440/24 440 filled
+                  (100.0 %) — reduced alpha; VC-5 conjugate-pair
+                  residual median 0.3941
+  ridge check: Re V₀(-15, 0) = +4.4816  (KKG (6·15)^(1/3) = +4.4814)
+  certified filled grid cells: 104 157 / 160 801 (64.8 %)
+  FW-style filled grid cells:  123 253 / 160 801 (76.6 %)
+  wedge poles: 3528
+```
+
+Phase budget: `surf_ray_fan` 12.5 s, `surf_laplace_voters` 62 s,
+`surf_anchor_bvp` ≈ instant, **`surf_wedge_fill` 12 228 s (3 h 24 min —
+the silent phase that needs more verbosity)**, sector vote loop 50 s.
+Ridge cross-check matches KKG eq. (1.3) `(6·15)^(1/3) = +4.4814` to four
+decimals — sign-regression guard PASSED. The wedge walk's
+all_candidates_failed skip count was 10/3755 = 0.27 % — the resilient
+walk is healthy.
+
+### The three carryover items the next agent must do (in this order)
+
+**(1) Persist the kernel output so a render-step fix doesn't cost another
+3.5 h.** The crash happened in `figures/kkg_pi2_tritronquee_surface.jl`
+*between* the kernel call (`res = kkg_pi2_surface()` at line 232) and
+`save(OUTPNG, fig)` at line 444. The `res` NamedTuple was fully computed
+and held in memory; the figure was being assembled when `@sprintf` blew
+up — so nothing was serialised to disk. **Add a cache-and-restore
+layer**: after the kernel call, serialise `res` (Serialization.serialize
+or JLD2 — JLD2 is friendlier for re-inspection; the figures project
+already pulls heavyweight deps, one more is fine) to e.g.
+`figures/output/kkg_pi2_kernel_cache.jld2`; at script start, if that
+file exists and is newer than every `figures/_kkg_pi2_*.jl` helper,
+deserialise it instead of calling the kernel. (A short-circuit env var
+`KKG_FORCE_RECOMPUTE=1` to override is a good safety valve.) The
+caching is figure-local — do not put it in `src/`. After persisting,
+a re-run that only fixes the `@sprintf` line is ~seconds, not hours.
+
+**(2) Make the program more verbose — `surf_wedge_fill` went quiet for
+3h 24 min.** The kernel-level phase markers in `_kkg_pi2_surface_helpers.jl`
+`kkg_pi2_surface()` (`[kernel Xs] Region N.M — …`) are good and proved
+their worth — every other phase boundary was visible. The one black hole
+is `surf_wedge_fill` itself: it emits the entry marker, then nothing for
+~3 hours until the exit marker. Inside `surf_wedge_fill` (helpers
+~line 870) there is a single big call to `vector_path_network_solve`
+that does all the Stage-1 walk work and the two Stage-2 fills. **Add
+periodic progress prints inside this phase**: either
+(a) instrument inside `vector_path_network_solve` itself in
+`src/VectorPathNetwork.jl` — a `verbose::Bool = false` kwarg that, when
+true, emits `@info` + `flush(stdout)` every N targets / every N visited
+nodes (e.g. each 100 targets or 1000 nodes), reporting elapsed time,
+nodes-laid, failed-so-far, median `h_v` — and pass `verbose = true`
+from the figure helper; OR (b) instrument inside `surf_wedge_fill` /
+the figure helpers by wrapping the walk call with a periodic
+`@async`-backed heartbeat that reads `length(walk.visited_z)` (won't
+work — the walk is synchronous, the inner state is not accessible from
+outside); (a) is the right choice. Also instrument the VC-4 / VC-5 /
+`extract_poles_shared_q` validation passes inside `surf_wedge_fill` —
+those run after the walk and accounted for some of the silent tail.
+Use the verbose-flush pattern already established (see project memory
+`long-julia-agents-verbose-flush` and the existing kernel markers).
+
+**(3) Decrease the area so the wedge contains ~100 poles, not 3528.** At
+the current `SURF_XY_LIM = 20.0` the order-48 walk found 3528
+VC-4-validated poles — vastly more than the ~266 the prior order-36
+runs reported (the higher order + dense targets + S7's `radius_t` fix
+each surfaced poles the lower-resolution runs missed). 3528 poles is
+**too many for a meaningful headline figure** — the pole field becomes
+visual noise. User instruction: shrink the area to give ~100 poles. The
+pole density in the wedge is roughly uniform (ADR-0026 Amendment 3
+measured spacing ~flat at 0.70 across `[5,20]`, varying as `|x|⁻¹ᐟ⁶` —
+weak) so pole count scales roughly with wedge area, which for `|x|∈[2,R]`
+scales as `R² − 4`. To get 3528 → ~100 means area / 35, so
+`R² − 4 ≈ 396 / 35 ≈ 11.3` → **`R ≈ 4`**. Concrete change: set
+**`SURF_XY_LIM = 4.0`** (`figures/_kkg_pi2_surface_helpers.jl:336`) AND
+**`SURF_R_MAX = 4.0`** (`:381`), and verify the dense-target generator's
+`r_outer = SURF_R_MAX` still produces sensible spacing (`SURF_DENSE_R_INNER`
+is 2.0; with `r_outer = 4.0` the lattice has a narrow `r` range — check
+the target count is in the low thousands, not millions). The sector
+voters (ray-fan / Cheb-Laplace / Gridap) all read `SURF_XY_LIM`/`SURF_R_MAX`
+too, so the sector solve will also shrink — much faster. **MEASURE** the
+new pole count empirically (it may not land at exactly 100, and the
+pole density is not perfectly uniform at small `|x|`); aim for ~100–300.
+Adjust `SURF_XY_LIM` once based on the first run.
+
+### Concrete next-agent runbook
+
+1. **Read** `docs/adr/0025-headline-figure-re-resolution.md` Amendment 14,
+   `docs/adr/0026-vector-resilient-walk-dense-targets.md` Amendments 1–10,
+   `docs/worklog/060-headline-figure-completion.md`, this section, and
+   the project memory files under
+   `.claude/projects/.../memory/`(scale covariance is a CORE PRINCIPLE).
+2. **Do not skip the persistence step (carryover 1) and just re-run.**
+   The 3.5 h kernel cost is real; with caching, every iteration of the
+   render-bug-fix cycle is seconds.
+3. The trivial `@sprintf` fix is collapsing each of the two
+   `*`-concatenated format strings into a single literal at lines 430
+   and 437 of `figures/kkg_pi2_tritronquee_surface.jl` — but only after
+   carryover 1 is in place.
+4. After the area shrink (carryover 3), do a sanity smoke run BEFORE
+   the production render: a single full kernel + render run at
+   `SURF_XY_LIM=4` should be ~minutes, not hours; verify pole count
+   lands in target range, verify the figure assembles end-to-end, then
+   commit the area + persistence + verbosity changes together.
+5. Run `julia --project=figures figures/test_kkg_pi2_surface.jl` — the
+   VC-4…VC-10 figure-acceptance suite must still pass. Some tests pin
+   pole counts and may need semantic updates (NOT tolerance
+   relaxations — they assert *families of poles*, not exact counts —
+   if the family count differs at smaller `R`, the test's geometric
+   assumption is what's changed; document in the commit).
+
+### Where files live, for quick orientation
+
+- **Render script**: `figures/kkg_pi2_tritronquee_surface.jl` (lines
+  430+437 = crash; 232 = kernel call; 444 = `save(OUTPNG, fig)`; the
+  caching wrapper would go between the imports and line 232).
+- **Compute kernel**: `figures/_kkg_pi2_surface_helpers.jl` — defines
+  `kkg_pi2_surface()` (line 1233+), `surf_wedge_fill` (~line 870),
+  `surf_ray_fan`, `surf_laplace_voters`, `surf_anchor_bvp`. Constants
+  to shrink: `SURF_XY_LIM` (:336), `SURF_R_MAX` (:381). Existing phase
+  markers (good model to extend): `:1262`, `:1267`, `:1272`, `:1288`,
+  `:1296`, `:1302`.
+- **Walk core**: `src/VectorPathNetwork.jl`
+  `vector_path_network_solve` (~line 428). Best target for the
+  `verbose::Bool` kwarg (carryover 2). The walk's target loop with the
+  `failed_targets` accounting is around line 600+.
+- **Validation tests**: `figures/test_kkg_pi2_surface.jl` (the
+  VC-4…VC-10 figure suite), `test/vector_path_network_test.jl` (VPN.\*),
+  `test/vector_pipeline_oracle_test.jl` (VPO.4 = Weierstrass-℘ end-to-end
+  oracle).
+- **Saved crash log**: `docs/handoff_artifacts/060_render_v3_crash.log`
+  (the full streamed output reproduced above, plus the stacktrace).
+
+### Why this session's work was so much (and where it lives)
+
+Coverage went from **~5 %** (figure as found at start) to **22 %**
+(certified at order 36 / shipped) to **~29 %** (certified at order 48,
+the run we just did) — and with Option B FW-style filling, the
+full-opacity-or-extrapolated-overlay together cover effectively 100 %
+of the wedge. Three scale-fixing heresies were found and fixed
+(`SAFETY` geometric-sink ratchet; `radius_t` rescaled-`t` window with
+its companion `cluster_atol`; in-kernel hardwired `SURF_PN_H`); the
+vector solver is now properly scale-covariant. The full path is:
+ADR-0026 Amendments 1 (probe falsifies density-alone), 2 (D3 diagnosis
+→ R1 fixed-h), 3 (full diagnosis), 4 (S1 sink mechanism), 5 (S5-diag
+order lever / `h_v` over-stride), 6 (S6 outcome), 7 (S7 fix), 8
+(`cfq`'s `h_v` mechanism — later withdrawn), 9 (S8 falsifies #8;
+honesty contract is the cap), 10 (tf9 closeout). Worklog 060 is the
+plain-language summary; read it first if you don't want to read 10
+amendments. Bead `padetaylor-0ln.40` is mostly resolved; bead
+`padetaylor-tf9` is the active one this handoff resumes.
 
 **After `0ln.40`**: V9 (`padetaylor-0ln.19`) — v0.2 docs + release prep
 (README/CHANGELOG/RESEARCH v0.2 sections, ADR review — ADRs 0023/0024/
