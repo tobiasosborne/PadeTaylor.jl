@@ -46,6 +46,7 @@ figures/Manifest.toml
 # (with `KKG_FORCE_RECOMPUTE=1` to override staleness logic).  The
 # output PNGs are committed; the binary cache is not.
 figures/output/kkg_pi2_kernel_cache.jld2
+figures/output/kkg_pi2_zoom_cache.jld2
 
 # Local scheduling lockfiles.
 .claude/scheduled_tasks.lock

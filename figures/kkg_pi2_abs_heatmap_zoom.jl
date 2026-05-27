@@ -1,8 +1,8 @@
 # figures/kkg_pi2_abs_heatmap_zoom.jl
 #
 # A SINGLE-PANEL 2D HEATMAP of `|V₀(x, 0)|` for the P_I^(2) tritronquée
-# over the **zoom window** `[-2, 2]²` at 801 × 801 resolution
-# (`dx = 0.005`, 8 × finer than the R = 8 cache).  Companion to
+# over the **zoom window** `[-3, 3]²` at 1001 × 1001 resolution
+# (`dx = 0.006`, ~6.7 × finer than the R = 8 cache).  Companion to
 # `kkg_pi2_abs_heatmap.jl` (the same field, viridis colormap, same
 # `SURF_CLAMP = 15` saturation policy), but over the inner-disc smooth
 # sector instead of the full `|x| ≤ 8` surface.
@@ -15,27 +15,31 @@
 # inner-wedge / inner-sector join band at `|x| ≈ 2`–3.  The zoom kernel
 # (`_kkg_pi2_zoom_helpers.jl`) bypasses that scaffolding entirely: a
 # single Padé walk from the BVP-anchored seed at `z = -3 + 0im`
-# integrates inward to every grid point of `[-2, 2]²`.  The seed is
-# **outside** the zoom square (`Re = -3 < -2`), the bulk of the zoom is
-# in the smooth pole-free sector (`|arg x| > 36°` covers all of
-# `[-2, 2]²` except a small triangular tip at `(±2, 0)`), and the
-# Stokes lines at `±36°` start at `|x| = 2` — they are at the boundary
-# of the zoom, not inside it.  The result is one clean,
-# wedge-artefact-free surface.
+# integrates inward to every grid point of `[-3, 3]²`.  The seed is
+# **on** the left edge of the zoom square (`Re = -3`), the bulk of the
+# zoom is in the smooth pole-free sector (`|arg x| > 36°` covers most
+# of `[-3, 3]²`), and the Stokes lines at `±36°` cross the zoom
+# interior for `|x| ∈ [2, 3]` — the [-3, 3]² zoom shows wedge-sector
+# poles in the band `|x| ∈ [2, 3], |arg x| < 36°`.  The single-walk
+# kernel renders these poles as finite-amplitude spikes rather than
+# separate wedge-walk artefacts.
 #
-# ## The "dishonest fill" — same convention as the R = 8 figure
+# ## Stage-2 `extrapolate = false` + BFS fill
 #
-# The zoom kernel runs Stage-2 with `extrapolate = true`, so every grid
-# cell receives a finite Padé evaluation regardless of the B1 true-
-# radius gate.  This matches the worklog-062 convention the zoom
-# inherits: the visible figure is FW-2011-style filled everywhere,
-# and the headline-figure dual-fill provenance is preserved in the
-# parallel `kkg_pi2_tritronquee_surface.png` figure.
-#
-# Unlike the R = 8 figure, the zoom needs NO `_fill_inner_disc_nan!`
-# BFS step — the zoom kernel has no Stokes-strip mask (no `±36°`
-# strips inside `|x| ≤ 2`), so every cell is finite on first pass.
-# The render asserts this directly.
+# At [-3, 3]² the seed-anchored walks travel up to √45 ≈ 6.7 units —
+# well beyond the per-node Padé `h = 0.1` convergence disc.  Raw
+# `extrapolate = true` Padé output past the disc produced SPURIOUS
+# Q-roots (ghost poles) in the analytic smooth sector, user-flagged
+# at the top/bottom edges (e.g. `(0, ±2.5)` at angle 90°, way outside
+# the wedge `|arg x| < 36°` where the tritronquée has any real poles).
+# The zoom kernel now runs Stage-2 with `extrapolate = false`: cells
+# past the nearest visited Padé's disc become `NaN`.  A nearest-non-NaN
+# BFS fill (`_fill_zoom_nan!` below — same Moore-neighbourhood idiom
+# as the R = 8 `_fill_inner_disc_nan!` but with no disc gate, since
+# the zoom IS the full square) papers those cells over with
+# interpolated values from valid neighbours.  Result: the in-disc
+# honest Padé evaluations stay intact, the past-disc cells are
+# smoothed via interpolation, and the figure shows no ghost poles.
 #
 # ## Cache contract
 #
@@ -169,16 +173,60 @@ res = _load_or_compute_zoom_kernel()
 
 xs, ys = res.xs, res.ys
 
-# `|V₀|` is finite everywhere — the zoom kernel has no Stokes-strip
-# mask, no provenance NaN, no outside-disc clipping (the zoom *is* a
-# square, not a disc).
-abs_u = sqrt.(res.Re_u .^ 2 .+ res.Im_u .^ 2)
+# Fill NaN cells from non-NaN neighbours via a Moore-3x3 BFS, iterated
+# until stable.  Read-from-snapshot, write-to-live: one BFS layer per
+# pass, no within-sweep cascading.  Same idiom as the R = 8 figure's
+# `_fill_inner_disc_nan!` but with NO disc gate — the zoom is the
+# full [-ZOOM_XY_LIM, ZOOM_XY_LIM]² square, no outside-disc cells.
+function _fill_zoom_nan!(M::Matrix{Float64})
+    n_i, n_j = size(M)
+    iters = 0
+    while true
+        changed = false
+        snap = copy(M)
+        @inbounds for j in 1:n_j, i in 1:n_i
+            isnan(M[i, j]) || continue
+            acc = 0.0; k = 0
+            for dj in -1:1, di in -1:1
+                (di == 0 && dj == 0) && continue
+                ii = i + di; jj = j + dj
+                (1 ≤ ii ≤ n_i && 1 ≤ jj ≤ n_j) || continue
+                v = snap[ii, jj]
+                isnan(v) && continue
+                acc += v; k += 1
+            end
+            if k > 0
+                M[i, j] = acc / k
+                changed = true
+            end
+        end
+        iters += 1
+        changed || break
+    end
+    return iters
+end
+
+Re_u = copy(res.Re_u)
+Im_u = copy(res.Im_u)
+n_nan_before = count(isnan, Re_u)
+@printf("phase: BFS-filling past-disc NaN cells (Re_u then Im_u)\n"); flush(stdout)
+@printf("  NaN cells in Re_u before fill: %d / %d (%.1f%%)\n",
+        n_nan_before, length(Re_u),
+        100.0 * n_nan_before / length(Re_u)); flush(stdout)
+n_re_iters = _fill_zoom_nan!(Re_u)
+n_im_iters = _fill_zoom_nan!(Im_u)
+@printf("  Re_u fill: %d BFS iterations; Im_u fill: %d BFS iterations\n",
+        n_re_iters, n_im_iters); flush(stdout)
+
+abs_u = sqrt.(Re_u .^ 2 .+ Im_u .^ 2)
 let n_finite = count(isfinite, abs_u)
-    @printf("  |V₀| finite cells: %d / %d\n",
+    @printf("  |V₀| finite cells after fill: %d / %d\n",
             n_finite, length(abs_u)); flush(stdout)
     @assert n_finite == length(abs_u) (
-        "zoom |V₀| has $(length(abs_u) - n_finite) NaN cells — the zoom " *
-        "kernel should fill every cell.  Investigate.")
+        "zoom |V₀| has $(length(abs_u) - n_finite) NaN cells after BFS " *
+        "fill — every cell should be filled.  Investigate: a NaN cell " *
+        "with no non-NaN neighbours can only happen if a whole row/" *
+        "column is NaN.")
 end
 
 # --- Render -----------------------------------------------------------

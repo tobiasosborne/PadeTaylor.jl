@@ -1,8 +1,8 @@
 # figures/kkg_pi2_abs_phase_surface_zoom.jl
 #
 # A SINGLE-PANEL 3D MODULUS SURFACE, PHASE-COLOURED, of `V₀(x, 0)`
-# for the P_I^(2) tritronquée over the **zoom window** `[-2, 2]²` at
-# 801 × 801 resolution.  Companion to `kkg_pi2_abs_phase_surface.jl`
+# for the P_I^(2) tritronquée over the **zoom window** `[-3, 3]²` at
+# 1001 × 1001 resolution.  Companion to `kkg_pi2_abs_phase_surface.jl`
 # (the R = 8 version with the same `min(|f|, 15)` height, cyclic
 # `:cyclic_mygbm_30_95_c78_n256` phase colormap, same `arg`-ticks
 # colourbar).  The zoom shows the smooth-sector core of the surface
@@ -12,20 +12,20 @@
 # ## Rendering choices — same as the R = 8 version
 #
 #   * **Height `z = min(|V₀|, 15.0)`.**  Matches `SURF_CLAMP = 15` from
-#     the R = 8 figures.  In `|x| ≤ 2` (squarely in the smooth sector)
-#     `|V₀|` is bounded by `O(10)` — the clamp barely engages near the
-#     negative-real ridge floor and never engages in the calm bulk of
-#     the zoom; the clamp is kept for consistency with the headline
-#     figures rather than to tame any zoom-specific spike.
+#     the R = 8 figures.  In the smooth sector (`|arg x| > 36°`) `|V₀|`
+#     is bounded by `O(10)` — the clamp barely engages near the
+#     negative-real ridge floor.  In the wedge band `|x| ∈ [2, 3],
+#     |arg x| < 36°` poles are present and will saturate the clamp;
+#     the clamp is kept for consistency with the headline figures.
 #
 #   * **Colour `(arg V₀ + π) / 2π` through `:cyclic_mygbm_30_95_c78_n256`.**
 #     The cyclic colormap renders the smooth-sector phase as a slow
 #     hue rotation around the negative-real ridge (`arg V₀ ≈ 0` →
 #     green-yellow at the ridge floor) with no spurious seam at the
-#     `±π` wraparound.  Inside the zoom there are no poles to encircle
-#     2π, so the phase varies smoothly — the colour gradient reads as
-#     a continuous tinting of the surface rather than the discrete
-#     pole-encircling pulses the R = 8 figure shows in its wedge.
+#     `±π` wraparound.  In the smooth-sector bulk the phase varies
+#     smoothly; in the wedge band `|x| ∈ [2, 3]` poles produce sharp
+#     `2π` phase windings visible as coloured rings in the rendered
+#     surface.
 #
 #   * **`Axis3` with `aspect = (1, 1, 0.5)`, `viewmode = :fit`.**
 #     Square in the data plane, half-height in the value axis — the
@@ -143,20 +143,61 @@ res = _load_or_compute_zoom_kernel()
 
 xs, ys = res.xs, res.ys
 
-# Build the height + phase fields.  The zoom kernel fills every cell,
-# so the NaN-guard branch below is defensive (Rule 1: keep it; the
-# branch is cheap and the assertion documents the invariant).
-abs_clamped = [isnan(res.Re_u[i, j]) || isnan(res.Im_u[i, j]) ? NaN :
-               min(sqrt(res.Re_u[i, j]^2 + res.Im_u[i, j]^2), SURF_CLAMP)
-               for i in 1:size(res.Re_u, 1), j in 1:size(res.Re_u, 2)]
-phase01     = [isnan(res.Re_u[i, j]) || isnan(res.Im_u[i, j]) ? NaN :
-               (atan(res.Im_u[i, j], res.Re_u[i, j]) + π) / (2π)
-               for i in 1:size(res.Re_u, 1), j in 1:size(res.Re_u, 2)]
+# BFS nearest-non-NaN fill (Moore 3×3, iterated until stable).  Same
+# helper as the heatmap-zoom companion; we duplicate it here rather
+# than factor to a shared file (Rule 6: each render is a self-
+# contained ≤200-LOC script).  See `kkg_pi2_abs_heatmap_zoom.jl`'s
+# top docstring for the rationale (`extrapolate = false` + BFS fill
+# vs raw past-disc Padé output's ghost poles).
+function _fill_zoom_nan!(M::Matrix{Float64})
+    n_i, n_j = size(M)
+    iters = 0
+    while true
+        changed = false
+        snap = copy(M)
+        @inbounds for j in 1:n_j, i in 1:n_i
+            isnan(M[i, j]) || continue
+            acc = 0.0; k = 0
+            for dj in -1:1, di in -1:1
+                (di == 0 && dj == 0) && continue
+                ii = i + di; jj = j + dj
+                (1 ≤ ii ≤ n_i && 1 ≤ jj ≤ n_j) || continue
+                v = snap[ii, jj]
+                isnan(v) && continue
+                acc += v; k += 1
+            end
+            if k > 0
+                M[i, j] = acc / k
+                changed = true
+            end
+        end
+        iters += 1
+        changed || break
+    end
+    return iters
+end
+
+Re_u = copy(res.Re_u)
+Im_u = copy(res.Im_u)
+n_nan_before = count(isnan, Re_u)
+@printf("phase: BFS-filling past-disc NaN cells (Re_u then Im_u)\n"); flush(stdout)
+@printf("  NaN cells in Re_u before fill: %d / %d (%.1f%%)\n",
+        n_nan_before, length(Re_u),
+        100.0 * n_nan_before / length(Re_u)); flush(stdout)
+n_re_iters = _fill_zoom_nan!(Re_u)
+n_im_iters = _fill_zoom_nan!(Im_u)
+@printf("  Re_u fill: %d BFS iterations; Im_u fill: %d BFS iterations\n",
+        n_re_iters, n_im_iters); flush(stdout)
+
+abs_clamped = min.(sqrt.(Re_u .^ 2 .+ Im_u .^ 2), SURF_CLAMP)
+phase01     = (atan.(Im_u, Re_u) .+ π) ./ (2π)
 let n_finite = count(isfinite, abs_clamped)
-    @printf("  |V₀| clamped finite cells: %d / %d\n",
+    @printf("  |V₀| clamped finite cells after fill: %d / %d\n",
             n_finite, length(abs_clamped)); flush(stdout)
     @assert n_finite == length(abs_clamped) (
-        "zoom surface has $(length(abs_clamped) - n_finite) NaN cells.")
+        "zoom surface has $(length(abs_clamped) - n_finite) NaN cells " *
+        "after BFS fill.  Investigate (a NaN cell with no non-NaN " *
+        "neighbours can only happen if a whole row/column is NaN).")
 end
 
 # --- Render -----------------------------------------------------------
