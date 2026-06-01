@@ -8,6 +8,49 @@
 > previous session already paid for. The frictions surfaced are
 > recorded in `docs/worklog/001-stages-Z-1-2-handoff.md`.
 
+## 🔬 LATEST SESSION (2026-06-01) — subtle-bug sweep, find phase complete (worklog 064)
+
+The maintainer reported a suspected **subtle, intermittent discontinuity
+bug** (likely a mis-transcribed equation/algorithm, possibly early,
+possibly in the path-network solver). I ran an orchestrated **read-only**
+26-agent audit of all of `src/` against the canonical references (workflow
+`wf_0709eaad-2bd`; reports in `docs/bug-sweep-2026-06-01/find-*.md`). The
+run was **stopped after the Find phase** on user instruction — the
+adversarial **Verify and Synthesize phases did NOT run**, so findings are
+unverified (single-source unless noted).
+
+- **Prime hypothesis DEAD**: the conjugate-transpose (`'` vs `.'`)
+  robust-Padé QR-reweighting bug is verified CORRECT (`RobustPade.jl:443`,
+  `SharedPade.jl:234` both use `adjoint`; no `.'`/`transpose(` anywhere in
+  `src/`). Cleared by agents A1 + E1 with line citations.
+- **LEADING SUSPECT (CRITICAL, double-flagged by A5 + E2, UNVERIFIED)**:
+  `src/SharedPade.jl:117` `_toeplitz_block` builds the C̃ block **one
+  Taylor coefficient too low** (`idx = m+rr-cc+1`, should be `+2`). `d=1`
+  does NOT reduce to the scalar GGT `(m,m)` Padé; invisible on the
+  exact-rational test jets, bites on transcendental jets per adaptive step
+  ⇒ intermittent discontinuity in the **vector** trajectory. Lives in the
+  v0.2 vector stack (not the scalar path-network whose Padé = A1-verified
+  `classical_pade_diagonal`); plausibly underlies the worklog-063 vector
+  zoom-figure artefacts. **Do NOT band-aid** — re-derive the intended
+  `d≥2` matching window vs Mano–Tsuda eq. 2.6 before touching the index
+  (ADR-0019 asserts a bit-identical `d=1` reduction the code violates).
+- Other unverified HIGHs: `B7` scalar `PoleField` `|t*|≤radius_t` far-root
+  filter (ADR-0026-known cause of *intermittently empty/sparse* pole
+  fields — best scalar-side symptom match); `D5` IVPBVPHybrid `a_2`
+  asymptotic coeff wrong; `E5` `shared_denominator_pade` rank break
+  `ρ≥m_cur` vs `==`.
+- **Verified CORRECT** (trust this negative space): RobustPade + classical
+  Padé, the Taylor/AD recurrence, all six Painlevé RHS, the P_I^(2)
+  companion system + closed-form oracles, the full Noumi–Yamada system.
+
+**Next agent**: see worklog 064 "Pickup" — resume Verify+Synthesize from
+the cached finds (`Workflow({scriptPath:"/tmp/sweep.workflow.js",
+resumeFromRunId:"wf_0709eaad-2bd"})`), then serial-Julia confirm the
+`SharedPade:117` off-by-one on a transcendental jet. Tracked: bead
+`padetaylor-bb2`.
+
+---
+
 ## TL;DR — where we are
 
 **Stage 0 (research) and Stage 1 (design) are complete.** Stage 2
