@@ -8,81 +8,98 @@
 > previous session already paid for. The frictions surfaced are
 > recorded in `docs/worklog/001-stages-Z-1-2-handoff.md`.
 
-## 🔬 LATEST SESSION (2026-06-02) — bug sweep verified, root cause found, C1+C2 SHIPPED (worklogs 065–067)
+## 🔬 LATEST SESSION (2026-06-02 cont.) — C3/C4/C6 SHIPPED, ADR-0028 drafted, FULL SUITE GREEN
 
-Picked up the worklog-064 find-phase sweep, ran the stopped Verify+Synthesize
-phases, root-caused the lead suspect (math settled before any code, per maintainer
-directive), and **shipped + pushed the C1+C2 SharedPade fix** (commit `cbf509b`).
-Read worklogs **065** (verify+plan), **066** (root cause), **067** (C1+C2 build)
-and **ADR-0027** before touching the SharedPade area.
+Orchestrated pickup of the three remaining sweep bugs (C3/C4/C6) and drafted the
+dispatch ADR. All three fixes shipped + pushed — each TDD + **mutation-proven**,
+docs in lockstep. A **pre-existing** full-suite RED (VSC.1.4, a C1+C2 tolerance
+miss) was found and fixed. **Full `Pkg.test()` GREEN: `7010 / 7010`** (certified
+2026-06-02, 16m32s; 0 failed). Worklogs **068** (C3), **069** (C4), **070** (C6).
 
-### Sweep verdict — 7 candidates → 5 real, 2 refuted (worklog 065)
-- **C5 REFUTED** as the discontinuity cause: scalar `_evaluate_pade`'s bare
-  `iszero` is *required* by ADR-0015 dense-output. The real worklog-063
-  zoom-figure discontinuity is the unguarded vector Stage-2 fill — already
-  tracked as **`padetaylor-6b5`** (K-nearest cross-validation).
-- **C7 REFUTED**: the sheet-blind Euclidean parent selection is real but
-  **deterministic per `rng_seed`**; improvement tracked in `padetaylor-pgc/zwh`.
+- **C3 `padetaylor-bez` ✅** (commit `7e71ade`, worklog 068) — ported the vector
+  §S7 scale-covariance fix to scalar `PoleField._extract_poles_core`: far-root
+  filter + cluster sort key now use z-plane distance `|h·t*| ≤ radius_t·h_max`
+  against the **h-INDEPENDENT** step ceiling (was per-node `|t*|`, which dropped a
+  fixed-z-distance pole when adaptive `h` shrank). Reduces exactly to legacy for a
+  near-uniform walk. New closed-form-℘ test **PF.4.1** (varying-h stitched
+  trajectory) RED→GREEN; mutation-proven both halves (M5 filter, M6 sort key).
+- **C4 `padetaylor-qsj` ✅** (commit `349bdf2`, worklog 069) — PIII asymptotic `a₂`
+  was matched at the WRONG Laurent order (s⁻⁷). The **s⁻⁵ balance** gives
+  `a₂ = −a₁²(α+δ)/(2α−δ)`, whose `(α+δ)` factor vanishes under the tronquée
+  validity constraint **δ=−α ⇒ a₂ = 0** for Fig-5 (sympy + hand-verified; the
+  bead's `β²(δ+1)/(δ−2)³` denominator was wrong — agrees only at δ=−1). IC now
+  matches FFW eq.6's published `u(z₂)` to **8.4e-6** (old a₂ was 7.4e-3 off).
+  **IB.1.1 rebuilt** around the FFW oracle (was self-referential — Rule 5
+  violation, with a structurally-impossible `>1e-3` assertion). 3 formula
+  duplicates fixed (incl. a 3rd in `ffw_fig_5_test.jl`); fail-loud δ=−α guard
+  added; PIII-equation transcription corrected; ADR-0014 + worklog 040 fixed.
+- **C6 `padetaylor-5jvd` ✅** (commit `7c2d6fd`, worklog 070) — steepest-descent
+  wedge ray now uses circular **S¹** distance `argmin|rem(θ_sd−off, 2π,
+  RoundNearest)|` on the *difference only* (was linear; mis-selected near
+  goal_dir≈±π). **PN.3.2** independent S¹-oracle pin (2 cut-straddling witnesses +
+  BigFloat), mutation-proven. Dormant on shipped workloads (default `:min_u`).
+- **VSC.1.4 tolerance miss ✅** (commit `decc32d`, `padetaylor-9zlq`) — the full
+  suite was RED on a **PRE-EXISTING** miss, NOT this session's work: the C1+C2
+  sweep (worklog 067) bumped the entire-harmonic sibling tolerances (VS.1.2/1.3,
+  VP.1.2/1.4 → 1e-8) but missed VSC.1.4 (atol 1e-9 vs the honest ~1.1e-9 `(m,m)`
+  accuracy). Bumped to 1e-8 (matching siblings). **LESSON: run full `Pkg.test()`
+  after ANY SharedPade-accuracy change** — the previous session never did, so
+  this lay dormant. (NB: the suite can be OOM-killed when another heavy Julia
+  session runs concurrently on the box; run it when the machine is otherwise idle.)
 
-### C1+C2 root cause (worklog 066, unanimous + sympy-verified) — SHIPPED
-The `SharedPade.jl:117` off-by-one was **not an index typo** but a
-**target-approximant conflation**: the `pillar-A` spec faithfully transcribed
-Mano–Tsuda's *off-diagonal* `(m−1,m)` window (top-left `c_m`, the `+1`) but paired
-it with a GGT-*diagonal* `(m,m)` numerator recovery + the `d=1`=`robust_pade(m,m)`
-contract (top-left `c_{m+1}`, the `+2`). **Correct window = `c_{m+1}` (`+2`)** at
-every `d`. Fix (commit `127edae`): `+2` window; graceful reduction (accept
-`ρ≥m_cur` incl. full-rank least-squares Q); `z^λ` cancellation replacing the
-`Q(0)≈0` throw; `Q=1` Taylor fallback for `ρ==0` regular jets; determinant Oracle-2
-bumped `+2`. Mutation-proven (SP.1.7 transcendental oracle; `z^λ` disable→RED).
-**Meromorphic oracles GREEN** (℘, Calogero–Moser, KKG P_I^(2), vector path-network).
+### 🚦 ADR-0028 DRAFTED — needs maintainer sign-off BEFORE the dispatch build
+**`docs/adr/0028-sharedpade-dual-construction-pareto-dispatch.md`** (commit
+`468c720`, `padetaylor-flnr`). Status: **proposed — awaiting sign-off** (Law 1,
+correctness-first). The full build-ready design + a **7-item sign-off list** is in
+the ADR; see the PICKUP below. NOTHING was built — the dispatch code is gated.
 
-### ⚠️ Accuracy cost shipped (documented) — the dispatch motivation
-The correct `(m,m)` is *less accurate than the buggy `(m−1,m)`* on ENTIRE/regular
-jets, and the cost **grows with component count `d`**: harmonic ~5e-9, exp ~4e-8,
-**Noumi–Yamada A₄ conservation ~6e-6 (`d=4`, a real target)**. Correct-not-wrong
-(poles recovered exactly; bounded). 49 entire-system test tolerances were updated
-to this honest accuracy (each cites ADR-0027 + `padetaylor-unk`). Recovery is
-deferred to the dispatch layer (**ADR-0028, `padetaylor-flnr`**).
+> **Prior session (worklogs 065–067, commit `cbf509b`; read 066+067+ADR-0027
+> before the SharedPade area)** — bug sweep verified (7→5 real / 2 refuted; C5+C7
+> refuted), and the **C1+C2 SharedPade `(m,m)` window + graceful reduction
+> SHIPPED**: the off-by-one was a target-approximant conflation (Mano–Tsuda
+> off-diagonal `(m−1,m)` `+1` window vs the GGT diagonal `(m,m)` `+2` contract);
+> correct window = `+2`. Documented accuracy cost on entire/high-`d` jets
+> (harmonic ~5e-9, exp ~4e-8, NY-A₄ d=4 ~6e-6); 49 tolerances updated — the 50th
+> (VSC.1.4) was the miss fixed this session. **Do NOT "fix"
+> `SharedPade._upper_block`** (sympy-verified correct under `+2`).
 
-## 🎯 PICKUP — land the remaining C's, then dispatch (in this order)
+## 🎯 PICKUP — dispatch build (GATED on sign-off), then minor follow-ups
 
-All independent of the shipped SharedPade work. Discipline: **one Julia process at
-a time** (Rule 7), TDD + **mutation-prove** each, no band-aid tolerance relaxation
-(Rule 2/5). `bd show <id>` has the full per-bug spec.
+Discipline: **one Julia process at a time** (Rule 7 — and watch for concurrent
+Julia sessions on the box, see VSC.1.4 note), TDD + **mutation-prove**, no
+band-aid tolerance relaxation (Rule 2/5). `bd show <id>` for full specs.
 
-1. **C3 `padetaylor-bez`** (HIGH, scalar) — `src/PoleField.jl:144` far-root filter
-   is a scale-fixing heresy. Port the landed vector S7 fix (`VectorPoleField.jl:250-329`,
-   commit `19b48ba`): filter by z-plane distance `|h_max·t*| ≤ radius·h_max` using the
-   **h-INDEPENDENT `h_max`** (per-node `h` cancels → no-op), and make the cluster
-   representative the z-closest node (`:147` sort key). Test = varying-h
-   Weierstrass-℘ lattice (closed-form poles), RED→GREEN; parity vs `VPO.4`.
-2. **C4 `padetaylor-qsj`** (HIGH, conf 0.95) — `src/IVPBVPHybrid.jl:332-342` ships
-   `a_2 ≈ −0.22208`; correct is `a₂ = β²(δ+1)/(δ−2)³ = 0` at δ=−1 (matched at `s⁻⁵`,
-   not the code's `s⁻⁷`). Fix the comment algebra, `figures/ffw2017_fig_5.jl:219`,
-   ADR-0014, worklog 040. Test = replace the **self-referential** IB.1.1 (Rule 5
-   violation) with FFW eq.6's published IC oracle (`u` at arg=−120°) + sympy.
-   Distinct from `padetaylor-ykg` (a₃₊ deferral — legitimately separate).
-3. **C6 `padetaylor-5jvd`** (LOW, dormant) — `src/PathNetwork.jl:997` uses a linear
-   angular distance; use `argmin |rem(θ_sd−off, 2π, RoundNearest)|` (RoundNearest
-   specifically; do NOT wrap offsets individually — breaks the index→ray invariant).
-   Test = negative-real-goal `:steepest_descent` case + S¹ geodesic oracle. Opt-in
-   mode, no shipped figure uses it → lowest priority.
-4. **Dispatch `padetaylor-flnr`** (ADR-0028) — recover the C1+C2 accuracy cost:
-   implement BOTH cells (GGT `(m,m)` `+2` and Mano–Tsuda square `(m−1,m)`) + a
-   **held-out-residual** validated-Pareto selection (deterministic tie-break).
-   **Write ADR-0028 + get maintainer sign-off BEFORE building** (correctness-first).
-   Settled-math basis in worklog 066.
-
-Also open: **`padetaylor-l48l`** (re-tune VPN.5.7 `skip_covered` demo for the
-correct tighter discs — assertion temporarily relaxed). `diagnose_test.jl` needs
-the optional `DelaunayTriangulation` extension instantiated (pre-existing).
+1. **Dispatch `padetaylor-flnr` — ADR-0028 IS WRITTEN; get maintainer sign-off
+   BEFORE building.** Recovers the C1+C2 accuracy cost (entire ~5e-9 / NY-A₄ d=4
+   ~6e-6 → target ~1e-11) by building BOTH Padé cells — (A) GGT diagonal `(m,m)`
+   [shipped] and (B) Mano–Tsuda square `(m−1,m)` [`+1` window, `n=m/d` rows,
+   degree-`(m−1)` numerators] — and selecting per-step by **held-out
+   cross-validation residual** (next-unused Taylor coeff at the common order
+   `min(K_A,K_B)+1`) on a Pareto frontier `{residual↓, σ_m/σ_{m+1}↑, order↑}` with
+   a **deterministic ε-banded lexicographic tie-break** (R→g→K→cell(A)). `d=1`
+   short-circuits to (A) (bit-identity, ~49 tolerances depend on it). Composes on
+   top of ADR-0027 (reduce = lower cell). **Read the ADR's "Decisions requiring
+   maintainer sign-off" (7 items: objective ordering, neighbour breadth,
+   always-both-vs-conditional [rec: conditional], diagnostic surfacing, perf
+   budget, combine rule, d=1 mechanism)** + its test/mutation plan. Re-scopes
+   `padetaylor-unk` (make it a child of `flnr` — the ~4e-12 entire residual was
+   the buggy `+1` cell's incidental accuracy; (B)-selection recovers it).
+2. **`padetaylor-vovw`** (P3) — thread α through `_pIII_asymptotic_coeffs`
+   (latent α=1 hardcode in a₁/a₂; currently SAFE behind the α==1 + δ=−α guard).
+3. **`padetaylor-l48l`** (P3) — re-tune VPN.5.7 `skip_covered` demo for the correct
+   tighter discs (assertion temporarily relaxed).
+4. `diagnose_test.jl` needs the optional `DelaunayTriangulation` extension
+   instantiated (pre-existing, unrelated).
 
 ### Verified CORRECT — trust this negative space (do NOT touch)
 RobustPade + classical Padé; the Taylor/AD recurrence; all six Painlevé RHS; the
 P_I^(2) companion + closed-form oracles; the full Noumi–Yamada system; the entire
-adjoint/transpose surface; and **`SharedPade._upper_block`** (sympy-verified correct
-for the degree-`m` numerator under `+2` — do NOT "fix" it to match the old block).
-Probes: `external/probes/sharedpade-offbyone-confirm/{confirm,c2_reduction_study}.jl`.
+adjoint/transpose surface; and **`SharedPade._upper_block`** (sympy-verified
+correct for the degree-`m` numerator under `+2`). **NOW ALSO VERIFIED this
+session**: scalar `PoleField` §S7 parity with the vector twin (C3); PIII `a₂=0` at
+δ=−1, sympy+hand-derived (C4); PathNetwork steepest-descent S¹ selection (C6); and
+the **full `Pkg.test()` 7010/7010 GREEN**. Probes:
+`external/probes/sharedpade-offbyone-confirm/{confirm,c2_reduction_study}.jl`.
 
 ---
 
