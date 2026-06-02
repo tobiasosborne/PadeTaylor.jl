@@ -130,17 +130,32 @@ using PadeTaylor.VectorProblems:    VectorPadeTaylorProblem, vector_solve_pade
             @test hk > 0
         end
         @test sol_adaptive.z[end] ≈ 2.0
-        # Same accuracy as :fixed against the closed form.
+        # Same accuracy as :fixed against the closed form.  The harmonic
+        # system [cos z, −sin z] is ENTIRE: the shared denominator Q has no
+        # genuine pole to fit, so under the CORRECT GGT diagonal (m,m) window
+        # (worklog 067 / ADR-0027) the construction reduces to the honest
+        # supported degree — the legitimate least-squares "best shared Q" for
+        # a pole-free system (bead padetaylor-unk).  Accumulated over the
+        # adaptive walk the residual is the method-set (m,m) shared-Q value
+        # (~1e-9 here); bumped to 1e-8 consistent with the sibling entire-
+        # system asserts (VS.1.2/1.3, VP.1.2/1.4).  The forthcoming dispatch
+        # layer (ADR-0028) is expected to tighten this back toward ~1e-11 by
+        # selecting the (m−1,m) cell when it validates better.  Closed form
+        # [cos z, −sin z] stays the exact Rule-5 oracle; only the achievable
+        # accuracy is method-set.
         for k in 1:length(sol_adaptive.z)
             z = sol_adaptive.z[k]
-            @test sol_adaptive.y[k][1] ≈ cos(z)  atol = 1e-9
-            @test sol_adaptive.y[k][2] ≈ -sin(z) atol = 1e-9
+            @test sol_adaptive.y[k][1] ≈ cos(z)  atol = 1e-8
+            @test sol_adaptive.y[k][2] ≈ -sin(z) atol = 1e-8
         end
-        # Dense callable still works under the adaptive policy.
+        # Dense callable still works under the adaptive policy.  Same honest
+        # (m,m) shared-Q accuracy as above — entire system, atol = 1e-8 per
+        # ADR-0027 / worklog 067 / padetaylor-unk (dispatch ADR-0028 will
+        # tighten this back toward ~1e-11).
         for z in (0.3, 1.1, 1.7)
             yz = sol_adaptive(z)
-            @test yz[1] ≈ cos(z)  atol = 1e-9
-            @test yz[2] ≈ -sin(z) atol = 1e-9
+            @test yz[1] ≈ cos(z)  atol = 1e-8
+            @test yz[2] ≈ -sin(z) atol = 1e-8
         end
 
         # An unknown policy symbol must throw (Rule 1).
