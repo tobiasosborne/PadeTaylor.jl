@@ -991,10 +991,25 @@ function _select_candidate(selection::Symbol, evals,
     if selection === :min_u
         return argmin(abs(e[2]) for e in evals)
     else
-        # :steepest_descent: θ_sd = arg(-u/u'); clip to wedge.
+        # :steepest_descent (FW 2011 §5.4.1,
+        # `FW2011_painleve_methodology_JCP230.md:368`): θ_sd = arg(-u/u');
+        # "choose the edge of the wedge closest to this steepest descent
+        # direction".  "Closest" is a CIRCULAR S¹ distance, not a linear
+        # one — both θ_sd (from `angle`, range (−π, π]) and the raw
+        # `off = goal_dir + θ` live on the angle circle.  Near goal_dir ≈
+        # ±π an `off` and θ_sd can straddle the branch cut (e.g. θ_sd = 3,
+        # off = −3 are 0.283 apart on S¹ but 6.0 apart on the real line),
+        # so a plain `abs(θ_sd - off)` selects the WRONG wedge edge.
+        # `rem(Δ, 2π, RoundNearest)` folds the difference into (−π, π], the
+        # true geodesic gap (bead padetaylor-5jvd, ADR-0004 amendment
+        # 2026-06-02).  The remainder is taken ONLY on the difference: the
+        # `offsets` generator keeps the index→physical-ray correspondence,
+        # so `argmin` returns an index into the original `wedge_angles`
+        # ordering — wrapping each `off` individually would break that.
         θ_sd = abs(up_cur) > 0 ? angle(-u_cur / up_cur) : T(goal_dir)
         offsets = (T(goal_dir) + T(θ) for θ in wedge_angles)
-        return argmin(abs(θ_sd - off) for off in offsets)
+        twoπ = 2 * T(π)
+        return argmin(abs(rem(θ_sd - off, twoπ, RoundNearest)) for off in offsets)
     end
 end
 

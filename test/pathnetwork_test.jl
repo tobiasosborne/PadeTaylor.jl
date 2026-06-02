@@ -319,6 +319,141 @@ include(joinpath(@__DIR__, "_oracle_problems.jl"))
         end
     end
 
+    @testset "PN.3.2: :steepest_descent wedge pick uses S¹ (circular) distance" begin
+        # Bead `padetaylor-5jvd` (sweep C6).  FW 2011 §5.4.1
+        # (`FW2011_painleve_methodology_JCP230.md:368`): "we choose the
+        # edge of the wedge closest to this steepest descent direction".
+        # "Closest" is a CIRCULAR S¹ distance.  The pre-fix code used a
+        # LINEAR `abs(θ_sd - off)`, which mis-selects the wedge edge when
+        # `θ_sd` and a wedge offset `off = goal_dir + θ` straddle the ±π
+        # branch cut — the dormant bug this testset pins.
+        #
+        # We unit-test `_select_candidate` directly (it lives in the
+        # PathNetwork submodule, reachable as
+        # `PadeTaylor.PathNetwork._select_candidate`).  The
+        # :steepest_descent branch reads only `u_cur, up_cur, goal_dir,
+        # wedge_angles` — `evals` is consumed by the :min_u branch alone —
+        # so a placeholder `evals` of the right length is sufficient.
+        sc    = PadeTaylor.PathNetwork._select_candidate
+        wedge = [-π/4, -π/8, 0.0, π/8, π/4]      # FW 2011 §3.1 default
+
+        # RED-before scenario.  goal_dir = 3.0 (near +π), θ_sd = -3.0
+        # (near -π).  Raw offsets = goal_dir .+ wedge are all in
+        # [2.215, 3.785] (positive, on the far side of +π for the upper
+        # two).  On the real line θ_sd = -3.0 is closest to the SMALLEST
+        # offset (idx 1, off=2.215, |Δ|=5.21).  On the circle θ_sd = -3.0
+        # is closest to off=3.393 (idx 4): |rem(-3.0-3.393, 2π, Nearest)|
+        # = 0.1095.  Linear picks idx 1; circular picks idx 4 — they
+        # DISAGREE, which is exactly what makes this RED on the linear
+        # code and GREEN after the circular fix.
+        goal_dir = 3.0
+        θ_sd     = -3.0
+
+        # Build u_cur, up_cur so that angle(-u_cur/up_cur) == θ_sd:
+        # set up_cur = 1, u_cur = -exp(i θ_sd) ⇒ -u_cur/up_cur = exp(i θ_sd).
+        up_cur = 1.0 + 0.0im
+        u_cur  = -exp(im * θ_sd)
+        @test isapprox(angle(-u_cur / up_cur), θ_sd; atol = 1e-12)  # sanity
+
+        # Independent brute-force S¹ geodesic oracle over the SAME offsets,
+        # using the direct great-circle formula min(|d|, 2π−|d|) (NOT the
+        # rem() the impl uses — a genuinely independent computation).
+        offsets    = [goal_dir + θ for θ in wedge]
+        function circ_dist(a, b)
+            d = abs(a - b) % (2π)
+            return min(d, 2π - d)
+        end
+        oracle_idx = argmin([circ_dist(θ_sd, off) for off in offsets])
+        @test oracle_idx == 4                       # documents the scenario
+
+        # Placeholder evals (steepest_descent ignores it); length 5.
+        CT    = ComplexF64
+        evals = [(CT(0), CT(0), CT(0), nothing) for _ in 1:5]
+
+        idx_sel = sc(:steepest_descent, evals, u_cur, up_cur, goal_dir, wedge)
+
+        # GREEN assertion: the solver picks the true S¹-closest wedge edge.
+        @test idx_sel == oracle_idx                 # RED on linear code (=1)
+
+        # ----------------------------------------------------------------
+        # MUTATION-PROOF + WRONG-FIX procedure (verified 2026-06-02, bead
+        # `padetaylor-5jvd`):
+        #
+        #   RED (linear metric, the pre-fix code).  Restore in
+        #   `_select_candidate`:
+        #       return argmin(abs(θ_sd - off) for off in offsets)
+        #   Observed: idx_sel == 1 ≠ oracle_idx == 4 — this @test goes RED
+        #   (1 fail).  Confirms the test bites the original bug.  Restored.
+        #
+        #   WRONG-FIX (wrap offsets individually).  Replace the fix with:
+        #       argmin(abs(rem(θ_sd, 2π, RoundNearest) -
+        #              rem(off, 2π, RoundNearest)) for off in offsets)
+        #   This folds θ_sd and each off into (−π, π] BEFORE the
+        #   subtraction.  For THIS first scenario it coincidentally agrees
+        #   (folded offsets = [2.215, 2.607, 3.0, -2.890, -2.498],
+        #   per-element |Δ| = [5.215, 5.607, 6.0, 0.110, 0.502] ⇒ argmin =
+        #   4 = oracle), so this point alone does NOT expose the wrong-fix.
+        #   The flaw: the per-element subtraction is still LINEAR, so it
+        #   reintroduces a discontinuity at the fold boundary and mis-ranks
+        #   when θ_sd and a neighbouring off straddle that boundary.  The
+        #   second scenario below (goal2=3.13, θ_sd2=-3.13) pins it: the
+        #   raw offsets [2.345, 2.737, 3.13, 3.523, 3.915] all fold below
+        #   +π, but θ_sd2 folds to ≈+3.153, so the wrapped θ_sd2 and the
+        #   center offset 3.13 — which are 0.023 apart on S¹ — get a LINEAR
+        #   gap of 6.26, and the wrong-fix picks idx 4 (off 3.523, gap
+        #   0.370) instead of the true S¹-closest idx 3.  The witness below
+        #   (`wrongfix2 != oracle2`) justifies the bead's "do NOT wrap
+        #   offsets individually" warning.
+        wedge2    = [-π/4, -π/8, 0.0, π/8, π/4]
+        goal2     = 3.13                       # just shy of +π
+        θ_sd2     = -3.13                       # just past −π on the circle
+        offs2     = [goal2 + θ for θ in wedge2]
+        # True S¹ oracle: θ_sd2 and goal2 are 0.283 apart across the cut,
+        # so the center ray (idx 3, off=3.13) is one of the closest; the
+        # genuinely closest is the ray whose offset minimises circ_dist.
+        oracle2   = argmin([circ_dist(θ_sd2, off) for off in offs2])
+        # Correct (difference-only) circular metric must match the oracle.
+        impl2     = argmin([abs(rem(θ_sd2 - off, 2 * π, RoundNearest))
+                            for off in offs2])
+        @test impl2 == oracle2
+        # Wrong-fix (per-element wrap) DISAGREES with the oracle here —
+        # the witness justifying the bead's "do not wrap offsets" warning.
+        wrongfix2 = argmin([abs(rem(θ_sd2, 2 * π, RoundNearest) -
+                                rem(off, 2 * π, RoundNearest)) for off in offs2])
+        @test wrongfix2 != oracle2
+
+        # Type-generality: the fix must also work at BigFloat (the impl
+        # uses `2 * T(π)` and `rem(::T, ::T, RoundNearest)`, both defined
+        # for AbstractFloat).  Same RED scenario, BigFloat element type.
+        bf_up  = BigFloat(1)  + 0im
+        bf_u   = -exp(im * BigFloat(θ_sd))
+        bf_idx = sc(:steepest_descent,
+                    [(Complex{BigFloat}(0), Complex{BigFloat}(0),
+                      Complex{BigFloat}(0), nothing) for _ in 1:5],
+                    bf_u, bf_up, BigFloat(goal_dir), wedge)
+        @test bf_idx == oracle_idx
+    end
+
+    @testset "PN.3.3: :steepest_descent ⇄ :min_u parity unperturbed by fix" begin
+        # Bead `padetaylor-5jvd` regression guard.  The S¹-distance fix
+        # touches ONLY the :steepest_descent wedge selection; it must not
+        # perturb a right-half-plane (goal_dir ≈ 0) walk, where linear and
+        # circular metrics already agree (no branch-cut straddle).  This
+        # mirrors PN.3.1's contract on a small RHP grid — both rules must
+        # still produce identical visited values to Padé noise.
+        prob = PadeTaylorProblem(fW, (u_0_FW, up_0_FW), (0.0, 2.0); order = 30)
+        grid = ComplexF64[1.2 + 0.0im, 0.8 + 0.3im, 0.6 - 0.2im]
+        sol_min     = path_network_solve(prob, grid; h = 0.5,
+                                         step_selection = :min_u)
+        sol_descent = path_network_solve(prob, grid; h = 0.5,
+                                         step_selection = :steepest_descent)
+        @test length(sol_min.grid_u) == length(sol_descent.grid_u)
+        for i in eachindex(sol_min.grid_u)
+            @test abs(sol_min.grid_u[i]  - sol_descent.grid_u[i])  ≤ 1e-10
+            @test abs(sol_min.grid_up[i] - sol_descent.grid_up[i]) ≤ 1e-9
+        end
+    end
+
     @testset "PN.6.1: enforce_real_axis_symmetry — bit-exact u(z̄) = ū(z)" begin
         # Bead `padetaylor-dtj` + worklog 014.  For ODEs that preserve
         # complex conjugation (real coefficients, real ICs on the real

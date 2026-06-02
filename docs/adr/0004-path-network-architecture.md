@@ -113,9 +113,58 @@ RF 2014 Fig 3, 6, 8–14.  Per-figure acceptance criteria in
 - No existing `.jl` files modified beyond the umbrella.
 - Tier-2 figure reproduction unblocked.  Tier-3 BVP interface planted.
 
+## Amendment (2026-06-02) — `:steepest_descent` wedge selection uses S¹ distance
+
+**Bead**: `padetaylor-5jvd` (sweep C6) | **Rule 2** (root cause, no
+band-aid) + **Law 2** (docs in lockstep).
+
+`_select_candidate`'s `:steepest_descent` branch chose the wedge edge
+"closest to the steepest-descent direction θ_sd = arg(−u/u′)" using a
+**linear** metric `abs(θ_sd − off)` over `off = goal_dir + θ`.  FW 2011
+§5.4.1 (`FW2011_painleve_methodology_JCP230.md:368`) — "we choose the
+edge of the wedge closest to this steepest descent direction" — is a
+**circular S¹ distance**, not a real-line one.  Both `θ_sd` (from
+`angle`, range (−π, π]) and `off` are angles; near `goal_dir ≈ ±π`
+they can straddle the branch cut (e.g. θ_sd = 3.0, off = −3.0 are
+0.283 apart on the circle but 6.0 apart on the line), selecting the
+WRONG wedge edge.
+
+**Dormant on shipped workloads**: the default `step_selection = :min_u`
+is angle-free and unaffected; no figure script uses `:steepest_descent`;
+the only prior coverage (PN.3.1) walks right-half-plane targets
+(goal_dir ≈ 0), never crossing the cut.
+
+**Fix** (`src/PathNetwork.jl`, `_select_candidate`):
+```julia
+twoπ = 2 * T(π)
+return argmin(abs(rem(θ_sd - off, twoπ, RoundNearest)) for off in offsets)
+```
+- `rem(Δ, 2π, RoundNearest)` folds the angular *difference* into
+  (−π, π] — the true S¹ geodesic gap.  `RoundNearest` is mandatory;
+  `mod2pi` would reintroduce a discontinuity at 0/2π.
+- The remainder is taken on the **difference only**.  Wrapping each
+  `off` individually (`rem(θ_sd,…) - rem(off,…)`) leaves the per-element
+  subtraction linear, reintroduces the fold-boundary discontinuity, and
+  still mis-selects (concrete witness in test PN.3.2: goal=3.13,
+  θ_sd=−3.13 → wrong-fix picks idx 4, S¹ oracle picks idx 3).  The
+  `offsets` generator carries the index→physical-ray correspondence, so
+  `argmin` must index the original `wedge_angles` ordering.
+- `2 * T(π)` keeps the fix correct at `BigFloat` (verified in PN.3.2).
+
+**Tests** (`test/pathnetwork_test.jl`): **PN.3.2** unit-tests
+`_select_candidate` directly against a brute-force `min(|d|, 2π−|d|)`
+S¹ oracle (RED on the linear metric: linear picks idx 1, oracle/fix
+pick idx 4), plus the per-element-wrap wrong-fix witness and a BigFloat
+type-generality check.  **PN.3.3** is a `:min_u` ⇄ `:steepest_descent`
+parity guard on a right-half-plane grid confirming the fix does not
+perturb the default path.  Both mutation-proven (procedure recorded in
+the PN.3.2 test comment).
+
 ## References
 
 - `docs/unified_path_network_spec.md §1–§7` — full algorithm spec.
 - `docs/figure_catalogue.md §6` — Tier-2 figure list.
 - `docs/worklog/004-phase-6-pivot.md` — failure analysis.
 - ADR-0001 — four-layer architecture extended at driver layer.
+- FW 2011 §5.4.1, `FW2011_painleve_methodology_JCP230.md:368` — the
+  "closest wedge edge" (S¹) ground truth for the 2026-06-02 amendment.
