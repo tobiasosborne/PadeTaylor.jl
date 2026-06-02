@@ -81,7 +81,11 @@ function tronquee_ic_sheet_test(z_modulus::Real, arg_z::Real;
                                  n_terms::Integer = 15,
                                  β::Real = -1/20, δ::Real = -1)
     a1 = -float(β) / 3
-    a2 = n_terms ≥ 2 ? ((4.0/9.0) + float(δ) * a1^2) / (2 * float(δ)) : 0.0
+    # a_2 = -(β²/9)(1 + δ)/(2 − δ) at α = 1 (sympy-derived, z^{-5/3}
+    # balance; bead padetaylor-qsj).  The (1 + δ) factor makes a_2 = 0
+    # at the FFW Fig 5 family δ = −1.  The old `((4/9)+δa1²)/(2δ)` was a
+    # wrong-order match (≈ −0.222) and is replaced, not annotated.
+    a2 = n_terms ≥ 2 ? -(a1^2 * (1 + float(δ))) / (2 - float(δ)) : 0.0
     s_mag = z_modulus^(1/3)
     s_arg = arg_z / 3
     s     = complex(s_mag * cos(s_arg), s_mag * sin(s_arg))
@@ -119,10 +123,15 @@ end
         u2_comp, up2_comp = tronquee_ic_sheet_test(z2_mod, arg_z2;
                                                     n_terms = 15,
                                                     β = β, δ = δ)
-        # |Δ| ~ 7e-3 at n_terms = 2 (v1 helper hard-cap; worklog 039
-        # §"What is NOT shipped").  Tighter at v2 with a_3+ implemented.
-        @test abs(u1_comp - u_z1_ffw) < 1e-2
-        @test abs(u2_comp - u_z2_ffw) < 1e-2
+        # padetaylor-qsj: with the CORRECTED a_2 = 0 (Fig 5 family), the
+        # helper carries a_1 only (a_2 vanishes; a_3+ not implemented), so
+        # |Δ| is the a_3 z^{-7/3} floor ≈ 8e-6 — NOT the old ~7e-3 that
+        # the spurious a_2 ≈ −0.222 produced.  Tightened from `< 1e-2` to
+        # `< 5e-5` to reflect the now-much-more-accurate IC (the shift is
+        # toward MORE accuracy; the loose 1e-2 hid the bug).  Still v2 can
+        # close to ~1e-7 by implementing a_3+ (FFW optimal truncation).
+        @test abs(u1_comp - u_z1_ffw) < 5e-5
+        @test abs(u2_comp - u_z2_ffw) < 5e-5
         @info "FF5.1.1 |u(z₁) - FFW| = $(abs(u1_comp - u_z1_ffw))  (n_terms=15 helper; FFW: optimally-truncated series)"
         @info "FF5.1.1 |u(z₂) - FFW| = $(abs(u2_comp - u_z2_ffw))  (same)"
         # Spot-check leading: |u₁| should ≈ |z|^{1/3} = 3.107.

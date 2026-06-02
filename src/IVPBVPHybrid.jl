@@ -137,31 +137,40 @@ family `(α, β, γ, δ) = (1, β, 0, -1)` of FFW 2017 Figure 5 (FFW
 md:222 + md:230, citing the existence theorem of [21]).
 
 The coefficients `a_n` are obtained by substituting the ansatz into
-the canonical PIII equation `u'' = (u')²/u − u'/z + (αu² + γu³)/z +
-β/z + δ/u` and matching powers of `z^{-1/3}`.  The leading sub-leading
-coefficient is derived analytically in the implementation docstring
-(verbatim algebra in the source):
+the canonical PIII equation (FFW md:31)
 
-  **a_1 derivation.**  Write `u = s + a_1 s^{-1} + O(s^{-3})` with
-  `s = z^{1/3}`.  Then `u² = s² + 2 a_1 + O(s^{-2})`, so
-  `u²/z = z^{-1/3} + 2 a_1 z^{-1} + O(z^{-5/3})`; and
-  `1/u = z^{-1/3} − a_1 z^{-1} + O(z^{-5/3})`, so
-  `δ/u = -1/u = -z^{-1/3} + a_1 z^{-1} + O(z^{-5/3})`.  The combined
-  RHS at order `z^{-1}` is `(2 a_1 + a_1 + β) z^{-1} = (3 a_1 + β) z^{-1}`.
-  The LHS `u''` and the `(u')²/u − u'/z` terms contribute no `z^{-1}`
-  piece (all are `O(z^{-5/3})` or higher).  Hence
+    u'' = (1/u)(u')² − (1/z)u' + (αu² + β)/z + γu³ + δ/u
 
-      3 a_1 + β = 0   ⇒   **a_1 = -β/3**.
+and matching powers of `z^{-1/3}`.  (NB: earlier versions of this
+docstring and ADR-0014 mis-transcribed the equation as
+`(αu² + γu³)/z + β/z + δ/u`, putting `γu³` inside the `1/z` term and
+adding a spurious `β/z`.  For the Fig 5 family `γ = 0`, so the
+numbers are unaffected, but the transcription is now corrected to
+FFW's form — bead padetaylor-qsj.)  The derivation, verified
+symbolically with sympy, is exposited in `_pIII_asymptotic_coeffs`:
 
-  For FFW Fig 5's `β = -1/20`, `a_1 = 1/60`.
+  **Leading consistency (z^{-1/3} order).**  The residual at this order
+  is `−(α + δ)`; it vanishes iff `δ = −α`.  The tronquée ansatz is an
+  asymptotic solution ONLY for `δ = −α` (FFW md:222: the existence
+  theorem of [21] requires `γ = 0, α = 1 = −δ`).  This helper enforces
+  `δ = −α` with a fail-loud throw.
 
-Higher-order coefficients are computed numerically by series
-substitution: we Taylor-expand `u`, `u'`, `u''` to `O(s^{-2n_terms-1})`
-in `s = z^{1/3}`, substitute into the equation, and solve the linear
-system arising from `z^{-1}, z^{-5/3}, z^{-7/3}, …` matching.  Only
-`(α, β, γ, δ) = (1, β, 0, -1)` is verified; other parameter sets are
-out of scope (FFW md:222 restricts the existence theorem to this
-family).
+  **a_1 (z^{-1} order).**  The residual is `−a_1(2α − δ) − β`, so
+  `a_1 = −β/(2α − δ)`; under `δ = −α` this is `a_1 = −β/(3α)`.  With
+  `α = 1`, `a_1 = −β/3` (= 1/60 for FFW Fig 5's `β = −1/20`).
+
+  **a_2 (z^{-5/3} order — NOT z^{-7/3}).**  The residual is
+  `−a_1²(α + δ) − a_2(2α − δ)`, so `a_2 = −a_1²(α + δ)/(2α − δ)`.  The
+  factor `(α + δ)` VANISHES under the validity constraint `δ = −α`,
+  hence **`a_2 = 0`** for the FFW Fig 5 family.  (The old shipped
+  `a_2 ≈ −0.22208` came from matching one order too late and dropping
+  the `αu²/z` term; it made the n_terms = 2 series ~880× LESS accurate
+  against FFW's published `u(z₂)`.)
+
+Only `(α, β, γ, δ) = (1, β, 0, −1)` is in scope (FFW md:222 restricts
+the existence theorem to this family); `a_3+` are a documented
+deferral (left at zero — the first dropped term is
+`a_3 = β(β² − 4)/81 ≈ 2.47e-3`, contributing ~8e-6 to u at |z| = 30).
 
 `n_terms` defaults to 10 — empirically near optimal at `|z| = 30` for
 Float64 (more terms give diminishing returns once `|a_n z^{-2n/3}|`
@@ -191,6 +200,18 @@ function pIII_asymptotic_ic(z::Number;
         "pIII_asymptotic_ic: this series is derived for the (α, γ) = (1, 0) " *
         "family of FFW Fig 5 / ref [21]; got (α, γ) = ($α, $γ).  Other " *
         "parameter sets are out of scope."))
+    # Leading consistency condition (FFW md:222 / md:230, sympy-verified
+    # in `_pIII_asymptotic_coeffs`): the tronquée ansatz `u ~ z^{1/3}[1 +
+    # …]` solves PIII only when `δ = −α`.  At the z^{-1/3} order the
+    # residual is `−(α + δ)`, which must vanish; otherwise the series is
+    # NOT an asymptotic solution (the existence theorem of [21] requires
+    # `α = 1 = −δ`).  Fail loud rather than return a series that does not
+    # satisfy the equation.  (bead padetaylor-qsj)
+    δ == -α || throw(ArgumentError(
+        "pIII_asymptotic_ic: the tronquée asymptotic ansatz requires " *
+        "δ = −α (FFW md:222 existence theorem of ref [21]); got δ = $δ " *
+        "with α = $α, so δ + α = $(δ + α) ≠ 0.  Suggestion: pass δ = $(-α) " *
+        "(the FFW Fig 5 value is δ = −1 with α = 1)."))
     # Sector check (FFW md:222): `-3π/4 < arg z < 9π/4`.  Note `arg z` from
     # Julia's principal `angle` returns values in `(-π, π]`; we accept
     # any z whose principal argument lies in (-3π/4, π], which is a
@@ -240,113 +261,98 @@ end
 #   z = s³,  d/dz = (1/(3s²)) d/ds,  d²/dz² = (1/(9s⁴)) d²/ds² − (2/(9s⁵)) d/ds.
 #
 # Both sides become Laurent series in `s` (one-sided in negative powers
-# beyond `s^1`).  Match powers `s^{−1}, s^{−3}, s^{−5}, …, s^{1-2N}`;
-# the resulting upper-triangular linear system gives `a_1, a_2, …, a_N`
-# in turn.  At each `n` the matched equation has the form
+# beyond `s^1`).  Match powers `s^{−1}, s^{−3}, s^{−5}, …, s^{1-2N}`,
+# i.e. orders `z^{−1/3}, z^{−1}, z^{−5/3}, …`; the resulting
+# upper-triangular linear system gives `a_1, a_2, …, a_N` in turn.  At
+# each `n ≥ 1` the matched equation has the form
 #
-#     3 a_n  +  P_n(a_1, …, a_{n-1}; β, δ)  =  0   ⇒   a_n = -P_n / 3.
+#     (2α − δ) a_n  +  P_n(a_1, …, a_{n-1}; β, δ)  =  0
+#         ⇒   a_n = -P_n / (2α − δ),
 #
-# We compute `P_n` by carrying truncated Laurent polynomials in `s`
-# (real coefficients) under the four arithmetic operations needed by
-# the PIII RHS — `u²`, `u²/z`, `1/u`, `(u')²`, `(u')²/u`, `u'/z`.  The
-# implementation does this concretely as Vector{Float64}-coefficient
-# arithmetic; the verbatim closed form for a_1 (= -β/3) is the
-# correctness check baked into `IB.1.2`.
+# and under the validity constraint `δ = −α` the prefactor is
+# `(2α − δ) = 3α`.  The `n = 0` order (`z^{−1/3}`) carries no `a`
+# unknown and yields the leading consistency condition `α + δ = 0`.
+#
+# We do NOT carry generic Laurent arithmetic here: the closed forms for
+# a_1 and a_2 (sympy-derived, see below) are exhibited directly, which
+# is exact and avoids a coefficient layer.  The closed form for a_1
+# (= −β/3 at α = 1) is the correctness check baked into `IB.1.2`, and
+# a_2 = 0 (at the FFW Fig 5 family) is checked structurally by `IB.1.1`
+# (n_terms = 1 and n_terms = 2 give identical u).  a_3+ are deferred.
 function _pIII_asymptotic_coeffs(β, δ, N::Integer)
     a = zeros(Float64, N)
     # Closed form for a_1 (derived in the helper's docstring).
     a[1] = -Float64(β) / 3
     # Higher-order coefficients via successive substitution.  We carry
     # truncated Laurent representations in s with negative-power degree
-    # capped at the relevant order.
-    # For brevity in v1 we hard-code a_2 via the same matching at the
-    # next order.  Worklog 039 §"What is NOT shipped" notes the
-    # mechanical generalisation to a_3+ as a deferred refinement; for
-    # |z| ≥ 30 (FFW Fig 5 boundary), the contribution from a_2·z^{-4/3}
-    # is already ~3·10⁻³ in magnitude and a_3 is ~10⁻⁵.
-    # The a_2 coefficient match at order z^{-7/3}.  Lengthy hand-algebra
-    # — we substitute u = s + a_1 s^{-1} + a_2 s^{-3} into the equation,
-    # match the s^{-7} coefficient (z^{-7/3}), and solve for a_2.
+    # capped at the relevant order.  Below we give the closed form for
+    # a_2; a_3+ are a documented deferral (left at zero).
     #
-    # The leading contributions at order s^{-7}:
+    # --------------------------------------------------------------------
+    # a_2 is fixed at the z^{-5/3} (s^{-5}) order — NOT z^{-7/3}.
+    # --------------------------------------------------------------------
     #
-    #   u²/z = (s² + 2 a_1 + a_1²·s^{-2} + 2 a_2 s^{-2} + ...) / s³
-    #        = s^{-1} + 2 a_1 s^{-3} + (a_1² + 2 a_2) s^{-5} + ...
-    #        — no s^{-7} from this term at the truncation u = s + a_1/s + a_2/s³
-    #          (u² truncated similarly).
+    # The earlier (shipped) derivation matched the s^{-7} order and is
+    # WRONG: it was one order too late, and additionally omitted the
+    # `α u²/z` contribution at s^{-5}.  The correct accounting, verified
+    # symbolically with sympy (substitute the ansatz into the FFW md:31
+    # equation, Laurent-expand in w = 1/s = z^{-1/3}, collect by power),
+    # gives the residual coefficients (for γ = 0):
     #
-    #   1/u (truncated to a_2 order):
-    #        1/u = z^{-1/3} − a_1 z^{-1} + (a_1² − a_2) z^{-5/3}
-    #            − (a_1³ − 2 a_1 a_2) z^{-7/3} + O(z^{-3}).
+    #   [z^{-1/3}]:  −(α + δ)                      ← CONSISTENCY condition
+    #   [z^{-1}  ]:  −a_1(2α − δ) − β              ← fixes a_1
+    #   [z^{-5/3}]:  −a_1²(α + δ) − a_2(2α − δ)    ← fixes a_2
+    #   [z^{-7/3}]:  a_1³δ − 2 a_1 a_2(α + δ) + (4/9)a_1 − a_3(2α − δ)
+    #                                              ← fixes a_3
     #
-    #   For δ = -1: δ/u = -1/u.  Coefficient at z^{-7/3}: + a_1³ − 2 a_1 a_2.
-    #   For general δ: δ/u contributes δ · (-(a_1³ − 2 a_1 a_2)).
+    # Step A — leading consistency (z^{-1/3} order):  −(α + δ) = 0.
+    #   The tronquée ansatz u ~ z^{1/3}[1 + …] is a solution of PIII
+    #   ONLY when δ = −α.  This matches FFW md:222: the existence theorem
+    #   of [21] requires "γ = 0, α = 1 = −δ".  The public entry
+    #   `pIII_asymptotic_ic` enforces δ = −α with a fail-loud throw; this
+    #   helper still returns the well-defined coefficients for any δ so
+    #   the closed forms below are exhibited in full generality.
     #
-    #   u² / z contribution at z^{-7/3}: 0 (next term is z^{-3}).
+    # Step B — a_1 (z^{-1} order):  −a_1(2α − δ) − β = 0 ⇒
+    #   a_1 = −β/(2α − δ).  Under the validity constraint δ = −α this is
+    #   a_1 = −β/(3α); with α = 1, a_1 = −β/3 (= 1/60 for β = −1/20).
+    #   [The shipped `a[1] = −β/3` already assumes α = 1, the only family
+    #    this helper serves; see the caller's (α,γ) = (1,0) guard.]
     #
-    #   β/z contributes β·z^{-1}; no z^{-7/3}.
+    # Step C — a_2 (z^{-5/3} order):  −a_1²(α + δ) − a_2(2α − δ) = 0 ⇒
     #
-    #   (u')²/u: u' = (1/(3s²))·(1 − a_1 s^{-2} − 3 a_2 s^{-4} + ...)
-    #            (u')² = (1/(9s⁴))·(1 − 2 a_1 s^{-2} + ...)
-    #            /u: divide by s + a_1/s + ... → leading 1/s factor
-    #            = (1/(9 s^5))·(1 − 2 a_1 s^{-2} − a_1 s^{-2} + ...)·...
-    #            = (1/(9 s^5))·(1 − 3 a_1 s^{-2} + ...)
-    #            order s^{-7} term: (1/9) · (−3 a_1)
-    #            in z^{-1} terms:  s^{-7} = z^{-7/3}
-    #            coefficient: −a_1 / 3.
+    #       a_2 = −a_1² (α + δ) / (2α − δ).
     #
-    #   −u'/z: −(1/(3 s²))·(1 − a_1 s^{-2} − 3 a_2 s^{-4} + ...) / s³
-    #         = −(1/(3 s^5))·(1 − a_1 s^{-2} − 3 a_2 s^{-4} + ...)
-    #         order s^{-7}: −(1/3) · (−a_1) = a_1/3.
+    #   With α = 1 and a_1 = −β/3 this is the general-δ closed form
     #
-    #   So combined LHS+RHS at z^{-7/3}:
+    #       a_2 = −(β²/9) (1 + δ) / (2 − δ)              (α = 1).
     #
-    #     u''_{at s^{-7}}: differentiating u = s + a_1 s^{-1} + a_2 s^{-3} gives
-    #       d²u/dz² = d/dz[ (1/(3s²))(1 − a_1 s^{-2} − 3 a_2 s^{-4}) ]
-    #              = (1/(3s²)) d/ds[…] · (1/(3 s²)) ... it's
-    #         u''  = (1/(9 s⁴)) · (2 a_1 s^{-3} + 12 a_2 s^{-5})
-    #              − (2/(9 s^5))·(1 − a_1 s^{-2} − 3 a_2 s^{-4}) + ...
-    #         u''_{at s^{-7}} pieces:
-    #           term (1/(9 s⁴))·(2 a_1 s^{-3}) = (2 a_1 / 9) s^{-7}  ✓
-    #           term −(2/(9 s^5))·(−a_1 s^{-2}) = (2 a_1 / 9) s^{-7}  ✓
-    #         total u'' at s^{-7}: (4 a_1 / 9) s^{-7} = (4 a_1 / 9) z^{-7/3}.
+    #   The crucial structural fact is the factor (α + δ) = (1 + δ):
+    #   under the validity constraint δ = −α = −1 it VANISHES, so
     #
-    #     RHS at s^{-7} (= z^{-7/3}):
-    #         (u')²/u    contribution: −a_1/3
-    #         −u'/z      contribution:  a_1/3
-    #         u²/z       contribution:  0
-    #         β/z        contribution:  0
-    #         δ/u        contribution:  -δ(a_1³ − 2 a_1 a_2)
+    #       a_2 = 0    for the FFW Fig 5 family (α = 1, δ = −1).
     #
-    #     Balance LHS = RHS:
-    #         (4 a_1 / 9) = -a_1/3 + a_1/3 + 0 + 0 − δ(a_1³ − 2 a_1 a_2)
-    #         (4 a_1 / 9) = − δ a_1³ + 2 δ a_1 a_2
-    #         2 δ a_1 a_2 = (4 a_1 / 9) + δ a_1³
-    #         a_2 = ((4 / 9) + δ a_1²) / (2 δ)         (assumes a_1 ≠ 0)
-    #
-    # For FFW Fig 5: δ = -1, a_1 = 1/60 → a_2 = ((4/9) - (1/3600)) / (-2)
-    #                                   = -0.22222... + 0.00013888... = -0.22208...
-    # — order-1 magnitude but multiplied by z^{-4/3} ≈ 30^{-4/3} ≈ 0.011,
-    # so the a_2 contribution to u at z = 30 is ~2.5e-3.  Beyond a_2 the
-    # corrections are at most a few×10^{-5} at |z| = 30.
+    #   The old shipped value a_2 = ((4/9) + δ a_1²)/(2δ) ≈ −0.22208 was
+    #   spurious (wrong order + missing α u²/z term).  See bead
+    #   `padetaylor-qsj` and ADR-0014.  Numerically, with a_2 = 0 the
+    #   n_terms = 2 series matches FFW's published u(z₂) to |err| ≈ 8e-6,
+    #   versus ≈ 7e-3 with the old a_2 — an ~880× improvement that
+    #   confirms the direction of the fix.
     if N ≥ 2
-        if a[1] != 0
-            a[2] = ((Float64(4)/Float64(9)) + Float64(δ) * a[1]^2) / (2 * Float64(δ))
-        else
-            # a_1 = 0 ⇒ β = 0; the a_2 equation becomes 4/9 = 0,
-            # which is inconsistent.  Skip — caller's β = 0 yields a
-            # degenerate truncation and we leave a[2..N] = 0.  This
-            # gives the leading u ~ z^{1/3} only.
-            a[2] = 0.0
-        end
+        # General-δ a_2 at α = 1 (this helper's only family): the
+        # numerator carries (1 + δ), which kills a_2 at δ = −1.
+        a[2] = -(a[1]^2 * (1 + Float64(δ))) / (2 - Float64(δ))
     end
-    # a_3 .. a_N: not implemented in v1; left at zero.  The series at
-    # |z| = 30 evaluates to a u-approximation matching FFW's published
-    # IC `u(z₁) = -2.000735… + 2.376177… i` to within ~10⁻³ at n_terms = 2,
-    # which is good enough for the BVP-IC role (the BVP solver then
-    # tightens to spectral accuracy on the sector).  Higher precision
-    # at the IC would require porting FFW's "optimal truncation"
-    # procedure (FFW md:232) — deferred as a separate bead.
+    # a_3 .. a_N: not implemented in v1; left at zero.  From Step's
+    # z^{-7/3} balance, under α = 1, δ = −1, a_2 = 0 the a_3 coefficient
+    # is a_3 = β(β² − 4)/81 (= 533/216000 ≈ 2.47e-3 for β = −1/20), so it
+    # is the FIRST dropped term.  At |z| = 30, |z^{-7/3}| ≈ 3·10⁻⁴, so the
+    # a_3·z^{-7/3} contribution to u is ~8·10⁻⁶ — exactly the measured
+    # n_terms = 2 residual against FFW's published IC `u(z₂)`.  This is
+    # good enough for the BVP-IC role (the BVP solver then tightens to
+    # spectral accuracy on the sector).  Higher precision at the IC would
+    # require porting FFW's "optimal truncation" procedure (FFW md:232) —
+    # deferred as a separate bead.
     return a
 end
 

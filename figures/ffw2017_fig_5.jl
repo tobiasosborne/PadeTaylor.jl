@@ -62,10 +62,11 @@
 # therefore build a thin sheet-aware wrapper at the figure layer
 # (`tronquee_ic_sheet`) that computes `s = z^{1/3}` using the **caller's
 # unfolded argument** instead of Julia's principal angle.  The
-# coefficients `a_1 = -β/3` and `a_2 = ((4/9) + δ a_1²)/(2δ)` are
-# lifted verbatim from `IVPBVPHybrid.pIII_asymptotic_ic`'s docstring
-# (ADR-0014 / worklog 039) — no algorithmic change, just a different
-# choice of cube-root branch.
+# coefficients `a_1 = -β/3` and `a_2 = -(β²/9)(1 + δ)/(2 − δ)` (which
+# is **0** at the FFW Fig 5 family δ = −1) are lifted verbatim from
+# `IVPBVPHybrid.pIII_asymptotic_ic`'s docstring (ADR-0014 / bead
+# padetaylor-qsj) — no algorithmic change, just a different choice of
+# cube-root branch.
 #
 # This wrapper is needed because the FFW Fig 5 sector spans 6π in
 # `Im ζ` — wider than ONE PIII strip — so the principal-branch
@@ -203,8 +204,9 @@ const OUTPNG = joinpath(@__DIR__, "output", "ffw2017_fig_5.png")
 # the wrong sheet.  The FFW Fig 5 upper IC at `arg z = 13π/6` needs
 # the +2π sheet of the cube root.  We rebuild the helper's series
 # (md:230) here using the CALLER-SUPPLIED unfolded argument; the
-# coefficients `a_1 = -β/3`, `a_2 = ((4/9) + δ a_1²) / (2δ)` are
-# verbatim from the shipped helper's docstring (ADR-0014).
+# coefficients `a_1 = -β/3`, `a_2 = -(β²/9)(1 + δ)/(2 − δ)` (= 0 for
+# the shipped δ = −1) are verbatim from the shipped helper's docstring
+# (ADR-0014 / bead padetaylor-qsj).
 #
 # Returns `(u, u')` with `u(z) ≈ s · (1 + a_1 s^{-2} + a_2 s^{-4})`
 # and the corresponding derivative; valid for `|z| ≫ 1` on any single
@@ -214,9 +216,13 @@ function tronquee_ic_sheet(z_modulus::Real, arg_z::Real;
                             n_terms::Integer = N_TERMS,
                             β::Real = β, δ::Real = δ)
     # Coefficients.  The shipped helper only knows a_1 and a_2 closed
-    # form; a_3+ are zero (worklog 039 §"What is NOT shipped").
+    # form; a_3+ are zero (worklog 039 §"What is NOT shipped").  The
+    # a_2 closed form is a_2 = -(β²/9)(1 + δ)/(2 − δ) (sympy-derived at
+    # α = 1, bead padetaylor-qsj); the (1 + δ) factor makes a_2 = 0 at
+    # the FFW Fig 5 family δ = −1.  (The old `((4/9)+δa1²)/(2δ)` was
+    # spurious — matched one order too late and dropped the αu²/z term.)
     a1 = -float(β) / 3
-    a2 = n_terms ≥ 2 ? ((4.0/9.0) + float(δ) * a1^2) / (2 * float(δ)) : 0.0
+    a2 = n_terms ≥ 2 ? -(a1^2 * (1 + float(δ))) / (2 - float(δ)) : 0.0
     # Cube root with the caller's unfolded argument.
     s_mag = z_modulus^(1/3)
     s_arg = arg_z / 3

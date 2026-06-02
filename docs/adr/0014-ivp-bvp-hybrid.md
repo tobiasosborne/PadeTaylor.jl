@@ -70,12 +70,36 @@ md:230 series
     u(z) ~ z^{1/3} · [ 1 + a_1 z^{-2/3} + a_2 z^{-4/3} + … ],
 
 with **`a_1 = -β/3`** derived analytically by substituting the ansatz
-into the canonical PIII equation `u'' = (u')²/u − u'/z + (αu² + γu³)/z
-+ β/z + δ/u` and matching the `z^{-1}` order.  For FFW Fig 5's
-`β = -1/20`, `a_1 = 1/60`.  Higher coefficients (`a_2`) follow from
-the `z^{-7/3}` match, giving `a_2 = ((4/9) + δ a_1²) / (2δ)`; for
-FFW's `δ = -1` this is `a_2 ≈ -0.22208`.  The verbatim algebra is in
-`src/IVPBVPHybrid.jl` lines 138-156 (a_1) and 222-260 (a_2).
+into the canonical PIII equation (FFW md:31)
+
+    u'' = (1/u)(u')² − (1/z)u' + (αu² + β)/z + γu³ + δ/u
+
+and matching the `z^{-1}` order.  (This ADR previously mis-transcribed
+the equation as `(αu² + γu³)/z + β/z + δ/u`, putting `γu³` inside the
+`1/z` term and adding a spurious `β/z`; corrected to FFW's form per
+bead `padetaylor-qsj`.  Since `γ = 0` for Fig 5, the numbers are
+unaffected.)  Two facts drop out of the matching, both sympy-verified:
+
+  - **Consistency (z^{-1/3} order):** the residual is `−(α + δ)`, so
+    the tronquée ansatz is a solution ONLY for `δ = −α` — matching FFW
+    md:222 (`γ = 0, α = 1 = −δ`).  The helper now enforces `δ = −α`
+    with a fail-loud throw.
+  - **a_1 (z^{-1} order):** `a_1 = −β/(2α − δ) = −β/(3α)` under `δ = −α`;
+    with `α = 1`, `a_1 = 1/60` for `β = −1/20`.
+
+The sub-leading coefficient **`a_2` is fixed at the `z^{-5/3}` order
+(NOT `z^{-7/3}`)**: the residual is `−a_1²(α + δ) − a_2(2α − δ)`, giving
+
+    a_2 = −a_1² (α + δ) / (2α − δ) = −(β²/9)(1 + δ)/(2 − δ)   (α = 1).
+
+The factor `(α + δ) = (1 + δ)` vanishes under `δ = −α = −1`, so
+**`a_2 = 0`** for the FFW Fig 5 family.  The earlier claim
+`a_2 = ((4/9) + δ a_1²)/(2δ) ≈ −0.22208` (from a `z^{-7/3}` match) was
+WRONG — one order too late and missing the `αu²/z` contribution; it
+made the n_terms = 2 IC ~880× less accurate against FFW's published
+`u(z₂)` (|err| 7e-3 → 8e-6 once corrected).  The corrected algebra is
+in `src/IVPBVPHybrid.jl`'s `_pIII_asymptotic_coeffs` (the `z^{-5/3}`
+balance) and is asserted against FFW eq.6 / md:243 by test IB.1.1.
 
 **v1 = Float64 + 2-term series**.  Per the bead spec, the hybrid is
 Float64-first; the whole point is to avoid BF-256 on pole-free

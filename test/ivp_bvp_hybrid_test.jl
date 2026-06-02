@@ -20,42 +20,55 @@ using PadeTaylor.CoordTransforms: pIII_z_to_ζ, pIII_ζ_to_z
     α, β, γ, δ = 1.0, -1/20, 0.0, -1.0
 
     # =================================================================
-    # IB.1.1 — Asymptotic IC helper sanity.
+    # IB.1.1 — Asymptotic IC helper vs FFW's INDEPENDENTLY-published IC.
     #
-    # Pin pIII_asymptotic_ic against the analytically-derived value at
-    # z = 1000 (large, so a_2 z^{-4/3} ≈ 1e-4 and a_3+ are < eps):
-    #   z = 1000 ⇒ z^{1/3} = 10 exactly.
-    #   a_1 = -β/3 = (1/20)/3 = 1/60.
-    #   Contribution: a_1 · z^{-1/3} = (1/60)/10 = 1/600 ≈ 0.001666...
-    #   u ≈ 10 + 1/600 + a_2/1000 — a_2 ≈ -0.222, /1000 = -2.22e-4.
-    # Also confirm truncation-error monotone decrease with n_terms.
+    # Ground truth: FFW eq.(6) / md:243.  At the lower boundary point
+    #   z₂ = 30·e^{i(−3π/4 + π/12)} = 30·e^{−2πi/3}   (principal branch,
+    # arg = −120° ∈ (−3π/4, π], so the helper's principal cube root is
+    # the correct sheet), FFW publish
+    #   u(z₂)  = 2.384379236170 − 1.993845650158 i,
+    #   u'(z₂) = 6.050817704e-3 + 3.398020750e-2 i.
+    # We assert the n_terms = 2 series against these.  This replaces the
+    # OLD self-referential pin (`10.001444583333…`), which recomputed
+    # its target from the same a_2 formula under test — a Rule 5
+    # violation — and the OLD `abs(u_n2 − u_n1) > 1e-3` assertion, which
+    # was STRUCTURALLY IMPOSSIBLE under the correct math: a_2 = 0 for the
+    # FFW Fig 5 family (α = 1, δ = −1), so n_terms = 1 and n_terms = 2
+    # produce IDENTICAL u (the (1+δ) factor in a_2 = −(β²/9)(1+δ)/(2−δ)
+    # vanishes at δ = −1).  See bead padetaylor-qsj.
+    #
+    # Honest tolerance: the n_terms = 2 truncation drops a_3 z^{-7/3}
+    # with a_3 = β(β²−4)/81 ≈ 2.47e-3 and |z|^{-7/3} ≈ 3e-4 at |z| = 30,
+    # so |err| ≈ 8e-6 is expected (and MEASURED: 8.41e-6 for u, 4.62e-7
+    # for u').  We pin atol just above the measured floor.
     # =================================================================
-    @testset "IB.1.1: asymptotic-IC helper matches hand-derived series" begin
-        # Hand-computed reference at z = 1000.
-        u_n2, up_n2 = pIII_asymptotic_ic(1000.0 + 0im;
-                                          n_terms = 2, β = β, δ = δ)
-        # The two-term result: u = z^{1/3} + a_1 z^{-1/3} + a_2 z^{-1}.
-        # With a_1 = -β/3 = 1/60 and a_2 = ((4/9) + δ a_1²)/(2δ) for
-        # δ = -1: a_2 = (4/9 - 1/3600)/(-2) = -0.22208333…
-        # At z = 1000: u = 10 + 0.001666… - 0.222083…/1000
-        #              = 10.001444583333…
-        @test isapprox(real(u_n2), 10.001444583333333; atol = 1e-12)
-        @test isapprox(imag(u_n2), 0.0; atol = 1e-12)
+    @testset "IB.1.1: asymptotic-IC helper matches FFW eq.6 (md:243)" begin
+        # FFW md:243 lower boundary point and its published IC.
+        z₂      = 30 * exp(-2π * im / 3)         # = 30·e^{i(−3π/4+π/12)}
+        u_pub   = 2.384379236170 - 1.993845650158im
+        up_pub  = 6.050817704e-3 + 3.398020750e-2im
 
-        # Truncation-error monotone decrease: at z = 100, smaller |z|
-        # so the series convergence rate is moderate.
-        z = 100.0 + 0im
-        us = [pIII_asymptotic_ic(z; n_terms = n, β = β, δ = δ)[1]
-              for n in (1, 2)]
-        # n=1 truncates after a_1, n=2 includes a_2; |u_n=2 - u_n=1|
-        # should equal |a_2 z^{-1}| = 0.22208/100 ≈ 2.22e-3.
-        @test abs(us[2] - us[1]) > 1e-3
-        @test abs(us[2] - us[1]) < 5e-3
+        u_n2, up_n2 = pIII_asymptotic_ic(z₂; n_terms = 2, β = -1/20, δ = -1)
+        # |err| ≈ 8.4e-6 (a_3-order truncation); pin just above.
+        @test isapprox(u_n2,  u_pub;  atol = 1e-5)
+        # Derivative against FFW's published u'(z₂); |err| ≈ 4.6e-7.
+        @test isapprox(up_n2, up_pub; atol = 1e-6)
 
-        # Sanity: derivative also returned and ≈ termwise differentiation
-        # of the series.  d/dz [z^{1/3}] = (1/3) z^{-2/3}.  At z = 1000,
-        # 1/3 · 100^{-1} = 1/300 = 0.003333...; corrections small.
-        @test isapprox(real(up_n2), 0.003333333333; atol = 1e-4)
+        # Structural cross-check: a_2 = 0 for the Fig 5 family, so the
+        # n_terms = 1 and n_terms = 2 series are BIT-IDENTICAL.  This
+        # documents WHY the old `> 1e-3` second assertion was impossible.
+        u_n1, up_n1 = pIII_asymptotic_ic(z₂; n_terms = 1, β = -1/20, δ = -1)
+        @test u_n1  == u_n2
+        @test up_n1 == up_n2
+
+        # ---- MUTATION RECORD (bead padetaylor-qsj) ---------------------
+        # Re-introducing the old wrong a_2 = ((4/9) + δ a_1²)/(2δ) ≈
+        # −0.22208 (in `_pIII_asymptotic_coeffs`) breaks both checks:
+        #   * the z₂ oracle goes off by ≈ 7.4e-3  ⇒ `isapprox(...,1e-5)`
+        #     fails (RED), and
+        #   * a_2 ≠ 0 makes the n_terms=1 vs n_terms=2 equality fail.
+        # Verified RED-on-mutation, restored to a_2 = 0.  See report.
+        # ----------------------------------------------------------------
     end
 
     # =================================================================
@@ -336,6 +349,14 @@ using PadeTaylor.CoordTransforms: pIII_z_to_ζ, pIII_ζ_to_z
         @test_throws ArgumentError pIII_asymptotic_ic(30.0+0im;
                                                        n_terms = 2,
                                                        α = 2, γ = 0)
+
+        # pIII_asymptotic_ic: δ ≠ −α violates the leading consistency
+        # condition (the tronquée ansatz is a PIII solution only for
+        # δ = −α; FFW md:222, bead padetaylor-qsj).  With α = 1, δ = −2
+        # gives α + δ = −1 ≠ 0 ⇒ fail-loud.
+        @test_throws ArgumentError pIII_asymptotic_ic(30.0+0im;
+                                                       n_terms = 2,
+                                                       α = 1, δ = -2)
 
         # Out-of-sector sol(ζ) query.
         sector = (im_lo = -1.0, im_hi = 1.0,
