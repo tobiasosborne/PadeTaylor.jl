@@ -158,6 +158,40 @@ end
     end
 
     # -------------------------------------------------------------------------
+    # SP.1.7 — d=1 reduces to scalar :svd on a TRANSCENDENTAL jet (regression
+    # guard for the SharedPade.jl:117 _toeplitz_block off-by-one — bead
+    # padetaylor-d3a / worklog 065).
+    #
+    # SP.1.1 uses an EXACT-RATIONAL jet, for which the true Q annihilates BOTH
+    # the correct (m,m) window z^{m+1}…z^{2m} AND the off-by-one (m-1,m) window
+    # z^m…z^{2m-1} — so the bug is INVISIBLE there (and to the determinant
+    # Oracle 2 below, which builds the identical block).  Only a transcendental
+    # (non-rational) jet distinguishes the two windows, so robust_pade(jet,m,m;
+    # :svd) is the SOLE independent oracle.  Pre-fix the shared Q diverged
+    # 5–50 % and the numerator degree collapsed by one; the +2 fix restores the
+    # bit-identical reduction.  See external/probes/sharedpade-offbyone-confirm/.
+    # -------------------------------------------------------------------------
+    @testset "SP.1.7 d=1 reduces to scalar :svd on transcendental jets" begin
+        expjet(N) = [1.0 / factorial(k) for k = 0:N]                 # exp(z)
+        logjet(N) = [k == 0 ? 0.0 : (-1.0)^(k + 1) / k for k = 0:N]  # log(1+z)
+        for jetf in (expjet, logjet), m in (2, 3, 4)
+            jet       = jetf(2m)                      # length 2m+1
+            nums, den = shared_denominator_pade([jet], m)
+            scalar    = robust_pade(jet, m, m; method = :svd)
+            # Bit-identical reduction (the SP.1.1 contract) — but now on a jet
+            # that genuinely exercises the matching window.
+            @test length(den) == length(scalar.b)
+            @test length(nums[1]) == length(scalar.a)   # numerator degree must NOT collapse
+            @test den ≈ scalar.b atol = 1e-10
+            @test nums[1] ≈ scalar.a atol = 1e-10
+            # Direct value cross-check against the scalar oracle off the real axis.
+            for z in (0.13, -0.27, 0.2 + 0.15im)
+                @test _ratval(nums[1], den, z) ≈ _ratval(scalar.a, scalar.b, z) atol = 1e-9
+            end
+        end
+    end
+
+    # -------------------------------------------------------------------------
     # SP.1.2 — genuine d=2 shared denominator.
     #
     # Known Q(z) = 1 - 0.4z + 0.2z² with two distinct (complex) roots; two

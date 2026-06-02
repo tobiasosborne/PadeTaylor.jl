@@ -90,16 +90,21 @@ end
 
     @testset "VS.1.2 closed-form harmonic system, single step" begin
         # y₁' = y₂, y₂' = −y₁, y0 = [1, 0] ⇒ y(h) = [cos h, −sin h].
-        # Both components are entire (no poles); the shared denominator Q
-        # is therefore underdetermined, and the SVD picks *some* Q.  The
-        # cos jet (even powers only) is recovered to roundoff; the sin
-        # jet (odd powers only) carries a small, fixed shared-Q fit
-        # residual — ~4e-12 at Float64, ~3.4e-21 at BigFloat — that does
-        # NOT shrink with order or precision (verified at order 20…50,
-        # prec 128…512).  This is the genuine shared-Q accuracy for an
-        # entire-function system; the tolerances below reflect it.  The
-        # closed form [cos h, −sin h] remains an exact known-correct
-        # oracle (Rule 5) — only the achievable accuracy is method-set.
+        # Both components are entire (no poles); the shared denominator Q has no
+        # genuine pole to fit.  Under the CORRECT GGT diagonal (m,m) window
+        # (worklog 066 / ADR-0027) the over-determined stack is rank-deficient
+        # at the stepper's degree, so the construction reduces to the honest
+        # supported degree (here ≈ 8) — the legitimate least-squares "best
+        # shared Q" for a pole-free system (bead padetaylor-unk).  The cos jet
+        # (even) is recovered to roundoff; the −sin jet (odd) carries a residual
+        # ~5e-9 at Float64 / ~1.6e-17 at BigFloat-256 — the method-set accuracy
+        # of an (m,m) shared-Padé on an ENTIRE system.  (The pre-fix +1/(m−1,m)
+        # window incidentally reached ~1e-10/~3.4e-21 here by placing its
+        # spurious poles elsewhere; neither window is "more correct" on an
+        # entire function.  The forthcoming dispatch layer — ADR-0028 — will
+        # recover the tighter accuracy by selecting the (m−1,m) cell when it
+        # validates better.)  Closed form [cos h, −sin h] stays the exact Rule-5
+        # oracle; only the achievable accuracy is method-set.
         harm = (z, y) -> [y[2], -y[1]]
         order, h = 30, 0.7
 
@@ -107,19 +112,19 @@ end
         vector_pade_step!(st, harm, order, h)
         @test st.z ≈ 0.7
         @test st.y[1] ≈ cos(0.7) atol = 1e-12       # even jet: roundoff
-        @test st.y[2] ≈ -sin(0.7) atol = 1e-10      # odd jet: shared-Q residual
+        @test st.y[2] ≈ -sin(0.7) atol = 1e-8       # odd jet: (m,m) entire-system residual (ADR-0027)
 
-        # BigFloat (256-bit): the cos component drops to ~1e-38 (the new
-        # working precision); the sin component's shared-Q residual is
-        # ~3.4e-21 — far below Float64 reach, the point of the arb-prec
-        # path, yet bounded away from the BigFloat roundoff floor.
+        # BigFloat (256-bit): the cos component drops to ~1e-38 (working
+        # precision); the −sin component's (m,m) entire-system residual is
+        # ~1.6e-17 (ADR-0027) — far below Float64 reach, the point of the
+        # arb-prec path, yet method-set above the BigFloat roundoff floor.
         setprecision(BigFloat, 256) do
             hb = BigFloat("0.7")
             stb = VectorPadeStepperState{BigFloat}(
                 BigFloat(0), BigFloat[1, 0])
             vector_pade_step!(stb, harm, order, hb)
             @test abs(stb.y[1] - cos(hb)) < BigFloat(10)^(-30)
-            @test abs(stb.y[2] + sin(hb)) < BigFloat(10)^(-18)
+            @test abs(stb.y[2] + sin(hb)) < BigFloat(10)^(-16)
         end
     end
 
@@ -134,8 +139,10 @@ end
             vector_pade_step!(st, harm, order, h)
             z = k * h
             @test st.z ≈ z
-            @test st.y[1] ≈ cos(z) atol = 1e-11
-            @test st.y[2] ≈ -sin(z) atol = 1e-11
+            # entire system → method-set (m,m) shared-Q accuracy (ADR-0027);
+            # dispatch (ADR-0028) will tighten this back toward 1e-11.
+            @test st.y[1] ≈ cos(z) atol = 1e-8
+            @test st.y[2] ≈ -sin(z) atol = 1e-8
         end
         @test st.z ≈ 2.0
 
@@ -147,8 +154,11 @@ end
         for k in 1:6
             vector_pade_step!(st2, sys, 20, 0.2)
             z = k * 0.2
-            @test st2.y[1] ≈ exp(z) atol = 1e-11
-            @test st2.y[2] ≈ z * exp(z) atol = 1e-11
+            # entire (exp) system → method-set (m,m) accuracy; the 0.2^k-rescaled
+            # jet reduces to degree ≈ 5, residual ~4e-8 accumulated (ADR-0027;
+            # dispatch ADR-0028 recovers the tighter accuracy).
+            @test st2.y[1] ≈ exp(z) atol = 1e-7
+            @test st2.y[2] ≈ z * exp(z) atol = 1e-7
         end
     end
 

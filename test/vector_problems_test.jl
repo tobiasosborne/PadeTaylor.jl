@@ -95,8 +95,11 @@ end
 
     @testset "VP.1.2 closed-form harmonic system over an interval" begin
         # y₁' = y₂, y₂' = −y₁, y0 = [1, 0] ⇒ y(z) = [cos z, −sin z].
-        # Both components entire (no poles) — the shared Q carries a
-        # small fixed fit residual (V3a VS.1.2); tolerances reflect it.
+        # Both components entire (no poles) — under the correct GGT (m,m) window
+        # the shared Q reduces to its honest supported degree and carries a
+        # method-set residual ~5e-9 (F64) / ~1.6e-17 (BF) for this pole-free
+        # system (ADR-0027 / bead padetaylor-unk; cf. V3a VS.1.2).  Dispatch
+        # (ADR-0028) will recover the tighter accuracy via the (m−1,m) cell.
         harm = (z, y) -> [y[2], -y[1]]
         order = 24
 
@@ -106,16 +109,16 @@ end
         # Trajectory at every breakpoint.
         for k in 1:length(sol.z)
             z = sol.z[k]
-            @test sol.y[k][1] ≈ cos(z)  atol = 1e-10
-            @test sol.y[k][2] ≈ -sin(z) atol = 1e-10
+            @test sol.y[k][1] ≈ cos(z)  atol = 1e-8
+            @test sol.y[k][2] ≈ -sin(z) atol = 1e-8
         end
         @test sol.z[end] ≈ 2.0
 
         # Dense callable at several interior points.
         for z in (0.1, 0.37, 0.99, 1.5, 1.875)
             yz = sol(z)
-            @test yz[1] ≈ cos(z)  atol = 1e-10
-            @test yz[2] ≈ -sin(z) atol = 1e-10
+            @test yz[1] ≈ cos(z)  atol = 1e-8
+            @test yz[2] ≈ -sin(z) atol = 1e-8
         end
 
         # BigFloat (256-bit): far below Float64 reach.  The sin-jet
@@ -126,8 +129,8 @@ end
             solb  = vector_solve_pade(probb; h = BigFloat("0.25"))
             zb = BigFloat("0.6")
             yb = solb(zb)
-            @test abs(yb[1] - cos(zb)) < BigFloat(10)^(-17)
-            @test abs(yb[2] + sin(zb)) < BigFloat(10)^(-17)
+            @test abs(yb[1] - cos(zb)) < BigFloat(10)^(-16)
+            @test abs(yb[2] + sin(zb)) < BigFloat(10)^(-16)
         end
     end
 
@@ -165,8 +168,8 @@ end
 
         # Interior point not coincident with any breakpoint.
         yz = sol(0.42)
-        @test yz[1] ≈ cos(0.42)  atol = 1e-10
-        @test yz[2] ≈ -sin(0.42) atol = 1e-10
+        @test yz[1] ≈ cos(0.42)  atol = 1e-8
+        @test yz[2] ≈ -sin(0.42) atol = 1e-8
 
         # Endpoints return the IC / final state exactly.
         y_start = sol(0.0)
@@ -190,8 +193,8 @@ end
         @test sol2.z[end] ≈ 0.9 atol = 1e-14
         @test sol2.h[end] ≈ 0.9 - 3 * 0.25 atol = 1e-14   # clamped tail
         ye2 = sol2(0.9)
-        @test ye2[1] ≈ cos(0.9)  atol = 1e-10
-        @test ye2[2] ≈ -sin(0.9) atol = 1e-10
+        @test ye2[1] ≈ cos(0.9)  atol = 1e-8
+        @test ye2[2] ≈ -sin(0.9) atol = 1e-8
     end
 
     @testset "VP.1.5 failure modes throw informatively" begin

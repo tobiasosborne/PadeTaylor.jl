@@ -89,15 +89,18 @@
 # ## Layout equivalence with SharedPade._toeplitz_block
 #
 # `SharedPade._toeplitz_block(c, m)` builds an `m × (m+1)` block with
-# `block[r,c] = c_{m+r-c}` (1-based: `c[idx]`, `idx = m+r-c+1`).  Mano–Tsuda's
-# rectangular Toeplitz `A^i_j(k,l)` has `(r,c)`-entry `a^i_{j+r-c}`
-# (`hp_arXiv_final.tex:1061-1077`).  The denominator block in eq. (2.6) /
-# Prop. 2.3 is `A^i_m(n, m+1)` — i.e. `j = m`, `k = n` rows, `l = m+1`
-# columns.  `SharedPade` uses `n = m` rows per block (square-block GGT
-# convention, `src/SharedPade.jl:31-44`).  With `j = m, k = n = m, l = m+1`
-# the Mano–Tsuda entry is `a^i_{m+r-c}` — *identical* to `c_{m+r-c}`.  This
-# oracle therefore mirrors `_toeplitz_block` verbatim (`_toeplitz_block`
-# below) so the two routes operate on the *same* `A_full`; only the
+# `block[r,c] = c_{m+r-c+1}` (1-based: `c[idx]`, `idx = m+r-c+2`), top-left
+# `c_{m+1}` — the GGT *diagonal* `(m,m)` matching window `z^{m+1}…z^{2m}`,
+# bit-identical to `RobustPade`'s `C̃` (the binding ADR-0019 contract).
+# CAUTION (worklog 066 / ADR-0027): Mano–Tsuda's literal rectangular Toeplitz
+# `A^i_j(k,l)` has `(r,c)`-entry `a^i_{j+r-c}` (`hp_arXiv_final.tex:1061-1077`),
+# and its minimal eq. (2.6) block `A^i_m(n, m+1)` (`j = m`) is `a^i_{m+r-c}` =
+# `c_{m+r-c}`, top-left `c_m` — that is the *off-diagonal* `(m−1,m)` type-II
+# approximant, NOT the diagonal `(m,m)` the project's contract demands.  Earlier
+# revisions of this oracle (and `_toeplitz_block`) used that `c_m` window; it was
+# a target-approximant conflation, now corrected to `c_{m+1}`.  This oracle
+# mirrors the corrected `_toeplitz_block` so the two routes operate on the *same*
+# `A_full`; only the
 # null-vector extraction differs.  That is precisely the disjointness V1c
 # needs: same matrix, algorithmically independent solve.
 #
@@ -146,18 +149,20 @@ export shared_q_via_determinant
     _toeplitz_block(c, m) -> Matrix
 
 The `m × (m+1)` block-Toeplitz block for one component, `block[r,c]` equal
-to the Taylor coefficient `c_{m+r-c}` (zero outside the available range).
+to the Taylor coefficient `c_{m+r-c+1}` (zero outside the available range);
+top-left `c_{m+1}` — the GGT diagonal `(m,m)` window (worklog 066 / ADR-0027).
 
-This is a verbatim mirror of `SharedPade._toeplitz_block` (`src/SharedPade.jl`),
-which is in turn `A^i_m(n, m+1)` of Mano–Tsuda 2017 eq. (2.6) at `n = m`
-(`hp_arXiv_final.tex:1405-1424`).  Mirroring it exactly is deliberate: the
-two routes (`SharedPade`'s SVD and this oracle's determinant) must act on the
-*same* stacked matrix, so the only difference is the null-vector solve.
+This is a verbatim mirror of the corrected `SharedPade._toeplitz_block`
+(`src/SharedPade.jl`), the GGT diagonal `C̃` (top-left `c_{m+1}`).  Mirroring it
+exactly is deliberate: the two routes (`SharedPade`'s SVD and this oracle's
+determinant) must act on the *same* stacked matrix, so the only difference is
+the null-vector solve.  (NB Mano–Tsuda's literal eq. (2.6) `A^i_m(n,m+1)` is the
+off-diagonal `(m−1,m)` block `c_{m+r-c}` — NOT what is implemented here.)
 """
 function _toeplitz_block(c::AbstractVector{T}, m::Int) where {T}
     blk = zeros(T, m, m + 1)
     @inbounds for cc = 1:(m + 1), rr = 1:m
-        idx = m + rr - cc + 1            # 1-based index into c (c[1] = c_0)
+        idx = m + rr - cc + 2            # GGT (m,m): top-left c_{m+1} (worklog 066)
         if 1 ≤ idx ≤ length(c)
             blk[rr, cc] = T(c[idx])
         end
