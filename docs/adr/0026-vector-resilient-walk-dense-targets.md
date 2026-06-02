@@ -662,6 +662,43 @@ scale heresies fixed (`h_max`, `radius_t`, `cluster_atol`), and the
 wrongly; the only thing that wasn't a ceiling was the no-extrapolation
 contract — a documented design decision, not a numerical limit.
 
+## Amendment 11 (2026-06-02) — the §S7 fix ported to the scalar `PoleField` twin (bead `padetaylor-bez`)
+
+The §S7 scale-covariance fix (Amendment 6/7) was applied to the
+*vector* extractor `VectorPoleField.extract_poles_shared_q` only; its
+**scalar twin** `PoleField._extract_poles_core` (`src/PoleField.jl`)
+was never ported and still carried the original two heresies:
+
+- the far-root filter kept roots by the per-node `|t*| ≤ radius_t` (a
+  window of a fixed number of *per-node* steps `h`), so a pole at a
+  fixed z-distance was silently dropped whenever the per-node `h`
+  shrank below the walk's ceiling — intermittent empty / sparse pole
+  fields on any varying-`h` (stitched / adaptive) trajectory; and
+- the greedy cluster sort key was `|t*|`, so under a varying `h` the
+  cluster representative drifted to a coarse far node (smallest `|t*|`)
+  rather than the z-plane-closest node.
+
+Both halves are **one atomic fix** (this ADR's §S7 / Amendment 7): the
+filter now accepts by z-plane distance `|h·t*| ≤ radius_t · h_max`
+(with `h_max = maximum(|hs|)`, the `h`-independent step ceiling, and a
+`zero` placeholder for an empty `hs` exactly as the vector code does),
+and the cluster sort key is the z-plane distance `|h·t*|`, so the
+representative is the z-plane-closest node. For a near-uniform-`h`
+walk (`h ≈ h_max`) the filter reduces *exactly* to the legacy
+`|t*| ≤ radius_t`, so the existing FW Table-5.1 / Fig-4.7 pole-field
+tests (PF.1.*/2.*/3.*) are unchanged.
+
+Verified by new test **PF.4.1** in `test/polefield_test.jl` against the
+closed-form equianharmonic-℘ lattice pole `℘_pole(0,0) = 1`: a stitched
+coarse-`h`(0.5)/fine-`h`(0.05) trajectory at `min_support = 4` drops
+the genuine z=1 pole under the old per-`|t*|` filter (only 3 nodes
+survive) and recovers it under the z-distance filter (all 8 nodes),
+with the representative placed at 2.94e-9 (z-closest node) vs 4.57e-7
+(old min-`|t*|` far node). Mutation-proved M5 (revert filter → RED) /
+M6 (revert sort key → representative drifts, RED) — see the test
+footer. No public-API or default-`radius_t` change. This is a pure
+bug-port to bring the scalar twin into parity with §S7.
+
 ## References
 
 - `docs/worklog/059-headline-figure-honest-reassessment.md`

@@ -217,6 +217,87 @@ in_box(z, xlo, xhi, ylo, yhi) =
         @test !isempty(extract_poles(sol))                    # default = 1
         @test isempty(extract_poles(sol; min_support = 3))    # one segment < 3
     end
+
+    @testset "PF.4.1: varying-h walk does not drop poles (scale-covariance, ADR-0026 §S7)" begin
+        # The scalar twin of the vector §S7 fix (`VectorPoleField`,
+        # ADR-0026 Amendment 6/7).  A trajectory whose per-segment step
+        # `h` VARIES across nodes must not silently lose a genuine pole.
+        #
+        # Repro: stitch two `solve_pade` runs at different fixed `h` into
+        # one `PadeTaylorSolution` (the legitimate adaptive/non-uniform-h
+        # case).  A COARSE run over [0, 0.5] at h = 0.5 sets the walk's
+        # step ceiling h_max = 0.5; a FINE run over [0.5, 0.85] at
+        # h = 0.05 approaches the equianharmonic-℘ lattice pole at
+        # z = ℘_pole(0,0) = 1 with small steps.  The five fine nodes at
+        # z_ctr ∈ {0.5, 0.55, 0.6, 0.65, 0.7} each see the pole at z=1 at
+        # z-distance {0.5, 0.45, 0.4, 0.35, 0.3} — all GREATER than
+        # 5·h_fine = 5·0.05 = 0.25, so the OLD per-|t*| filter
+        # (`|t*| ≤ radius_t`) discards every one of them; only the coarse
+        # z=0 node and the two fine nodes at z_ctr ∈ {0.75, 0.8}
+        # (z-distance ≤ 0.25) survive it — exactly THREE distinct nodes.
+        # The NEW z-plane-distance filter (`|h·t*| ≤ radius_t·h_max`,
+        # h_max = 0.5 ⇒ radius_z = 2.5) keeps all eight nodes' sightings.
+        #
+        # Measured per-node accuracy of the z=1 estimate (see probe):
+        #   z_ctr=0.0  (h=0.5,  |t*|=2.0, z-dist=1.0): err 4.57e-7  (worst)
+        #   z_ctr=0.8  (h=0.05, |t*|=4.0, z-dist=0.2): err 2.94e-9  (best)
+        # The OLD greedy clustering orders by |t*|, so the min-|t*| node
+        # (the FAR coarse z=0 node, |t*|=2.0) becomes the representative —
+        # its placement is the *worst* of the surviving set (4.57e-7).
+        # The NEW clustering orders by z-plane distance, so the z-closest
+        # node (z_ctr=0.8, z-dist=0.2) wins — placement 2.94e-9.
+        prob_c = PadeTaylorProblem(fW, (u_0_FW, up_0_FW), (0.0, 0.5); order = 30)
+        sol_c  = solve_pade(prob_c; h_max = 0.5)
+        u05, up05 = sol_c(0.5)
+        prob_f = PadeTaylorProblem(fW, (u05, up05), (0.5, 0.85); order = 30)
+        sol_f  = solve_pade(prob_f; h_max = 0.05)
+
+        Tt = Float64
+        Yt = Tuple{Float64, Float64}
+        Pt = eltype(sol_c.pade)
+        z_all    = vcat(sol_c.z,    sol_f.z[2:end])     # drop duplicated z=0.5
+        y_all    = vcat(sol_c.y,    sol_f.y[2:end])
+        h_all    = vcat(sol_c.h,    sol_f.h)
+        pade_all = vcat(sol_c.pade, sol_f.pade)
+        sol = PadeTaylorSolution{Tt, Yt, Pt}(z_all, y_all, h_all, pade_all)
+
+        # Precondition the repro actually has varying h with a high ceiling.
+        @test maximum(h_all) ≈ 0.5
+        @test minimum(h_all) ≈ 0.05
+
+        # `min_support = 4` is the discriminator: the OLD per-|t*| filter
+        # leaves the z=1 cluster with only 3 surviving nodes (< 4), so it
+        # drops the pole entirely.  The NEW z-distance filter keeps all 8,
+        # so the cluster clears the bar.  RED-before / GREEN-after.
+        pole_z1 = ℘_pole(0, 0)                       # exact lattice pole: z = 1
+        poles   = extract_poles(sol; min_support = 4)
+
+        near = filter(p -> abs(p - pole_z1) < 0.2, poles)
+        # (a) Filter half — the genuine pole is recovered at all.  RED on
+        #     the OLD per-|t*| filter (cluster support 3 < 4).
+        @test length(near) == 1
+
+        # (b) Sort-key half — the representative is the z-plane-CLOSEST
+        #     node (err 2.94e-9), not the min-|t*| far node (err 4.57e-7).
+        #     1e-8 sits cleanly between the two: RED on the OLD min-|t*|
+        #     ordering, GREEN on the NEW z-distance ordering.
+        @test abs(near[1] - pole_z1) ≤ 1.0e-8
+
+        # (c) No spurious far poles *inside the covered region*.  The
+        #     trajectory runs along the real axis z ∈ [0, 0.85]; the only
+        #     lattice pole it can place accurately is z = 1 (just past the
+        #     end).  As the file header and PF.1.2/2.2 document, far nodes
+        #     also "see" genuine off-region poles but place them poorly
+        #     (here `-0.22 ± 2.06i`-class candidates), so accuracy is
+        #     asserted only over the covered box — exactly the `in_box`
+        #     discipline of PF.1.2.  Widening the far-root window must not
+        #     invent a spurious pole IN-region: every in-box pole is on
+        #     the exact ℘ lattice to the Float64 catalogue spec.
+        lattice = ℘_lattice(2, 2)
+        in_cov  = filter(p -> in_box(p, -0.5, 1.2, -0.5, 0.5), poles)
+        @test !isempty(in_cov)
+        @test maximum(nearest_lattice_dist(p, lattice) for p in in_cov) ≤ 1.0e-6
+    end
 end
 
 # ----------------------------------------------------------------------
@@ -255,4 +336,32 @@ end
 #        confirming the shared core is exercised by both paths.  M2 / M3
 #        live in the same shared core and were already proven against the
 #        path-network path (PF.1.2 / PF.2.2).
+#
+#   M5 — §S7 z-plane-distance FILTER (bead padetaylor-bez, 2026-06-02).
+#        In `_extract_poles_core`, revert the far-root filter from the
+#        z-plane test `z_dist ≤ radius_z` back to the legacy per-node
+#        `abs(t) ≤ radius`.  PF.4.1 (a) goes RED — `length(near) == 1`
+#        evaluates `0 == 1`: under the per-|t*| filter only 3 distinct
+#        nodes survive the z=1 cluster (the coarse z=0 node + the two
+#        fine nodes at z-distance ≤ 0.25), below the `min_support = 4`
+#        bar, so the genuine pole is dropped; (b)/(c) then fail on the
+#        empty `near`/`in_cov`.  All of PF.1.*/2.*/3.* stay GREEN —
+#        for the uniform-`h` walks they exercise, `h ≈ h_max`, so the
+#        z-plane test reduces exactly to the legacy `|t*| ≤ radius_t`.
+#        (Observed: 31 passed, 2 failed, 2 errored.)  Restored.
+#
+#   M6 — §S7 z-plane-distance SORT KEY (bead padetaylor-bez, 2026-06-02).
+#        Keeping the new filter, revert ONLY the cluster sort key:
+#        change the candidate tuple's 2nd field from `RT(z_dist)` back
+#        to `RT(abs(t))`.  PF.4.1 (a) STILL PASSES (the new filter keeps
+#        all 8 nodes' sightings, support 8 ≥ 4, so z=1 is recovered) —
+#        but (b) `abs(near[1] - pole_z1) ≤ 1e-8` goes RED, evaluating
+#        `4.56910677626432e-7 ≤ 1e-8`: ordering by `|t*|` crowns the
+#        FAR coarse z=0 node (|t*|=2.0, the smallest |t*| of the
+#        surviving set) the representative, and its placement (4.57e-7)
+#        is two orders worse than the z-closest fine node's (2.94e-9)
+#        that the z-distance ordering picks.  The representative drifts
+#        exactly as documented.  (Observed: 34 passed, 1 failed.)
+#        Restored.  The two halves are ONE atomic §S7 fix (ADR-0026
+#        Amendment 7): M5 proves the filter half, M6 the sort-key half.
 # ----------------------------------------------------------------------

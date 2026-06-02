@@ -40,8 +40,21 @@ the solution:
 
   - **Far roots.** A local `(m, n)` Padé built from a Taylor jet of
     radius `~h` reliably locates only singularities within a few `h`
-    of its centre. Roots with `|t*|` beyond `radius_t` are
-    extrapolation artefacts and are dropped.
+    of its centre. A root is kept iff its **z-plane distance** from the
+    birthing node, `|h·t*|`, is within `radius_z = radius_t · h_max`,
+    where `h_max = maximum(|hs|)` is the walk's step *ceiling* — a
+    fixed, `h`-INDEPENDENT scale. Roots beyond that are extrapolation
+    artefacts and are dropped. The earlier filter kept roots by
+    `|t*| ≤ radius_t` (a window of a fixed number of *per-node* steps
+    `h`); under a varying / adaptive `h` that silently discards a pole
+    at a fixed z-distance as soon as `h` shrinks (`|t*| = D/h` grows
+    past the window), emptying the pole field. Filtering on z-plane
+    distance against the `h`-independent `h_max` cures that and is
+    genuinely scale-covariant; for a near-uniform-`h` walk
+    (`h ≈ h_max`) it reduces exactly to the legacy `|t*| ≤ radius_t`.
+    This is the §S7 scale-covariance fix ported from the vector twin
+    `VectorPoleField.extract_poles_shared_q` (ADR-0026 Amendment 6/7;
+    `src/VectorPoleField.jl:49-97`).
 
   - **Froissart doublets.** A near-singular Padé linear system — the
     Float64 classical-Toeplitz path has no SVD rank guard (ADR-0005) —
@@ -61,11 +74,19 @@ the solution:
     poles is accepted as physical only when at least `min_support`
     *distinct* nodes independently place a root there.
 
-The node nearest a physical pole sees it at the smallest `|t*|` and
-places it most accurately. Clustering is therefore *greedy in
-increasing* `|t*|`: the first (best-placed) candidate to land in a
-cluster becomes its representative, and every later candidate — from a
-node that sees the pole less well — only adds cross-node support.
+The node nearest a physical pole in the z-plane places it most
+accurately. Clustering is therefore *greedy in increasing z-plane
+node-to-pole distance* `|h·t*|`: the first (best-placed) candidate to
+land in a cluster becomes its representative, and every later
+candidate — from a node that sees the pole less well — only adds
+cross-node support. The earlier code ordered by `|t*|`, the
+*per-node-step-relative* distance; that is the same scale-fixing
+heresy as the old far-root filter — under a varying `h` a node closer
+in z but with a smaller `h` carries a *larger* `|t*| = z_dist/h`, so
+`|t*|`-ordering crowns a coarse far node over a fine near one and the
+representative drifts to the worse-placed sighting. Ordering by the
+z-plane distance `|h·t*|` is the genuinely scale-covariant "which node
+is closest" measure (§S7; `src/VectorPoleField.jl:223-242`).
 
 A second-order pole (the Weierstrass-℘ test problem, and the Painlevé
 transcendents themselves, have double poles) is a double root of `D`.
@@ -125,7 +146,24 @@ function _extract_poles_core(centers, pades, hs;
     minres = RT(min_residue)
     catol  = RT(cluster_atol)
 
-    # (pole_z, |t*|, node-index) candidates gathered from every node.
+    # Far-root filter on a SCALE-STABLE z-radius (ADR-0026 Amendment 6/7
+    # §S7; ported from the vector twin `VectorPoleField.extract_poles_shared_q`,
+    # `src/VectorPoleField.jl:259-261`).  The scale is `h_max` — the
+    # walk's step *ceiling* — recovered as the largest per-node step
+    # `|hs|`.  `h_max` is `h`-INDEPENDENT: a varying-`h` (stitched /
+    # adaptive) walk shrinks individual `hs[k]`, but the ceiling is fixed
+    # by the coarsest segment, so `maximum(abs, hs)` recovers it.  For an
+    # empty `hs` there are no nodes — `radius_z` is unused (the loop is
+    # empty) — so a `zero(RT)` placeholder is harmless (mirrors the
+    # vector code's empty-`visited_h` guard).
+    h_max    = isempty(hs) ? zero(RT) : RT(maximum(abs, hs))
+    radius_z = radius * h_max
+
+    # (pole_z, z_dist, node-index) candidates gathered from every node.
+    # `z_dist = |h·t*|` is the z-plane distance from the birthing node to
+    # the pole — the scale-covariant "how close is this node" measure the
+    # greedy clustering orders by (see below, and the vector twin's
+    # docstring "Why the representative is the z-plane-closest node").
     candidates = Tuple{CT, RT, Int}[]
     for k in eachindex(hs)
         P     = pades[k]
@@ -141,18 +179,37 @@ function _extract_poles_core(centers, pades, hs;
         Dp = derivative(D)
 
         for t in roots(D)
-            abs(t) ≤ radius || continue           # far-root artefact
+            # Far-root filter — ADR-0026 §S7.  Accept by the root's
+            # z-plane DISTANCE `|h·t*|` against the scale-stable z-radius
+            # `radius_z = radius_t·h_max`, NOT by `|t*|` (a window of a
+            # fixed number of *per-node* steps `h`, which silently
+            # discards a fixed-z-distance pole as soon as the adaptive
+            # `h` shrinks: `|t*| = D/h` grows past the window — measured
+            # to empty pole fields on the vector side, ADR-0026 Amd 6).
+            # The `h` factor is load-bearing: t lives in t = (z - z_ctr)/h,
+            # so the pole sits at z-distance `|h·t*|`.  For a default
+            # near-uniform-`h` walk every `h ≈ h_max`, so the test reduces
+            # to the legacy `|t*| ≤ radius_t` — backward compatible.
+            z_dist = abs(h * t)
+            z_dist ≤ radius_z || continue
             res = N(t) / Dp(t)                    # Padé residue at t*
             (isfinite(res) && abs(res) ≥ minres) || continue   # Froissart
-            push!(candidates, (CT(z_ctr + h * t), RT(abs(t)), k))
+            push!(candidates, (CT(z_ctr + h * t), RT(z_dist), k))
         end
     end
 
-    # Greedy clustering in increasing |t*|: the first (best-placed)
-    # candidate to land in a cluster becomes its representative; later
-    # candidates only contribute cross-node support. A cluster is a
-    # physical pole only when ≥ min_support distinct nodes land a root
-    # in it — node-local artefacts never accrue cross-node support.
+    # Greedy clustering in increasing z-plane node-to-pole distance
+    # `z_dist`: the best-placed candidate — the one whose birthing node is
+    # *physically closest* to the pole in the z-plane — lands first and
+    # becomes the cluster representative; later candidates only contribute
+    # cross-node support.  Ordering by `z_dist` (not the per-node-step-
+    # relative `|t*|`) is the §S7 scale-covariance fix: with a varying
+    # `h`, a node *closer* in z but with a *smaller* `h` carries a
+    # *larger* `|t*| = z_dist/h`, so the old `|t*|` order crowned a coarse
+    # far node over a fine near one — the near node's placement is the
+    # accurate one (`src/VectorPoleField.jl:223-242`).  A cluster is a
+    # physical pole only when ≥ min_support distinct nodes land a root in
+    # it — node-local artefacts never accrue cross-node support.
     sort!(candidates; by = c -> c[2])
     reps    = CT[]                    # cluster representatives
     support = Vector{Set{Int}}()      # distinct source nodes per cluster
@@ -181,9 +238,16 @@ For every visited node the roots of the stored Padé denominator are
 mapped back to the `z`-plane (`z = z_v + h · t*`), filtered, and then
 clustered:
 
-  - `radius_t`     — keep only roots with `|t*| ≤ radius_t`; a local
-                     Padé does not reliably place distant singularities
-                     (default `5.0`, i.e. a few canonical steps).
+  - `radius_t`     — the far-root filter, in units of "steps at the
+                     walk's step *ceiling* `h_max = maximum(|h|)`".  A
+                     root `t*` from a node with step `h` is kept iff its
+                     z-plane distance from the node satisfies
+                     `|h·t*| ≤ radius_t · h_max`; a local Padé does not
+                     reliably place distant singularities (default `5.0`,
+                     a few canonical steps at the ceiling scale).  This is
+                     the §S7 scale-covariance fix (see the module
+                     docstring "Far roots"); for a near-uniform-`h` walk
+                     it reduces exactly to the legacy `|t*| ≤ radius_t`.
   - `min_residue`  — drop Froissart doublets: keep a root only when the
                      Padé residue `|N(t*) / D'(t*)| ≥ min_residue`.
   - `cluster_atol` — surviving roots within this distance (in `z`) of
@@ -197,9 +261,10 @@ clustered:
                      pass `min_support = 1` to disable it, e.g. when
                      reading poles off a single-node network.
 
-Each reported pole is the cluster representative — the candidate seen
-at the smallest `|t*|`, i.e. by the closest node. Returns one
-`Complex{T}` per physical pole, in order of discovery.
+Each reported pole is the cluster representative — the candidate placed
+by the node closest to it *in the z-plane* (the smallest node-to-pole
+z-distance `|h·t*|`; §S7, not the per-node-step-relative `|t*|`).
+Returns one `Complex{T}` per physical pole, in order of discovery.
 """
 extract_poles(sol::PathNetworkSolution{T};
               radius_t::Real       = 5.0,
