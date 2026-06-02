@@ -8,46 +8,81 @@
 > previous session already paid for. The frictions surfaced are
 > recorded in `docs/worklog/001-stages-Z-1-2-handoff.md`.
 
-## 🔬 LATEST SESSION (2026-06-01) — subtle-bug sweep, find phase complete (worklog 064)
+## 🔬 LATEST SESSION (2026-06-02) — bug sweep verified, root cause found, C1+C2 SHIPPED (worklogs 065–067)
 
-The maintainer reported a suspected **subtle, intermittent discontinuity
-bug** (likely a mis-transcribed equation/algorithm, possibly early,
-possibly in the path-network solver). I ran an orchestrated **read-only**
-26-agent audit of all of `src/` against the canonical references (workflow
-`wf_0709eaad-2bd`; reports in `docs/bug-sweep-2026-06-01/find-*.md`). The
-run was **stopped after the Find phase** on user instruction — the
-adversarial **Verify and Synthesize phases did NOT run**, so findings are
-unverified (single-source unless noted).
+Picked up the worklog-064 find-phase sweep, ran the stopped Verify+Synthesize
+phases, root-caused the lead suspect (math settled before any code, per maintainer
+directive), and **shipped + pushed the C1+C2 SharedPade fix** (commit `cbf509b`).
+Read worklogs **065** (verify+plan), **066** (root cause), **067** (C1+C2 build)
+and **ADR-0027** before touching the SharedPade area.
 
-- **Prime hypothesis DEAD**: the conjugate-transpose (`'` vs `.'`)
-  robust-Padé QR-reweighting bug is verified CORRECT (`RobustPade.jl:443`,
-  `SharedPade.jl:234` both use `adjoint`; no `.'`/`transpose(` anywhere in
-  `src/`). Cleared by agents A1 + E1 with line citations.
-- **LEADING SUSPECT (CRITICAL, double-flagged by A5 + E2, UNVERIFIED)**:
-  `src/SharedPade.jl:117` `_toeplitz_block` builds the C̃ block **one
-  Taylor coefficient too low** (`idx = m+rr-cc+1`, should be `+2`). `d=1`
-  does NOT reduce to the scalar GGT `(m,m)` Padé; invisible on the
-  exact-rational test jets, bites on transcendental jets per adaptive step
-  ⇒ intermittent discontinuity in the **vector** trajectory. Lives in the
-  v0.2 vector stack (not the scalar path-network whose Padé = A1-verified
-  `classical_pade_diagonal`); plausibly underlies the worklog-063 vector
-  zoom-figure artefacts. **Do NOT band-aid** — re-derive the intended
-  `d≥2` matching window vs Mano–Tsuda eq. 2.6 before touching the index
-  (ADR-0019 asserts a bit-identical `d=1` reduction the code violates).
-- Other unverified HIGHs: `B7` scalar `PoleField` `|t*|≤radius_t` far-root
-  filter (ADR-0026-known cause of *intermittently empty/sparse* pole
-  fields — best scalar-side symptom match); `D5` IVPBVPHybrid `a_2`
-  asymptotic coeff wrong; `E5` `shared_denominator_pade` rank break
-  `ρ≥m_cur` vs `==`.
-- **Verified CORRECT** (trust this negative space): RobustPade + classical
-  Padé, the Taylor/AD recurrence, all six Painlevé RHS, the P_I^(2)
-  companion system + closed-form oracles, the full Noumi–Yamada system.
+### Sweep verdict — 7 candidates → 5 real, 2 refuted (worklog 065)
+- **C5 REFUTED** as the discontinuity cause: scalar `_evaluate_pade`'s bare
+  `iszero` is *required* by ADR-0015 dense-output. The real worklog-063
+  zoom-figure discontinuity is the unguarded vector Stage-2 fill — already
+  tracked as **`padetaylor-6b5`** (K-nearest cross-validation).
+- **C7 REFUTED**: the sheet-blind Euclidean parent selection is real but
+  **deterministic per `rng_seed`**; improvement tracked in `padetaylor-pgc/zwh`.
 
-**Next agent**: see worklog 064 "Pickup" — resume Verify+Synthesize from
-the cached finds (`Workflow({scriptPath:"/tmp/sweep.workflow.js",
-resumeFromRunId:"wf_0709eaad-2bd"})`), then serial-Julia confirm the
-`SharedPade:117` off-by-one on a transcendental jet. Tracked: bead
-`padetaylor-bb2`.
+### C1+C2 root cause (worklog 066, unanimous + sympy-verified) — SHIPPED
+The `SharedPade.jl:117` off-by-one was **not an index typo** but a
+**target-approximant conflation**: the `pillar-A` spec faithfully transcribed
+Mano–Tsuda's *off-diagonal* `(m−1,m)` window (top-left `c_m`, the `+1`) but paired
+it with a GGT-*diagonal* `(m,m)` numerator recovery + the `d=1`=`robust_pade(m,m)`
+contract (top-left `c_{m+1}`, the `+2`). **Correct window = `c_{m+1}` (`+2`)** at
+every `d`. Fix (commit `127edae`): `+2` window; graceful reduction (accept
+`ρ≥m_cur` incl. full-rank least-squares Q); `z^λ` cancellation replacing the
+`Q(0)≈0` throw; `Q=1` Taylor fallback for `ρ==0` regular jets; determinant Oracle-2
+bumped `+2`. Mutation-proven (SP.1.7 transcendental oracle; `z^λ` disable→RED).
+**Meromorphic oracles GREEN** (℘, Calogero–Moser, KKG P_I^(2), vector path-network).
+
+### ⚠️ Accuracy cost shipped (documented) — the dispatch motivation
+The correct `(m,m)` is *less accurate than the buggy `(m−1,m)`* on ENTIRE/regular
+jets, and the cost **grows with component count `d`**: harmonic ~5e-9, exp ~4e-8,
+**Noumi–Yamada A₄ conservation ~6e-6 (`d=4`, a real target)**. Correct-not-wrong
+(poles recovered exactly; bounded). 49 entire-system test tolerances were updated
+to this honest accuracy (each cites ADR-0027 + `padetaylor-unk`). Recovery is
+deferred to the dispatch layer (**ADR-0028, `padetaylor-flnr`**).
+
+## 🎯 PICKUP — land the remaining C's, then dispatch (in this order)
+
+All independent of the shipped SharedPade work. Discipline: **one Julia process at
+a time** (Rule 7), TDD + **mutation-prove** each, no band-aid tolerance relaxation
+(Rule 2/5). `bd show <id>` has the full per-bug spec.
+
+1. **C3 `padetaylor-bez`** (HIGH, scalar) — `src/PoleField.jl:144` far-root filter
+   is a scale-fixing heresy. Port the landed vector S7 fix (`VectorPoleField.jl:250-329`,
+   commit `19b48ba`): filter by z-plane distance `|h_max·t*| ≤ radius·h_max` using the
+   **h-INDEPENDENT `h_max`** (per-node `h` cancels → no-op), and make the cluster
+   representative the z-closest node (`:147` sort key). Test = varying-h
+   Weierstrass-℘ lattice (closed-form poles), RED→GREEN; parity vs `VPO.4`.
+2. **C4 `padetaylor-qsj`** (HIGH, conf 0.95) — `src/IVPBVPHybrid.jl:332-342` ships
+   `a_2 ≈ −0.22208`; correct is `a₂ = β²(δ+1)/(δ−2)³ = 0` at δ=−1 (matched at `s⁻⁵`,
+   not the code's `s⁻⁷`). Fix the comment algebra, `figures/ffw2017_fig_5.jl:219`,
+   ADR-0014, worklog 040. Test = replace the **self-referential** IB.1.1 (Rule 5
+   violation) with FFW eq.6's published IC oracle (`u` at arg=−120°) + sympy.
+   Distinct from `padetaylor-ykg` (a₃₊ deferral — legitimately separate).
+3. **C6 `padetaylor-5jvd`** (LOW, dormant) — `src/PathNetwork.jl:997` uses a linear
+   angular distance; use `argmin |rem(θ_sd−off, 2π, RoundNearest)|` (RoundNearest
+   specifically; do NOT wrap offsets individually — breaks the index→ray invariant).
+   Test = negative-real-goal `:steepest_descent` case + S¹ geodesic oracle. Opt-in
+   mode, no shipped figure uses it → lowest priority.
+4. **Dispatch `padetaylor-flnr`** (ADR-0028) — recover the C1+C2 accuracy cost:
+   implement BOTH cells (GGT `(m,m)` `+2` and Mano–Tsuda square `(m−1,m)`) + a
+   **held-out-residual** validated-Pareto selection (deterministic tie-break).
+   **Write ADR-0028 + get maintainer sign-off BEFORE building** (correctness-first).
+   Settled-math basis in worklog 066.
+
+Also open: **`padetaylor-l48l`** (re-tune VPN.5.7 `skip_covered` demo for the
+correct tighter discs — assertion temporarily relaxed). `diagnose_test.jl` needs
+the optional `DelaunayTriangulation` extension instantiated (pre-existing).
+
+### Verified CORRECT — trust this negative space (do NOT touch)
+RobustPade + classical Padé; the Taylor/AD recurrence; all six Painlevé RHS; the
+P_I^(2) companion + closed-form oracles; the full Noumi–Yamada system; the entire
+adjoint/transpose surface; and **`SharedPade._upper_block`** (sympy-verified correct
+for the degree-`m` numerator under `+2` — do NOT "fix" it to match the old block).
+Probes: `external/probes/sharedpade-offbyone-confirm/{confirm,c2_reduction_study}.jl`.
 
 ---
 
