@@ -75,6 +75,14 @@ include("RobustPade.jl")
 # it reuses LinAlg.pade_svd and RobustPade.default_tol, so it loads after
 # both.  Additive — no v0.1 module behaviour changes (bead padetaylor-0ln.2).
 include("SharedPade.jl")
+# ADR-0028 dual-construction dispatch (Amendments 1 & 2): per vector step build the
+# shipped diagonal (m,m) cell A AND the wide-square Mano–Tsuda cell B, and select by
+# the relative ODE defect.  These load after SharedPade/LinAlg/RobustPade and before
+# VectorStepper (which calls shared_pade_select).  Additive — the scalar d=1 path and
+# shared_denominator_pade itself are unchanged (bead padetaylor-flnr).
+include("SharedPadeCellB.jl")
+include("SharedPadeDefect.jl")
+include("SharedPadeDispatch.jl")
 include("Coefficients.jl")
 # VectorCoefficients lifts the Taylor-jet layer from scalar to vector
 # ODEs (y' = f(z, y), y ∈ ℂ^d); a d=1 jet reduces bit-identically to

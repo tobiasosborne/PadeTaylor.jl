@@ -40,6 +40,7 @@ using PadeTaylor
     include("linalg_test.jl")
     include("robustpade_test.jl")
     include("shared_pade_test.jl")
+    include("shared_pade_dispatch_test.jl")
     include("classical_pade_test.jl")
     include("coefficients_test.jl")
     include("vector_coefficients_test.jl")
