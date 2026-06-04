@@ -1,10 +1,12 @@
 # ADR-0028 — Shared-Padé dual-construction + validated-Pareto dispatch (the numerator-degree axis)
 
-**Status**: proposed (design; awaiting maintainer sign-off before build, per
-worklog 066 correctness-first directive). **Amended 2026-06-04 by an empirical
-audition (Amendment 1, below) — three load-bearing claims of the original design
-are corrected; read the amendment before the original §1–§6.**
-**Date**: 2026-06-02 (Amendment 1: 2026-06-04)
+**Status**: **accepted — built & shipped 2026-06-04** (Amendment 3). The original
+§1–§6 are the initial design; **Amendments 1–3 are the as-built record and govern
+where they conflict** — read them first. Amendment 1 (audition) corrected the
+cell-B realisation + the win-boundary; Amendment 2 settled the selector (relative
+ODE defect); Amendment 3 records the production build + a build-time discovery (the
+Froissart-consumer fix).
+**Date**: 2026-06-02 (Amendments 1–2: 2026-06-04 design; Amendment 3: 2026-06-04 build)
 **Beads**: `padetaylor-flnr` (this ADR), depends on the shipped
 `padetaylor-d3a` (C1, `+2` window) + `padetaylor-3p9c` (C2, graceful
 reduction) — i.e. **on ADR-0027**. Re-scopes `padetaylor-unk`. Audition:
@@ -494,3 +496,90 @@ poles, not merely accidentally correct.
   SIAM J.Appl.Math. 39(2):248. AAA: Nakatsukasa–Sète–Trefethen 2018
   arXiv:1612.00337. Repo precedent: `figures/_kkg_pi2_helpers.jl` `kkg_ode_residual`,
   `test/painleve_hierarchy_test.jl:154-186`.
+
+---
+
+## Amendment 3 (2026-06-04) — the production build (as shipped)
+
+The gate was lifted and the dispatch built per Amendments 1 & 2. As-built:
+
+### A3.1 — the three modules + the wiring
+
+- **`src/SharedPadeCellB.jl`** — `build_square_cell(jets, m)`: the wide-square
+  Mano–Tsuda **cell B** at degree `m_eff = ⌈m/d⌉·d` (`+1` window, degree-`(m_eff−1)`
+  numerators), reusing `LinAlg.pade_svd` + the QR-reweight/`z^λ`/trim of cell A. Any
+  degenerate input (`d > m`, jet too short for `m_eff+1`, denominator below tol)
+  returns `nothing` ⇒ the dispatcher uses cell A (never throws, never lies).
+- **`src/SharedPadeDefect.jl`** — `relative_defect` (the Amendment-2 selector score)
+  with non-finite-sample dropping; `shared_q_residue` (the Froissart genuineness,
+  A3.3); `guard_root_estimates` (a ComplexF64 companion root estimate, the RISK-1
+  precision split — full-`T` defect arithmetic, ComplexF64 only for the sample
+  pole-guard).
+- **`src/SharedPadeDispatch.jl`** — `shared_pade_select(jets, m, f, z₀, h)`: d=1 →
+  cell A; build A always; try B (guarded); score both; **A-default type-scaled
+  tie-break** (`B iff defect_B < defect_A·(1−100·eps(real(T)))`). Opt-in
+  `diagnostics` 3-tuple.
+- **Wiring**: a single line, `VectorStepper.jl:242`, now calls `shared_pade_select`
+  (was `shared_denominator_pade`); every vector approximant-build routes through it.
+  `shared_denominator_pade` (cell A) and the d=1 bit-identity are untouched — the
+  16 SP.* oracle tests and SP.1.1 are unchanged.
+
+### A3.2 — build-time discovery: cell B corrupts the pole-ROOT consumers
+
+The audition tested isolated single steps; the production walk exposed a regime it
+could not see. Cell B optimises step **value** (the defect), but on a regular
+stretch its wide-square `Q` can plant a **Froissart doublet** — a near-cancelling
+pole/zero pair, a spurious pole essentially *at* the node, where the solution is
+provably analytic. It is **harmless for the value** (the doublet cancels, so the
+defect happily picks B) but it corrupts the two consumers that read `Q`'s **roots**:
+the adaptive step controller (`VectorWedgeStep._adaptive_h` collapsed the ℘ FW
+Table 5.1 walk — "nearest pole within 3.3e-6 of the node") and the pole extractor
+(`VectorPoleField.extract_poles_shared_q`). Root cause: the **vector** root
+consumers lacked the residue Froissart filter the **scalar** `PoleField` already
+has. A selector-level pole-fidelity veto was tried and **rejected** — it over-fires
+on entire jets where the near-node root is harmless, throwing away the value gain;
+the selector cannot know whether `Q`'s roots will be consumed.
+
+### A3.3 — the fix: a residue Froissart filter on the consumers (calibrated)
+
+`shared_q_residue(numerators, denominator, t) = max_c |P_c(t)/Q'(t)|` — the
+shared-Q lift of the scalar `PoleField` residue. **Calibrated** on the ℘ walk
+(probe `external/probes/adr0028-froissart-consumer/`, the maintainer chose
+"investigate first"): across 342 nodes, **genuine ℘-pole residues ≥ 2.1** (median
+1.1e4), **cell-B doublet residues ≤ 5.5e-8** (median 3e-13) — an **~8-order clean
+gap**. Threshold **`POLE_MIN_RESIDUE = 1e-4`** (≥4 orders of margin each side; the
+scalar default `1e-8` is *too low* — a doublet reaches 5.5e-8). Applied in
+`VectorWedgeStep._candidate_pole_disc` / `_adaptive_h` (nearest **genuine** pole)
+and `extract_poles_shared_q` (`min_residue` kwarg). **The filter touches pole-roots
+only — never the step value `P(1)/Q(1)`** — so it is cell-agnostic and a strict
+correctness improvement (it also stops the controller being mildly fooled by cell
+A's own least-squares roots). Mutation-proven: filter off + dispatch wired ⇒ the ℘
+walk collapses again (VPO RED).
+
+### A3.4 — accuracy recovered (re-baseline)
+
+The dispatch evens the shared-Q error across components. Canonical case VS.1.2
+(harmonic, order 30, h 0.7), measured: cell B gives **F64 cos 2.2e-16 / −sin
+1.1e-16** and **BF-256 cos 1.76e-30 / −sin 5.8e-31** — vs cell A's −sin **~5e-9
+(F64) / ~1.6e-17 (BF)**, a ~7-/14-order win on the worst component (cell A had only
+reached the cos jet deep by luck of its even parity). Single-step entire/high-`d`
+tolerances tightened to the measured values × margin; accumulated-walk and figure
+bounds left as upper bounds (a per-step close-call pick shifts accumulated error).
+
+### A3.5 — `padetaylor-unk` recovered
+
+`unk` (entire-system shared-Q residual) is resolved by the dispatch: its ~4e-12
+entire residual was cell B's accuracy seen through the old off-by-one; the
+dispatch now selects cell B on entire systems on purpose and validated (VS.1.2
+−sin: ~5e-9 → ~1e-16). Closed as recovered.
+
+### A3 references
+
+- `src/SharedPadeCellB.jl`, `src/SharedPadeDefect.jl`, `src/SharedPadeDispatch.jl`,
+  `src/VectorStepper.jl:242` (wiring), `src/VectorWedgeStep.jl`
+  (`POLE_MIN_RESIDUE`, `_nearest_genuine_pole`, `_adaptive_h` `numerators` kwarg),
+  `src/VectorPoleField.jl` (`min_residue`).
+- `test/shared_pade_dispatch_test.jl` (26 assertions; mutants M1–M4 + SPD.6),
+  `test/vector_stepper_test.jl` VS.1.2 (re-baseline).
+- `external/probes/adr0028-froissart-consumer/FINDINGS.md` (the calibration).
+- Beads `padetaylor-flnr` (build), the Froissart-consumer fix, `padetaylor-unk`.

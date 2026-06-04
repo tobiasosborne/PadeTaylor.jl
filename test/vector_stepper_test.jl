@@ -91,40 +91,39 @@ end
     @testset "VS.1.2 closed-form harmonic system, single step" begin
         # y₁' = y₂, y₂' = −y₁, y0 = [1, 0] ⇒ y(h) = [cos h, −sin h].
         # Both components are entire (no poles); the shared denominator Q has no
-        # genuine pole to fit.  Under the CORRECT GGT diagonal (m,m) window
-        # (worklog 066 / ADR-0027) the over-determined stack is rank-deficient
-        # at the stepper's degree, so the construction reduces to the honest
-        # supported degree (here ≈ 8) — the legitimate least-squares "best
-        # shared Q" for a pole-free system (bead padetaylor-unk).  The cos jet
-        # (even) is recovered to roundoff; the −sin jet (odd) carries a residual
-        # ~5e-9 at Float64 / ~1.6e-17 at BigFloat-256 — the method-set accuracy
-        # of an (m,m) shared-Padé on an ENTIRE system.  (The pre-fix +1/(m−1,m)
-        # window incidentally reached ~1e-10/~3.4e-21 here by placing its
-        # spurious poles elsewhere; neither window is "more correct" on an
-        # entire function.  The forthcoming dispatch layer — ADR-0028 — will
-        # recover the tighter accuracy by selecting the (m−1,m) cell when it
-        # validates better.)  Closed form [cos h, −sin h] stays the exact Rule-5
-        # oracle; only the achievable accuracy is method-set.
+        # genuine pole to fit.  This is the canonical ADR-0028 recovery case:
+        # the dispatch (VectorStepper → SharedPadeDispatch.shared_pade_select)
+        # selects the wide-square Mano–Tsuda cell B over the diagonal (m,m) cell A
+        # here (the ODE defect validates B better on an entire system), so BOTH
+        # components are recovered to ~roundoff — the worst-component accuracy the
+        # diagonal cell A could not reach.  Measured (probe
+        # adr0028-froissart-consumer/measure_vs12.jl): cell B gives cos err 2.2e-16
+        # / −sin err 1.1e-16 at Float64, cos 1.76e-30 / −sin 5.8e-31 at BF-256 —
+        # vs cell A's −sin ~5e-9 (F64) / ~1.6e-17 (BF).  (Cell A reached the cos
+        # jet to ~1e-38 by luck of the even jet, but stalled the −sin at the
+        # method-set (m,m) residual; cell B trades that for both components even at
+        # ~1e-30 — a ~14-order win on the worst component.)  Closed form
+        # [cos h, −sin h] is the exact Rule-5 oracle.
         harm = (z, y) -> [y[2], -y[1]]
         order, h = 30, 0.7
 
         st = VectorPadeStepperState{Float64}(0.0, [1.0, 0.0])
         vector_pade_step!(st, harm, order, h)
         @test st.z ≈ 0.7
-        @test st.y[1] ≈ cos(0.7) atol = 1e-12       # even jet: roundoff
-        @test st.y[2] ≈ -sin(0.7) atol = 1e-8       # odd jet: (m,m) entire-system residual (ADR-0027)
+        @test st.y[1] ≈ cos(0.7) atol = 1e-14       # cell B: roundoff (meas 2.2e-16)
+        @test st.y[2] ≈ -sin(0.7) atol = 1e-14      # cell B: roundoff (meas 1.1e-16; cell A was ~5e-9)
 
-        # BigFloat (256-bit): the cos component drops to ~1e-38 (working
-        # precision); the −sin component's (m,m) entire-system residual is
-        # ~1.6e-17 (ADR-0027) — far below Float64 reach, the point of the
-        # arb-prec path, yet method-set above the BigFloat roundoff floor.
+        # BigFloat (256-bit): the ADR-0028 dispatch's square cell B recovers BOTH
+        # components to ~1e-30 (meas cos 1.76e-30, −sin 5.8e-31) — the −sin no
+        # longer stalls at the (m,m) ~1.6e-17 residual.  Both asserted < 1e-28
+        # (≳ 50× the measured values), the even-error invariant of cell B.
         setprecision(BigFloat, 256) do
             hb = BigFloat("0.7")
             stb = VectorPadeStepperState{BigFloat}(
                 BigFloat(0), BigFloat[1, 0])
             vector_pade_step!(stb, harm, order, hb)
-            @test abs(stb.y[1] - cos(hb)) < BigFloat(10)^(-30)
-            @test abs(stb.y[2] + sin(hb)) < BigFloat(10)^(-16)
+            @test abs(stb.y[1] - cos(hb)) < BigFloat(10)^(-28)
+            @test abs(stb.y[2] + sin(hb)) < BigFloat(10)^(-28)
         end
     end
 

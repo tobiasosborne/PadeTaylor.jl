@@ -8,7 +8,42 @@
 > previous session already paid for. The frictions surfaced are
 > recorded in `docs/worklog/001-stages-Z-1-2-handoff.md`.
 
-## 🔬 LATEST SESSION (2026-06-02 cont.) — C3/C4/C6 SHIPPED, ADR-0028 drafted, FULL SUITE GREEN
+## 🔬 LATEST SESSION (2026-06-04) — ADR-0028 DISPATCH BUILT & SHIPPED (audition → build → Froissart fix)
+
+Took ADR-0028 (shared-Padé dual-construction dispatch) from *proposed* to
+*accepted/shipped*. Full arc in **worklog 071**; ADR-0028 **Amendments 1–3** are the
+as-built record (read them before the original §1–§6). Full `Pkg.test()`: **7796 /
+7796 GREEN** (idle box; a concurrent heavy Julia session can OOM it — run idle).
+
+**What shipped.** Per vector step (`d≥2`) the stepper now builds BOTH the diagonal
+`(m,m)` cell A (`shared_denominator_pade`, untouched) and the wide-square Mano–Tsuda
+cell B (`SharedPadeCellB.build_square_cell`, degree `m_eff=⌈m/d⌉·d`) and selects by
+the **relative ODE defect** (`SharedPadeDefect.relative_defect`) — a single uniform
+selector validated 18/18. `SharedPadeDispatch.shared_pade_select` does d=1→A,
+A-default tie-break, fall-back-to-A on any cell-B degeneracy. Wired at the single
+site `VectorStepper.jl:242`. Recovers the worklog-067 entire/high-`d` accuracy cost
+(VS.1.2 −sin: ~5e-9→~1e-16 F64, ~1.6e-17→~6e-31 BF) while keeping cell A's genuine-
+pole×precision edge (BF-256 Calogero–Moser). `padetaylor-unk` recovered.
+
+**The build-time discovery (the load-bearing lesson).** The audition tested isolated
+single steps; the production walk exposed a **value-vs-pole-fidelity conflict**: cell
+B (value-optimal) plants **Froissart doublets** — spurious near-node poles, harmless
+for the value but they collapse the adaptive walk (`_adaptive_h`) and pollute
+`extract_poles_shared_q`, because the **vector** root-consumers lacked the residue
+Froissart filter the **scalar** `PoleField` has. Fixed by lifting that filter to the
+shared-Q form (`shared_q_residue`, `POLE_MIN_RESIDUE=1e-4` — **calibrated** on the ℘
+walk: genuine ≥2.1, doublets ≤5.5e-8; probe `adr0028-froissart-consumer`). The
+filter touches pole-ROOTS only, never the step VALUE. A selector-level veto was
+tried + rejected (over-fires on entire jets). **Lesson: a dispatch that changes the
+stored `Q` must be validated against everything that consumes `Q` — value AND roots.**
+
+**Follow-ups (open beads).** `padetaylor-q70r` (BigFloat root-finding precision split
+— documented, the ComplexF64 guard-root estimate), `padetaylor-lxw6` (close-call
+probe for the defect selector — all audition cases were decisive). A light pass to
+refresh the now-realized "ADR-0028 will…" forward-looking comments in passing tests
+(VS.1.3, VP, VSC, NYF) is nice-to-have (Law 2), not blocking.
+
+
 
 Orchestrated pickup of the three remaining sweep bugs (C3/C4/C6) and drafted the
 dispatch ADR. All three fixes shipped + pushed — each TDD + **mutation-proven**,

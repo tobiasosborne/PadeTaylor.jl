@@ -139,6 +139,7 @@ module VectorStepper
 using LinearAlgebra:        norm
 using ..VectorCoefficients: vector_taylor_coefficients
 using ..SharedPade:         shared_denominator_pade
+using ..SharedPadeDispatch: shared_pade_select
 
 export VectorPadeStepperState, vector_pade_step!, vector_pade_step_with_pade!
 
@@ -238,8 +239,13 @@ function vector_pade_step_with_pade!(state::VectorPadeStepperState{T}, f,
 
     # Step 3: shared-Q Padé — d numerators over ONE denominator.  The
     # diagonal degree m = order ÷ 2 mirrors the scalar stepper's (m,m).
+    # ADR-0028 dispatch: for d ≥ 2, build both the diagonal (m,m) cell A and the
+    # wide-square Mano–Tsuda cell B and select per-step by the relative ODE defect
+    # (needs f, the current point state.z, and the step h_T — all local here).
+    # d = 1 short-circuits to cell A bit-identically (the scalar contract), so the
+    # call is uniform.  Returns the same 2-tuple as shared_denominator_pade.
     m = order ÷ 2
-    numerators, denominator = shared_denominator_pade(rescaled, m)
+    numerators, denominator = shared_pade_select(rescaled, m, f, state.z, h_T)
 
     # Step 4: evaluate at t = 1.  Q(1) is computed once; every numerator
     # is divided by the SAME Q(1) — the shared-denominator keystone.

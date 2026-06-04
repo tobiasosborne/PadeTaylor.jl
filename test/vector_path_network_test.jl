@@ -491,16 +491,20 @@ end
     # =========================================================================
 
     # -------------------------------------------------------------------------
-    # VPN.3.1 — the B2 headline win.  The P_I⁽²⁾ tritronquée carries a
-    # *dense* pole field in the wedge straddling the positive real axis
-    # (KKG Fig 7.4; ADR-0025).  The A2 probe
-    # (external/probes/wedge-tractability/REPORT.md §3.1) measured the
-    # fixed-h=0.1 walk BLOCKING past |x|≈8 on an extended target fan: a
-    # bridging walk crosses the pole field on a chord and a fixed-h chord
-    # step lands on a pole, degenerating the shared-Q linear solve
-    # (`shared_denominator_pade: every singular value is below τ`).  B2's
-    # adaptive walk threads that same fan to |x| ≳ 15.  This is the exact
-    # failure B2 exists to fix — and the test that proves it.
+    # VPN.3.1 — the P_I⁽²⁾ wedge.  The tritronquée carries a *dense* pole field
+    # in the wedge straddling the positive real axis (KKG Fig 7.4; ADR-0025).
+    # The A2 probe (external/probes/wedge-tractability/REPORT.md §3.1) measured
+    # the fixed-h=0.1 :min_y walk BLOCKING past |x|≈8: a bridging chord step
+    # landed on a pole, degenerating the shared-Q solve
+    # (`shared_denominator_pade: every singular value is below τ`).  The
+    # ADR-0028 dual-construction dispatch REMOVED that failure mode — cell B's
+    # accurate step values steer even the fixed-h :min_y walk around the pole,
+    # so it now threads the full fan (45/45) to |x|≈18 (verified
+    # external/probes/adr0028-froissart-consumer/check_vpn31.jl).  B2's adaptive
+    # :max_q_root walk — the principled pole-distance-aware path — threads it
+    # too.  This test now confirms BOTH thread the wedge to |x| ≳ 15 (and so it
+    # is a mutation-proof of the dispatch: forcing cell A blocks the fixed-h
+    # walk again).
     # -------------------------------------------------------------------------
     @testset "VPN.3.1 B2 adaptive walk threads the P_I^(2) wedge" begin
         # The P_I⁽²⁾ companion RHS and an asymptotic tritronquée seed at
@@ -520,11 +524,17 @@ end
                          for r in 2.0:2.0:18.0
                          for a in range(-0.4, 0.4; length = 5)]
 
-        # The fixed-h walk BLOCKS — the A2 failure mode.  It throws the
-        # shared-Q degeneration (a chord step landed on a pole).
-        @test_throws Exception vector_path_network_solve(
+        # Post-ADR-0028 the fixed-h :min_y walk no longer blocks: the dispatch's
+        # cell-B values steer it around the pole that used to degenerate the
+        # shared-Q solve, so it threads the full fan to |x| ≳ 15 (deterministic;
+        # measured 45/45, |x|≈17.94).  Asserting this here also ties VPN.3.1 to
+        # the dispatch — forcing cell A makes the fixed-h walk throw again.
+        sol_fixed = vector_path_network_solve(
             prob, fan; order = 24, h = 0.1,
             adaptive = false, step_policy = :min_y)
+        @test sol_fixed isa VectorPathNetworkSolution
+        @test maximum(abs, sol_fixed.visited_z) ≥ 15.0
+        @test all(all(isfinite, y) for y in sol_fixed.visited_y)
 
         # The B2 adaptive :max_q_root walk threads the same fan.
         sol = vector_path_network_solve(prob, fan; order = 24, h = 0.3,
