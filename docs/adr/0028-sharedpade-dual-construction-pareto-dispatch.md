@@ -1,11 +1,14 @@
 # ADR-0028 — Shared-Padé dual-construction + validated-Pareto dispatch (the numerator-degree axis)
 
 **Status**: proposed (design; awaiting maintainer sign-off before build, per
-worklog 066 correctness-first directive).
-**Date**: 2026-06-02
+worklog 066 correctness-first directive). **Amended 2026-06-04 by an empirical
+audition (Amendment 1, below) — three load-bearing claims of the original design
+are corrected; read the amendment before the original §1–§6.**
+**Date**: 2026-06-02 (Amendment 1: 2026-06-04)
 **Beads**: `padetaylor-flnr` (this ADR), depends on the shipped
 `padetaylor-d3a` (C1, `+2` window) + `padetaylor-3p9c` (C2, graceful
-reduction) — i.e. **on ADR-0027**. Re-scopes `padetaylor-unk`.
+reduction) — i.e. **on ADR-0027**. Re-scopes `padetaylor-unk`. Audition:
+`padetaylor-0ql3`.
 
 ## Context
 
@@ -317,3 +320,117 @@ ADR's deliverable.
   eager-opt-in pattern §5 mirrors).
 - `bd show padetaylor-flnr`, `bd show padetaylor-unk`.
 - CLAUDE.md Laws 1 & 2, Rules 1, 4, 5, 9, 10.
+
+---
+
+## Amendment 1 (2026-06-04) — empirical audition findings
+
+A prototype + audition of this design was run **before build** (bead
+`padetaylor-0ql3`; probe `external/probes/adr0028-dual-construction-audition/`,
+synthesis in its `FINDINGS.md`). The probe unifies cell (A) and three cell-(B)
+realisations into one parameterised block-Toeplitz solver — cell (A) asserted
+**bit-identical** to the shipped `shared_denominator_pade` (Δ=0, `smoke.jl`) —
+and measures *true* per-step error vs oracle (closed-form ℘/Calogero–Moser,
+conservation for Noumi–Yamada A₄) across Float64, BigFloat-256, and
+pole-crossings. It **confirms the motivation but corrects three load-bearing
+claims of §1–§6.** Where this amendment and the original text conflict, **this
+amendment governs.**
+
+### A1.1 — ✅ The accuracy recovery is real (the goal stands)
+
+The square Mano–Tsuda cell recovers the worklog-067 cost by **6–8 orders** at
+Float64: harmonic `5.22e-9 → 1.4e-15`, ℘ (regular step) `3.93e-4 → 8.2e-13`,
+Calogero–Moser `9.66e-11 → 4.4e-16`. (`err_A = 5.22e-9` reproduces worklog
+`067:65` `~5e-9` exactly — harness faithful.)
+
+### A1.2 — 🔴 Cell (B) must be the higher-degree **wide-square** system, not §1(B)'s `⌈m/d⌉`-keep-degree
+
+§1(B) and sign-off #2 specify `n = ⌈m/d⌉` rows **keeping denominator degree
+`m`**. The audition shows this is the *wrong* realisation: when `d∤m` it makes
+the stack **over-determined** (`d·⌈m/d⌉ ≥ m+1`), re-introducing the very
+least-squares pathology cell (B) was meant to cure — `×4e9 / ×7e8 / ×2e6`
+*worse* than the square variants on exp / CM / NY. (This is exactly the
+"source-silent" `d∤m` gap the Mano–Tsuda scout flagged against §1(B):82-85 — it
+is decisive, not minor.) **Corrected cell (B): the genuinely wide-square system
+at degree `m_eff = ⌈m/d⌉·d ≥ m`** — `n = ⌈m/d⌉` rows, `d·n = m_eff`, an
+`m_eff×(m_eff+1)` matrix with a guaranteed 1-D null, `+1` window, degree-`(m_eff−1)`
+numerators (probe `cell_B_grow`). This both recovers the entire-jet accuracy and
+beats the lower-degree `⌊m/d⌋` square variant on meromorphic steps (CM `4.4e-16`
+vs `3.4e-13`).
+
+### A1.3 — ✅🔴 The dispatch is justified, but the win-boundary is {genuine pole × precision}, not entire-vs-meromorphic
+
+The original "(A) wins on genuine meromorphic poles, (B) on entire/regular" framing
+(§ Consequences) is too coarse. Stress-testing at **BigFloat-256** found cell (A)
+wins on Calogero–Moser by **×900** (`2.3e-22` vs the corrected B `2.1e-19`) — A's
+clean-isolated-null degree-`m` advantage, masked by roundoff at Float64 (where B
+wins ×280), emerges only at extended precision **and** only where a genuine shared
+pole is present (NY's *regular-stretch* step does **not** flip at BF-256: A stays
+`4.7e-14`, B `5.6e-17`). A single transcendental **pole-crossing** does *not*
+favour A (F64 tan past π/2: off-diagonal ties/beats diagonal); multi-pole single
+steps break *both* cells. So the A-win regime is narrow — *genuine shared pole +
+extended precision* — but it **includes the FW 2011 Table 5.1 BF-256 long-range
+showcase**, so "always B" is unsafe and the per-step dispatch is retained.
+
+### A1.4 — 🔴 Replace the (R,g,K) Pareto (§2–§3) with a held-out-POINT discriminator; drop the conditioning gap
+
+The §2–§3 selection mechanism is **not trustworthy as specified** (mis-ranks
+**6/8** test cases):
+- the **held-out residual `R`** (§2) is fooled — an over-determined LS fit nails a
+  single held-out coefficient while its function is inaccurate;
+- the **`ε_rel = 100·eps` band** (§3) is relative to `R` (~1e-30), far below `R`'s
+  ~1e-16 noise floor, so near-exact cells select on noise;
+- the **conditioning gap `g = σ_m/σ_{m+1}`** (§3 obj. 2, §6 gate) **does not
+  separate the regimes** (the "A-worse" and "A-ok" `g_A` ranges overlap entirely)
+  **and is not even consistently defined across the two cell shapes** — cell (A)
+  is tall (its null is `σ_{m+1}`), the corrected cell (B) is wide-square (its null
+  is structural, absent from the returned σ-vector) — so `g_A` and `g_B` measure
+  different objects.
+
+**Corrected mechanism (validated 8/8):** select by the **held-out-POINT**
+surrogate-truth error (probe `held_out_point`): evaluate each cell's
+`P_i(t*)/Q(t*)` at a point `t*` inside the Taylor radius and compare to the
+full-jet Taylor sum (a more-accurate local truth, using *all* the held-out
+coefficients); pick the closer cell. Scored **8/8** across F64 + BigFloat,
+correctly firing **A** on BF-CM and **B** on BF-harmonic where both `R`-based
+rules fail. **Drop objective `g` entirely.** **Open design item (not yet
+prototyped):** `t*` must be inside the radius — for a genuine *in-step pole*
+(pole-crossing vector step) the surrogate truth diverges; add a radius check and
+a fallback (default to A on a detected in-step pole, consistent with the F64-tan
+tie + BF-CM A-win).
+
+### A1.5 — unchanged
+
+§4 (**d=1 short-circuit to (A)**) is *confirmed needed* — at d=1 cell (B) =
+`robust_pade(m−1,m)` ≠ cell (A) = `robust_pade(m,m)` (`smoke.jl`: μ_A=6, μ_B=5).
+§5 (opt-in `diagnostics` 3-tuple) stands. §6 perf: since the `g` gate is dropped,
+**build both always** (one extra small `O(m_eff³)` SVD per d≥2 step) — the
+unreliable conditional gate is not worth its risk.
+
+### A1.6 — updated sign-off status
+
+1. Objective ordering — **superseded**: use held-out-POINT, drop `g`/ε-floor.
+2. Neighbour breadth — **superseded**: cell (B) = wide-square `⌈m/d⌉·d` (A1.2).
+3. Always-both vs conditional — **decided: always-both** (the `g` gate fails, A1.4).
+4. Diagnostic surfacing — **stands** (opt-in 3-tuple; add `chosen_cell`, point-errors).
+5. Performance budget — **accepted**, always-both (A1.5).
+6. Held-out combine rule — **moot/replaced** by the point metric (max over components).
+7. d=1 mechanism — **stands** (short-circuit, A1.5).
+
+### A1.7 — untested before build (carry-overs)
+
+The audition measured **isolated single steps**. Before/with build, verify on:
+the multi-step **path-network walk** (accumulating error, adaptive `h`); the
+**~49-tolerance contract** (the corrected cell (B) lets the worklog-067 tolerances
+tighten back — confirm none asserts the loose value as a *lower* bound); cell-(B)
+**degenerate guards** (`d > m`, identically-zero component jet `padetaylor-0o9`;
+the prototype skips the ADR-0027 reduction loop on the square variants); and the
+**in-step-pole radius fallback** for the held-out-point discriminator (A1.4).
+
+### A1 references
+
+- `external/probes/adr0028-dual-construction-audition/FINDINGS.md` (synthesis),
+  `cells.jl` (the unified cell builder + `held_out_point`), `audition.jl`,
+  `addendum.jl`/`addendum2.jl` (BigFloat + multi-pole), `discriminator.jl`
+  (the 8/8 selector validation), `smoke.jl` (cell-A bit-identity + d=1 oracles).
+- `bd show padetaylor-0ql3` (audition bead, with the numeric summary).
