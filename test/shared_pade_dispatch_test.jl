@@ -19,6 +19,7 @@ using PadeTaylor: shared_denominator_pade, robust_pade, vector_taylor_coefficien
                   noumi_yamada_rhs
 using PadeTaylor.SharedPadeCellB: build_square_cell
 using PadeTaylor.SharedPadeDispatch: shared_pade_select
+using PadeTaylor.SharedPadeDefect: shared_q_residue
 using LinearAlgebra: eigvals
 
 # --- helpers ----------------------------------------------------------------
@@ -144,5 +145,17 @@ pick(f, z0, y0, h, m) =
         @test res[3].chosen_cell in (:square, :diagonal)              # ran, picked validly
         @test isfinite(res[3].defect_A) || isfinite(res[3].defect_B)  # at least one finite score
         @test res[3].chosen_cell == :square                          # SPD.5 entire ⇒ B even at complex h
+    end
+
+    @testset "SPD.6 shared_q_residue separates genuine pole from doublet" begin
+        # Q = 1 - t/2 has a simple pole at t=2; Q'(2) = -0.5.
+        den = [1.0, -0.5]
+        # genuine: numerator nonzero at the pole ⇒ residue |P(2)/Q'(2)| = 1/0.5 = 2
+        @test shared_q_residue([[1.0, 0.0]], den, 2.0) ≈ 2.0 atol = 1e-12   # SPD.6a genuine
+        # Froissart doublet: numerator ALSO vanishes at t=2 (P = 1 - t/2) ⇒ residue 0
+        @test shared_q_residue([[1.0, -0.5]], den, 2.0) < 1e-10            # SPD.6b doublet
+        # the filter (POLE_MIN_RESIDUE = 1e-4) keeps the genuine, drops the doublet
+        @test shared_q_residue([[1.0, 0.0]], den, 2.0) ≥ 1e-4              # SPD.6c kept
+        @test shared_q_residue([[1.0, -0.5]], den, 2.0) < 1e-4            # SPD.6d dropped
     end
 end

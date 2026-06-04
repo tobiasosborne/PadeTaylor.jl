@@ -156,6 +156,7 @@ module VectorWedgeStep
 using LinearAlgebra:        norm
 using Polynomials:          Polynomial, roots
 using ..VectorStepper:      VectorPadeStepperState, vector_pade_step_with_pade!
+using ..SharedPadeDefect:   shared_q_residue
 
 export _select_wedge, _adaptive_h, WEDGE_STEP_POLICIES, H_MIN_RATIO,
        SAFETY, VectorWalkError
@@ -305,6 +306,34 @@ const WEDGE_STEP_POLICIES = (:max_q_root, :min_y)
 # ten step-lengths away constrains nothing the next single step does.
 const CLEAR_CAP   = 10.0
 
+# Froissart-doublet residue floor for the pole-distance controllers (ADR-0028
+# dual-construction).  Cell B (selected per-step by the ODE defect) optimises the
+# step VALUE but can plant a near-cancelling pole–zero pair — a spurious pole
+# essentially at the node — that barely moves the value yet, read as a real pole,
+# collapses `_adaptive_h`.  A genuine shared pole has `shared_q_residue ≥ 2.1`; a
+# cell-B doublet `≤ 5.5e-8` (probe `external/probes/adr0028-froissart-consumer/`).
+# `1e-4` sits in that ~8-order gap with ≥4 orders of margin on each side.  (The
+# scalar `PoleField` default `1e-8` is too low — a doublet reaches 5.5e-8.)
+const POLE_MIN_RESIDUE = 1.0e-4
+
+# Nearest GENUINE shared-Q pole, |t*| over the denominator roots whose
+# `shared_q_residue ≥ POLE_MIN_RESIDUE` (Froissart doublets skipped).  `Inf` when
+# the denominator is constant or all its roots are doublets ⇒ no pole constrains
+# the step.  This is what makes the pole-distance controllers robust to the cell-B
+# doublets the ADR-0028 dispatch can introduce.
+function _nearest_genuine_pole(numerators, denominator)
+    length(denominator) ≤ 1 && return Inf
+    rs = roots(Polynomial(collect(denominator)))
+    isempty(rs) && return Inf
+    best = Inf
+    for t in rs
+        shared_q_residue(numerators, denominator, t) ≥ POLE_MIN_RESIDUE || continue
+        a = abs(t)
+        a < best && (best = a)
+    end
+    return best
+end
+
 # -----------------------------------------------------------------------------
 # Candidate quality — the canonical pole-free disc radius
 # -----------------------------------------------------------------------------
@@ -340,19 +369,20 @@ function _candidate_pole_disc(f, z_new::Complex{T}, y_new::Vector{Complex{T}},
                               order::Int, h_mag::T, ::Type{C}) where {T, C}
     clear = T(CLEAR_CAP) * h_mag
     state = VectorPadeStepperState{C}(z_new, y_new)
-    local denominator
+    local numerators, denominator
     try
-        _, _, denominator =
+        _, numerators, denominator =
             vector_pade_step_with_pade!(state, f, order, C(h_mag))
     catch
         # The canonical step at the landed node threw — the node is on a
         # pole.  The worst candidate: lose every max comparison.
         return T(-Inf)
     end
-    length(denominator) ≤ 1 && return clear         # constant Q — no pole
-    rs = roots(Polynomial(collect(denominator)))
-    isempty(rs) && return clear
-    return min(clear, h_mag * T(minimum(abs, rs)))
+    # Nearest GENUINE pole — Froissart doublets (an ADR-0028 cell-B artefact)
+    # filtered by residue, so a spurious near-node root never shrinks the disc.
+    dist = _nearest_genuine_pole(numerators, denominator)
+    isinf(dist) && return clear                     # no genuine pole — fully clear
+    return min(clear, h_mag * T(dist))
 end
 
 # -----------------------------------------------------------------------------
@@ -537,17 +567,29 @@ it and records the point as a `failed_targets` record — a fail-loud
 throw is still the honest signal, never a silent degenerate step.
 """
 function _adaptive_h(denominator::AbstractVector{C}, h_prev::T,
-                     h_max::T, h_min::T) where {T, C}
+                     h_max::T, h_min::T;
+                     numerators = nothing) where {T, C}
     # D_local — the h-independent absolute z-plane distance to the
     # nearest pole.  The canonical shared-Q lives in t = Δz/h_prev, so a
     # root t* is a pole at z-distance h_prev·|t*|.  No nearby pole (a
     # constant Q, or an empty root set) ⇒ the step is unconstrained from
     # below ⇒ h = h_max.
+    #
+    # When `numerators` is supplied (the production path), the nearest pole
+    # is the nearest GENUINE root — Froissart doublets (an ADR-0028 cell-B
+    # artefact) are filtered by residue (`_nearest_genuine_pole`), so a
+    # spurious near-node root does not collapse the step.  Without numerators
+    # (e.g. the VPN.3.3 contract test) the legacy raw-nearest-root is used.
     h_target = h_max
     if length(denominator) > 1
-        rs = roots(Polynomial(collect(denominator)))
-        if !isempty(rs)
-            D_local  = h_prev * T(minimum(abs, rs))
+        dist = if numerators === nothing
+            rs = roots(Polynomial(collect(denominator)))
+            isempty(rs) ? Inf : minimum(abs, rs)
+        else
+            _nearest_genuine_pole(numerators, denominator)
+        end
+        if isfinite(dist)
+            D_local  = h_prev * T(dist)
             # The scale-derived step: an *absolute* fraction of the
             # local pole-free disc, with no h_prev factor — so a node
             # leaving a dense pocket jumps straight back to h_max.

@@ -119,6 +119,7 @@ module VectorPoleField
 
 using Polynomials:        Polynomial, roots
 using ..VectorPathNetwork: VectorPathNetworkSolution
+using ..SharedPadeDefect: shared_q_residue
 
 export extract_poles_shared_q
 
@@ -244,7 +245,8 @@ measure.
 function extract_poles_shared_q(sol::VectorPathNetworkSolution{T};
                                 radius_t::Real               = 5.0,
                                 cluster_atol::Union{Nothing,Real} = nothing,
-                                min_support::Integer         = 2) where {T}
+                                min_support::Integer         = 2,
+                                min_residue::Real            = 1.0e-4) where {T}
     C = Complex{T}
 
     # The far-root filter is a z-plane-distance test against a
@@ -281,8 +283,15 @@ function extract_poles_shared_q(sol::VectorPathNetworkSolution{T};
         # A constant denominator (Q == [1]) has no roots — the local
         # approximant is a polynomial, no poles to report from this node.
         length(Q) ≥ 2 || continue
+        nums_k = sol.visited_numerators[k]
 
         for t in roots(Polynomial(Q))
+            # Froissart-doublet filter (ADR-0028 dual-construction): a cell-B
+            # near-cancelling pole–zero pair is not a real pole.  Skip a root
+            # whose shared-Q residue `max_c |P_c(t)/Q'(t)|` is below
+            # `min_residue` (calibrated 1e-4; genuine poles ≥ 2.1, doublets
+            # ≤ 5.5e-8 — probe `external/probes/adr0028-froissart-consumer/`).
+            shared_q_residue(nums_k, Q, t) ≥ min_residue || continue
             t_C = C(t)
             # Far-root filter — ADR-0026 Amendment 6 §S7.  Accept by
             # the root's z-plane DISTANCE `|h_node·t*|` against the

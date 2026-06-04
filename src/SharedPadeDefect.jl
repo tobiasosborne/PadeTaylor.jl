@@ -52,7 +52,7 @@ module SharedPadeDefect
 
 using LinearAlgebra: norm, eigvals
 
-export relative_defect, guard_root_estimates, pole_disagreement
+export relative_defect, guard_root_estimates, pole_disagreement, shared_q_residue
 
 # Horner evaluation of a low-to-high coefficient vector at scalar `t`.
 function _horner(c::AbstractVector, t)
@@ -129,6 +129,28 @@ function relative_defect(numerators::AbstractVector{<:AbstractVector{C}},
         used += 1
     end
     return used == 0 ? Inf : worst
+end
+
+"""
+    shared_q_residue(numerators, denominator, t) -> Float64
+
+Genuineness of a shared-Q pole candidate at a root `t` of `denominator`:
+`max_c |P_c(t) / Q'(t)|`.  A *genuine* shared pole (every component blows up
+together) has a substantial residue; a *Froissart doublet* — a spurious root whose
+numerators nearly vanish too, so the rational does not actually blow up there — has
+residue ≈ 0.  Returns `Inf` when `Q'(t) ≈ 0` (an exact multiple root, i.e. a genuine
+higher-order pole — kept).
+
+This is the shared-Q (vector) lift of the scalar `PoleField` Froissart residue
+(`res = N(t*)/D'(t*)`).  Calibrated separation on the ℘ FW Table 5.1 walk (probe
+`external/probes/adr0028-froissart-consumer/`): genuine poles have residue ≥ 2.1,
+cell-B doublets ≤ 5.5e-8 — an ~8-order gap, so a threshold `min_residue ≈ 1e-4`
+cleanly filters doublets without touching genuine poles.
+"""
+function shared_q_residue(numerators, denominator, t)
+    qp = _horner(polyder(denominator), t)
+    abs(qp) ≤ 1e-300 && return Inf
+    return Float64(maximum(abs(_horner(num, t) / qp) for num in numerators))
 end
 
 """

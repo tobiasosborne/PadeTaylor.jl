@@ -110,7 +110,7 @@ using PadeTaylor.VectorPathNetwork: vector_path_network_solve,
                                     VectorWalkFailure, COVER_FRAC
 using PadeTaylor.VectorPoleField: extract_poles_shared_q
 using PadeTaylor.VectorWedgeStep: _select_wedge, _adaptive_h, H_MIN_RATIO,
-                                  SAFETY, VectorWalkError
+                                  SAFETY, VectorWalkError, _nearest_genuine_pole
 using PadeTaylor.PainleveHierarchy: painleve_hierarchy, pI2_tritronquee_ic
 using PadeTaylor.VectorProblems: VectorPadeTaylorProblem
 using PadeTaylor.VectorStepper: VectorPadeStepperState,
@@ -584,18 +584,21 @@ end
         # The shared-Q-root distance (= pole-free disc) of the node a
         # wedge candidate lands on — the very quantity :max_q_root
         # maximises.  Mirrors `VectorWedgeStep._candidate_pole_disc`.
+        # Mirrors `VectorWedgeStep._candidate_pole_disc`, including the
+        # ADR-0028 Froissart-doublet residue filter (`_nearest_genuine_pole`):
+        # the disc is the distance to the nearest GENUINE pole, so a spurious
+        # near-cancelling root never shrinks it.
         function cand_disc(zc, yc, θ)
             hs = ComplexF64(h * cos(θ), h * sin(θ))
             st = VectorPadeStepperState{ComplexF64}(zc, yc)
             try
                 vector_pade_step_with_pade!(st, f, 24, hs)
                 st2 = VectorPadeStepperState{ComplexF64}(st.z, st.y)
-                _, _, den = vector_pade_step_with_pade!(st2, f, 24,
-                                                        ComplexF64(h))
+                _, num, den = vector_pade_step_with_pade!(st2, f, 24,
+                                                          ComplexF64(h))
                 length(den) < 2 && return 10.0 * h
-                rs = roots(Polynomial(collect(den)))
-                isempty(rs) ? 10.0 * h :
-                    min(10.0 * h, h * minimum(abs, rs))
+                dist = _nearest_genuine_pole(num, den)
+                isinf(dist) ? 10.0 * h : min(10.0 * h, h * dist)
             catch
                 -Inf
             end

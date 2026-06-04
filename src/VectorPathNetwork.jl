@@ -812,7 +812,8 @@ function vector_path_network_solve(prob::VectorPadeTaylorProblem{F, CT},
                 # h_max.
                 h_cur = adaptive ?
                     _adaptive_h(visited_denominator[parent],
-                                real(visited_h[parent]), h_max, h_min) :
+                                real(visited_h[parent]), h_max, h_min;
+                                numerators = visited_numerators[parent]) :
                     h_max
 
                 z_new, y_new =
