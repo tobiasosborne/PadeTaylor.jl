@@ -176,6 +176,51 @@ The held-out-point rule is the recommendation: it is the only tested rule that
 correctly fires **A** in the genuine-pole×precision regime *and* **B**
 everywhere else.
 
+## Pole-crossing resolution — the ODE defect is a single UNIFORM selector
+
+The held-out-point needs a point inside the Taylor radius, so it is invalid when
+a step *crosses* a pole. Research (defect/residual control — Enright; Higham;
+Corless–Kaya 2025 arXiv:2510.20117; the repo's own `kkg_ode_residual` pattern)
+pointed at the **relative ODE defect** as a reference-free, precision- and
+pole-agnostic accuracy proxy:
+
+```
+        ‖ ỹ'(t) − h·f(z₀+h·t, y(t)) ‖_∞                  ỹ(t) = P(t)/Q(t),
+score = ──────────────────────────────  (worst over t),  ỹ' = (P'Q−PQ')/Q²,
+        ‖ h·f(z₀+h·t, y(t)) ‖_∞ + atol                   sampled off the Q-roots.
+```
+
+`pole_crossing.jl` scores four rules against ground truth across **four
+regimes**, adding a genuine **vector pole-crossing** case with a closed-form
+oracle (tan-companion `u''=2u+2u³` → `(tan z, sec²z)`, double pole at π/2):
+
+| rule | pole-free | pole-crossing | BigFloat | BF-crossing | TOTAL |
+|---|---|---|---|---|---|
+| held-out-point | 5/5 | 5/5 | 2/2 | 6/6 | **18/18** |
+| **D1 relative defect** | 5/5 | 5/5 | 2/2 | 6/6 | **18/18** |
+| D2 Q²-defect | 5/5 | 5/5 | 2/2 | 6/6 | **18/18** |
+| D3 point+defect-fallback | 5/5 | 5/5 | 2/2 | 6/6 | **18/18** |
+
+Two findings:
+1. **Cell A NEVER wins a pole-crossing step** — even at BigFloat-256 and degree
+   `m=28`, the over-determined diagonal A *degrades* across a pole (`eA`: 1e2→1e3
+   as `m` grows) while square B_grow stays clean (down to `4e-32`). A's only
+   win is a *regular* high-precision step near (not across) a pole (BF-CM). So
+   in the crossing regime the choice is trivially B — which is *why* even the
+   (theoretically invalid) held-out-point scores 18/18 there: every crossing is a
+   landslide for B, so no rule can err.
+2. **D1 (relative defect) is the cleanest answer: a single uniform selector**,
+   18/18, with **no pole detection / radius check / fallback**. It is principled
+   across poles (the defect is a valid accuracy measure everywhere), whereas the
+   held-out-point is only *accidentally* correct across poles (landslides). It
+   fires A correctly on the genuine BF-CM A-win and B everywhere else.
+
+**Caveat (skeptic):** every test case was decisive (not a within-one-order close
+call); D1's perfection is on clear cases spanning ~30 orders of error magnitude
+and both precisions. A misrank in a genuine close call would cost ~nothing (both
+cells ≈ equally accurate by definition), and D1 never picked the much-worse cell.
+Recommend one close-call probe before final sign-off, but the result is strong.
+
 ## Bottom line for the maintainer decision
 
 - **Cell B must be the higher-degree wide-square Mano–Tsuda (`⌈m/d⌉·d`), not the
@@ -183,9 +228,16 @@ everywhere else.
 - **The dispatch is justified** — a genuine A-win regime survives (genuine poles
   × extended precision, e.g. the CM BF-256 case central to FW Table 5.1), so
   "always B" is unsafe.
-- **Replace the (R,g,K) Pareto with the held-out-POINT discriminator** (8/8 vs
-  6/8). Drop the conditioning gap `g` entirely (item 3). Add the in-step-pole
-  radius check + fallback as the one remaining design item.
+- **Replace the (R,g,K) Pareto with the relative ODE-defect selector (D1)** — a
+  *single uniform* discriminator, **18/18** across pole-free, pole-crossing,
+  BigFloat, and BigFloat-crossing regimes, needing **no pole detection / radius
+  check / fallback**. (The held-out-point also scores 18/18 but is only
+  accidentally valid across poles; D1 is principled everywhere. D3 = point +
+  defect-fallback is an equivalent more-conservative option.) Drop the
+  conditioning gap `g` entirely.
+- **The last open design item is now resolved** — there is no separate
+  pole-crossing fallback to build; the defect *is* the selector. (Cell A never
+  wins a pole-crossing step, so the crossing regime is trivially B anyway.)
 - d=1 short-circuit, opt-in diagnostics, and the always-both cost are all fine.
 
 ## Untested regimes (before fully retiring/committing the design)

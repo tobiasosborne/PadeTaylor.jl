@@ -387,17 +387,16 @@ The §2–§3 selection mechanism is **not trustworthy as specified** (mis-ranks
   is structural, absent from the returned σ-vector) — so `g_A` and `g_B` measure
   different objects.
 
-**Corrected mechanism (validated 8/8):** select by the **held-out-POINT**
-surrogate-truth error (probe `held_out_point`): evaluate each cell's
-`P_i(t*)/Q(t*)` at a point `t*` inside the Taylor radius and compare to the
-full-jet Taylor sum (a more-accurate local truth, using *all* the held-out
-coefficients); pick the closer cell. Scored **8/8** across F64 + BigFloat,
-correctly firing **A** on BF-CM and **B** on BF-harmonic where both `R`-based
-rules fail. **Drop objective `g` entirely.** **Open design item (not yet
-prototyped):** `t*` must be inside the radius — for a genuine *in-step pole*
-(pole-crossing vector step) the surrogate truth diverges; add a radius check and
-a fallback (default to A on a detected in-step pole, consistent with the F64-tan
-tie + BF-CM A-win).
+**Corrected mechanism — RESOLVED 2026-06-04 (Amendment 2, below):** select by the
+**relative ODE defect** `‖ỹ'(t) − h·f(z₀+h·t, y(t))‖ / ‖h·f‖` (a reference-free,
+precision- and pole-agnostic accuracy proxy; Enright/Higham defect control,
+Corless–Kaya 2025). It is a **single uniform selector — 18/18** across pole-free,
+pole-crossing, BigFloat, and BigFloat-crossing regimes (probe `pole_crossing.jl`,
+`relative_defect`), needing **no `g`, no radius check, and no separate
+pole-crossing fallback**. The held-out-point discriminator (8/8 on pole-free
+steps) remains a valid alternative/cross-check but is only accidentally correct
+across poles; the defect is principled everywhere. **Drop objective `g`
+entirely.** See Amendment 2 for the full pole-crossing audition.
 
 ### A1.5 — unchanged
 
@@ -424,8 +423,9 @@ the multi-step **path-network walk** (accumulating error, adaptive `h`); the
 **~49-tolerance contract** (the corrected cell (B) lets the worklog-067 tolerances
 tighten back — confirm none asserts the loose value as a *lower* bound); cell-(B)
 **degenerate guards** (`d > m`, identically-zero component jet `padetaylor-0o9`;
-the prototype skips the ADR-0027 reduction loop on the square variants); and the
-**in-step-pole radius fallback** for the held-out-point discriminator (A1.4).
+the prototype skips the ADR-0027 reduction loop on the square variants); and a
+**close-call probe** for the defect selector (all audition cases were decisive;
+A1.4's in-step-pole fallback is now *resolved* — Amendment 2).
 
 ### A1 references
 
@@ -434,3 +434,63 @@ the prototype skips the ADR-0027 reduction loop on the square variants); and the
   `addendum.jl`/`addendum2.jl` (BigFloat + multi-pole), `discriminator.jl`
   (the 8/8 selector validation), `smoke.jl` (cell-A bit-identity + d=1 oracles).
 - `bd show padetaylor-0ql3` (audition bead, with the numeric summary).
+
+---
+
+## Amendment 2 (2026-06-04) — the selector is resolved (relative ODE defect; uniform)
+
+A2 closes the one design item A1.4 left open (the in-step-pole fallback for the
+held-out-point selector). A literature survey (defect/residual control — Enright;
+Higham 1991; Corless–Kaya 2025 arXiv:2510.20117; AAA — Nakatsukasa–Sète–Trefethen
+2018; singularity-from-jet — Domb–Sykes, Mercer–Roberts, Hunter–Guerrieri) plus a
+four-discriminator audition (probe `pole_crossing.jl`, bead the A2 research bead)
+settled it.
+
+### A2.1 — the relative ODE defect is a single UNIFORM selector
+
+For the candidate `ỹ_i(t) = P_i(t)/Q(t)` over a step (rescaled `t∈[0,1]`,
+`z = z₀+h·t`), the **relative defect**
+`score = max_t ‖ ỹ'(t) − h·f(z₀+h·t, ỹ(t)) ‖_∞ / (‖h·f‖_∞ + atol)` (sampled at
+interior nodes off the roots of `Q`; `ỹ' = (P'Q − PQ')/Q²` exact) is a
+reference-free accuracy proxy that needs **no surrogate truth**, so it stays valid
+*across* a pole (the `‖h·f‖` normalisation cancels the blow-up). Scored against
+the oracle across **four regimes** — pole-free, pole-crossing (tan-companion
+`u''=2u+2u³` → `(tan z, sec²z)`, double pole at π/2, exact oracle), BigFloat-256,
+and BigFloat pole-crossing — it is **18/18**, correctly firing **A** on the lone
+genuine A-win (BF-CM regular step) and **B** everywhere else.
+
+### A2.2 — cell A never wins a pole-CROSSING step
+
+Even at BigFloat-256 and degree `m=28`, the over-determined diagonal A *degrades*
+across a pole (`eA` grows `1e2→1e3` with `m`) while the square cell B stays clean
+(to `4e-32`). A's only win is a *regular* high-precision step near (not across) a
+pole. So the crossing regime is trivially B — which is why even the
+theoretically-invalid held-out-point scores 18/18 there (every crossing is a
+landslide). The relative defect is preferred because it is *principled* across
+poles, not merely accidentally correct.
+
+### A2.3 — revised recommendation + remaining work
+
+- **Selector: the relative ODE defect (A2.1).** Drop the held-out-point + radius
+  fallback of A1.4 (the defect needs neither); keep the held-out-point only as an
+  optional independent cross-check on pole-free steps. Drop `g` (A1.4).
+- **Resolved sign-off #1**: relative ODE defect; no `g`, no ε-floor, no fallback.
+- **Remaining before build** (A1.7 minus the now-resolved fallback): the
+  ~49-tolerance contract; cell-(B) degenerate guards (`d>m`, zero-component jet
+  `padetaylor-0o9`, ADR-0027 reduction loop on the square variant); a multi-step
+  path-network walk; and a **close-call probe** (all audition cases were decisive
+  — a within-one-order A≈B step has not been stress-tested, though a misrank there
+  costs ≈ nothing by definition).
+
+### A2 references
+
+- `external/probes/adr0028-dual-construction-audition/pole_crossing.jl` (the
+  4-discriminator × 4-regime audition, 18/18), `cells.jl` (`relative_defect`,
+  `q_defect`, `held_out_point`, `nearest_pole_modulus`), `FINDINGS.md`
+  (§"Pole-crossing resolution").
+- Defect/residual control: Enright (CS Toronto E11); Higham 1991 SIAM
+  J.Sci.Comp. 12:991; Corless–Kaya 2025 arXiv:2510.20117. Singularity-from-jet:
+  Domb–Sykes; Mercer–Roberts (arXiv:2406.04228 App. B); Hunter–Guerrieri 1980
+  SIAM J.Appl.Math. 39(2):248. AAA: Nakatsukasa–Sète–Trefethen 2018
+  arXiv:1612.00337. Repo precedent: `figures/_kkg_pi2_helpers.jl` `kkg_ode_residual`,
+  `test/painleve_hierarchy_test.jl:154-186`.

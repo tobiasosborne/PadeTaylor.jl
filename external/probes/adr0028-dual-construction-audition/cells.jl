@@ -24,7 +24,7 @@
 using PadeTaylor: shared_denominator_pade, robust_pade
 using PadeTaylor.LinAlg: pade_svd
 using PadeTaylor.RobustPade: default_tol
-using LinearAlgebra: norm, qr, Diagonal, adjoint
+using LinearAlgebra: norm, qr, Diagonal, adjoint, eigvals
 
 # --- block builders ---------------------------------------------------------
 
@@ -279,6 +279,103 @@ function held_out_point(cell::PadeCell{T}, jets, tstar::Real) where {T}
         worst = max(worst, Float64(abs(pred - tru)))
     end
     return worst
+end
+
+# --- ODE-defect / residual discriminators (pole-AGNOSTIC, research-backed) --
+# Survey (bead padetaylor-? research phase): the defect δ(t)=ỹ'(t)−h·f(z0+ht,y(t))
+# (Enright; Higham; Corless–Kaya 2025 arXiv:2510.20117) is a reference-free,
+# precision-agnostic accuracy proxy that — unlike the held-out-point — stays
+# valid ACROSS a pole.  The repo already uses this pattern (kkg_ode_residual,
+# painleve_hierarchy_test.jl:154-186).
+
+# coefficients of d/dt of a low-to-high polynomial coeff vector.
+polyder(c::AbstractVector{T}) where {T} =
+    length(c) < 2 ? T[zero(T)] : T[(k - 1) * c[k] for k = 2:length(c)]
+
+# roots of a low-to-high coeff vector via the companion matrix (probe-local;
+# avoids a Polynomials.jl dep mismatch and works for Complex/BigFloat inputs).
+function poly_roots(c::AbstractVector)
+    cc = ComplexF64.(c)
+    while length(cc) > 1 && abs(cc[end]) < 1e-30
+        pop!(cc)
+    end
+    n = length(cc) - 1
+    n < 1 && return ComplexF64[]
+    C = zeros(ComplexF64, n, n)
+    for i = 1:n-1; C[i+1, i] = 1; end
+    for i = 1:n; C[i, n] = -cc[i] / cc[end]; end
+    return eigvals(C)
+end
+
+# |nearest root of Q| — the in-step-pole detector (cf. StepControl.step_pade_root).
+function nearest_pole_modulus(Q)
+    r = poly_roots(Q)
+    isempty(r) ? Inf : minimum(abs, r)
+end
+
+"""
+    relative_defect(cell, rhs, z0, h; samples, atol) -> Float64
+
+D1 — the UNIFORM candidate.  Sample the relative ODE defect
+`‖ỹ'(t) − h·f(z0+h·t, y(t))‖_∞ / (‖h·f‖_∞ + atol)` at interior points, skipping
+a guard band around each root of `Q` (where both sides blow up).  Worst sample
+governs.  Valid both on pole-free steps and ACROSS a pole (the ‖h·f‖
+normalisation cancels the leading blow-up).  `rhs(z,y)` is the ODE RHS.
+"""
+function relative_defect(cell::PadeCell{T}, rhs, z0, h;
+                         samples = (0.08, 0.22, 0.37, 0.55, 0.68, 0.82, 0.94),
+                         poleguard = 0.05, atol = 1e-300) where {T}
+    Q = cell.denominator
+    Qp = polyder(Q)
+    rts = poly_roots(Q)
+    numder = [polyder(p) for p in cell.numerators]
+    worst = 0.0
+    used = 0
+    for tr in samples
+        t = real(T)(tr)
+        any(r -> abs(t - r) < poleguard, rts) && continue
+        qv = _horner(Q, t); qpv = _horner(Qp, t)
+        y = [_horner(cell.numerators[i], t) / qv for i = 1:length(cell.numerators)]
+        yp = [(_horner(numder[i], t) * qv - _horner(cell.numerators[i], t) * qpv) / qv^2
+              for i = 1:length(cell.numerators)]
+        slope = h .* rhs(z0 + h * t, y)
+        defect = yp .- slope
+        scale = maximum(abs, slope) + atol
+        worst = max(worst, Float64(maximum(abs, defect) / scale))
+        used += 1
+    end
+    return used == 0 ? Inf : worst
+end
+
+"""
+    q_defect(cell, rhs, z0, h; samples) -> Float64
+
+D2 — the Q²-weighted (rigorous pole-crossing) form.  `D_i(t) = P_i'(t)Q(t) −
+P_i(t)Q'(t) − Q(t)²·h·f_i(z0+h·t, P/Q)`; the first two terms are polynomial
+(finite at the pole), so this can be sampled even straddling `t*`.  Normalised
+by `‖Q‖² · ‖h·f‖`.  (For a polynomial RHS the f-term × Q² is finite; we still
+skip the exact root to avoid the intermediate P/Q overflow.)
+"""
+function q_defect(cell::PadeCell{T}, rhs, z0, h;
+                  samples = (0.1, 0.25, 0.4, 0.6, 0.75, 0.9), poleguard = 0.02) where {T}
+    Q = cell.denominator; Qp = polyder(Q)
+    rts = poly_roots(Q)
+    numder = [polyder(p) for p in cell.numerators]
+    worst = 0.0; used = 0
+    nq2 = norm(Q)^2
+    for tr in samples
+        t = real(T)(tr)
+        any(r -> abs(t - r) < poleguard, rts) && continue
+        qv = _horner(Q, t); qpv = _horner(Qp, t)
+        y = [_horner(cell.numerators[i], t) / qv for i = 1:length(cell.numerators)]
+        fv = h .* rhs(z0 + h * t, y)
+        D = [_horner(numder[i], t) * qv - _horner(cell.numerators[i], t) * qpv - qv^2 * fv[i]
+             for i = 1:length(cell.numerators)]
+        scale = nq2 * (maximum(abs, fv) + 1e-300)
+        worst = max(worst, Float64(maximum(abs, D) / scale))
+        used += 1
+    end
+    return used == 0 ? Inf : worst
 end
 
 # --- conditioning gap + Pareto/lexicographic selection (ADR-0028 §3) --------
