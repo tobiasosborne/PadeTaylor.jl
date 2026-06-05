@@ -60,6 +60,8 @@ using PadeTaylor
     include("corpus_scalar_pole_bridge_test.jl")
     include("corpus_robust_pade_test.jl")
     include("corpus_taylor_jet_test.jl")
+    include("corpus_vector_test.jl")
+    include("corpus_vector_polefield_test.jl")
     include("pathnetwork_test.jl")
     include("branch_tracker_test.jl")
     include("path_network_branch_test.jl")
