@@ -65,6 +65,8 @@ using PadeTaylor
     include("corpus_bvp_test.jl")
     include("corpus_bvp_hybrid_test.jl")
     include("corpus_morphology_test.jl")
+    include("corpus_multisheet_test.jl")
+    include("corpus_winding_test.jl")
     include("pathnetwork_test.jl")
     include("branch_tracker_test.jl")
     include("path_network_branch_test.jl")
