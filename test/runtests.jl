@@ -109,4 +109,6 @@ using PadeTaylor
     include("corpus_vector_bvp_test.jl")
     include("vector_pipeline_oracle_test.jl")
     include("heun_test.jl")
+    include("corpus_heun_test.jl")
+    include("corpus_special_fn_test.jl")
 end
