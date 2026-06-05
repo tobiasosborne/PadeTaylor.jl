@@ -57,6 +57,7 @@ using PadeTaylor
     include("vector_path_network_stage2_test.jl")
     include("calogero_moser_test.jl")
     include("problems_test.jl")
+    include("corpus_scalar_pole_bridge_test.jl")
     include("pathnetwork_test.jl")
     include("branch_tracker_test.jl")
     include("path_network_branch_test.jl")
