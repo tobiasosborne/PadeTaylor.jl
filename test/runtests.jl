@@ -103,6 +103,7 @@ using PadeTaylor
     include("kkg_pi2_figure_test.jl")
     include("vector_bvp_test.jl")
     include("vector_bvp_wirein_test.jl")
+    include("corpus_vector_bvp_test.jl")
     include("vector_pipeline_oracle_test.jl")
     include("heun_test.jl")
 end
