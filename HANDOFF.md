@@ -8,7 +8,56 @@
 > previous session already paid for. The frictions surfaced are
 > recorded in `docs/worklog/001-stages-Z-1-2-handoff.md`.
 
-## 🔬 LATEST SESSION (2026-06-04) — ADR-0028 DISPATCH BUILT & SHIPPED (audition → build → Froissart fix)
+## 🔬 LATEST SESSION (2026-06-05) — GROUND-TRUTH TEST CORPUS (epic padetaylor-p1v0): 10 files, ~691 assertions, 3 bugs found
+
+Built a comprehensive ground-truth corpus to root out correctness bugs across
+EVERY capability. Two read-only research fan-outs (8-slice capability map +
+9-territory literature/reference-impl sweep) produced `docs/test_corpus/`
+(`00_capability_map.md` 22 buckets B1–B22 + 15 gaps; `01_corpus_catalogue.md`
+102 candidates; `candidates.json`; `_generate_catalogue.py`). Then 10 test
+files were built SERIALLY (one Opus subagent each, Rule 7), every assertion
+pinned to independently-derived ground truth (closed-form / mpmath /
+Mathematica / exact Rational), every load-bearing test mutation-proven,
+`src/` NEVER touched. Capture scripts under
+`external/probes/corpus-oracles/<area>/`.
+
+**Full `Pkg.test()`: 8487 PASS / 5 BROKEN / 8492 (17m26s, idle box).** The +691
+over the 7796 baseline are the new corpus; the 5 broken are exactly the 5
+in-suite trackers (below). 0 failures.
+
+**3 CONFIRMED LIBRARY BUGS** (all Rule-1 fail-loud-guard-missing at the edges —
+NOT wrong numerics; all P2, all tracked via `@test_broken` that auto-flips GREEN on fix):
+- **padetaylor-q0yq** — `IVPBVPSolution` callable promises a glue-continuity
+  throw it never performs (src/IVPBVPHybrid.jl:726-729,736 vs :738-781);
+  reproduced live (CBV.9).
+- **padetaylor-53tu** — BVP/VectorBVP callable `real(t*)`-only domain guard
+  silently extrapolates off oblique-complex segments (src/BVP.jl:491,
+  src/VectorBVP.jl:~318); CBV.7.
+- **padetaylor-61um** — `winding_delta` silently loses a full revolution on
+  |Δθ|≥π single steps; precondition (src/SheetTracker.jl:275-277) unenforced,
+  and subtle (angle() wraps before the subtraction, so a naive guard never
+  fires); corrupts downstream sheet indices; CWD.5.
+
+**The numerical core is CLEAN.** Across ~691 assertions no computed value was
+wrong: robust Padé, Taylor jets (incl. the new BigFloat 2nd-order recurrence
+oracle), steppers, scalar+vector BVP, the vector shared-Q complex-pole-bridging
+KEYSTONE (verified vs 3 external closed forms; NY vector walk externally
+validated vs mpmath odefun ~2e-16), multi-sheet transformed RHS, Heun (ε-mono­
+culture broken), and the Painlevé/NY families are all sound.
+
+**7 catalogue oracle errata** (`docs/test_corpus/ERRATA.md`) — research-artifact
+scout-recipe slips caught by independent verification; the PACKAGE was correct
+in all 7 (jorba-zou exponent, CM sign-convention, two-cut winding sign, 2 Heun
+truncation/figure errors, tritronquée pole on +axis not −axis, NY Bäcklund α-sum).
+
+**FOLLOW-ON (open beads):** padetaylor-q0yq / 53tu / 61um (fix the 3 fail-loud
+guards — each `@test_broken` flips GREEN when fixed). Deferred-oracle markers
+(not bugs): CVE.6 (CM imaginary-collision — repulsive system has no real
+collision) and CPR.9 (PI⁽²⁾ tritronquée x=0 ridge value — no published value).
+Lamé/HeunC-2nd-sheet reductions deferred (need Mathematica LameC). The 5 corpus
+@test_broken are the canonical TODO list for the guard fixes + deferrals.
+
+## 🔬 SESSION (2026-06-04) — ADR-0028 DISPATCH BUILT & SHIPPED (audition → build → Froissart fix)
 
 Took ADR-0028 (shared-Padé dual-construction dispatch) from *proposed* to
 *accepted/shipped*. Full arc in **worklog 071**; ADR-0028 **Amendments 1–3** are the
