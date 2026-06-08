@@ -124,4 +124,5 @@ using PadeTaylor
     include("corpus_pathnet_lattice_sectors_test.jl")
     include("corpus_pathnet_winding_test.jl")
     include("corpus_algebraic_pvi_test.jl")
+    include("corpus_out_of_class_test.jl")
 end
