@@ -117,4 +117,5 @@ using PadeTaylor
     include("corpus_periodic_pole_test.jl")
     include("corpus_orthopoly_bvp_test.jl")
     include("corpus_higher_order_pole_test.jl")
+    include("corpus_elliptic_lattice_test.jl")
 end
