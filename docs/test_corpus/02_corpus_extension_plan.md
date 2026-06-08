@@ -407,3 +407,52 @@ poles / sheet index** are pinnable.
 Build **serially** (Rule 7), mutation-prove every load-bearing assertion (Rule
 4), full `Pkg.test()` only at end-of-phase (the new `@test_broken`s for 61um /
 53tu / essential-singularity auto-flip green when those guards are fixed).
+
+---
+
+## Build status — DELIVERED (2026-06-08)
+
+All 14 new test files + the CVB.4 addition shipped GREEN, mutation-proven (Rule
+4), every assertion pinned to independent ground truth (Rule 5), `src/`
+untouched, built **serially** by one Opus coding agent each (Rule 7). Per-file
+standalone results:
+
+| Bead | File | Result | Notes |
+|---|---|---|---|
+| bnqq | corpus_riccati_rational | 19/19 | Hermite/Chebyshev exact-rational rows |
+| 5rks | corpus_periodic_pole | 12/12 | logistic vertical row; extract_poles resolved it at default min_support=3 |
+| 40q1 | corpus_orthopoly_bvp | 12/12 | gap #6 D1-Jacobian **clean**; BC-sign + tol-metric errata |
+| gf8i | corpus_higher_order_pole | 43/43 | orders 3–5 incl ℘′ triple (not deferred); SVD-routing premise erratum |
+| dctk | corpus_elliptic_lattice | 30/30 | Jacobi-triple shared-Q keystone pinned by independent oracle (closes gap #5) |
+| g9lg | corpus_elementary_branch | 29 + 1 broken | CBr.3 = 61um auto-flip marker; CBr.1 cross-sheet deferred |
+| vt02 | corpus_pathnet_walls_rows | 36/36 | δ-sweep 2→1 pole merge at cluster floor; no spurious doublet |
+| 3jfw | corpus_pathnet_lattice_sectors | 21/21 | tritronquée sector z=-50 + zero-pole; off-axis sector-edge deferred |
+| nkw8 | corpus_pathnet_winding | 21 + 1 broken | **first real-walk 61um catch**; min_u-into-branch finding documented |
+| tyef | corpus_riccati_special | 19/19 | Airy/Bessel real rows + PCF complex pole (not deferred) |
+| by02 | corpus_algebraic_pvi | 29/29 | PVI ζ-RHS wiring verified vs external algebraic solution (closes gap #9) |
+| nzcj | corpus_out_of_class | 12 + 1 broken | **v1ub CONFIRMED** (silent essential-singularity bridge); Chazy deferred |
+| evlo | corpus_special_fn_bvp | 10/10 | Kummer exact-poly + Mathieu pinned eigenvalue + Whittaker |
+| p0yv | corpus_oblique_guard | 47 + 2 broken | 53tu confirmed in **both** BVP + VectorBVP; cosh-sign erratum |
+| t6z8 | corpus_vector_bvp (CVB.4) | 112/112 file | off-diagonal coupling τ-assembly verified **correct** (closes gap #10) |
+
+**Library bugs found: 1** — `padetaylor-v1ub` (essential-singularity silent bridge,
+CONFIRMED with the real solver; relERR curve annotated on the bead). The 3
+prior-known guard bugs (`q0yq`/`53tu`/`61um`) now have **5 in-suite `@test_broken`
+auto-flip markers** (CBr.3, CPN.7, CFail.1, and the two CBvx.4 scalar+vector).
+**No wrong computed value anywhere** — the numerical core remains clean.
+
+**Brief errata: 5** (`docs/test_corpus/ERRATA.md`, corpus-extension section) — all
+brief/recipe slips caught by independent verification, package correct in every
+case.
+
+**Clean-verdict checks (no bug, gap closed):** gap #5 (shared-Q keystone, dctk),
+gap #6 (D1-coupled BVP Jacobian, 40q1 + evlo), gap #9 (non-self-referential PVI,
+by02), gap #10 (coupling vector BC τ-assembly, t6z8).
+
+**Deferred / follow-on (open beads):** `padetaylor-v1ub` (the fix needs a careful
+out-of-class diagnostic that must NOT misfire on genuine pole-bridging — its own
+design effort + ADR), `padetaylor-90oh` (extract_poles per-cluster multiplicity
+API — additive enhancement + ADR), `padetaylor-vimm` (generic-branch algebraic
+PVI oracle — blocked on reference acquisition). In-test deferrals: CBr.1
+cross-sheet eval, CFail.2 Chazy, CRic.6 real-row sister, the off-axis tritronquée
+sector-edge targets.
