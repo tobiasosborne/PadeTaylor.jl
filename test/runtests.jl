@@ -113,4 +113,5 @@ using PadeTaylor
     include("heun_test.jl")
     include("corpus_heun_test.jl")
     include("corpus_special_fn_test.jl")
+    include("corpus_riccati_rational_test.jl")
 end
