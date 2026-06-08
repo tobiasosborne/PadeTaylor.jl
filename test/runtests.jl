@@ -121,4 +121,5 @@ using PadeTaylor
     include("corpus_elementary_branch_test.jl")
     include("corpus_pathnet_walls_rows_test.jl")
     include("corpus_pathnet_lattice_sectors_test.jl")
+    include("corpus_pathnet_winding_test.jl")
 end
