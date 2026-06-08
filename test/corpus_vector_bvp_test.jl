@@ -31,6 +31,13 @@
 #   CVB.3  vector-rank-deficient-bc    Rule-1 fail-loud probe: a genuinely
 #          RANK-DEFICIENT combined boundary operator → singular Jacobian →
 #          the solver MUST throw (never silently return garbage).
+#   CVB.4  vector-offdiag-coupling-bvp GENUINE off-diagonal COUPLING B (gap-#10
+#          residual, 02_corpus_extension_plan.md Family H CVB.4 note): neither a
+#          selector (CVB.2) nor a scalar ±I (CVB.1) but B_a=[[1,1],[0,1]],
+#          B_b=[[1,0],[1,1]] — each block COUPLES y1 with y2 via a non-zero
+#          OFF-DIAGONAL entry, so the B_a·Y_N + B_b·Y_0 τ-assembly is
+#          load-bearing in its off-diagonal entries (a diagonal-only mutation of
+#          the assembly changes the recovered function).
 #
 # THE ODE AND CLOSED FORM (one oracle, three BCs)
 # -----------------------------------------------
@@ -54,6 +61,13 @@
 #     valid trivial solution).  Solving the BC leaves a FREE parameter
 #     (A = 1−√3·B): the continuous problem is genuinely underdetermined, so
 #     the discrete BC rows are linearly dependent and the Jacobian singular.
+#   * CVB.4: B_a=[[1,1],[0,1]], B_b=[[1,0],[1,1]] on [0, π/2].
+#     B_a·y(0)   = [[1,1],[0,1]]·(0,1) = (1,1);
+#     B_b·y(π/2) = [[1,0],[1,1]]·(1,0) = (1,1);  g = (1,1)+(1,1) = (2,2).
+#     sympy confirms [B_a|B_b] full rank 2 ⇒ UNIQUE A=1,B=0 = (sin,cos), and
+#     that a DIAGONAL-ONLY mutant (zeroing the off-diagonal B_a[1,2]) instead
+#     pins A=4/3,B=2/3 ≠ (sin,cos) — i.e. the off-diagonal coupling is
+#     load-bearing.  y(π/4)=(√2/2,√2/2) exact.
 #
 # DE-DUPLICATION (CLAUDE.md Rule 3 — skepticism)
 # ----------------------------------------------
@@ -173,6 +187,34 @@ y_exact(z) = [sin(z), cos(z)]
         @test_throws ErrorException vector_bvp_solve(f_sc, z_a, z_b,
                                                      B_a, B_b, g; N = 16)
     end
+
+    # ----------------------------------------------------------------------
+    # CVB.4  vector-offdiag-coupling-bvp — GENUINE off-diagonal COUPLING B
+    # (gap-#10 residual).  B_a=[[1,1],[0,1]] couples y1+y2 at z_a; B_b=
+    # [[1,0],[1,1]] couples y1+y2 at z_b; g=(2,2) on [0, π/2].  Oracle (sympy,
+    # from the closed form): B_a·y(0)=(1,1), B_b·y(π/2)=(1,1), g=(2,2); full
+    # rank ⇒ UNIQUE (sin,cos).  Each off-diagonal B entry is load-bearing —
+    # a diagonal-only assembly would pin A=4/3,B=2/3 ≠ (sin,cos).
+    # ----------------------------------------------------------------------
+    @testset "CVB.4  off-diagonal coupling B: recover (sin z, cos z)" begin
+        z_a, z_b = 0.0, π/2
+        B_a = [1.0 1.0; 0.0 1.0]               # row1 couples y1+y2 at z_a
+        B_b = [1.0 0.0; 1.0 1.0]               # row2 couples y1+y2 at z_b
+        g   = [2.0, 2.0]                        # = B_a·y(0)+B_b·y(π/2), sympy
+        @test rank([B_a B_b]) == 2             # full-rank coupling ⇒ well-posed
+        sol = vector_bvp_solve(f_sc, z_a, z_b, B_a, B_b, g; N = 24, tol = 1e-12)
+        @test sol.iterations ≤ 2               # linear ⇒ 1 Newton step
+        @test sol.residual_inf ≤ 1e-12
+        # Interior node values to spectral accuracy — the gap-#10 assertion.
+        for j in 1:sol.N+1
+            @test isapprox(sol.Y_nodes[j], y_exact(sol.nodes_z[j]); atol = 1e-12)
+        end
+        # Off-node barycentric callable, incl. the catalogue spot value.
+        @test isapprox(sol(π/4), [sqrt(2)/2, sqrt(2)/2]; atol = 1e-12)
+        for z in (0.2, 0.8, 1.3)
+            @test isapprox(sol(z), y_exact(z); atol = 1e-12)
+        end
+    end
 end
 
 # ============================================================================
@@ -203,6 +245,27 @@ end
 #   so the expected throw did NOT fire — an extra catch, not the targeted
 #   bite.)  This is exactly the τ-method trap ADR-0023 / VB.* Mutation B warn
 #   about, here localised to the general/coupling/mixing-B path.  Restored
+#   byte-for-byte.
+#
+# M-oracle (CVB.4): flip the CVB.4 boundary right-hand side g — `g=[2.0,2.0]`
+#   → `g=[3.0,2.0]`.  Result: CVB.4 RED (29 sub-asserts — the node loop, the
+#   off-node loop, and the y(π/4) spot value all detect the recovered function
+#   ≠ (sin,cos) once g is wrong); CVB.1/CVB.2/CVB.3 stayed GREEN (36/42/2).
+#   Restored byte-for-byte.
+#
+# M-impl (the OFF-DIAGONAL τ-ASSEMBLY mutant — CVB.4's gap-#10 target): in
+#   src/VectorBVP.jl, drop the off-diagonal contribution of B_a in the
+#   `B_a·Y_N` assembly — `J_bc[:, nodeN+1:nodeN+d] .= Diagonal(Ba)` (was `.=
+#   Ba`) and the matching `_residual` line `R[ctx.bc_rows] .= Diagonal(ctx.Ba)
+#   * Y[n+1:n+d] .+ ctx.Bb*Y[1:d] .- ctx.g_CT` (with `Diagonal` added to the
+#   LinearAlgebra import).  This keeps the τ-pairing correct but silently zeros
+#   the cross-component coupling B_a[1,2].  Result: CVB.4 RED (29 sub-asserts)
+#   — Newton converges but to the diagonal-only function A=4/3,B=2/3 ≠
+#   (sin,cos) (sympy-predicted in capture.py CASE 4); CVB.1 (B_a=I, already
+#   diagonal) and CVB.2 (B_a=[[0,0],[0,1]], already diagonal) stayed GREEN
+#   (36/42 — the mutation is a no-op on a diagonal B_a), and CVB.3 still threw
+#   (2 GREEN).  So CVB.4 is the UNIQUE detector of an off-diagonal assembly bug
+#   — its off-diagonal coupling is provably load-bearing.  Restored
 #   byte-for-byte.
 #
 # Run standalone with:

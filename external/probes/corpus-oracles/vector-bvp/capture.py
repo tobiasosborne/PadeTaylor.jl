@@ -77,3 +77,28 @@ print("#   g (from closed form) =", g3.T.tolist(), " ; consistent (g2==2*g1):",
       sp.simplify(g3[1] - 2 * g3[0]) == 0, " ; non-trivial (g != 0): True")
 print("#   uniqueness (A,B):", uniqueness(Ba3, Bb3, g3, za3, zb3),
       "-> FREE PARAMETER => underdetermined => singular Jacobian (Rule-1 throw)")
+
+# === CASE 4 — vector-offdiag-coupling-bvp: GENUINE off-diagonal B on [0, pi/2] ===
+# Gap-#10 residual (02_corpus_extension_plan.md Family H, CVB.4 note): an
+# off-diagonal COUPLING B (not a selector, not antiperiodic-scalar I), so the
+# B_a·Y_N + B_b·Y_0 tau-assembly is load-bearing in BOTH off-diagonal entries.
+print("\n# === CVB.4  off-diagonal coupling  B_a=[[1,1],[0,1]], B_b=[[1,0],[1,1]]  on [0, pi/2] ===")
+za4, zb4 = sp.Integer(0), sp.pi / 2
+Ba4 = sp.Matrix([[1, 1], [0, 1]])   # row1 couples y1+y2 at z_a (off-diagonal)
+Bb4 = sp.Matrix([[1, 0], [1, 1]])   # row2 couples y1+y2 at z_b (off-diagonal)
+g4 = sp.simplify(Ba4 * yat(za4) + Bb4 * yat(zb4))
+M4 = sp.Matrix.hstack(Ba4, Bb4)
+print("#   B_a y(0)   =", sp.simplify(Ba4 * yat(za4)).T.tolist(), " (= (1,1))")
+print("#   B_b y(pi/2)=", sp.simplify(Bb4 * yat(zb4)).T.tolist(), " (= (1,1))")
+print("#   g = B_a y(0) + B_b y(pi/2) =", g4.T.tolist(), " (catalogue (2,2))")
+print("#   [Ba|Bb] rank =", M4.rank(), "(full rank 2 -> well-posed)")
+print("#   y(pi/4) =", sp.simplify(yat(sp.pi / 4)).T.tolist(), " (= (sqrt2/2, sqrt2/2))")
+print("#   uniqueness (A,B):", uniqueness(Ba4, Bb4, g4, za4, zb4),
+      "-> UNIQUE A=1,B=0 = (sin,cos)")
+# Load-bearing check: a DIAGONAL-ONLY mutation of the assembly (zero the
+# off-diagonal B_a[0,1]) must change the unique solution away from (sin,cos),
+# proving the off-diagonal coupling is load-bearing (Rule-4 M-impl target).
+Ba4_diag = sp.Matrix([[1, 0], [0, 1]])   # off-diagonal entry zeroed
+sol_diag = uniqueness(Ba4_diag, Bb4, g4, za4, zb4)
+print("#   diagonal-only mutant (Ba[0,1]->0) uniqueness (A,B):", sol_diag,
+      "-> NOT A=1,B=0  => off-diagonal coupling is LOAD-BEARING")
