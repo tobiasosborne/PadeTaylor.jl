@@ -8,7 +8,49 @@
 > previous session already paid for. The frictions surfaced are
 > recorded in `docs/worklog/001-stages-Z-1-2-handoff.md`.
 
-## 🔬 LATEST SESSION (2026-06-05) — GROUND-TRUTH TEST CORPUS (epic padetaylor-p1v0): 10 files, ~691 assertions, 3 bugs found
+## 🔬 LATEST SESSION (2026-06-08) — CORPUS-v2 POLE-ZOO (epic padetaylor-25og) DELIVERED + extract_poles bug found
+
+Full arc in **worklog 072**; plan + DELIVERED build-status table in
+`docs/test_corpus/02_corpus_extension_plan.md`; errata in
+`docs/test_corpus/ERRATA.md` (corpus-extension section). Extended the v1 corpus into
+the **pole-morphology** blind spots (higher-order poles, real/vertical-periodic pole
+rows, new elliptic lattices, elementary branch points, out-of-class fail-loud, BVP
+exact oracles, path-network routing). **Orchestrated, serial build**: one Sonnet
+recon → BUILD CONTRACT, then **15 beads built one Opus agent each** (Rule 7 — never
+two Julia processes), oracle-capture → test → mutation-proof → register, per-bead
+commit/push.
+
+**Full `Pkg.test()`: 8859 PASS / 10 BROKEN / 0 FAIL** (18m32s). The 10 broken are
+INTENTIONAL `@test_broken` auto-flip markers — a nonzero broken count is EXPECTED,
+not a regression (`bd remember corpus-v2-expected-broken-count`); investigate only
+Fails. 14 new test files + CVB.4, ~370 assertions, all mutation-proven, `src/`
+untouched.
+
+**Found 1 NEW library bug + 1 via the demo:**
+- **padetaylor-v1ub** (P3) — `solve_pade` SILENTLY bridges an essential singularity
+  (`e^{1/z}`): finite plausible values, no throw, relERR → 1e+17 *and wrong sign*
+  near z=0. CONFIRMED vs the real solver; CFail.1 `@test_broken` is the auto-flip.
+- **padetaylor-fzse** (P2) — `extract_poles` over-splits poles into duplicate
+  clusters AND emits false-positives + misses on **dense 2D path-network pole
+  fields** (~76 % precision/recall even tuned; default cluster_atol=0.1 too tight vs
+  cross-node spread, greedy clustering can't self-merge, radius_t=5 admits ghost
+  roots). Found plotting `figures/demo_lattice_singularities.jl` (logistic row + ℘
+  lattice). The `|u|` FIELD is computed flawlessly; only the pole-FINDER is buggy.
+  Bead carries root cause + fix menu (agglomerative clustering + validity gate +
+  tighter far-root admission) + a requested dense-lattice corpus test.
+
+**4 clean-verdict gap closures (no bug):** shared-Q keystone #5 (Jacobi triple),
+D1-coupled BVP Jacobian #6, PVI ζ-RHS wiring #9 (external algebraic solution),
+coupling vector-BC τ-assembly #10. **5 brief errata** — package correct every time.
+
+**Open follow-ons (standalone P3 unless noted):** `padetaylor-v1ub` (fix — must not
+misfire on genuine pole-bridging), `padetaylor-fzse` (P2, extract_poles), `padetaylor-90oh`
+(extract_poles multiplicity API + ADR; lands alongside fzse via shared
+`_extract_poles_core`), `padetaylor-vimm` (BLOCKED on reference acquisition). Also
+the v1 follow-ons `q0yq`/`53tu`/`61um` remain — now with corpus `@test_broken`
+auto-flip markers across CBr.3/CPN.7/CBvx.4.
+
+## 🔬 SESSION (2026-06-05) — GROUND-TRUTH TEST CORPUS (epic padetaylor-p1v0): 10 files, ~691 assertions, 3 bugs found
 
 Built a comprehensive ground-truth corpus to root out correctness bugs across
 EVERY capability. Two read-only research fan-outs (8-slice capability map +
