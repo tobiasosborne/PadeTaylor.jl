@@ -119,4 +119,5 @@ using PadeTaylor
     include("corpus_higher_order_pole_test.jl")
     include("corpus_elliptic_lattice_test.jl")
     include("corpus_elementary_branch_test.jl")
+    include("corpus_pathnet_walls_rows_test.jl")
 end
