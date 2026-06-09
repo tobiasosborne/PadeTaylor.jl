@@ -8,7 +8,30 @@
 > previous session already paid for. The frictions surfaced are
 > recorded in `docs/worklog/001-stages-Z-1-2-handoff.md`.
 
-## 🔬 LATEST SESSION (2026-06-08) — CORPUS-v2 POLE-ZOO (epic padetaylor-25og) DELIVERED + extract_poles bug found
+## 🔬 LATEST SESSION (2026-06-09) — TEST-HARDENING SWEEP (epic padetaylor-krgy) DELIVERED
+
+Full arc in **worklog 073**; methodology in `docs/test_corpus/03_hardening_methodology.md`
+(deep-research synthesis); ADR-0029 (certified ball oracles), ADR-0030 (formal-methods
+DEFER). Upgraded the ground-truth corpus into a **multi-technique verification suite**:
+static analysis (Aqua/JET/ExplicitImports), property-based (Supposition), **metamorphic
+relations** (oracle-free), **certified ball oracles** (Arb), differential (in-file RK4),
+convergence/MMS V&V, **automated mutation gate**, accuracy-regression ledger, enforced
+provenance contract, type-stability + AllocCheck, coverage (96.18%), perf gate. One
+serial runner `scripts/quality_gate.sh` (fast/full/deep) ties them together (see CLAUDE.md
+Practical guidance). **Full `Pkg.test()`: 9219 pass / 10 broken / 0 fail.**
+
+**Orchestrated, serial** (Rule 7): one Opus subagent per coding bead (build →
+mutation-prove → verify → report), Sonnet for research; per-bead commit/push; full-suite
+gates batched. All 14 planned beads shipped; epic stays open only for deferred `krgy.15`.
+
+**8 finding-beads produced — all real edge-guards / test-gaps, the numerical core is CLEAN:**
+`xhjw` (solve_pade descending-span Rule-1 bug), `jznu` (SharedPade degenerate divergence,
+SP.1.1 over-claims), `fmf8` (Statistics→weakdep), `98pe` (mutation survivors), `ftxn`
+(coverage blind spots COV-1..7), `krgy.15` (deferred MRs). Non-bug corrections folded in:
+the diagonal-Padé order law `2⌊order/2⌋+1` and a TOML test-env fix. 3 process lessons in
+`bd remember` (static-gate order-dependence; standalone-vs-Pkg.test env gotchas).
+
+## 🔬 SESSION (2026-06-08) — CORPUS-v2 POLE-ZOO (epic padetaylor-25og) DELIVERED + extract_poles bug found
 
 Full arc in **worklog 072**; plan + DELIVERED build-status table in
 `docs/test_corpus/02_corpus_extension_plan.md`; errata in
