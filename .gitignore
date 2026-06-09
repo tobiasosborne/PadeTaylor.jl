@@ -60,3 +60,6 @@ external/probes/heun-oracle/capture.stderr
 # comes from its fixed `rng=Xoshiro(0x5eed)` seed, NOT from this directory, so
 # the DB is a regenerable runtime artifact — never committed.
 test/SuppositionDB/
+
+# Julia coverage artifacts (Coverage.jl / --code-coverage)
+*.cov
