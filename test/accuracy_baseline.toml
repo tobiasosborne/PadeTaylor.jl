@@ -1,0 +1,111 @@
+# test/accuracy_baseline.toml -- ACCURACY-REGRESSION LEDGER baseline.
+# Bead padetaylor-krgy.8 (epic padetaylor-krgy; Tier-2 §2.5 of
+# docs/test_corpus/03_hardening_methodology.md:143-146).
+#
+# This is the committed, human-reviewable BASELINE consumed by
+# test/accuracy_ledger_test.jl.  Each `[case]` table records the BEST
+# ACHIEVED error metric of one representative computation, captured on this
+# machine.  The test asserts, for every case,
+#
+#       achieved_relerr <= relerr * (1 + slack)
+#
+# where `slack` lives in the test (a single band, documented there), so a
+# silent DEGRADATION -- the kind a fixed absolute-tol gate happily passes --
+# turns the suite RED.  When the achieved error drops well BELOW the
+# baseline the test STILL PASSES but prints an "improved -- tighten me"
+# advisory; that is the cue to regenerate (see below).
+#
+# `relerr` here is the LEDGER metric, NOT a correctness tolerance: the
+# corpus already pins each value against its oracle at an absolute tol
+# (cited per case).  The ledger tracks DRIFT of the achieved error, a
+# strictly finer signal.
+#
+# ----------------------------------------------------------------------------
+# THIS IS A LOCAL (NO-CI) BASELINE.  Rule 11: no GitHub CI.  The package's
+# numerical-tier determinism (SVD + Padé root-finding) is bit-identical only
+# *given the platform fingerprint* {arch, os, runtime} (src/PadeTaylor.jl
+# "Determinism" docstring).  The literals below were captured on THIS box;
+# the test's `slack` band absorbs the small cross-platform float jitter a
+# different LAPACK/BLAS or arch can introduce.  A reviewer regenerating on a
+# different machine should expect last-digit movement, NOT order-of-magnitude
+# change -- if a case moves by orders of magnitude, that is a real
+# regression, not jitter.
+#
+# ----------------------------------------------------------------------------
+# REGENERATION / APPROVAL (ties to krgy.9 snapshot-approval workflow).
+# Baseline updates are EXPLICIT, reviewed commits -- never silent:
+#
+#   julia --project=. -e 'ENV["PADETAYLOR_REGEN_ACCURACY_BASELINE"]="1"; \
+#       include("test/accuracy_ledger_test.jl")'
+#
+# rewrites THIS file from the current achieved errors, then a human reviews
+# the `git diff` (every changed digit is visible) and commits it as the new
+# approved baseline.  TIGHTENING after an "improved" advisory and a genuine
+# (documented) accuracy regression both go through the same review gate.  The
+# test NEVER writes this file on a normal run.
+#
+# Provenance of each metric + its oracle is in the per-case `oracle` field
+# and, in full, in the test header.  `meta.captured` records when/where.
+
+[meta]
+captured = "2026-06-09; Julia 1.12.5; linux x86_64 (WSL2); local no-CI baseline"
+slack    = 0.25   # advisory copy of the test's band; the TEST is authoritative
+
+# ----------------------------------------------------------------------------
+# robust_pade -- the algebraic SVD/classical heart (GGT 2013 Alg.2).
+# ----------------------------------------------------------------------------
+
+[robust_pade_exp77]
+relerr = 1.1824596857223924e-11
+metric = "max |coeff - exact| of (7,7) Pade of exp jet (abs; a[1]=1 has unit scale so abs == rel here)"
+oracle = "exact binomial Pade CRP_EXP77_A/_B (_oracle_corpus_robust_pade.jl; catalogue md:1459-1474); kappa(T_7x7)~9.1e12"
+
+[robust_pade_tan33]
+relerr = 6.245004513516506e-16
+metric = "relERR of cubic numerator coeff a[4] of (3,3) Pade of tan vs -1/15"
+oracle = "closed-form p=z-z^3/15 CRP_TAN33_A[4] (_oracle_corpus_robust_pade.jl; catalogue md:1476-1491)"
+
+# ----------------------------------------------------------------------------
+# solve_pade -- the IVP stepper (Taylor -> Pade -> step), Weierstrass-P RHS.
+# Two scales: BEFORE the lattice pole (machine floor) and PAST it (the
+# Pade-bridge rational-approx floor) -- the ledger tracks both independently.
+# ----------------------------------------------------------------------------
+
+[solve_pade_wp_z05]
+relerr = 4.4359408466012887e-16
+metric = "relERR of solve_pade WeierstrassP value u(0.5) (before the z=1 pole)"
+oracle = "3-source u_at_0_5=4.0044646690030875 (_oracle_problems.jl; closed-form == NDSolve == mpmath)"
+
+[solve_pade_wp_z14]
+relerr = 2.1446507387512946e-8
+metric = "relERR of solve_pade WeierstrassP value u(1.4) PAST the bridged z=1 pole"
+oracle = "closed-form u_at_1_4=6.2518286125821094 (_oracle_problems.jl; certified-ball CO.3 pins same point)"
+
+# ----------------------------------------------------------------------------
+# Taylor jets -- the 2nd-order Cauchy recurrence (scalar) and the d=2 vector
+# recurrence, each vs an INDEPENDENT mpmath recurrence (no self-pin).
+# ----------------------------------------------------------------------------
+
+[taylor_jet_wp]
+relerr = 1.3957091314719158e-15
+metric = "max over n=0..30 of relERR of taylor_coefficients_2nd(u''=6u^2) Float64 jet"
+oracle = "mpmath dps=80 independent recurrence CTJ_WP_C (_oracle_corpus_taylor_jet.jl; catalogue md:1565-1580)"
+
+[taylor_jet_pi]
+relerr = 3.940890834829142e-16
+metric = "max over n=0..30 of relERR of taylor_coefficients_2nd(u''=6u^2+z, Painleve I) Float64 jet"
+oracle = "mpmath dps=80 independent recurrence CTJ_PI_C, FW2011 tritronquee IC (_oracle_corpus_taylor_jet.jl; md:1582-1597)"
+
+[vector_jet_tansec2]
+relerr = 2.971837663340234e-16
+metric = "max over both components n=0..30 of relERR of vector_taylor_coefficients d=2 jet (tan,sec^2)"
+oracle = "mpmath dps=50 independent recurrence CTSJ_C1/_C2 (_oracle_corpus_vector.jl; catalogue md:1616-1631)"
+
+# ----------------------------------------------------------------------------
+# Chebyshev-Newton BVP -- spectral node max-error vs the closed form.
+# ----------------------------------------------------------------------------
+
+[bvp_cosh_N16]
+relerr = 1.7763568394002505e-15
+metric = "max node abs-error of bvp_solve(u''=u, N=16) vs cosh(t)/cosh(1) on [-1,1]"
+oracle = "closed form cosh(t)/cosh(1); same Chebyshev floor bvp_test.jl BV.1.2 / _oracle_bvp.jl test_bvp_lin_N16_inf_err_vs_ref=6.44e-15"

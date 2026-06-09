@@ -119,6 +119,17 @@ using PadeTaylor
     # the Chebyshev BVP until the conditioning floor.  Catches order-
     # degradation bugs a single-resolution value test passes.
     include("convergence_test.jl")
+    # Accuracy-regression ledger (bead padetaylor-krgy.8).  Tier-2 §2.5: stores
+    # each representative case's BEST ACHIEVED relERR in a committed,
+    # human-reviewable baseline (test/accuracy_baseline.toml) and asserts
+    # achieved ≤ baseline·(1+slack).  Catches SILENT accuracy DRIFT a fixed
+    # absolute-tol value pin passes (the mutation-proof shows a degradation the
+    # corpus z=1.4 rtol-1e-7 pin misses but the ledger catches), and surfaces
+    # IMPROVEMENT (advisory to tighten + re-approve the baseline).  Complements,
+    # never replaces, the absolute-tol pins.  Local no-CI baseline; the slack
+    # band absorbs cross-platform float jitter.  Regeneration is explicit +
+    # reviewed (ties to krgy.9 snapshot/approval).
+    include("accuracy_ledger_test.jl")
     # Static-analysis + lint quality gate (Aqua/JET/ExplicitImports), bead
     # padetaylor-krgy.2.  Infra-tier: asserts package hygiene + abstract-
     # interpretation cleanliness, not a numerical invariant.
