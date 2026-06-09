@@ -40,6 +40,7 @@ Printf = "1"
 Random = "1"
 SpecialFunctions = "2"
 Statistics = "1"
+Supposition = "0.3"
 TaylorSeries = "0.21"
 Test = "1"
 julia = "1.10"
@@ -52,7 +53,8 @@ DelaunayTriangulation = "927a84f5-c5f4-47a5-9785-b46e178433df"
 ExplicitImports = "7d51a73a-1435-4ff3-83d9-f097790105c7"
 JET = "c3a54625-cd67-489e-a8e7-0a5a0ff4e31b"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+Supposition = "5a0628fe-1738-4658-9b6d-0b7605a9755b"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Aqua", "Arblib", "CommonSolve", "DelaunayTriangulation", "ExplicitImports", "JET", "Makie", "Test"]
+test = ["Aqua", "Arblib", "CommonSolve", "DelaunayTriangulation", "ExplicitImports", "JET", "Makie", "Supposition", "Test"]

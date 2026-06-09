@@ -97,6 +97,11 @@ using PadeTaylor
     # padetaylor-krgy.2.  Infra-tier: asserts package hygiene + abstract-
     # interpretation cleanliness, not a numerical invariant.
     include("quality_test.jl")
+    # Property-based invariant gate (Supposition.jl), bead padetaylor-krgy.1.
+    # Tier-1 §1.2: generates hundreds of inputs per property and shrinks
+    # failures to a minimal counterexample; pins INVARIANTS where the corpus
+    # pins VALUES.
+    include("property_test.jl")
     include("diagnose_test.jl")
     include("fw_fig_41_test.jl")
     include("coord_transforms_test.jl")

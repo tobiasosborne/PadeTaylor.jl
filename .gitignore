@@ -52,3 +52,10 @@ figures/output/kkg_pi2_zoom_cache.jld2
 .claude/scheduled_tasks.lock
 external/probes/heun-oracle/capture.log
 external/probes/heun-oracle/capture.stderr
+
+# Supposition.jl property-test example database (test/property_test.jl,
+# bead padetaylor-krgy.1).  Supposition records each found counterexample
+# here for deterministic replay on the next run.  The gate's reproducibility
+# comes from its fixed `rng=Xoshiro(0x5eed)` seed, NOT from this directory, so
+# the DB is a regenerable runtime artifact — never committed.
+test/SuppositionDB/
