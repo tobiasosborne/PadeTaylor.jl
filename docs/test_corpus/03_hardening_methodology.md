@@ -126,9 +126,17 @@ fuzz/metamorphic), **strength measurement** (automated mutation, coverage),
 - **Framing (confirmed 3-0):** Roy 2005 distinguishes **code verification**
   (math solved right — MMS/Richardson) from **solution verification** (error in
   a given calculation). We are doing *code verification*.
-- **Tool:** plain `Test.jl` + refinement loop + linear fit. Assert
-  `err ~ h^(order+1)` for the stepper; spectral (exponential) convergence for the
-  Chebyshev BVP.
+- **Tool:** plain `Test.jl` + refinement loop + linear fit. Assert the observed
+  single-step order for the stepper; spectral (exponential) convergence for the
+  Chebyshev BVP. **CORRECTION (krgy.6, as-built):** the naive textbook law
+  `err ~ h^(order+1)` is WRONG for this package — `pade_step_with_pade!` builds a
+  *diagonal* `(m,m)` Padé with `m = order÷2`, which matches the series to degree
+  `2m`, so the single-step order is `2·(order÷2)+1` (verified m=1→3, 2→5, 3→7),
+  half the naive value. The order is observable only at MODEST orders (2–6) and
+  inside the error window `[~1e-12, 1e-1]`; at the production order 30 the leading
+  term `h^31` is sub-eps and the slope is unmeasurable. EVEN manufactured
+  solutions collapse the Padé trimmer `(m,m)→(m-1,m-1)` — use both-parity anchors.
+  See `test/convergence_test.jl` header.
 - Sources: Roy JCP 2005 (aoe.vt.edu cjr_jcp); Oberkampf & Roy, *V&V in Scientific
   Computing* (Cambridge); ASME MMS code-verification paper.
 

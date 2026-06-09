@@ -109,6 +109,16 @@ using PadeTaylor
     # invariant is AGREEMENT with a second, different-method code path.  No
     # new dependency (RK4 is hand-rolled), so this runs standalone too.
     include("differential_test.jl")
+    # Convergence-order / MMS / observed-order-of-accuracy V&V (bead
+    # padetaylor-krgy.6).  Tier-2 §2.4: CODE verification (Roy 2005) — refine
+    # the discretisation and confirm the error decays at the THEORETICAL rate,
+    # distinct from value pinning.  CV.1 asserts the IVP single-step observed
+    # order tracks the diagonal-Padé law 2·(order÷2)+1 (NOT the textbook
+    # h^(N+1) — the stepper evaluates an (m,m) Padé, m=order÷2, not the order-N
+    # Taylor polynomial); CV.2 asserts exponential (spectral) convergence of
+    # the Chebyshev BVP until the conditioning floor.  Catches order-
+    # degradation bugs a single-resolution value test passes.
+    include("convergence_test.jl")
     # Static-analysis + lint quality gate (Aqua/JET/ExplicitImports), bead
     # padetaylor-krgy.2.  Infra-tier: asserts package hygiene + abstract-
     # interpretation cleanliness, not a numerical invariant.
