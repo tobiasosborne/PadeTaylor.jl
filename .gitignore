@@ -8,6 +8,7 @@
 # Keep the parent dir for the empirical-probe scripts (external/probes/),
 # but skip the upstream clones — they are reproducible via shallow clone.
 external/Arblib.jl/
+external/Gremlins.jl/
 external/Polynomials.jl/
 external/TaylorIntegration.jl/
 external/TaylorSeries.jl/
