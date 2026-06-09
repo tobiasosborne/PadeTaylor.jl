@@ -51,6 +51,12 @@ using PadeTaylor
     include("vector_problems_test.jl")
     include("noumi_yamada_test.jl")
     include("noumi_yamada_symmetry_test.jl")
+    # Metamorphic-relation test layer (oracle-free invariants), bead
+    # padetaylor-krgy.3.  Symmetry MRs (conjugate, PII α-negation, PIV parity)
+    # + consistency MRs (step additivity, forward∘reverse).  The canonical
+    # algebraic NY Bäcklund MR lives in noumi_yamada_symmetry_test.jl (NYS.1.6).
+    include("metamorphic_symmetry_test.jl")
+    include("metamorphic_consistency_test.jl")
     include("noumi_yamada_piv_test.jl")
     include("painleve_hierarchy_test.jl")
     include("vector_path_network_test.jl")
