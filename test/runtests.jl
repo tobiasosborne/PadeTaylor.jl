@@ -141,6 +141,12 @@ using PadeTaylor
     # padetaylor-krgy.2.  Infra-tier: asserts package hygiene + abstract-
     # interpretation cleanliness, not a numerical invariant.
     include("quality_test.jl")
+    # Allocation-budget + type-stability gate (AllocCheck/JET report_opt/@inferred),
+    # bead padetaylor-krgy.12.  EFFICIENCY-tier: asserts the per-step inner loop is
+    # type-stable (no runtime dispatch / Any) and within an O(1)-per-step allocation
+    # budget — the upstream, deterministic causes of the wall-time the krgy.11 perf
+    # gate measures downstream.  Shares the JET setup with quality_test.jl (krgy.2).
+    include("type_stability_test.jl")
     # Property-based invariant gate (Supposition.jl), bead padetaylor-krgy.1.
     # Tier-1 §1.2: generates hundreds of inputs per property and shrinks
     # failures to a minimal counterexample; pins INVARIANTS where the corpus
