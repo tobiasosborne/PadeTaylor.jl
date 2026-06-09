@@ -100,6 +100,15 @@ using PadeTaylor
     # (tol_pkg ≫ ε_cert).  Certifies the oracle side, NOT the SVD output
     # (Arblib has no SVD; ADR-0002).  See docs/adr/0029-certified-ball-oracles.md.
     include("certified_oracle_test.jl")
+    # Live differential / back-to-back testing (bead padetaylor-krgy.14).
+    # Tier-2 §2.3: integrates manufactured smooth (pole-free) IVPs with BOTH
+    # solve_pade AND an in-file classical RK4 sharing no code with src/, then
+    # asserts the two LIVE codes agree in value AND derivative (Hatton:
+    # independent codes disagree more than expected).  Distinct from the
+    # certified-ball oracle above (which BOUNDS the true value) — here the
+    # invariant is AGREEMENT with a second, different-method code path.  No
+    # new dependency (RK4 is hand-rolled), so this runs standalone too.
+    include("differential_test.jl")
     # Static-analysis + lint quality gate (Aqua/JET/ExplicitImports), bead
     # padetaylor-krgy.2.  Infra-tier: asserts package hygiene + abstract-
     # interpretation cleanliness, not a numerical invariant.
