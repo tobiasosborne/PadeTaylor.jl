@@ -1,5 +1,17 @@
-# Pade oracle outputs from padeapprox.m, Octave 8.4.0.
-# Format: Julia-readable literals.
+# test/_oracles.jl — Padé oracle outputs, pinned values.
+#
+# REGENERATION ORACLE:
+#   external/probes/padeapprox-oracle/capture.m  (Octave 8.4.0, drives
+#   Chebfun's padeapprox.m on a fixed set of test cases).  Every literal
+#   below is a verbatim copy of that script's `oracles.txt` output.  Do NOT
+#   hand-edit.  To update: re-run `octave capture.m` in that probe dir and
+#   re-pin (regenerate → review `git diff` → approve-commit; see
+#   docs/test_corpus/04_snapshot_approval_workflow.md).
+#
+# SOURCE: Chebfun padeapprox.m (GGT 2013 Algorithm 2 reference impl) at
+# double precision, tol = 1e-14 (1e-5 for the noisy-geometric case).  These
+# are the cross-solver goldens robustpade_test.jl pins the :svd / :classical
+# paths against.  Format: Julia-readable literals (top-level assignments).
 
 # Case test_2_1_2_exp_20_20 — (m,n) = (20,20), tol = 1e-14
 test_2_1_2_exp_20_20_a = [1.000000000000000000e+00, 5.000000000181369364e-01, 1.153846153939462466e-01, 1.602564102783808273e-02, 1.456876457182933182e-03, 8.741258743970576185e-05, 3.237503238978780471e-06, 5.781255785251530580e-08]

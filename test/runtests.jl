@@ -130,6 +130,13 @@ using PadeTaylor
     # band absorbs cross-platform float jitter.  Regeneration is explicit +
     # reviewed (ties to krgy.9 snapshot/approval).
     include("accuracy_ledger_test.jl")
+    # Oracle PROVENANCE contract (bead padetaylor-krgy.9).  Tier §2.6: asserts
+    # every test/_oracle*.jl data file carries a non-trivial header declaring
+    # BOTH a SOURCE (ground-truth class) and a REGENERATION reference (capture
+    # script / regen command) — the executable companion to the snapshot-
+    # approval runbook docs/test_corpus/04_snapshot_approval_workflow.md.  A
+    # golden whose source/regeneration is undocumented turns the suite RED.
+    include("oracle_provenance_test.jl")
     # Static-analysis + lint quality gate (Aqua/JET/ExplicitImports), bead
     # padetaylor-krgy.2.  Infra-tier: asserts package hygiene + abstract-
     # interpretation cleanliness, not a numerical invariant.
