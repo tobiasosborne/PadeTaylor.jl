@@ -93,6 +93,13 @@ using PadeTaylor
     include("ext_commonsolve_test.jl")
     include("ext_arblib_test.jl")
     include("ext_makie_test.jl")
+    # Certified ball oracles (Arblib midpoint-radius), bead padetaylor-krgy.5.
+    # Tier-2 §2.2: certifies the closed-form Weierstrass-℘ ORACLE as a
+    # provably-tiny Arb ball (radius < ε_cert), THEN pins the package's
+    # solve_pade value to that ball's midpoint at the package tolerance
+    # (tol_pkg ≫ ε_cert).  Certifies the oracle side, NOT the SVD output
+    # (Arblib has no SVD; ADR-0002).  See docs/adr/0029-certified-ball-oracles.md.
+    include("certified_oracle_test.jl")
     # Static-analysis + lint quality gate (Aqua/JET/ExplicitImports), bead
     # padetaylor-krgy.2.  Infra-tier: asserts package hygiene + abstract-
     # interpretation cleanliness, not a numerical invariant.
