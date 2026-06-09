@@ -1,0 +1,37 @@
+# benchmark/Project.toml — the perf-gate TOOL environment.
+#
+# Bead padetaylor-krgy.11 (epic padetaylor-krgy; EFFICIENCY section of
+# docs/test_corpus/03_hardening_methodology.md:163-167).
+#
+# WHY A DEDICATED ENV, NOT THE PACKAGE [deps] / [targets].test.  BenchmarkTools
+# is a TOOL dependency, not a SUITE dependency — exactly as Coverage.jl is for
+# the coverage tool and the bespoke harness is for the mutation gate.  The
+# package itself must stay lean: adding BenchmarkTools to PadeTaylor's
+# `[deps]`/`[targets].test` would (a) pull a measurement library into every
+# `Pkg.test` run that does not need it, and (b) blur the line between the
+# package's runtime contract and a periodic local instrument.
+#
+# WHY a committed `benchmark/Project.toml` (the idiomatic Julia layout) rather
+# than the coverage tool's runtime temp-env.  The coverage tool installs
+# Coverage.jl into `mktempdir()` because it only reads `.cov` byte files and
+# needs no stable, reproducible environment.  A perf BASELINE is different: the
+# committed median/min numbers in `baseline.toml` are only comparable against
+# the SAME BenchmarkTools version that produced them, so the tool's env must be
+# PINNED and REPRODUCIBLE, not freshly resolved each run.  A `benchmark/` dir
+# with its own `Project.toml` that `dev`s the package and pins BenchmarkTools is
+# the standard PkgBenchmark / AirspeedVelocity convention and gives exactly that.
+#
+# SETUP (one-time, single Julia process — Rule 7):
+#   julia --project=benchmark -e 'import Pkg; Pkg.develop(path=".."); Pkg.instantiate()'
+# (run_perf_gate.jl also self-heals: it `Pkg.develop`s the package + instantiates
+#  on first run if PadeTaylor is not yet resolved in this env.)
+
+[deps]
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+PadeTaylor = "00000000-0000-0000-0000-000000000001"
+TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
+
+[compat]
+BenchmarkTools = "1"
+TOML = "1"
+julia = "1.10"

@@ -40,6 +40,12 @@ docs/Manifest.toml
 # The output PNGs ARE committed: they are the figure deliverables.
 figures/Manifest.toml
 
+# Perf-gate tool env (bead padetaylor-krgy.11) — the Manifest carries an
+# absolute `dev` path to the package and is regenerable via
+# `julia --project=benchmark -e 'import Pkg; Pkg.develop(path=".."); Pkg.instantiate()'`
+# (run_perf_gate.jl also self-heals).  Project.toml + baseline.toml ARE committed.
+benchmark/Manifest.toml
+
 # Headline-figure kernel cache — the persistent `res` NamedTuple for
 # `figures/kkg_pi2_tritronquee_surface.jl`.  Skipping a render-only
 # re-run costs ~3.5 h of CPU; the JLD2 blob saves that.  Regenerable

@@ -1,0 +1,60 @@
+# benchmark/baseline.toml — committed PERF baseline (bead padetaylor-krgy.11).
+#
+# Median + min wall time (ns) and allocations of each hot path, captured on this
+# box with threads pinned to 1.  The gate (benchmark/run_perf_gate.jl) asserts,
+# per case, current_min <= min_ns * (1 + SLACK) (the MIN is the noise-floor
+# estimator; SLACK lives in the tool — a single calibrated band documented in
+# benchmark/README.md).
+#
+# These are FLOOR numbers: the minimum across 4 back-to-back captures per path
+# (the noise-free estimate — BenchmarkTools' minimum philosophy applied across
+# reps), since a perfectly-idle WSL2 capture is not always available.  See
+# benchmark/README.md §"Calibrating the slack" + §"Idle-box discipline".
+#
+# LOCAL (no-CI) baseline (Rule 11).  These numbers are platform-specific; a
+# different CPU/BLAS will shift them — the SLACK band absorbs small jitter, NOT
+# order-of-magnitude moves.  REGENERATE (explicit, reviewed commit — never
+# silent), then review the git diff and commit:
+#   PADETAYLOR_REGEN_PERF_BASELINE=1 julia --project=benchmark benchmark/run_perf_gate.jl
+[evaluate_pade]
+allocs = 0
+bytes = 0
+median_ns = 56.5
+min_ns = 55.4
+
+[meta]
+blas = "lbt"
+blas_threads = 1
+captured = "2026-06-09; Julia 1.12.5; linux x86_64 (WSL2); floor-of-4 idle-ish capture; local no-CI baseline"
+julia_threads = 1
+slack = 0.5
+
+[pade_step]
+allocs = 89
+bytes = 23280
+median_ns = 26423.0
+min_ns = 25811.0
+
+[path_network_short_walk]
+allocs = 725
+bytes = 339800
+median_ns = 455050.5
+min_ns = 294035.0
+
+[robust_pade_svd_1515]
+allocs = 82
+bytes = 54328
+median_ns = 103589.0
+min_ns = 99725.0
+
+[solve_pade_wp_multiseg]
+allocs = 460
+bytes = 117936
+median_ns = 194645.5
+min_ns = 147095.0
+
+[taylor_coefficients_2nd_o30]
+allocs = 69
+bytes = 17584
+median_ns = 22515.0
+min_ns = 22108.0
