@@ -165,6 +165,21 @@ right but aren't.
 
 - Substrate is **Julia 1.10+**. Run tests via `julia --project=. -e
   'using Pkg; Pkg.test()'`. No build step.
+- **Quality-gate runner: `scripts/quality_gate.sh`** (bead padetaylor-krgy.10)
+  — the one serial entry point that ties every gate together (no CI, Rule 11).
+  Three tiers: `fast` (static analysis only, ~1.5 min, pre-commit), `full`
+  (default: the always-on `Pkg.test()` correctness suite incl. all in-suite
+  gates, ~24 min, pre-push), `deep` (`full` + the three PERIODIC out-of-suite
+  tools — mutation gate, coverage, perf — ~55 min, end-of-phase). The
+  always-on-vs-periodic split: `test/runtests.jl` includes the in-suite gates;
+  `test/mutation/`, `test/coverage/`, `benchmark/` are deliberately NOT included
+  (each its own runbook). The runner is STRICTLY SERIAL by construction — each
+  gate is a separate `julia` child that exits before the next (Rule 7; no `&`,
+  ever). It interprets results FOR you and surfaces the two EXPECTED-NOISE facts
+  so a passing run reads green: the **10 `@test_broken` markers are intentional**
+  (investigate only FAILs — bd memory corpus-v2-expected-broken-count) and the
+  **2 mutation survivors under bead 98pe are tracked** (exit 0 is clean). Use
+  `--dry-run` to print the exact command plan; perf needs an IDLE box.
 - ADRs go in `docs/adr/`. Worklog (when we add it) goes in
   `docs/worklog/`.
 - PDFs in `references/`; markdown extractions (via `marker_single`)
