@@ -138,7 +138,6 @@ module VectorStepper
 
 using LinearAlgebra:        norm
 using ..VectorCoefficients: vector_taylor_coefficients
-using ..SharedPade:         shared_denominator_pade
 using ..SharedPadeDispatch: shared_pade_select
 
 export VectorPadeStepperState, vector_pade_step!, vector_pade_step_with_pade!

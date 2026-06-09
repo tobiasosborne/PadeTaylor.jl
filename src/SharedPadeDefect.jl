@@ -50,7 +50,7 @@ Amendment 2).
 """
 module SharedPadeDefect
 
-using LinearAlgebra: norm, eigvals
+using LinearAlgebra: eigvals
 
 export relative_defect, guard_root_estimates, pole_disagreement, shared_q_residue
 

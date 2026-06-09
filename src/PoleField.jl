@@ -116,7 +116,6 @@ References:
 module PoleField
 
 using Polynomials: Polynomial, roots, derivative
-using ..RobustPade:  PadeApproximant
 using ..PathNetwork: PathNetworkSolution
 using ..Problems:    PadeTaylorSolution
 

@@ -156,7 +156,7 @@ Throws with a `Suggestion` line on:
 """
 module BVP
 
-using LinearAlgebra: Diagonal, lu
+using LinearAlgebra: Diagonal
 
 export bvp_solve, BVPSolution
 

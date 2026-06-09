@@ -115,9 +115,8 @@ module IVPBVPHybrid
 using ..Problems:        PadeTaylorProblem
 using ..PathNetwork:     PathNetworkSolution, path_network_solve
 using ..BVP:             BVPSolution, bvp_solve
-using ..CoordTransforms: pIII_z_to_ζ, pIII_ζ_to_z, pIII_transformed_rhs
-using ..Painleve:        PainleveProblem, PainleveSolution
-import ..Painleve:       _coord, _painleve_solution
+using ..Painleve:        PainleveProblem
+import ..Painleve:       _coord
 
 export solve_pole_free_hybrid, IVPBVPSolution, pIII_asymptotic_ic
 

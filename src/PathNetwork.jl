@@ -142,7 +142,7 @@ using Printf:        @sprintf, @printf
 using Random:        shuffle, MersenneTwister
 using ..RobustPade:  PadeApproximant
 using ..PadeStepper: PadeStepperState, pade_step_with_pade!,
-                     adaptive_pade_step!, ffw_truncation_error, ffw_rescale_q,
+                     ffw_truncation_error, ffw_rescale_q,
                      _evaluate_pade, _evaluate_pade_deriv
 using ..Problems:    PadeTaylorProblem
 using ..BranchTracker: resolve_cut_angles, any_cut_crossed, step_sheet_update

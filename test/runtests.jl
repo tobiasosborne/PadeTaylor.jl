@@ -87,6 +87,10 @@ using PadeTaylor
     include("ext_commonsolve_test.jl")
     include("ext_arblib_test.jl")
     include("ext_makie_test.jl")
+    # Static-analysis + lint quality gate (Aqua/JET/ExplicitImports), bead
+    # padetaylor-krgy.2.  Infra-tier: asserts package hygiene + abstract-
+    # interpretation cleanliness, not a numerical invariant.
+    include("quality_test.jl")
     include("diagnose_test.jl")
     include("fw_fig_41_test.jl")
     include("coord_transforms_test.jl")

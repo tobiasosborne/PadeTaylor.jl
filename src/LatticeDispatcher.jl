@@ -175,8 +175,7 @@ module LatticeDispatcher
 using ..Problems:       PadeTaylorProblem
 using ..PathNetwork:    path_network_solve, PathNetworkSolution
 using ..BVP:            bvp_solve, BVPSolution
-using ..EdgeDetector:   pole_field_mask
-using ..EdgeGatedSolve: edge_gated_pole_field_solve, EdgeGatedSolution
+using ..EdgeGatedSolve: edge_gated_pole_field_solve
 
 export LatticeSolution, lattice_dispatch_solve
 

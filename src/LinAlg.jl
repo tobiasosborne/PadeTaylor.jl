@@ -54,7 +54,7 @@ With `full=true`: `U` is `m × m`, `S` is `min(m,n)`-vector, `Vt` is
 """
 module LinAlg
 
-using LinearAlgebra:        LinearAlgebra, svd
+using LinearAlgebra:        LinearAlgebra
 using GenericLinearAlgebra: GenericLinearAlgebra
 
 # -----------------------------------------------------------------------------
