@@ -49,9 +49,33 @@ rectangular matrix; no coupled or iterated solves (pillar A §3).
 For `d = 1`, `A_full` is a single `m×(m+1)` block, *identical* to the
 scalar GGT `C̃` at `n = m`.  The SVD, the QR-reweighting, the numerator
 recovery from the upper Toeplitz block, and the `b[1]=1` normalisation
-are all the verbatim scalar operations.  Hence `shared_denominator_pade`
-with one jet reproduces `robust_pade(jet, m, m; method=:svd)` bit-for-bit
-modulo SVD sign conventions — this is asserted in `SP.1.1`.
+are all the verbatim scalar operations.  Hence, *in the full-rank,
+non-degree-reduced regime*, `shared_denominator_pade` with one jet reproduces
+`robust_pade(jet, m, m; method=:svd)` bit-for-bit modulo SVD sign conventions
+(asserted in `SP.1.1` and `SP.1.7`).
+
+This bit-for-bit equality is **scoped to the full-rank regime** (bug
+`padetaylor-jznu`, pinned by `SP.1.8`).  In two DEGENERATE regimes the two
+*separate* constructions can diverge, because the scalar path truncates its
+input to `m+n+1` coefficients and jointly reduces `(m, n)`, whereas this path
+keeps the full jet and reduces a single `m_cur`:
+
+  * **locally-regular collapse** (`Q = [1]`): the scalar path returns a
+    jointly-reduced numerator (e.g. `a = [4.0]` — a degree-0 constant) while
+    this path returns the FULL Taylor numerator.  These agree only at `z = 0`
+    and diverge off-centre (reldiff ~2e-5 by `z ≈ 0.07`) — different in
+    DEGREE *and* VALUE;
+  * **trim-boundary straddle**: a trailing denominator coefficient sitting
+    within ~`tol` (≈1e-14, LAPACK-roundoff-dependent) is kept by one path and
+    trimmed by the other, so the rationals are VALUE-equal but differ by one
+    in DEGREE.
+
+Both representations are individually Rule-1-correct (neither returns a
+NaN/zero/garbage lie); the divergence is in the rational REPRESENTATION (and,
+locally-regular, in off-centre value), not a numerical breakdown.  Downstream
+this is benign: the stepper evaluates real ODE jets (full-rank in practice),
+and V7/V8 pole extraction roots only the DENOMINATOR (a constant `Q = [1]` has
+no roots).
 
 ## The QR-reweighting (ported unchanged from padeapprox.m)
 

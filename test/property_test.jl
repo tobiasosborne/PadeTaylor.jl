@@ -173,12 +173,14 @@ const _nonzero  = Data.Integers(1, 4)
     # padetaylor-jznu): (a) a TRIM-BOUNDARY case, where the two paths' raw
     # null vectors differ by ~1e-14 QR roundoff that straddles the trailing-
     # near-zero trim threshold, so one path keeps a sub-tol trailing
-    # denominator coefficient the other trims; and (b) a LOCALLY-REGULAR
-    # case, where the rank check collapses Q→1 and SharedPade returns the raw
-    # Taylor polynomial as numerator while the scalar path trims it to degree
-    # m — equal as truncated power series (where the stepper evaluates) but
-    # different-degree rationals.  Both show up as a SHAPE divergence
-    # (different `length(a)` or `length(b)`); we `assume!` same-shape, which
+    # denominator coefficient the other trims (rationals stay VALUE-equal);
+    # and (b) a LOCALLY-REGULAR case, where the rank check collapses Q→1 and
+    # SharedPade returns the raw Taylor polynomial as numerator while the scalar
+    # path jointly-reduces to a degree-0 constant — divergent in DEGREE *and*
+    # off-centre VALUE (they agree only at z=0; NOT "equal as a power series").
+    # Both regimes are pinned as masters by SP.1.8a/b (shared_pade_test.jl) and
+    # show up here as a SHAPE divergence (different `length(a)` or
+    # `length(b)`); we `assume!` same-shape, which
     # restricts the check to exactly the regime SP.1.1 actually covers.  This
     # is a principled domain restriction (not a tolerance relaxation): inside
     # it the contract is genuinely bit-for-bit — verified 0 failures over

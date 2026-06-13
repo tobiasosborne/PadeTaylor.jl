@@ -192,6 +192,54 @@ end
     end
 
     # -------------------------------------------------------------------------
+    # SP.1.8 — d=1 DEGENERATE regimes where the SharedPade↔scalar:svd contract
+    # is NOT bit-for-bit (bug padetaylor-jznu).  Property fuzzing (property_test
+    # INV-2) shrank two minimal jets refuting the over-broad "bit-for-bit" claim
+    # in SharedPade.jl's "Reduction to the scalar path"; here we PIN both as
+    # regression masters.  Each path is individually Rule-1-correct — the
+    # divergence is in the rational REPRESENTATION (and, locally-regular, in
+    # off-centre value), not a numerical breakdown.  Outputs VERIFIED empirically
+    # 2026-06-13 (probe in this session), NOT copied from the bead text (whose
+    # "equal as power series" phrasing is itself wrong for the (a) regime).
+    # -------------------------------------------------------------------------
+    @testset "SP.1.8 d=1 degenerate regimes diverge (jznu masters)" begin
+        # (a) LOCALLY-REGULAR collapse (Q → [1]): SharedPade returns the FULL
+        # Taylor numerator; the scalar path jointly-reduces to a degree-0
+        # constant.  Equal at z = 0 only; they DIVERGE off-centre.
+        jet_a = [4.0, 0.0, 0.0, 0.0, -4.0, 2.0, -4.0, -1.0]
+        nums_a, den_a = shared_denominator_pade([jet_a], 2)
+        sc_a = robust_pade(jet_a, 2, 2; method = :svd)
+        @test den_a == [1.0]                            # no shared pole
+        @test nums_a[1] == jet_a                        # SharedPade: the RAW full jet
+        @test sc_a.b == [1.0]
+        @test length(sc_a.a) == 1 && sc_a.a[1] ≈ 4.0    # scalar: degree-0 constant
+        # Refute "equal as a power series": agree at 0, diverge by z ≈ 0.07.
+        @test _ratval(nums_a[1], den_a, 0.0) ≈ _ratval(sc_a.a, sc_a.b, 0.0)
+        @test abs(_ratval(nums_a[1], den_a, 0.07) -
+                  _ratval(sc_a.a, sc_a.b, 0.07)) > 1e-6
+
+        # (b) TRIM-BOUNDARY straddle: the two paths' QR null vectors differ by
+        # ~1e-14 across the trailing-near-zero trim threshold, so SharedPade
+        # KEEPS a sub-tol trailing denominator coefficient the scalar trims.  The
+        # NUMERATORS match and the rationals are VALUE-equal; only the
+        # denominator DEGREE differs (by ≤ 1; exactly 1 on the capture platform —
+        # the kept coeff's magnitude is LAPACK thin-vs-full-SVD-roundoff-dependent
+        # at ~1e-14, so we pin shape/value robustly, not that exact magnitude).
+        jet_b = [1.0, -1.0, -2.0, -3.0, -4.0, -4.0, 0.0, -4.0]
+        nums_b, den_b = shared_denominator_pade([jet_b], 3)
+        sc_b = robust_pade(jet_b, 3, 3; method = :svd)
+        @test nums_b[1] ≈ sc_b.a atol = 1e-10               # numerators match
+        @test abs(length(den_b) - length(sc_b.b)) ≤ 1       # ≤ 1 degree divergence
+        @test den_b[1:length(sc_b.b)] ≈ sc_b.b atol = 1e-10 # leading coeffs match
+        if length(den_b) > length(sc_b.b)
+            @test abs(den_b[end]) < 1e-12                   # the kept coeff is sub-tol
+        end
+        for z in (0.01, 0.05, 0.07)                          # VALUE-equal off the roots
+            @test _ratval(nums_b[1], den_b, z) ≈ _ratval(sc_b.a, sc_b.b, z) atol = 1e-12
+        end
+    end
+
+    # -------------------------------------------------------------------------
     # SP.1.2 — genuine d=2 shared denominator.
     #
     # Known Q(z) = 1 - 0.4z + 0.2z² with two distinct (complex) roots; two
