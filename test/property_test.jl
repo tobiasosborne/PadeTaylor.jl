@@ -77,6 +77,8 @@ using PadeTaylor.RobustPade:    robust_pade, PadeApproximant
 using PadeTaylor.SharedPade:    shared_denominator_pade
 using PadeTaylor.Coefficients:  taylor_coefficients_1st
 using PadeTaylor.PadeStepper:   _evaluate_pade, _evaluate_pade_deriv
+using PadeTaylor.BVP:           bvp_solve
+using PadeTaylor.VectorBVP:     vector_bvp_solve
 using Supposition
 using Supposition: Data
 using Random: Xoshiro
@@ -296,6 +298,62 @@ const _nonzero  = Data.Integers(1, 4)
     end
 
 end # @testset "Property-based invariants"
+
+# -----------------------------------------------------------------------------
+# INV-6/7/8 — oblique BVP/VectorBVP barycentric domain guard (bug padetaylor-53tu).
+#
+# The corpus (CBvx.4, CBV.7) pins the guard at a FEW hand-chosen query points.
+# Here we fuzz the QUERY over a box around the segment to pin the guard's exact
+# IFF contract for ALL z, and to prove it never false-rejects a genuine
+# on-segment point.  The guard is purely geometric (`abs(t*) ≤ 1 + 100eps`),
+# so ONE solve of the fixed analytic fixture u''=u ⇒ u=cosh(z) on the oblique
+# segment [0, 1+i] suffices; the value oracle is Julia's own cosh (an
+# independent code path from the barycentric interpolant under test).
+# -----------------------------------------------------------------------------
+_throws(f) = try; f(); false; catch; true; end
+
+@testset "Property: oblique BVP/VectorBVP domain guard (53tu)" begin
+    za, zb            = 0.0 + 0.0im, 1.0 + 1.0im
+    center, half_diff = (za + zb) / 2, (zb - za) / 2
+    tstar(z)          = (z - center) / half_diff
+    sol_s = bvp_solve((z, u) -> u, (z, u) -> one(u), za, zb,
+                      1.0 + 0.0im, cosh(zb); N = 24)
+    sol_v = vector_bvp_solve((z, y) -> [y[2], y[1]], za, zb,
+                             [1.0+0im 0; 0 1.0+0im], [0.0+0im 0; 0 0.0+0im],
+                             [1.0 + 0.0im, 0.0 + 0.0im]; N = 24)
+
+    # INV-6 (scalar): sol(z) throws DomainError IFF |t*| > 1 + 100eps.  `assume!`
+    # keeps the query clear of the |t*|=1 ring so float rounding of |t*| cannot
+    # straddle the threshold (a generated artifact, never an algorithm bug).
+    @check rng=PROP_SEED max_examples=PROP_N function inv6_guard_iff_scalar(
+            re = Data.Floats{Float64}(; infs=false, nans=false, minimum=-5.0, maximum=5.0),
+            im = Data.Floats{Float64}(; infs=false, nans=false, minimum=-5.0, maximum=5.0))
+        z = re + im * 1.0im
+        m = abs(tstar(z))
+        assume!(abs(m - 1) > 1e-6)
+        _throws(() -> sol_s(z)) == (m > 1 + 100 * eps(Float64))
+    end
+
+    # INV-7 (vector): the identical IFF invariant at the VectorBVP.jl locus.
+    @check rng=PROP_SEED max_examples=PROP_N function inv7_guard_iff_vector(
+            re = Data.Floats{Float64}(; infs=false, nans=false, minimum=-5.0, maximum=5.0),
+            im = Data.Floats{Float64}(; infs=false, nans=false, minimum=-5.0, maximum=5.0))
+        z = re + im * 1.0im
+        m = abs(tstar(z))
+        assume!(abs(m - 1) > 1e-6)
+        _throws(() -> sol_v(z)) == (m > 1 + 100 * eps(Float64))
+    end
+
+    # INV-8 (scalar): every ON-segment query (real t* ∈ [-1,1]) is ADMITTED and
+    # returns ≈ cosh(z).  Couples the guard's no-false-rejection to a
+    # known-correct value (Rule 5: not merely "did not throw").
+    @check rng=PROP_SEED max_examples=PROP_N function inv8_onseg_value_scalar(
+            t0 = Data.Floats{Float64}(; infs=false, nans=false, minimum=-1.0, maximum=1.0))
+        z    = center + half_diff * t0       # exactly on the segment ⇒ real t*
+        u, _ = sol_s(z)                       # must NOT throw (no false reject)
+        abs(u - cosh(z)) ≤ 1e-10
+    end
+end # @testset "Property: oblique BVP/VectorBVP domain guard (53tu)"
 
 # ── Mutation-proof procedure (verified 2026-06-09, bead padetaylor-krgy.1) ──
 #

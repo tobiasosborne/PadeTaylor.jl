@@ -307,19 +307,24 @@ end
 Evaluate the converged vector BVP solution at an arbitrary `z` in the
 segment `[sol.z_a, sol.z_b]` via component-wise Berrut-Trefethen 2004
 Chebyshev-2 barycentric interpolation.  Throws `DomainError` for `z`
-outside the segment (silent extrapolation on a spectral interpolant is
-unsafe).
+outside the segment's pre-image disc (`|t*| > 1` by more than `100·eps`):
+silent extrapolation on a spectral interpolant is unsafe.
 """
 function (sol::VectorBVPSolution{T, CT})(z) where {T, CT}
     z_CT      = CT(z)
     half_diff = (sol.z_b - sol.z_a) / 2
     t_star    = (z_CT - (sol.z_a + sol.z_b) / 2) / half_diff
 
-    real(t_star) ≤ 1 + 100*eps(T) && real(t_star) ≥ -1 - 100*eps(T) ||
+    # Pre-image disc guard |t*| ≤ 1 (+100·eps), mirror of src/BVP.jl — bug
+    # padetaylor-53tu: a real(t*)-only check silently admits off-segment queries
+    # on an oblique-complex segment (|Re t*| ≤ 1 but large |Im t*|).  |t*|
+    # reduces to |Re t*| for a real on-segment t* and is 1 exactly at the
+    # endpoints, so valid in-segment queries are never rejected.
+    abs(t_star) ≤ 1 + 100*eps(T) ||
         throw(DomainError(z,
             "VectorBVPSolution: z = $z is outside [z_a, z_b] = " *
-            "[$(sol.z_a), $(sol.z_b)] (t* = $t_star).  Suggestion: restrict " *
-            "the query to the segment."))
+            "[$(sol.z_a), $(sol.z_b)] (t* = $t_star, |t*| = $(abs(t_star))).  " *
+            "Suggestion: restrict the query to the segment."))
 
     d = length(sol.Y_nodes[1])
     return CT[_barycentric_eval(sol.nodes_t,

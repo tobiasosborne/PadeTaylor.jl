@@ -212,18 +212,18 @@ const OBL_BF_INT_IM = big"0.2498263975004615314895596560305843910592106801715682
     end
 
     # =====================================================================
-    # CBV.7 — bvp-domain-guard-imaginary-tstar (gap #7): the real(t*)-only
-    # guard at src/BVP.jl:491 silently ACCEPTS an off-segment query whose
-    # pre-image t* = 10i has Re(t*)=0 (passes) but |Im t*|=10 (ignored).
+    # CBV.7 — bvp-domain-guard-imaginary-tstar (gap #7), bug padetaylor-53tu
+    # FIXED: the guard at src/BVP.jl now tests |t*| (was real(t*)-only), so an
+    # off-segment query whose pre-image t* = 10i — Re(t*)=0 (the old guard
+    # admitted) but |Im t*|=10 — is correctly REJECTED (Rule 1 fail-loud).
     #
     # Segment [0, 1+i]; query z=-4.5+5.5i ⇒ t* = (z-half_sum)/half_diff
     #   = (-5+5i)/(0.5+0.5i) = 10i  EXACTLY (capture.py block 7, hand-verified).
-    # The barycentric interpolant then EXTRAPOLATES wildly (off by ~42 vs
-    # cosh).  We assert the CURRENT (no-throw) behaviour AND mark the
-    # should-throw assertion @test_broken: a Rule-1-faithful guard would
-    # reject |t*|>1, not just |Re t*|>1.  REPORTED to the caller.
+    # Pre-fix the barycentric interpolant EXTRAPOLATED wildly (off by ~42 vs
+    # cosh); now `abs(t_star) ≤ 1 + 100eps` throws a DomainError.  The former
+    # @test_broken should-throw assertion is flipped to @test_throws below.
     # =====================================================================
-    @testset "CBV.7: real(t*) guard accepts off-segment imaginary t* (weakness)" begin
+    @testset "CBV.7: |t*| guard rejects off-segment imaginary t* (53tu fixed)" begin
         f(z, u)  = u
         ∂f(z, u) = one(u)
         zb = 1.0 + 1.0im
@@ -232,16 +232,13 @@ const OBL_BF_INT_IM = big"0.2498263975004615314895596560305843910592106801715682
         # Confirm the pre-image is what the recipe says (independent of the guard).
         t_star = (zq - (0.0im + zb) / 2) / ((zb - 0.0im) / 2)
         @test isapprox(t_star, 10im; atol = 1e-12)
-        @test abs(real(t_star)) ≤ 1            # Re(t*)=0 passes the guard
-        @test abs(imag(t_star)) > 1            # but it is far off-segment
+        @test abs(real(t_star)) ≤ 1            # Re(t*)=0: the OLD guard admitted
+        @test abs(imag(t_star)) > 1            # but |t*|=10 ⇒ far off-segment
 
-        # CURRENT behaviour: the guard does NOT throw and the value is a
-        # wild extrapolation (not cosh(zq)).  Pinned so a future stricter
-        # guard that REJECTS this query will turn this @test_broken green.
-        uq = sol(zq)[1]                         # no DomainError thrown today
-        @test abs(uq - cosh(zq)) > 1.0          # extrapolation is meaningless
-        # SHOULD-THROW (Rule 1): a |t*|-based guard would reject z off-segment.
-        @test_broken (sol(zq); false)           # currently does NOT throw → broken
+        # FIXED (53tu): the |t*| guard now REJECTS this off-segment query
+        # (|t*|=10 > 1) — src/BVP.jl throws a DomainError instead of silently
+        # extrapolating (was off by ~42 vs cosh).  Flipped from @test_broken.
+        @test_throws DomainError sol(zq)
     end
 
 end # @testset Corpus BVP (CBV)

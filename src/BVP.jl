@@ -488,10 +488,18 @@ function (sol::BVPSolution{T, CT})(z) where {T, CT}
     half_diff = (sol.z_b - sol.z_a) / 2
     t_star = (z_CT - (sol.z_a + sol.z_b) / 2) / half_diff
 
-    real(t_star) ≤ 1 + 100*eps(T) && real(t_star) ≥ -1 - 100*eps(T) ||
+    # Guard the *pre-image disc* |t*| ≤ 1 (+100·eps), not just real(t*):
+    # bug padetaylor-53tu — on an OBLIQUE-complex segment a query whose t* has
+    # |Re t*| ≤ 1 but large |Im t*| is OFF-segment, yet a real(t*)-only check
+    # silently admitted it and the barycentric interpolant extrapolated (Rule 1
+    # violation).  |t*| = √(Re² + Im²) reduces EXACTLY to |Re t*| for a genuine
+    # on-segment (real-t*) query and the endpoints map to |t*| = 1 exactly, so
+    # this never false-rejects a valid in-segment point.
+    abs(t_star) ≤ 1 + 100*eps(T) ||
         throw(DomainError(z,
             "BVPSolution: z = $z is outside [z_a, z_b] = [$(sol.z_a), $(sol.z_b)] " *
-            "(t* = $t_star).  Suggestion: restrict the query to the segment."))
+            "(t* = $t_star, |t*| = $(abs(t_star))).  Suggestion: restrict the " *
+            "query to the segment."))
 
     u_val   = _barycentric_eval(sol.nodes_t, sol.u_nodes, t_star)
 
