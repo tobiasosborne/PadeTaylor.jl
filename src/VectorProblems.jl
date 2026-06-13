@@ -75,7 +75,8 @@ there is no derivative to interpolate.
 Bad inputs throw with a `Suggestion` line: `order < 2`, coincident
 `zspan` endpoints, empty `y0` (all at problem construction, mirroring
 `PadeTaylorProblem`); non-positive `h` and exhausting `max_steps` (in
-the driver); evaluating outside `[z_start, z_end]` (in the callable).
+the driver); evaluating outside the `[lo, hi]` span envelope — for
+either span ordering (in the callable; bug `padetaylor-x0p0`).
 Numerical breakdowns inside the stepper — a singular shared Toeplitz
 block, `Q(1) ≈ 0` meaning the step landed on a pole — propagate from
 `VectorStepper`/`SharedPade` unchanged.
@@ -218,6 +219,15 @@ shared-`Q` approximant for later dense evaluation via the callable
 interface.  The final partial step is clamped so the trajectory lands
 *exactly* on `z_end`.
 
+The span may be ASCENDING (`real(z_end) > real(z_start)`) or DESCENDING
+(`real(z_end) < real(z_start)`): the driver steps with
+`dir = sign(real(z_end − z_start))` and the inner stepper round-trips a
+signed `h`, so a leftward integration is fully supported (bug
+`padetaylor-x0p0`, the vector twin of scalar `padetaylor-xhjw`).  `h` is
+always a positive-magnitude ceiling; `dir` sets the travel direction.
+For a descending span `sol.z` is *decreasing*; the callable handles
+either ordering.
+
 `step_policy` selects how the step length is chosen each iteration:
 
   - `:fixed` (default) — every step is the supplied `h` (the final
@@ -252,6 +262,19 @@ function vector_solve_pade(prob::VectorPadeTaylorProblem{F, T};
     z_start, z_end = prob.zspan
     h_T   = T(h)
     state = VectorPadeStepperState{T}(z_start, prob.y0)
+    # Integration direction (bug padetaylor-x0p0, mirroring the scalar
+    # padetaylor-xhjw fix in `Problems.solve_pade`).  The inner stepper
+    # round-trips a SIGNED step: `VectorStepper._rescale_by_powers` is a pure
+    # `h^k` power (`src/VectorStepper.jl:291-299`) and the pole guard tests
+    # `abs(Q(1))` (`:263`), both sign-agnostic, so a DESCENDING span
+    # (`real(z_end) < real(z_start)`) is integrated leftward rather than
+    # silently returning a degenerate one-node trajectory (Rule 1).  `dir` is
+    # ±1 in `real(T)` (the constructor rejects `z_start == z_end`, so it is
+    # never zero).  The user-supplied `h` stays a POSITIVE-magnitude ceiling;
+    # `dir` is applied once to the clamped magnitude, so `|h_step| ≤ h` and
+    # `≤ |gap|`.  For an ascending span `dir = 1` and every expression below
+    # reduces exactly to the former forward-only code.
+    dir = sign(real(z_end - z_start))
 
     z_vec    = T[z_start]
     y_vec    = Vector{T}[copy(prob.y0)]
@@ -259,7 +282,7 @@ function vector_solve_pade(prob::VectorPadeTaylorProblem{F, T};
     pade_vec = SharedPadeApproximant{T}[]
 
     steps = 0
-    while real(state.z) < real(z_end)
+    while dir * (real(z_end) - real(state.z)) > 0
         steps += 1
         steps ≤ max_steps || error(
             "vector_solve_pade: did not reach z_end after " *
@@ -267,21 +290,23 @@ function vector_solve_pade(prob::VectorPadeTaylorProblem{F, T};
             "z_end=$z_end). " *
             "Suggestion: increase max_steps, or shorten the integration " *
             "window.")
-        # Choose the step length.  Under :fixed it is the supplied h
-        # (clamped to z_end on the final partial step).  Under
-        # :jorba_zou the norm-based Jorba–Zou selector proposes h_jz
-        # from the d local Taylor jets, and the supplied h is a ceiling:
-        # h_step = min(h_jz, h, z_end − z) — never exceeds the user's h,
-        # never overshoots z_end.
-        h_ceiling = min(h_T, z_end - state.z)
+        # Choose the step length.  The clamp is over POSITIVE magnitudes
+        # (`h_jz` from the Jorba–Zou selector and the user's `h` are positive;
+        # `gap_mag = |z_end − z|`), then signed once by `dir`.  Under :fixed it
+        # is the supplied h, clamped to the gap on the final partial step so
+        # the trajectory lands on `z_end` exactly.  Under :jorba_zou the
+        # norm-based selector proposes `h_jz` and the supplied `h` is a
+        # ceiling: `h_step = dir·min(h_jz, h, |z_end − z|)`.
+        gap_mag = abs(z_end - state.z)
         if step_policy === :jorba_zou
             jets = vector_taylor_coefficients(prob.f, state.z, state.y,
                                               prob.order)
             h_jz = T(vector_step_jorba_zou(jets, eps(real(T))))
-            h_step = min(h_jz, h_ceiling)
+            h_mag = min(h_jz, h_T, gap_mag)
         else
-            h_step = h_ceiling
+            h_mag = min(h_T, gap_mag)
         end
+        h_step = dir * h_mag
         _, numerators, denominator =
             vector_pade_step_with_pade!(state, prob.f, prob.order, h_step)
         push!(z_vec, state.z)
@@ -309,16 +334,26 @@ outside `[z_start, z_end]`.
 """
 function (sol::VectorPadeTaylorSolution{T})(z) where {T}
     z_T = T(z)
-    real(z_T) < real(sol.z[1]) && throw(DomainError(z,
-        "VectorPadeTaylorSolution: z=$z is below z_start=$(sol.z[1])."))
-    real(z_T) > real(sol.z[end]) && throw(DomainError(z,
-        "VectorPadeTaylorSolution: z=$z is above z_end=$(sol.z[end])."))
+    # Direction-agnostic window guard (bug padetaylor-x0p0): for a DESCENDING
+    # span `sol.z` is decreasing, so guard against the `[lo, hi]` envelope
+    # rather than the raw first/last breakpoints (which assumed ascending).
+    lo, hi = minmax(real(sol.z[1]), real(sol.z[end]))
+    real(z_T) < lo && throw(DomainError(z,
+        "VectorPadeTaylorSolution: z=$z is outside the integration window " *
+        "[$lo, $hi]."))
+    real(z_T) > hi && throw(DomainError(z,
+        "VectorPadeTaylorSolution: z=$z is outside the integration window " *
+        "[$lo, $hi]."))
 
     # Linear scan for the segment containing z — v0.2 vector trajectories
     # have a modest segment count; switch to bisection if a vector
-    # path-network with many segments ships later.
+    # path-network with many segments ships later.  `cdir` makes the scan
+    # advance in the direction of integration (`sol.z` may be decreasing for a
+    # descending span; for an ascending span `cdir = 1` and the test reduces to
+    # the former `real(z_T) > real(sol.z[k+1])`).
+    cdir = sign(real(sol.z[end]) - real(sol.z[1]))
     k = 1
-    @inbounds while k < length(sol.h) && real(z_T) > real(sol.z[k + 1])
+    @inbounds while k < length(sol.h) && cdir * (real(z_T) - real(sol.z[k + 1])) > 0
         k += 1
     end
 

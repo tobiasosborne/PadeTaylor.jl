@@ -85,8 +85,10 @@ up_0_FW  = 1.710337353176786
 c_1_FW   = -1
 c_2_FW   = 2
 
-# (C) DESCENDING-span oracle (bug padetaylor-xhjw, 2026-06-13).  Same FW
-# problem u''=6u², u(z)=℘(z-1; g₂=0, g₃=2), pole at z=1; integrated LEFTWARD
+# (C) DESCENDING-span oracle (bug padetaylor-xhjw 2026-06-13 scalar; reused for
+# the vector twin padetaylor-x0p0 2026-06-13 — the scalar ℘ values ARE the
+# vector companion y₁ = u, y₂ = u' of y' = (y₂, 6y₁²)).  Same FW problem
+# u''=6u², u(z)=℘(z-1; g₂=0, g₃=2), pole at z=1; integrated LEFTWARD
 # from z=0.  SOURCE: closed-form Weierstrass-℘ (no code shared with src/).
 # REGENERATION (independent of the existing probe): convention verified
 # ℘(-1;{0,2}) == u_0_FW, then
@@ -100,5 +102,8 @@ u_at_m0_5    =  0.8296899113606488
 up_at_m0_5   = -0.5334655722915860
 u_at_m0_7    =  1.0295165057128672
 # PAST the negative pole (z=-1.726), for the descending multi-segment
-# pole-bridge scan test: u(-1.8)=℘(-2.8;{0,2}).
+# pole-bridge scan test: u(-1.8)=℘(-2.8;{0,2}), and its derivative
+# u'(-1.8)=℘'(-2.8;{0,2}) (the vector companion y₂ past the bridge, x0p0).
+#   wolframscript -code 'NumberForm[N[WeierstrassPPrime[-2.8,{0,2}],20],20]'
 u_at_m1_8    =  182.95202472221675
+up_at_m1_8   =  4949.209161573186
