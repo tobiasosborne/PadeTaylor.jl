@@ -17,19 +17,19 @@
 #          IVP and BVP branches the Dispatcher/Hybrid stitch are mutually
 #          consistent on a pole-free segment (FW 2011 §3.2 md:190-192).
 #
-#   CBV.9  q0yq MARKER (bug `padetaylor-q0yq`, CONFIRMED)  [src/IVPBVPHybrid.jl]
-#          The IVPBVPSolution callable docstring (IVPBVPHybrid.jl:726-729,736)
-#          promises: on the sector boundary it "evaluates both the BVP and the
-#          PFS sides and *asserts* their values agree to within glue_tol…
-#          Failure throws."  The callable BODY (lines 738-781) performs ONLY
-#          inside/outside DomainError dispatch + linear interpolation between
-#          bracketing BVP slices — NO dual-side evaluation, NO continuity
-#          check.  A discontinuous glue passes SILENTLY (Rule 1 gap, Law 2
-#          violation).  We construct a genuine IVPBVPSolution, inject a +1000
-#          discontinuity into one slice, and assert the callable SHOULD throw
-#          per its docstring.  Since the guard is absent it does NOT → wrapped
-#          @test_broken so the suite visibly tracks the bug and auto-flags
-#          when q0yq is fixed.  See `bd show padetaylor-q0yq`.
+#   CBV.9  q0yq guard (bug `padetaylor-q0yq`, FIXED 2026-06-13)  [IVPBVPHybrid.jl]
+#          The callable docstring once promised an unconditional glue-continuity
+#          throw the BODY never performed (linear interpolation between
+#          bracketing BVP slices, NO check) — a discontinuous glue passed
+#          SILENTLY (Rule 1 gap).  The literal PFS-vs-BVP match is INFEASIBLE in
+#          v1 (a value tautology — BVP BCs === harvested PFS values — plus a
+#          ~1e-1 derivative mismatch, FFW md:226, deferred as padetaylor-sn9a).
+#          The FIX is an inter-slice COHERENCE guard: a jump between the two
+#          bracketing slices' values exceeding 3× the smaller value (floored at
+#          1) is a divergent/corrupt slice ⇒ fail loud (measured: honest
+#          jump/|w| ≈ 0.09, the +1000 injection ≈ 14).  We inject +1000 into one
+#          slice and assert the callable now THROWS (@test_throws, flipped from
+#          @test_broken); GM2 asserts the un-corrupted stack does NOT throw.
 #
 # ORACLES: cosh closed form (residual u''-u==0 sympy-verified, capture.py
 # block 6/8) + Julia stdlib cosh/sinh as a second oracle.  No fitted tol.
@@ -134,18 +134,18 @@ using PadeTaylor.Painleve: PainleveProblem
         re_q = (sol.slice_re[1] + sol.slice_re[2]) / 2
         ζq = complex(re_q, 0.0)
 
-        # CURRENT behaviour: returns a finite interpolated value (~midpoint
-        # ≈ original + 500), silently — NO throw despite |Δglue| ≫ glue_tol.
-        w_bad = sol_bad(ζq)[1]
-        w_ok  = sol(ζq)[1]                        # un-corrupted reference
-        @test isfinite(w_bad)
-        @test abs(w_bad - w_ok) > 100             # discontinuity leaked through
+        # FIXED (q0yq): the callable now FAILS LOUD on the gross inter-slice
+        # incoherence.  At ζq the +1000-corrupted slice jumps ≈14× the
+        # un-corrupted bracketing value, exceeding the 3× catastrophe bound, so
+        # the callable throws instead of silently interpolating a fictitious
+        # midpoint (~original + 500).  (Flipped from the q0yq @test_broken.)
+        @test_throws ErrorException sol_bad(ζq)
 
-        # SHOULD-THROW per the docstring (IVPBVPHybrid.jl:728-729,736):
-        # "asserts their values agree to within glue_tol… Failure throws."
-        # The guard is absent (q0yq) → this is @test_broken and auto-flags
-        # green the day q0yq is fixed.
-        @test_broken (sol_bad(ζq); false)
+        # GM2 (must NOT throw): the un-corrupted, CONTINUOUS real stack.  The
+        # guard must not false-fire on honest O(0.1·|w|) inter-slice variation
+        # (measured jump/|w| ≈ 0.09 here — far below the 3× bound).
+        w_ok, up_ok = sol(ζq)
+        @test isfinite(w_ok) && isfinite(up_ok)
     end
 
 end # @testset Corpus BVP hybrid (CBV.8-9)
@@ -160,12 +160,18 @@ end # @testset Corpus BVP hybrid (CBV.8-9)
 #   makes |u_bvp - u_ivp| ≈ 0.05 ⇒ both atol-1e-10 junction tests go RED.
 #   Restored; `git diff src/` empty.
 #
-#   CBV.9 is itself the marker — it asserts a KNOWN-ABSENT guard.  Its
-#   load-bearing assertion is the @test_broken: when q0yq is fixed (a glue
-#   throw added), the callable will throw on the injected discontinuity, the
-#   `(sol_bad(ζq); false)` body will error before returning false, and
-#   @test_broken flips to a passing @test — a built-in regression tripwire.
-#   The `abs(w_bad - w_ok) > 100` guard mutation-proves that the injected
-#   discontinuity actually reaches the callable output (drop the `.+ 1000.0`
-#   → w_bad == w_ok → RED), so the marker cannot silently become vacuous.
+#   CBV.9 — bug padetaylor-q0yq FIXED 2026-06-13 (inter-slice coherence guard
+#   in IVPBVPHybrid.jl).  Mutation-proof (EXECUTED, restored byte-clean):
+#     MT1 — disable the guard (`jump > 3*scale` → `jump > 1e12*scale`): the
+#       +1000-corrupted query no longer throws ⇒ `@test_throws ErrorException
+#       sol_bad(ζq)` RED.  Proves the guard catches the catastrophe.
+#     MT2 — threshold → 0 (`jump > 0*scale`, always throw): the un-corrupted
+#       CONTINUOUS stack (GM2 `sol(ζq)`) false-fires ⇒ RED.  Proves the 3×
+#       calibration is load-bearing (no false-throw on honest variation).
+#   CALIBRATION (Rule 5, measured this session): honest inter-slice jump/|w| ≈
+#   0.093 (the FFW md:226 ~0.1 phenomenon) vs ≈14 for the +1000 injection — a
+#   150× separation; the 3× bound sits 32× above honest, 4.7× below catastrophe.
+#   The `min`-based scale (NOT max) is essential: the +1000 inflates the LARGER
+#   bracketing value, so a max-based bound (e.g. 10·max) would never fire.
+#   Regression: ivp_bvp_hybrid (65) + ffw_fig_5 (23) GREEN — no false-throws.
 # ============================================================================

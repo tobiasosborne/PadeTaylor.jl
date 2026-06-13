@@ -60,8 +60,11 @@ function `z -> (u, u')` valid at large `|z|`:
 
   **Step 4 — Glue.**  Build an `IVPBVPSolution` whose `sol(ζ)`
   callable dispatches on whether ζ falls inside S (BVP slice) or
-  outside (PFS).  Continuity across the boundary is asserted to
-  `glue_tol`; violation fails loud (CLAUDE.md Rule 1).
+  outside (PFS).  Between two bracketing slices the callable fails
+  loud (Rule 1) on GROSS inter-slice incoherence — a divergent/corrupt
+  slice (bug `padetaylor-q0yq`).  The finer FFW md:247 PFS-vs-BVP
+  derivative match (~1e-7) is a v1 Float64 deferral (the value check is
+  a tautology, the derivative is ~1e-1 here — bead `padetaylor-sn9a`).
 
 Sector geometry note (FFW md:222): Figure 5's pole-free sector is
 described in the z-plane as `-3π/4 < arg z < 9π/4`.  Under the PIII
@@ -722,17 +725,23 @@ Evaluate the hybrid solution at ζ in the ζ-frame.  Dispatches:
     between the two bracketing slices at fractional `Re ζ` is the
     accuracy-bound v1 (Worklog 039 notes the 2D-spectral upgrade as
     a deferred follow-up).
-  - **On the sector boundary**: the callable evaluates both the
-    BVP and the PFS sides and *asserts* their values agree to
-    within `glue_tol` (FFW md:247 derivative-match style).  Failure
-    throws.
+  - **Between two bracketing slices**: before interpolating, the
+    callable fails loud (Rule 1) on GROSS inter-slice incoherence —
+    a jump between the two slices' values at ζ exceeding `3×` the
+    smaller value (floored at 1) signals a divergent/corrupt BVP slice
+    (bug `padetaylor-q0yq`).  It does NOT perform the FFW md:247
+    PFS-vs-BVP *derivative* match: that ~1e-7 criterion is a value
+    tautology (BVP BCs are set === the harvested PFS values) plus a
+    derivative check that is ~1e-1 in v1 Float64 (FFW md:226) — a
+    documented v2 deferral (bead `padetaylor-sn9a`).
   - **Outside the sector**: not currently callable — IVPBVPSolution
     v1 does not expose a dense-callable PFS interpolant (PFS is a
     Stage-2 grid by construction; FW 2011 line 166).  Users querying
     outside the sector should read `sol.pfs_top.grid_u` /
     `sol.pfs_bot.grid_u` directly.
 
-Throws `DomainError` outside the sector; throws on glue violation.
+Throws `DomainError` outside the sector; throws `ErrorException` on gross
+inter-slice incoherence (a divergent/corrupt BVP slice — bug `padetaylor-q0yq`).
 """
 function (sol::IVPBVPSolution{T})(ζ) where T
     CT = Complex{T}
@@ -774,6 +783,27 @@ function (sol::IVPBVPSolution{T})(ζ) where T
         # apart in Re ζ.
         w_a, up_a = _eval_bvp_slice(sol.bvp_slices[i], ζ_CT)
         w_b, up_b = _eval_bvp_slice(sol.bvp_slices[i+1], ζ_CT)
+        # Inter-slice COHERENCE guard (bug padetaylor-q0yq, Rule 1 fail-loud).
+        # The callable's docstring promised a glue-continuity throw that the
+        # code never performed; a divergent/corrupt BVP slice (one that failed
+        # to converge to the correct branch) was silently interpolated into a
+        # fictitious value.  This is a CATASTROPHE bound, NOT `glue_tol`: adjacent
+        # slices legitimately differ by O(0.1·|w|) across a finite Re gap (the
+        # FFW md:226 derivative phenomenon, out of v1 scope — that ~1e-7 PFS-vs-
+        # BVP match is deferred, bead padetaylor-sn9a).  Measured: the honest
+        # ratio is ~0.093 while a corrupt slice gives ≥14 — so a jump exceeding
+        # 3× the smaller bracketing value (floored at 1 for zero-crossings) is
+        # unambiguously a divergent slice, and we fail loud instead of lying.
+        jump  = abs(w_b - w_a)
+        scale = max(min(abs(w_a), abs(w_b)), one(jump))
+        jump > 3 * scale && throw(ErrorException(
+            "IVPBVPSolution: inter-slice incoherence at Re ζ = $re between " *
+            "bracketing BVP slices $i and $(i + 1) (Re = $(sol.slice_re[i]), " *
+            "$(sol.slice_re[i+1])): |Δw| = $jump exceeds the catastrophe bound " *
+            "$(3 * scale) (3× the smaller slice value).  A BVP slice likely " *
+            "failed to converge to the correct branch.  Suggestion: re-solve " *
+            "with larger N / maxiter, verify every slice.residual_inf < tol, " *
+            "or widen the PFS wedge so the boundary harvest is clean."))
         return ((1 - ξ) * w_a + ξ * w_b,
                 (1 - ξ) * up_a + ξ * up_b)
     end

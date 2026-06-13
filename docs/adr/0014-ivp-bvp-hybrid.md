@@ -54,7 +54,13 @@ The four-step FFW §3 algorithm (md:203-247) maps to existing modules:
   3. **BVP sector solve** ← `bvp_solve` 3-arg-RHS overload on each
      `Re ζ = const` slice through the sector.
   4. **Glue** ← `IVPBVPSolution.(::Complex)` callable dispatches by
-     sector membership; continuity asserted to `glue_tol`.
+     sector membership; between two bracketing slices it fails loud on
+     GROSS inter-slice incoherence (a divergent/corrupt slice — bug
+     `padetaylor-q0yq`).  The finer FFW md:247 PFS-vs-BVP derivative
+     match (~1e-7) is a v1 Float64 deferral (bead `padetaylor-sn9a`):
+     the value check is a tautology (BVP BCs === harvested PFS values)
+     and the derivative is ~1e-1 here.  (`glue_tol` remains the *sector
+     membership* tolerance, not a continuity bound.)
 
 **BVP three-argument-RHS extension** (bead `padetaylor-i76`).  The
 P̃_III RHS `w'' = (w')²/w + …` depends on `w'`, but the existing

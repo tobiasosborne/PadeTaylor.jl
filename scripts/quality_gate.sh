@@ -27,13 +27,13 @@
 # processes is the inherently Rule-7-safe shape.
 #
 # EXPECTED-NOISE (the two facts a passing run must NOT look alarming over):
-#   1. The full Pkg.test() suite is GREEN at N pass / 7 BROKEN / 0 fail. The
-#      7 broken are INTENTIONAL @test_broken markers: 5 auto-flip markers for
-#      known open bugs (q0yq×1, 61um×3, v1ub×1) + 2 deferred-feature markers
+#   1. The full Pkg.test() suite is GREEN at N pass / 6 BROKEN / 0 fail. The
+#      6 broken are INTENTIONAL @test_broken markers: 4 auto-flip markers for
+#      known open bugs (61um×3, v1ub×1) + 2 deferred-feature markers
 #      (cm-n2 collision in corpus_vector_polefield_test, pi2-tritronquee in
-#      corpus_painleve_rational_test). [Was 10; bug padetaylor-53tu's 3 markers
-#      — CBvx.4.2, CBvx.4.4, CBV.7 — were FIXED and flipped to @test_throws on
-#      2026-06-13.] A nonzero broken count is EXPECTED, not a regression — each
+#      corpus_painleve_rational_test). [Was 10; on 2026-06-13 padetaylor-53tu's
+#      3 markers (CBvx.4.2, CBvx.4.4, CBV.7) AND padetaylor-q0yq's 1 marker
+#      (CBV.9) were FIXED and flipped to @test_throws.] A nonzero broken count is EXPECTED, not a regression — each
 #      auto-flip marker flips to "Unexpected Pass" the day its bug is fixed
 #      (that IS the signal to remove the marker). INVESTIGATE ONLY FAILs.
 #      (bd memory corpus-v2-expected-broken-count.) So this runner gates on the
