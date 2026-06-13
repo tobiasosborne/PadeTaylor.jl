@@ -37,8 +37,10 @@ test setup; tests 6.1.3 + 6.1.5 are the headline.
 
 **v1 (this implementation)**: pure fixed-`h_max` stepping, no vault,
 no Jorba-Zou.  The architecture supports *multi*-segment trajectories
-(the `solve_pade` loop iterates while `state.z < z_end`), but the v1
-test corpus only exercises the single-segment `h_max = 1.5` case.
+(the `solve_pade` loop steps in the direction of `sign(z_end - z_start)`,
+so both ascending and DESCENDING spans are integrated — bug
+`padetaylor-xhjw`), but the v1 test corpus mostly exercises the
+single-segment `h_max = 1.5` case.
 
 **v2 (deferred, P0 bead `padetaylor-8cr`)**: the FW 2011 §3.1 path-
 network for long-range integration crossing many lattice poles, and/or
@@ -168,6 +170,12 @@ end
 Take fixed-`h_max` Padé-Taylor steps until the integration window is
 exhausted.  Each segment stores the local Padé approximant for later
 dense evaluation via the callable interface.
+
+The span may be ASCENDING (`z_end > z_start`) or DESCENDING
+(`z_end < z_start`); the driver steps with `sign(z_end - z_start)·h_max`
+and the underlying stepper round-trips signed `h` exactly, so a leftward
+integration is fully supported (bug `padetaylor-xhjw`).  For a descending
+span `sol.z` is *decreasing*; the callable handles either ordering.
 """
 function solve_pade(prob::PadeTaylorProblem{F, T, Y};
                     h_max::Real,
@@ -184,6 +192,12 @@ function solve_pade(prob::PadeTaylorProblem{F, T, Y};
     z_start, z_end = prob.zspan
     h_max_T = T(h_max)
     state   = PadeStepperState{T}(z_start, prob.y0[1], prob.y0[2])
+    # Integration direction (bug padetaylor-xhjw): the stepper accepts a signed
+    # h and round-trips correctly (krgy.3 MM.5), so a DESCENDING span
+    # (z_end < z_start) is integrated leftward rather than silently returning a
+    # degenerate one-node trajectory.  `dir` is ±1 (T-typed; the constructor
+    # rejects z_start == z_end so it is never zero).
+    dir = sign(z_end - z_start)
 
     P_T = PadeApproximant{T}
     z_vec    = T[z_start]
@@ -192,15 +206,20 @@ function solve_pade(prob::PadeTaylorProblem{F, T, Y};
     pade_vec = P_T[]
 
     steps = 0
-    while state.z < z_end
+    while dir * (z_end - state.z) > zero(T)
         steps += 1
         steps ≤ max_steps || error(
             "solve_pade: did not reach z_end after max_steps=$max_steps " *
             "steps (current z=$(state.z), target z_end=$z_end). " *
             "Suggestion: increase max_steps, or shorten the integration " *
             "window.")
-        h_step = min(h_max_T, z_end - state.z)
+        gap    = z_end - state.z
+        h_step = dir * min(h_max_T, abs(gap))     # signed; |h_step| ≤ h_max
         _, P_u = pade_step_with_pade!(state, prob.f, prob.order, h_step)
+        # On the final clamped step `h_step == gap`, so `state.z` lands on
+        # `z_end` exactly (`x + (z_end - x) == z_end`, verified over a wide
+        # span/h_max sweep) and the loop then terminates; the `max_steps`
+        # guard above backstops any pathological non-landing.
         push!(z_vec, state.z)
         push!(y_vec, (state.u, state.up))
         push!(h_vec, h_step)
@@ -216,15 +235,21 @@ end
 
 function (sol::PadeTaylorSolution{T, Y, P})(z) where {T, Y, P}
     z_T = T(z)
-    z_T < sol.z[1] && throw(DomainError(z,
-        "PadeTaylorSolution: z=$z is below z_start=$(sol.z[1])."))
-    z_T > sol.z[end] && throw(DomainError(z,
-        "PadeTaylorSolution: z=$z is above z_end=$(sol.z[end])."))
+    # Direction-agnostic window guard (bug padetaylor-xhjw): for a DESCENDING
+    # span sol.z decreases, so guard against the [lo, hi] envelope rather than
+    # the raw first/last breakpoints (which assumed an ascending span).
+    lo, hi = minmax(sol.z[1], sol.z[end])
+    z_T < lo && throw(DomainError(z,
+        "PadeTaylorSolution: z=$z is outside the integration window [$lo, $hi]."))
+    z_T > hi && throw(DomainError(z,
+        "PadeTaylorSolution: z=$z is outside the integration window [$lo, $hi]."))
 
-    # Why: linear scan is fine — v1 trajectories have ≤ a handful of
-    # segments. Switch to bisection when the path-network ships in v2.
+    # Why: linear scan is fine — v1 trajectories have ≤ a handful of segments.
+    # Switch to bisection when the path-network ships in v2.  `dir` makes the
+    # scan advance in the direction of integration (sol.z may be decreasing).
+    dir = sign(sol.z[end] - sol.z[1])
     k = 1
-    @inbounds while k < length(sol.h) && z_T > sol.z[k + 1]
+    @inbounds while k < length(sol.h) && dir * (z_T - sol.z[k + 1]) > zero(T)
         k += 1
     end
 

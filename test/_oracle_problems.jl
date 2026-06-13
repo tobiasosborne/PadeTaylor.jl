@@ -84,3 +84,21 @@ u_0_FW   = 1.071822516416917
 up_0_FW  = 1.710337353176786
 c_1_FW   = -1
 c_2_FW   = 2
+
+# (C) DESCENDING-span oracle (bug padetaylor-xhjw, 2026-06-13).  Same FW
+# problem u''=6u², u(z)=℘(z-1; g₂=0, g₃=2), pole at z=1; integrated LEFTWARD
+# from z=0.  SOURCE: closed-form Weierstrass-℘ (no code shared with src/).
+# REGENERATION (independent of the existing probe): convention verified
+# ℘(-1;{0,2}) == u_0_FW, then
+#   wolframscript -code 'NumberForm[N[WeierstrassP[#-1,{0,2}],20],20]&  /@ {-0.1,-0.3,-0.5,-0.7,-0.95}'
+#   wolframscript -code 'NumberForm[N[WeierstrassPPrime[#-1,{0,2}],20],20]& /@ {-0.3,-0.5}'
+# Nearest negative-side pole at z=-1.7260681808557806 (so [-0.95,0] is
+# pole-free; [0,-1.95] brackets it for the descending pole-bridge edge).
+u_at_m0_3    =  0.8012333414468930
+up_at_m0_3   =  0.2397637851620445
+u_at_m0_5    =  0.8296899113606488
+up_at_m0_5   = -0.5334655722915860
+u_at_m0_7    =  1.0295165057128672
+# PAST the negative pole (z=-1.726), for the descending multi-segment
+# pole-bridge scan test: u(-1.8)=℘(-2.8;{0,2}).
+u_at_m1_8    =  182.95202472221675
