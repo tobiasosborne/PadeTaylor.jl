@@ -8,7 +8,42 @@
 > previous session already paid for. The frictions surfaced are
 > recorded in `docs/worklog/001-stages-Z-1-2-handoff.md`.
 
-## 🔬 LATEST SESSION (2026-06-09) — TEST-HARDENING SWEEP (epic padetaylor-krgy) DELIVERED
+## 🔬 LATEST SESSION (2026-06-13) — BUG-FIX CAMPAIGN (epic padetaylor-l7yt): 4 of 6 FIXED
+
+Full arc in **worklog 074**. Fixed the confirmed library bugs surfaced by the
+corpus-v2 + test-hardening sweeps, to the highest correctness bar (audition ≥2
+fixes each, independent oracle, mutation-prove every load-bearing assertion,
+extremely high coverage incl. Supposition fuzzing). **Orchestration:** one
+read-only fix-audition workflow (Rule-7-safe), then strictly serial Julia in a
+minimal env at `/tmp/ptcampaign` (recreate per worklog 074).
+
+**Fixed + pushed:** `53tu` (`8a3c3c5`, BVP `|t*|` disc guard), `xhjw` (`b0227e3`,
+direction-aware `solve_pade`), `jznu` (`3f96794`, scoped SharedPade contract +
+SP.1.8 masters), `q0yq` (`7712341`, IVPBVP inter-slice coherence guard).
+Expected-broken **10 → 6** (lockstep in `quality_gate.sh` + `CLAUDE.md` + bd
+memory). Caught **two audition errors** (xhjw's snap was verified-redundant → removed;
+q0yq's `10·max(scale)` would never fire → measured + used `min`-based 3× bound).
+
+**⚠️ STILL OPEN — `61um` and `fzse` (campaign epic `padetaylor-l7yt`):**
+- **`61um`** (DEEPEST — silent Riemann-sheet corruption). The audition's
+  chord-bisection fix is **geometrically WRONG** — proven: chord-bisection
+  returns −0.9π at every subdivision depth, only **trajectory** subdivision
+  recovers +1.1π (worklog 074 has the probe). Correct fix is ARCHITECTURAL:
+  accumulate winding along the densely-sampled trajectory in the `PathNetwork`
+  walker / `step_sheet_update` (or fail loud on too-coarse steps), NOT in the
+  2-arg `winding_delta`. The CWD.5 `@test_broken` (+1.1π from 2 args) is
+  information-theoretically impossible — REFRAME, don't flip. Start by tracing
+  `src/PathNetwork.jl:620-633` (where `step_sheet_update` is called) and whether
+  the Stage-2 trajectory is reachable there. Fixtures: CWD.5, CBr.3, CPN.7.2/7.3.
+- **`fzse`** (LARGEST — `extract_poles` ~76% precision/recall on dense 2D
+  path-network pole fields). Audition recommends agglomerative single-linkage
+  self-merge + a near-field validity gate in `src/PoleField.jl:213-225`, with a
+  calibration probe on the equianharmonic-lattice oracle. Pure param-tuning is
+  proven insufficient.
+
+**Follow-on beads filed:** `rsln`, `tqvz`, `x0p0`, `sn9a` (see worklog 074).
+
+## 🔬 SESSION (2026-06-09) — TEST-HARDENING SWEEP (epic padetaylor-krgy) DELIVERED
 
 Full arc in **worklog 073**; methodology in `docs/test_corpus/03_hardening_methodology.md`
 (deep-research synthesis); ADR-0029 (certified ball oracles), ADR-0030 (formal-methods
