@@ -35,14 +35,19 @@
 # ring radius r=0.45; two single-wedge-step cross_branch=true walks differing
 # ONLY in step coarseness:
 #   COARSE -- IC arg +0.82*pi, target arg +1.18*pi, h=0.48.  The single step
-#     straddles the arg=pi cut with realised subtended ~+0.555*pi (< pi, CCW).
-#     winding_delta is EXACT; visited_sheet=[1] is CORRECT (matches TRUE +1).
-#   FINE -- IC arg -0.47*pi, target arg +0.59*pi, h=0.70.  The single step
-#     straddles the cut with realised TRUE subtended ~+1.083*pi (> pi, CCW).
-#     winding_delta CLAMPS into (-pi,pi] -> ~ -2.88 rad (loses a +2*pi
-#     revolution) -> visited_sheet=[-1], the 61um-CORRUPTED sheet (TRUE +1).
-# Same ODE/branch/cut/CCW-direction; only the subtended angle crosses the pi
-# threshold -- proving the corruption is STEP-SIZE-TRIGGERED.
+#     straddles the arg=pi cut with realised subtended ~+0.555*pi (< pi, CCW)
+#     and clears the branch (grazing ratio ~0.20 > graze_tol=0.1).  winding_delta
+#     is EXACT; visited_sheet=[1] is CORRECT (matches TRUE +1) and does NOT throw.
+#   FINE -- IC arg -0.47*pi, target arg +0.59*pi, h=0.70 (padetaylor-61um
+#     RESOLVED 2026-06-13).  The single step GRAZES branch=1 (realised grazing
+#     ratio ~0.06 « graze_tol=0.1).  winding_delta on the chord is CORRECT
+#     (-0.94*pi, the principal value; a straight chord never subtends |Δθ|>=pi
+#     about an exterior branch).  Because the step grazes the branch the sheet
+#     bump is winding-AMBIGUOUS, so step_sheet_update fails loud and the walk
+#     THROWS.  (The "+1.083*pi true subtended" is the CURVED major arc, not the
+#     straight chord; unrecoverable from two endpoints -- worklog 074:47-74.)
+# Same ODE/branch/cut; only whether the chord CLEARS or GRAZES the branch
+# differs -- proving the fail-loud is STEP-SIZE-TRIGGERED (shrink h to clear it).
 #
 # TOLERANCES (justified by METHOD).
 #   * Closed-form +-sqrt oracle: exact analytic sqrt -> atol 1e-12.
@@ -57,16 +62,16 @@
 # REAL-WALK complement.
 #
 # MUTATION-PROOF (Rule 4): footer -- M-oracle (flip a pinned +-sqrt value ->
-# reddens) + M-impl (perturb winding_delta's (-pi,pi] wrap -> the coarse-ring
-# sheet assertion reddens AND the FINE @test_broken marker flips to
-# "unexpectedly passes", proving it is the LIVE 61um auto-flip).  ACTUALLY
-# EXECUTED then restored byte-clean.
+# reddens) + M-guard-off (disable the step_sheet_update grazing guard -> the
+# FINE @test_throws reddens) + M-guard-overfire (raise graze_tol above COARSE's
+# ratio -> the SAFE COARSE leg reddens).  ACTUALLY EXECUTED then restored
+# byte-clean.
 # ============================================================================
 
 using Test
 using PadeTaylor
 import PadeTaylor.SheetTracker: winding_delta, accumulate_winding, sheet_index
-import PadeTaylor.BranchTracker: segment_crosses_cut
+import PadeTaylor.BranchTracker: segment_crosses_cut, step_sheet_update
 
 include(joinpath(@__DIR__, "_oracle_corpus_pathnet_winding.jl"))
 
@@ -145,45 +150,50 @@ end
     end
 
     # -----------------------------------------------------------------------
-    # CPN.7.3  FINE leg -- a REAL single-step cross_branch=true walk whose
-    #          wedge step subtends > pi.  winding_delta WRAPS into (-π,π] and
-    #          returns a NEGATIVE value, so step_sheet_update bumps -1 instead
-    #          of +1: visited_sheet=[-1] is the padetaylor-61um CORRUPTION.
-    #          The TRUE crossing is CCW (+1).
+    # CPN.7.3  FINE leg (padetaylor-61um RESOLVED 2026-06-13) -- a REAL single-
+    #          step cross_branch=true walk whose wedge step GRAZES branch=1
+    #          (realised grazing ratio ~0.06 « graze_tol=0.1).  winding_delta on
+    #          the chord is CORRECT (returns -0.94π, the principal value — a
+    #          straight chord cannot subtend |Δθ| ≥ π about an exterior branch).
+    #          Because the step grazes the branch the sheet bump is winding-
+    #          AMBIGUOUS, so step_sheet_update REFUSES it fail-loud and the walk
+    #          THROWS — surfacing the ill-conditioned step instead of silently
+    #          corrupting the sheet index.  (The earlier framing — "true
+    #          subtended +1.083π, winding_delta loses a revolution, visited_sheet
+    #          corrupted to [-1]" — was geometrically false: +1.083π is the
+    #          MAJOR-arc angle of a CURVED path the walker never realises,
+    #          unrecoverable from two endpoints.  worklog 074:47-74; ADR-0031.)
     # -----------------------------------------------------------------------
-    @testset "CPN.7.3: FINE step (>π) ⇒ visited_sheet CORRUPTED (61um)" begin
-        sol = cpn7_leg(CPN7_FINE_P, CPN7_FINE_Q, 0.70)
-        zp, zc = sol.visited_z[1], sol.visited_z[2]
+    @testset "CPN.7.3: FINE step (grazes branch) ⇒ fail-loud, winding_delta CORRECT (61um)" begin
+        # winding_delta on the IDEAL FINE chord (the documented ring geometry)
+        # returns the chord's TRUE winding -0.94π = the principal arg-difference.
+        # This is a pure, CORRECT primitive call (no throw — winding_delta has no
+        # guard; the ambiguity is the WALKER's concern, handled below).
+        @test segment_crosses_cut(CPN7_FINE_P, CPN7_FINE_Q, CPN7_BRANCH, π) == true
+        wd = winding_delta(CPN7_FINE_P, CPN7_FINE_Q, CPN7_BRANCH)
+        @test isapprox(wd, CPN7_FINE_IDEAL_WRAPPED; atol = 1e-9)   # = -0.94π, CORRECT
+        @test wd < 0 && abs(wd) < π                                # never wraps past π
+        @test isapprox(wd, angle((CPN7_FINE_Q - CPN7_BRANCH) /
+                                 (CPN7_FINE_P - CPN7_BRANCH)); atol = 1e-12)
+        # The +1.06π "ideal subtended" is the curved major arc, off by exactly
+        # the +2π neither the chord nor two endpoints carry.
+        @test isapprox(wd - CPN7_FINE_IDEAL_SUBTENDED, -2π; atol = 1e-9)
 
-        # The realised single wedge step crosses the same arg=π cut.
-        @test segment_crosses_cut(zp, zc, CPN7_BRANCH, π) == true
+        # UNIT: the FINE chord crosses the arg=π cut AND grazes branch=1
+        # (ratio ~0.047 < graze_tol), so step_sheet_update REFUSES the bump.
+        @test_throws DomainError step_sheet_update([0], CPN7_FINE_P, CPN7_FINE_Q,
+                                                   (CPN7_BRANCH,), (Float64(π),))
+        gerr = try
+            step_sheet_update([0], CPN7_FINE_P, CPN7_FINE_Q, (CPN7_BRANCH,), (Float64(π),))
+        catch e; e end
+        @test gerr isa DomainError
+        @test occursin("graze", sprint(showerror, gerr))
+        @test occursin("shorten h", sprint(showerror, gerr))
 
-        # TRUE (continuous) subtended angle of the realised edge exceeds π and
-        # is CCW (+): unwrap the principal arg-difference by +2π.
-        raw  = angle((zc - CPN7_BRANCH) / (zp - CPN7_BRANCH))   # principal, < 0
-        true_subtended = raw < 0 ? raw + 2π : raw
-        @test true_subtended > π
-        @test true_subtended < 2π                               # < a full loop
-
-        # winding_delta returns the WRAPPED (negative) value -- the silent loss
-        # of one +2π revolution (the 61um precondition violation).
-        wd = winding_delta(zp, zc, CPN7_BRANCH)
-        @test wd < 0
-        @test isapprox(wd - true_subtended, -2π; atol = 1e-9)   # lost exactly -2π
-        @test isapprox(wd, raw; atol = 1e-12)                   # = principal arg-diff
-
-        # CURRENT (documented-wrong) sheet bookkeeping: bumps -1 (sign of the
-        # wrapped wd), so visited_sheet=[-1].  GREEN today -- pins the bug.
-        @test sol.visited_sheet[2] == [-1]
-
-        # ----- 61um REAL-WALK AUTO-FLIP MARKER -------------------------------
-        # The TRUE CCW crossing should bump +1, giving visited_sheet=[1].  Today
-        # the wrapped winding_delta yields [-1], so this is BROKEN.  It auto-
-        # flips to "unexpectedly passes" the day padetaylor-61um is fixed (a
-        # winding_delta that returns the TRUE +1.083π makes step_sheet_update
-        # bump +1).  DO NOT delete -- this is the LIVE real-walk 61um tracker,
-        # the complement to CWD.5/CBr.3's unit-level markers.
-        @test_broken sol.visited_sheet[2] == [1]
+        # REAL WALK: the wedge stepper realises that same grazing step, so
+        # path_network_solve now THROWS at the sheet-bump site (PathNetwork.jl:627)
+        # — the 61um fix in action (was: silent visited_sheet=[-1] corruption).
+        @test_throws DomainError cpn7_leg(CPN7_FINE_P, CPN7_FINE_Q, 0.70)
     end
 
 end # @testset Corpus path-network winding (CPN.7)
@@ -198,29 +208,23 @@ end # @testset Corpus path-network winding (CPN.7)
 #     +sqrt no longer matches the corrupted pin) AND the explicit-literal pin
 #     fails.  Restored the literal; file GREEN again.
 #
-#   M-impl -- perturb the (-π,π] wrap in src/SheetTracker.jl winding_delta
-#     (delete the `if Δθ ≤ -π … elseif Δθ > π …` block; return the raw
-#     Δθ = angle(z_new-branch) - angle(z_old-branch)).  Verified bite (9 RED +
-#     1 Unexpected-Pass of 22):
-#     (i)  CPN.7.3's @test_broken FLIPS to "Unexpected Pass" -- with the wrap
-#          removed, winding_delta returns the raw +1.083π-ish POSITIVE value,
-#          step_sheet_update bumps +1, visited_sheet[2]==[1], so the marker
-#          passes.  AND CPN.7.3's `wd < 0` / `wd - true ≈ -2π` pins go RED (wd
-#          is now positive and equals the unwrapped value).  This is the
-#          DEFINITIVE proof that CPN.7.3's @test_broken is the LIVE 61um
-#          auto-flip: removing the exact wrap that causes 61um turns the marker
-#          green.
-#     (ii) CPN.7.2 (COARSE) ALSO reddens (5 RED), a STRONGER result than first
-#          predicted: the COARSE edge's two principal arg() values straddle the
-#          arg=π ray, so the RAW difference is -4.538 rad (OUT of (-π,π]) and
-#          the wrap is load-bearing for the coarse leg too -- removing it makes
-#          wd=-4.538 (<0), so `wd>0` / `abs(wd)<π` / the +1 sheet pins all fail
-#          and visited_sheet bumps -1.  Recorded honestly: the wrap is NOT
-#          incidental to the coarse leg; both legs depend on it (the FINE leg's
-#          dependence is the BUG, the COARSE leg's is the CORRECT use).
-#     (iii) CPN.7.1 unaffected (closed-form ±√, no winding).
-#     Restored byte-for-byte; `git diff src/` empty; file GREEN with exactly
-#     one @test_broken.
+#   M-guard-off -- in src/BranchTracker.jl step_sheet_update, disable the 61um
+#     grazing guard (e.g. set graze_tol default to 0.0, or delete the
+#     `mind < graze_tol*|d|` throw).  Verified bite: CPN.7.3's two @test_throws
+#     (the unit step_sheet_update + the cpn7_leg(FINE) walk) go RED — with no
+#     guard the FINE grazing step no longer throws (it would silently bump
+#     sign(winding_delta) = -1, the old corruption).  CBr.3's @test_throws
+#     reddens identically.  Restored byte-clean.
+#   M-guard-overfire -- raise graze_tol default to 0.3 (above CPN.7.2 COARSE's
+#     realised grazing ratio 0.2045).  Verified bite: CPN.7.2 reddens — the SAFE
+#     coarse step (which must return [1] WITHOUT throwing) now throws, and the
+#     other in-suite cross_branch walks would too.  Proves the threshold is not
+#     over-firing on well-conditioned steps.  Restored byte-clean.
+#   Measured (campaign env, 2026-06-13): M-guard-off → CPN.7.3 5 RED (the unit
+#   @test_throws + 3 message pins + the cpn7_leg(FINE) walk @test_throws) and
+#   CBr.3 1 RED; M-guard-overfire (tol=0.3) → CPN.7.2 1 ERROR (the safe COARSE
+#   walk throws).  Both reverted byte-clean (`git diff src/` empty).
+#   CPN.7.1 unaffected (closed-form ±√, no winding).
 #
 # STANDALONE RUN:
 #   julia --project=. test/corpus_pathnet_winding_test.jl

@@ -17,10 +17,14 @@
 #     accumulation + sheet_index), including the -3π/2 → +π/2 normalisation;
 #   * the oblique-cut Cramer crossing with the EXACT t,s hand-values;
 #   * one step crossing TWO cuts simultaneously (both counters bump);
-#   * GAP #4 — the |Δθ|≥π single-step precondition VIOLATION: the code
-#     silently loses a full revolution.  We pin the documented-WRONG return
-#     value AND @test_broken the Rule-1-correct behaviour (throw/subdivide),
-#     reporting it loudly so a Rule-1 enforcement bead can be filed.
+#   * GAP #4 (padetaylor-61um, RESOLVED 2026-06-13) — winding_delta on a near-
+#     antipodal single step is CORRECT: a straight chord cannot subtend |Δθ| ≥ π
+#     about an exterior branch, so the principal value IS the chord's true
+#     winding; the "+1.1π" the earlier @test_broken expected is a CURVED-path
+#     major arc, unrecoverable from two endpoints.  The genuine Rule-1 defect
+#     was the unguarded ill-conditioned (branch-GRAZING) step in the walker's
+#     sheet bookkeeping — now fixed by the step_sheet_update grazing guard
+#     (CBr.3 / CPN.7.3).  CWD.5 pins winding_delta's correctness.
 #
 # GROUND TRUTH (Law 1): winding normalisation (-π,π] is principal-value arg;
 # the Cramer 2×2 system is src/BranchTracker.jl:112-121; sheet convention is
@@ -154,7 +158,7 @@ import PadeTaylor.BranchTracker:
     #        trackable.  REPORT: file a Rule-1 bead — winding_delta should
     #        throw (or the caller subdivide) when |raw Δθ| ≥ π.
     # -----------------------------------------------------------------------
-    @testset "CWD.5: GAP #4 — |Δθ|≥π single step silently loses a revolution" begin
+    @testset "CWD.5: GAP #4 — single straight step, winding_delta is CORRECT (61um)" begin
         z_old = 0.1 + 0.0im
         z_new = 0.1 * exp(im * 1.1 * π)
         actual = winding_delta(z_old, z_new, 0.0im)
@@ -165,23 +169,32 @@ import PadeTaylor.BranchTracker:
         # The error is exactly one missed revolution.
         @test isapprox(actual - true_subtended, -2π; atol = 1e-12)
 
-        # THE TRAP (why no naive guard fires): the raw arg-difference here is
-        #   angle(z_new) - angle(z_old) = −0.9π − 0 = −0.9π,
-        # whose magnitude is BELOW π — so a guard testing `|raw Δθ| ≥ π`
-        # would NOT trigger, yet a full revolution has still been lost.  The
-        # discontinuity is hidden inside `angle()` itself (it already mapped
-        # +1.1π → −0.9π before the subtraction).  A correct bookkeeper must
-        # track the CONTINUOUS angle (e.g. via the path tangent / sub-stepping
-        # so each step subtends < π in TRUE angle), not post-hoc clamp.
+        # WHY winding_delta is CORRECT here (61um resolution).  The raw
+        # arg-difference is angle(z_new) − angle(z_old) = −0.9π − 0 = −0.9π,
+        # already in (−π, π], and that IS the true winding of the STRAIGHT
+        # segment [z_old, z_new] about the origin (a straight chord can never
+        # subtend |Δθ| ≥ π about an exterior point).  The +1.1π "true subtended"
+        # is the MAJOR-arc angle of a CURVED path — and which way a path winds
+        # between two endpoints is information winding_delta's two arguments do
+        # NOT carry, so +1.1π is unrecoverable from this call (worklog
+        # 074:47-74).  winding_delta is a pure, correct principal-value primitive.
         raw_dtheta = angle(z_new) - angle(z_old)
         @test isapprox(raw_dtheta, -0.9 * π; atol = 1e-12)   # < π in magnitude
-        @test abs(raw_dtheta) < π                              # guard won't fire
+        @test abs(raw_dtheta) < π
+        @test isapprox(actual, raw_dtheta; atol = 1e-14)     # winding_delta == raw == truth
 
-        # Rule-1-correct behaviour: winding_delta should return the TRUE
-        # subtended +1.1π for this step (caller having sub-stepped), OR throw.
-        # Today it returns −0.9π silently.  Mark BROKEN, report loudly.
-        @test_broken isapprox(winding_delta(z_old, z_new, 0.0im),
-                              true_subtended; atol = 1e-12)
+        # ----- 61um RESOLUTION (was @test_broken expecting +1.1π) ------------
+        # The prior marker asserted winding_delta SHOULD return the unwrapped
+        # +1.1π.  That is geometrically impossible for a straight chord and
+        # information-theoretically unrecoverable from two endpoints; it is NOT
+        # a bug in winding_delta.  The genuine Rule-1 defect was the UNGUARDED
+        # ill-conditioned step in the WALKER's sheet bookkeeping, now fixed by
+        # the step_sheet_update grazing guard (demonstrated on a crossed-cut
+        # grazing geometry in CBr.3 and end-to-end in CPN.7.3).  This step's
+        # straight chord does NOT cross the arg=π cut from the origin (it leaves
+        # the +real axis directly into the lower-left), so it is a pure
+        # winding_delta primitive fixture; reframed per bd decision 2026-06-13.
+        @test sheet_index(actual) == 0                       # |−0.9π| < π ⇒ sheet 0
     end
 
 end # @testset Corpus winding (CWD)
@@ -200,7 +213,12 @@ end # @testset Corpus winding (CWD)
 #     to `Δθ > 0 ? -1 : 1`.  Verified bite: CWD.4 RED (returns [1,1] instead
 #     of [-1,-1]).  Restored.
 #
-#   GAP #4 (CWD.5) is intentionally a @test_broken, not a mutation target —
-#     it documents a REAL Rule-1 gap (winding_delta does not enforce its own
-#     precondition).  REPORTED for a follow-up Rule-1 enforcement bead.
+#   GAP #4 (CWD.5) was reframed when padetaylor-61um was RESOLVED (2026-06-13):
+#     winding_delta is mathematically correct for the straight chord (it never
+#     loses a revolution — a chord cannot subtend |Δθ| ≥ π about an exterior
+#     branch), so the former @test_broken (expecting an impossible unwrapped
+#     +1.1π) was removed and replaced by live pins of the correct value.  The
+#     Rule-1 enforcement landed in BranchTracker.step_sheet_update's grazing
+#     guard (the WALKER's sheet-bump site), mutation-proven in
+#     branch_tracker_test.jl / corpus_pathnet_winding_test.jl.  See ADR-0031.
 # ============================================================================

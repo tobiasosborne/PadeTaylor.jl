@@ -74,6 +74,7 @@
 using Test
 using PadeTaylor
 import PadeTaylor.SheetTracker: winding_delta, accumulate_winding, sheet_index
+import PadeTaylor.BranchTracker: segment_crosses_cut, step_sheet_update
 
 include(joinpath(@__DIR__, "_oracle_corpus_elementary_branch.jl"))
 
@@ -133,30 +134,42 @@ include(joinpath(@__DIR__, "_oracle_corpus_elementary_branch.jl"))
         # Branch points ±1 are the zeros of (1-z^2) — structural pin.
         @test (1 - 1.0^2) == 0.0 && (1 - (-1.0)^2) == 0.0
 
-        # (b) THE 61um STEP.  Branch at z=1; both endpoints off the real axis
-        # at arg -0.45π / +0.65π relative to the branch.  TRUE subtended angle
-        # = +1.1π (CCW, > π); winding_delta wraps it into (-π,π] → -0.9π,
-        # SILENTLY losing a full +2π revolution.
+        # (b) THE 61um STEP (RESOLVED 2026-06-13).  Branch at z=1; both
+        # endpoints on a radius-0.1 ring at arg -0.45π / +0.65π relative to the
+        # branch — a NEARLY-ANTIPODAL pair, so the straight chord GRAZES the
+        # branch (ratio ~0.079).  winding_delta returns the chord's TRUE winding
+        # -0.9π (the principal value).  This is CORRECT, not a "lost revolution":
+        # a straight chord can never subtend |Δθ| ≥ π about an exterior branch,
+        # so the +1.1π "true subtended" is the MAJOR-arc angle of a CURVED path
+        # the walker never realises — unrecoverable from two endpoints
+        # (worklog 074:47-74; ADR-0031).  The genuine 61um defect was the
+        # UNGUARDED grazing step in the sheet bookkeeping, now fixed: a crossed-
+        # cut grazing step fails loud in step_sheet_update.
         branch = 1.0 + 0.0im
         z_old  = 1 + 0.1 * exp(im * (-0.45π))
         z_new  = 1 + 0.1 * exp(im * (+0.65π))
         actual = winding_delta(z_old, z_new, branch)
 
-        # Pin the ACTUAL (documented-wrong) wrapped return: -0.9π.  GREEN today.
+        # winding_delta returns the chord's TRUE winding -0.9π = the principal
+        # arg-difference (it is a pure, CORRECT primitive).
         @test isapprox(actual, CBR3_61UM_WRAPPED; atol = 1e-12)   # -0.9π
         @test isapprox(actual, -0.9π; atol = 1e-12)
-        # The error is exactly one missed revolution (-2π) below the truth.
-        @test isapprox(actual - CBR3_61UM_TRUE_SUBTENDED, -2π; atol = 1e-12)
-        # The true subtended angle the oracle confirms (mpmath dps=50).
+        @test abs(actual) < π                                     # never wraps past π
+        @test isapprox(actual, angle((z_new - branch) / (z_old - branch));
+                       atol = 1e-12)                              # = principal arg-diff
+        # The +1.1π "true subtended" is the curved major arc, NOT the straight
+        # chord; the chord and winding_delta agree on -0.9π (they differ from the
+        # major arc by exactly the 2π neither the chord nor two endpoints carry).
         @test isapprox(CBR3_61UM_TRUE_SUBTENDED, 1.1π; atol = 1e-12)
+        @test isapprox(actual - CBR3_61UM_TRUE_SUBTENDED, -2π; atol = 1e-12)
 
-        # ----- 61um AUTO-FLIP MARKER -----------------------------------------
-        # Rule-1-correct behaviour: winding_delta should return the TRUE +1.1π
-        # for this single step (or throw / subdivide).  Today it returns -0.9π,
-        # so this is BROKEN.  It auto-flips to "unexpectedly passes" the day
-        # padetaylor-61um is fixed — DO NOT delete it; it is the live tracker.
-        @test_broken isapprox(winding_delta(z_old, z_new, branch),
-                              CBR3_61UM_TRUE_SUBTENDED; atol = 1e-12)
+        # ----- 61um RESOLUTION (was @test_broken expecting +1.1π) ------------
+        # The chord crosses the arg=π cut AND grazes branch=1 (ratio ~0.079 <
+        # graze_tol=0.1), so the sheet bump is winding-AMBIGUOUS: step_sheet_update
+        # REFUSES it fail-loud (Rule 1) rather than silently mis-accumulating.
+        @test segment_crosses_cut(z_old, z_new, branch, π) == true
+        @test_throws DomainError step_sheet_update([0], z_old, z_new,
+                                                   (branch,), (Float64(π),))
     end
 
     # -----------------------------------------------------------------------

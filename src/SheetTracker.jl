@@ -272,13 +272,29 @@ end
     winding_delta(z_old, z_new, branch) -> Float64
 
 Signed angle change from `z_old` to `z_new` as seen from `branch`,
-normalised to `(-π, π]`.  Caller must ensure no single path step has
-`|Δθ| ≥ π` (else the normalisation hides the wrap and the cumulative
-sum loses one full revolution at that step).
+normalised to `(-π, π]`.  This is the EXACT winding of the **straight
+segment** `[z_old, z_new]` about `branch` — and that is the only path
+`winding_delta` can see (it has just the two endpoints).
 
-For path-network walks with step `h = 0.5` and branch points at
-distance `> 1`, single-step `|Δθ|` is bounded by `arcsin(0.5/1) ≈ 0.52
-≈ 30°` — well within the safe range.
+A straight chord between two points can NEVER subtend `|Δθ| ≥ π` about
+an exterior point, so the `(-π, π]` normalisation never discards a
+revolution for a single straight step: the principal value IS the true
+straight-segment winding.  (Bug `padetaylor-61um` corrected the earlier
+docstring claim that a single step could "lose a full revolution"; that
+is geometrically impossible for a straight chord, and the corpus
+fixtures CWD.5/CBr.3/CPN.7.3 that asserted an unwrapped `+1.1π` were
+reframed accordingly — the unwrapped major-arc angle is a *curved* path
+the walker never realises, and is unrecoverable from two endpoints.)
+
+The genuine hazard lives one level up, in the WALKER: a single step
+whose chord GRAZES a tracked branch is winding-AMBIGUOUS (the chord
+cannot tell which side of the branch the true continuation passed).
+That is detected and refused fail-loud in
+`BranchTracker.step_sheet_update`'s `graze_tol` guard (equivalently
+`|Δθ| → π`), NOT here — `winding_delta` stays a pure principal-value
+primitive (also consumed by `accumulate_winding` / `sheet_index`).
+For FW 2011 walks with step `h = 0.5` and branches at distance `> 1`,
+single-step `|Δθ| ≲ 30°` and the chord clears the branch comfortably.
 """
 function winding_delta(z_old, z_new, branch)
     Δθ = angle(z_new - branch) - angle(z_old - branch)

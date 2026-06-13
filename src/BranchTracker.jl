@@ -62,11 +62,25 @@ normalised to `(-π, π]`).  Counter-clockwise crossing (positive
 branch — and that's the unambiguous signal to leave the counter
 alone).
 
-The per-step caller contract is the same as SheetTracker's: the
-step magnitude must be small enough that `|Δθ_k| < π` at every
-branch (else the principal-branch normalisation in `winding_delta`
-hides one full revolution).  At the FW 2011 default `h = 0.5`
-with branches at distance `≥ 1`, this holds with ~30° margin.
+The per-step caller contract is that no single step may GRAZE a
+tracked branch.  `winding_delta` itself is always correct — a
+straight chord can never subtend `|Δθ| ≥ π` about an exterior
+branch, so the principal-value result IS the chord's true winding
+(bug `padetaylor-61um` corrected the earlier "loses a full
+revolution" framing, which was geometrically false for the
+straight steps the walker realises).  The genuine hazard is a step
+whose chord passes very CLOSE to the branch relative to its length:
+then the discrete two-node chord cannot resolve which side of the
+branch the true continuation passed, and the `sign(Δθ_k)` bump is
+ill-conditioned.  `step_sheet_update` ENFORCES this (Rule 1): a
+crossed-cut step with grazing ratio `min_dist / |chord| < graze_tol`
+(default `WINDING_GRAZE_TOL = 0.1`, calibrated on the in-suite
+corpus; equivalently `|Δθ_k| → π`) throws a `DomainError` with a
+"shorten h / densify nodes near the branch" suggestion rather than
+silently mis-accumulating.  At the FW 2011 default `h = 0.5` with
+branches at distance `≥ 1` the grazing ratio stays well above
+`graze_tol`, so the guard never trips a well-conditioned walk.  See
+ADR-0031.
 
 ## Caller responsibilities
 
@@ -79,11 +93,14 @@ with branches at distance `≥ 1`, this holds with ~30° margin.
     one inner vector per visited node, each inner vector of length
     `length(branch_points)`.
 
-  Fail-loud predicate: in `refuse` mode, when all wedge candidates
+  Fail-loud predicates: in `refuse` mode, when all wedge candidates
   are forbidden, the caller (PathNetwork's wedge loop) throws an
   `ErrorException` whose message names `cross_branch = true` as the
-  most common fix.  This module does not throw — it returns booleans
-  and updated counters.
+  most common fix.  `step_sheet_update` itself throws a `DomainError`
+  on a winding-ambiguous (branch-grazing) crossed-cut step (the
+  `graze_tol` guard above; bug `padetaylor-61um`).  `segment_crosses_cut`
+  / `any_cut_crossed` / `resolve_cut_angles` do not throw on geometry —
+  they return booleans / counters / the resolved tuple.
 """
 module BranchTracker
 
@@ -93,6 +110,23 @@ export segment_crosses_cut,
        any_cut_crossed,
        step_sheet_update,
        resolve_cut_angles
+
+# Default grazing-ratio threshold for the winding-ambiguity guard in
+# `step_sheet_update` (bug padetaylor-61um).  A crossed-cut single step whose
+# chord's closest approach to the branch is below this fraction of the chord
+# length is refused as winding-ambiguous (the discrete two-node chord cannot
+# resolve which side of the branch the true continuation passed).  CALIBRATED on
+# the in-suite `cross_branch=true` corpus (2026-06-13, measured at every
+# crossed-cut step across corpus_winding/branch_tracker/path_network_branch/
+# sheet_aware_stage2/corpus_pathnet_winding/ffw_fig_2/3/7): the LONE ambiguous
+# step (CPN.7.3 FINE) has ratio 0.0605; the NEAREST safe step (CPN.7.2 COARSE,
+# which correctly returns [1]) has ratio 0.2045; every other in-suite walk step
+# has ratio ≥ 0.71.  The default 0.1 catches FINE with 1.65× margin and clears
+# COARSE by 2.05×.  See ADR-0031 for the full distribution and the
+# |winding_delta| → π angular equivalence.  Override per-call via the
+# `graze_tol` kwarg; threading it through `path_network_solve` is a deferred lift
+# (bead padetaylor-61um notes; no in-suite walk needs it).
+const WINDING_GRAZE_TOL = 0.1
 
 # -----------------------------------------------------------------------------
 # Cut-crossing predicate
@@ -141,7 +175,8 @@ end
 # -----------------------------------------------------------------------------
 
 """
-    step_sheet_update(sheet_old, z_cur, z_new, branches, cut_angles) -> Vector{Int}
+    step_sheet_update(sheet_old, z_cur, z_new, branches, cut_angles;
+                      graze_tol = WINDING_GRAZE_TOL) -> Vector{Int}
 
 Per-step sheet-counter update for `cross_branch = true` mode.  Returns
 a NEW `Vector{Int}` of the same length as `sheet_old` (and
@@ -150,15 +185,55 @@ z_new]`, the corresponding counter is updated by
 `sign(winding_delta(z_cur, z_new, branch))`.  Branches whose cut is
 NOT crossed are passed through unchanged.
 
+Throws `DomainError` (Rule 1, bug `padetaylor-61um`) when a crossed-cut
+step GRAZES the branch — chord closest-approach `min_dist < graze_tol ·
+|chord|` — because then the discrete two-node chord cannot resolve which
+side of the branch the true continuation passed and the `sign(Δθ)` bump
+is ill-conditioned (equivalently `|winding_delta| → π`).  `graze_tol`
+defaults to `WINDING_GRAZE_TOL = 0.1` (calibrated on the in-suite
+`cross_branch` corpus; see the module docstring's "Sheet update law" and
+ADR-0031); pass a smaller value to admit nearer-grazing steps or a larger
+one to be stricter.  A well-conditioned step (`h` small, branches not
+skimmed) never trips it.
+
 Allocates a fresh vector each call (cheap: typically 1-3 Int entries);
 PathNetwork's wedge loop calls this at most once per accepted step.
 """
 function step_sheet_update(sheet_old::AbstractVector{<:Integer},
-                           z_cur, z_new, branches, cut_angles)
+                           z_cur, z_new, branches, cut_angles;
+                           graze_tol::Real = WINDING_GRAZE_TOL)
     @assert length(sheet_old) == length(branches) == length(cut_angles)
     out = collect(Int, sheet_old)             # fresh allocation, Int-typed
     @inbounds for k in eachindex(branches)
         if segment_crosses_cut(z_cur, z_new, branches[k], cut_angles[k])
+            # Rule-1 fail-loud winding-ambiguity guard (bug padetaylor-61um).
+            # A single STRAIGHT walker step whose chord GRAZES the branch is
+            # winding-AMBIGUOUS: the discrete two-node chord cannot tell whether
+            # the true ODE continuation passed the branch on the short or the
+            # long side, so the sign(winding_delta) sheet bump is unreliable.
+            # The signal is the chord's closest approach to the branch RELATIVE
+            # to the chord length (the grazing ratio); equivalently
+            # |winding_delta| → π.  Below `graze_tol` the bump is REFUSED loudly
+            # rather than silently mis-accumulated into a corrupt sheet index.
+            #
+            # NOTE the defect was NEVER a "lost revolution": winding_delta is
+            # mathematically CORRECT for the straight chord (it returns the
+            # principal-value winding, which a straight chord can never push past
+            # ±π).  The real bug was this UNGUARDED ill-conditioned step.  See
+            # ADR-0031 and the SheetTracker.winding_delta docstring.
+            d    = z_new - z_cur
+            ts   = real(conj(d) * (branches[k] - z_cur)) / abs2(d)
+            ts   = clamp(ts, zero(ts), oneunit(ts))
+            mind = abs(z_cur + ts * d - branches[k])
+            mind < graze_tol * abs(d) && throw(DomainError((z_cur, z_new, branches[k]),
+                "step_sheet_update: the straight step from $z_cur to $z_new grazes " *
+                "branch $k (at $(branches[k])): closest approach $mind over a chord of " *
+                "length $(abs(d)) (ratio $(mind / abs(d)) < graze_tol=$graze_tol).  The " *
+                "Riemann-sheet winding is AMBIGUOUS — the chord cannot resolve which " *
+                "side of the branch the true analytic continuation passed (equivalently " *
+                "|winding_delta| → π).  Suggestion: shorten h, or densify nodes near " *
+                "the branch (e.g. node_separation R(z) that shrinks toward branch_points), " *
+                "so each step clears the branch, then retry."))
             Δθ = winding_delta(z_cur, z_new, branches[k])
             out[k] += Δθ > 0 ? 1 : (Δθ < 0 ? -1 : 0)
         end
