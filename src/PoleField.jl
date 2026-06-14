@@ -96,6 +96,36 @@ already sub-`cluster_atol` for the well-placed nodes that win the
 representative slot, so the doublet collapses into its own cluster
 without special handling.
 
+## Self-merge: why greedy clustering alone over-splits (bug `padetaylor-fzse`)
+
+The greedy first-fit above assigns each candidate to the *first*
+representative within `cluster_atol`. On a *dense 2D* path-network pole
+field one physical pole is seen by many nodes at slightly different `t*`,
+and those z-plane estimates spread by *more* than `cluster_atol` — so the
+greedy pass cannot merge the resulting *chain* of representatives (each
+adjacent pair is close, but the ends are `> cluster_atol` apart) and the
+pole fragments into 2–4 duplicate reps, each still clearing `min_support`.
+Widening `cluster_atol` is the wrong cure: it lets node-local aliases
+gather enough support to survive (calibration measured 21 spurious reps at
+`cluster_atol = 0.4, min_support = 2`). Instead a **post-pass single-linkage
+self-merge** (`merge_atol`, default `h_max`) collapses the duplicate chain
+*after* the `min_support` filter — by which point only genuine poles remain,
+so the wider merge radius cannot admit an alias.
+
+The merge predicate is "close AND **disjoint-support**", not distance alone,
+because distance cannot tell over-split froth (one pole seen by many nodes)
+from a genuine near-*coalescent pair* (two distinct poles at small
+separation). A node sees one pole at one `t*`, so it contributes to exactly
+one froth rep — the froth reps of a single pole have *disjoint* support; a
+coalescent pair gives each node two roots, so both reps *share* that node.
+Merging only disjoint-support reps therefore collapses the cross-node froth
+while never merging a coalescent pair (or a doublet a single node resolved).
+The remaining case — a *double* pole that one node splits into two roots
+(shared support) — is left to the multiplicity API (bead `padetaylor-90oh`),
+which reports it as one location of order 2 rather than two locations.
+Recall (which poles are *seen* at all) is unchanged: it is bounded by the
+walk's node coverage, not the clustering.
+
 ## Ground truth
 
 Verified against the equianharmonic Weierstrass-℘ test problem of
@@ -138,7 +168,8 @@ export extract_poles
 # over `eachindex(hs)`, so the trailing breakpoint is harmlessly ignored.
 function _extract_poles_core(centers, pades, hs;
                              radius_t::Real, min_residue::Real,
-                             cluster_atol::Real, min_support::Integer)
+                             cluster_atol::Real, min_support::Integer,
+                             merge_atol::Union{Nothing,Real} = nothing)
     RT     = real(float(eltype(centers)))
     CT     = Complex{RT}
     radius = RT(radius_t)
@@ -221,7 +252,68 @@ function _extract_poles_core(centers, pades, hs;
             push!(support[j], k)
         end
     end
-    return [reps[j] for j in eachindex(reps) if length(support[j]) ≥ min_support]
+    # `reps` is in non-decreasing z_dist order (candidates were sorted by
+    # z_dist and a rep is created by the first — best-placed — candidate to
+    # land in it), so a smaller index is a better-placed representative.
+    keptj = [j for j in eachindex(reps) if length(support[j]) ≥ min_support]
+    kept  = CT[reps[j] for j in keptj]
+    ksupp = [support[j] for j in keptj]
+
+    # Post-pass single-linkage SELF-MERGE (bug padetaylor-fzse).  The greedy
+    # first-fit above cannot merge a CHAIN of representatives wider than
+    # `catol`: when a physical pole's cross-node estimates spread beyond
+    # `catol` (a dense 2D path-network sees one pole from many nodes at
+    # slightly different `t*`), the pole fragments into several duplicate reps,
+    # each still accruing ≥ min_support support.
+    #
+    # The merge predicate is "close AND DISJOINT-support", not distance alone —
+    # because distance cannot tell over-split FROTH (one pole) from a genuine
+    # near-COALESCENT PAIR (two distinct poles at small separation).  The
+    # support sets distinguish them: a node sees one pole at ONE `t*`, so it
+    # contributes to exactly ONE froth rep — the froth reps of a single pole
+    # therefore have DISJOINT support.  A coalescent pair, by contrast, gives
+    # each node TWO roots, so both reps SHARE that node.  So we merge reps `a`,
+    # `b` iff `|a−b| ≤ mtol` AND `support(a) ∩ support(b) = ∅`.  This collapses
+    # the cross-node duplicates while never merging coalescent pairs / doublets
+    # a single node resolved (CPN.4 near-coalescent sweep, CRic.3 Hermite
+    # zero-pair).  Keep the best-placed (smallest z_dist ⇒ smallest index).
+    #
+    # Two further safety properties: (1) the merge runs on the min_support-
+    # FILTERED survivors — at the tight default `catol` all genuine poles, since
+    # node-local aliases never gather ≥ min_support within `catol`, so widening
+    # the radius here cannot ADMIT an alias; (2) `mtol` defaults to the walk's
+    # step ceiling `h_max`.  Calibrated on the equianharmonic ℘ lattice
+    # (external/probes/fzse-calibration): legacy → 32 reps with 4 over-split
+    # dup-poles; the disjoint-support self-merge → 24 reps, 2 dup-poles,
+    # precision 1.0.  The residual 2 are the ℘ DOUBLE pole resolved by a single
+    # node into a doublet (shared support, NOT cross-node froth) — collapsing
+    # that to one location-with-multiplicity is the multiplicity API's job
+    # (bead padetaylor-90oh).  Recall is walk-coverage-bounded and unchanged.
+    # Override via `merge_atol`; `merge_atol = 0` disables the self-merge.
+    mtol = merge_atol === nothing ? h_max : RT(merge_atol)
+    return _single_linkage_merge(kept, ksupp, mtol)
+end
+
+# Single-linkage merge of `reps` within `mtol` AND only between DISJOINT-support
+# representatives (see the call site: this is what separates over-split froth
+# from a genuine near-coalescent pair).  Returns one representative per merged
+# component — the smallest-index member (best-placed, since the caller passes
+# reps in z_dist order).  Union-find with the smaller index as the component
+# root; O(n²) over the (few tens of) surviving reps.
+function _single_linkage_merge(reps::AbstractVector{T},
+                               supports::AbstractVector, mtol::Real) where {T}
+    n = length(reps)
+    (n ≤ 1 || mtol ≤ 0) && return collect(reps)
+    parent = collect(1:n)
+    root(x) = parent[x] == x ? x : (parent[x] = root(parent[x]))
+    @inbounds for a in 1:n, b in (a+1):n
+        if abs(reps[a] - reps[b]) ≤ mtol && isdisjoint(supports[a], supports[b])
+            ra, rb = root(a), root(b)
+            ra, rb = ra ≤ rb ? (ra, rb) : (rb, ra)
+            parent[rb] = ra              # smaller index becomes the root
+        end
+    end
+    return T[reps[a] for a in 1:n if root(a) == a]
 end
 
 """
@@ -259,6 +351,23 @@ clustered:
                      spurious-pole filter (see the module docstring);
                      pass `min_support = 1` to disable it, e.g. when
                      reading poles off a single-node network.
+  - `merge_atol`   — the post-pass self-merge radius (bug
+                     `padetaylor-fzse`). After the support filter, the
+                     surviving representatives are single-linkage merged
+                     when they are within `merge_atol` AND have
+                     *disjoint* support, so a physical pole whose
+                     cross-node estimates spread beyond `cluster_atol`
+                     does not fragment into duplicates (the greedy
+                     first-fit cannot self-merge such a chain). The
+                     disjoint-support condition is what separates that
+                     over-split froth from a genuine near-coalescent pole
+                     pair (two distinct poles a single node resolves —
+                     shared support — are never merged; see the module
+                     docstring). Defaults to the walk's step ceiling
+                     `h_max = maximum(|h|)`; because the merge runs on the
+                     min_support-filtered survivors it cannot admit a
+                     spurious pole. Pass `merge_atol = 0` for the exact
+                     legacy clustering.
 
 Each reported pole is the cluster representative — the candidate placed
 by the node closest to it *in the z-plane* (the smallest node-to-pole
@@ -269,9 +378,11 @@ extract_poles(sol::PathNetworkSolution{T};
               radius_t::Real       = 5.0,
               min_residue::Real    = 1.0e-8,
               cluster_atol::Real   = 1.0e-1,
-              min_support::Integer = 3) where {T} =
+              min_support::Integer = 3,
+              merge_atol::Union{Nothing,Real} = nothing) where {T} =
     _extract_poles_core(sol.visited_z, sol.visited_pade, sol.visited_h;
-                        radius_t, min_residue, cluster_atol, min_support)
+                        radius_t, min_residue, cluster_atol, min_support,
+                        merge_atol)
 
 """
     extract_poles(sol::PadeTaylorSolution;
@@ -308,8 +419,10 @@ extract_poles(sol::PadeTaylorSolution;
               radius_t::Real       = 5.0,
               min_residue::Real    = 1.0e-8,
               cluster_atol::Real   = 1.0e-1,
-              min_support::Integer = 1) =
+              min_support::Integer = 1,
+              merge_atol::Union{Nothing,Real} = nothing) =
     _extract_poles_core(sol.z, sol.pade, sol.h;
-                        radius_t, min_residue, cluster_atol, min_support)
+                        radius_t, min_residue, cluster_atol, min_support,
+                        merge_atol)
 
 end # module PoleField

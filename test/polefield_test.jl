@@ -298,6 +298,77 @@ in_box(z, xlo, xhi, ylo, yhi) =
         @test !isempty(in_cov)
         @test maximum(nearest_lattice_dist(p, lattice) for p in in_cov) ≤ 1.0e-6
     end
+
+    # ----------------------------------------------------------------------
+    # PF.5.1 — dense 2D ELLIPTIC-LATTICE pole field: no over-split duplicates
+    # (bug padetaylor-fzse).  THE regression the self-merge was built for.
+    #
+    # On the dense equianharmonic-℘ field of figures/demo_lattice_singularities,
+    # one physical lattice pole is seen by MANY nodes at slightly different t*,
+    # and those z-estimates spread by MORE than cluster_atol (0.1) — so the
+    # greedy first-fit fragments each into 2-4 duplicate reps (each still
+    # clearing min_support).  The post-pass single-linkage self-merge collapses
+    # the duplicates; this test pins it by comparing the DEFAULT (self-merge)
+    # against the LEGACY clustering (`merge_atol = 0`) on the SAME solve.
+    #
+    # CALIBRATED on external/probes/fzse-calibration/probe.jl (vs the closed-form
+    # lattice, in + out of window): legacy → 32 reps with 4 over-split DUP-poles;
+    # the DISJOINT-support self-merge → 24 reps, **2** dup-poles, PRECISION 1.0
+    # (every rep within 0.5·spacing of a real lattice point — there are NO
+    # interstitial false positives at the default; the bead's "FPs" were genuine
+    # OUT-OF-WINDOW poles + an artifact of tuning cluster_atol to 0.4).
+    #
+    # The 2 residual dups are NOT cross-node over-split — they are the ℘ DOUBLE
+    # pole resolved by a SINGLE node into two roots ~0.15-0.2 apart (shared
+    # support), which the disjoint-support predicate deliberately does NOT merge
+    # (it is indistinguishable BY DISTANCE from a genuine near-coalescent PAIR,
+    # which CPN.4 / CRic.3 require kept distinct).  Collapsing a double pole to
+    # one location-with-multiplicity-2 is the job of the multiplicity API
+    # (bead padetaylor-90oh); here the load-bearing claim is that the CROSS-NODE
+    # froth is removed (4 → 2 dup-poles) with no spurious reps.
+    #
+    # Recall is bounded by the WALK's node coverage (bottom-edge rows are sparsely
+    # visited), NOT by the clustering, so it is unchanged by the self-merge — and
+    # deliberately NOT asserted = 17 (that would conflate extraction with walk
+    # density).
+    # ----------------------------------------------------------------------
+    @testset "PF.5.1: dense ℘-lattice field — self-merge kills cross-node over-split (fzse)" begin
+        SP = 2 * Ω_FW                                          # lattice spacing 2.726
+        full_lat = ℘_lattice(8, 8)                             # in + out of window
+        win_lat  = filter(p -> in_box(p, -4.0, 6.0, -5.0, 5.0), full_lat)
+        ndup(reps) = count(t -> count(r -> abs(r - t) ≤ 0.5SP, reps) > 1, win_lat)
+        ncov(reps) = count(t -> any(r -> abs(r - t) ≤ 0.5SP, reps), win_lat)
+
+        prob = PadeTaylorProblem(fW, (u_0_FW, up_0_FW), (0.0, 1.5); order = 30)
+        xs = range(-4.0, 6.0; length = 121); ys = range(-5.0, 5.0; length = 121)
+        grid = ComplexF64[complex(x, y) for y in ys for x in xs]
+        sol  = path_network_solve(prob, grid; h = 0.5,
+                                  max_steps_per_target = 4000,
+                                  enforce_real_axis_symmetry = true)
+
+        legacy = extract_poles(sol; merge_atol = 0)            # greedy first-fit only
+        merged = extract_poles(sol)                            # default self-merge
+
+        # (a) The bug EXISTS without the fix: the dense field over-splits.
+        @test ndup(legacy) ≥ 3
+        # (b) The fix REDUCES the over-split (the cross-node froth is collapsed).
+        #     The residual (≤ the ℘ double-pole doublet-splits) is a multiplicity
+        #     matter deferred to padetaylor-90oh; the load-bearing claim is that
+        #     a DISJOINT-support physical-pole duplicate no longer survives.
+        @test ndup(merged) < ndup(legacy)
+        @test ndup(merged) ≤ 2
+        # (c) The self-merge only REMOVES reps (collapses duplicates).
+        @test length(merged) < length(legacy)
+        # (d) PRECISION = 1.0: every reported pole is a real lattice point
+        #     (in OR out of window) — no interstitial spurious rep.  0.5·spacing
+        #     is generous, but the over-split froth this test targets sits ON the
+        #     lattice; an interstitial FP would be ≥ ~0.9 from any pole.
+        @test all(r -> nearest_lattice_dist(r, full_lat) ≤ 0.5SP, merged)
+        @test maximum(nearest_lattice_dist(r, full_lat) for r in merged) < 0.5
+        # (e) Recall is NOT reduced by the merge (coverage is a walk property).
+        @test ncov(merged) == ncov(legacy)
+        @test ncov(merged) ≥ 12                                # walk-coverage floor
+    end
 end
 
 # ----------------------------------------------------------------------
@@ -364,4 +435,21 @@ end
 #        exactly as documented.  (Observed: 34 passed, 1 failed.)
 #        Restored.  The two halves are ONE atomic §S7 fix (ADR-0026
 #        Amendment 7): M5 proves the filter half, M6 the sort-key half.
+#
+#   M7 — self-merge OFF (bug padetaylor-fzse, 2026-06-14).  In
+#        `_extract_poles_core` change the default merge radius
+#        `mtol = merge_atol === nothing ? h_max : …` to `… ? zero(h_max) :`
+#        (no post-pass self-merge by default).  PF.5.1 (b) `ndup(merged) <
+#        ndup(legacy)` and (c) `length(merged) < length(legacy)` go RED — the
+#        default no longer collapses the cross-node froth (merged == legacy).
+#        Restored.
+#   M8 — DISJOINT-support condition dropped.  In `_single_linkage_merge`
+#        delete `&& isdisjoint(supports[a], supports[b])` (distance-only
+#        merge).  The near-COALESCENT-pair fixtures go RED — CPN.4
+#        (corpus_pathnet_walls_rows, the δ-sweep coalescent pair) and CRic.3
+#        (corpus_riccati_rational, the Hermite zero-pair) — because two
+#        distinct poles a single node resolves (shared support, separation
+#        < h_max) would now wrongly merge.  This proves the disjoint-support
+#        predicate — not distance — is what protects coalescent pairs while
+#        still collapsing cross-node froth.  Restored.
 # ----------------------------------------------------------------------

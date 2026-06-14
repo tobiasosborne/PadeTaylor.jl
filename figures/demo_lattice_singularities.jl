@@ -37,14 +37,18 @@ function rect_grid(xlo, xhi, ylo, yhi, Nx, Ny)
     return xs, ys, grid
 end
 
-# NOTE on `pole_kwargs`: the stock `extract_poles` defaults (cluster_atol=0.1,
-# min_support=3, radius_t=5) OVER-SPLIT each physical pole into several duplicate
-# clusters on a dense 2D path-network pole field — the per-node Padé estimates of
-# one pole spread by ~0.1-0.2 (> cluster_atol) and fragment, while sparsely-seen
-# poles miss the 3-node support threshold (bug padetaylor-fzse). We pass per-panel
-# tuned params: a wider cluster_atol (< the inter-pole spacing) collapses the
-# fragments to one rep per pole; min_support=2 / a wider radius_t recover the
-# sparsely-sampled outer poles. These give ~one cross per true singularity.
+# NOTE on `pole_kwargs` (bug padetaylor-fzse, FIXED 2026-06-14, ADR/worklog 075).
+# The 2D lattice panel (b) once needed a hand-tuned `cluster_atol=0.4` because the
+# stock greedy clustering OVER-SPLIT each physical pole into duplicate reps (the
+# per-node Padé estimates of one pole spread by ~0.1-0.2 > the default
+# cluster_atol=0.1).  That is now handled automatically by the post-pass
+# single-linkage SELF-MERGE in `extract_poles` (default `merge_atol = h_max`), so
+# panel (b) uses STOCK DEFAULTS — and the old `cluster_atol=0.4` was itself
+# harmful (calibration showed it admitted ~4 interstitial aliases by letting
+# node-local roots gather support).  The logistic panel (a) keeps a per-panel
+# tune for RECALL only: its vertical pole row is sampled sparsely, so min_support=2
+# / a wider radius_t recover the outer poles (a walk-coverage matter, orthogonal
+# to over-splitting).  These give ~one cross per true singularity.
 
 # Solve `prob` over the rectangular window and return (xs, ys, |u|-matrix, poles).
 function field_over_window(prob, xlo, xhi, ylo, yhi, Nx, Ny; label = "", pole_kwargs = NamedTuple())
@@ -102,8 +106,9 @@ fwp(z, u, up) = 6 * u^2
 prob_wp = PadeTaylorProblem(fwp, (1.071822516416917, 1.710337353176786),
                             (0.0, 1.5); order = ORDER)
 xs_w, ys_w, absu_w, poles_w =
-    field_over_window(prob_wp, -4.0, 6.0, -5.0, 5.0, 121, 121; label = "weierstrass",
-                      pole_kwargs = (cluster_atol = 0.4,))
+    field_over_window(prob_wp, -4.0, 6.0, -5.0, 5.0, 121, 121; label = "weierstrass")
+                      # stock defaults — the self-merge (padetaylor-fzse fix) now
+                      # handles the over-splitting that once needed cluster_atol=0.4.
 
 # ----------------------------------------------------------------------
 # Analytic true singularities (independent of the solver) for the overlay.
