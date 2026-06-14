@@ -8,7 +8,42 @@
 > previous session already paid for. The frictions surfaced are
 > recorded in `docs/worklog/001-stages-Z-1-2-handoff.md`.
 
-## 🔬 LATEST SESSION (2026-06-13) — BUG-FIX CAMPAIGN (epic padetaylor-l7yt): 4 of 6 FIXED
+## 🔬 LATEST SESSION (2026-06-14) — BUG-FIX CAMPAIGN COMPLETE (epic padetaylor-l7yt): final 3 FIXED
+
+Full arc in **worklog 075**. The 3 bugs left after worklog 074 are FIXED, pushed,
+closed — **the campaign is DONE (6/6 epic children + the x0p0 sibling)**.
+Orchestration: one **read-only audition workflow** (11 Opus agents w/ wolframscript,
+NO julia — Rule-7-safe), then strictly serial Julia per bug in `/tmp/ptcampaign`.
+Expected-broken **6 → 3** (lockstep `quality_gate.sh` + `CLAUDE.md` + bd memory).
+
+- **`x0p0`** (`1caeaf3`) — dir-aware `vector_solve_pade` (vector twin of `xhjw`);
+  descending spans were a silent degenerate trajectory. +35 VP.2.*, 4-locus
+  mutation-proof, VP 72/72 + VPO 27/27 GREEN.
+- **`61um`** (`9f5021a`, **ADR-0031**) — **THE BEAD WAS WRONG** (verified by my own
+  + the audition's independent wolframscript): a straight chord can never subtend
+  `|Δθ|≥π` about an exterior branch, so `winding_delta` is CORRECT and loses
+  nothing; the `+1.1π` markers expected a curved-path arc unrecoverable from 2
+  endpoints. Fix = **fail-loud grazing guard** in `step_sheet_update`
+  (`min_dist/|chord| < graze_tol=0.1`, threshold MEASURED on the realised in-suite
+  walks — corrected the audition's `0.2` which gave the safe CPN.7.2 only 2%
+  margin). CWD.5/CBr.3/CPN.7.3 **reframed** not flipped. All `cross_branch` walks
+  (incl. ffw_fig_2/3/7) GREEN; mutation-proven both directions.
+- **`fzse`** (`4d97319`, **ADR-0032**) — **THE BEAD WAS WRONG AGAIN** (calibration
+  probe vs the closed-form lattice incl. out-of-window poles): precision is
+  already **1.00** at default; the "4 FPs" were out-of-window poles + an artifact
+  of the bead's own `cluster_atol=0.4` tuning. Real bug = cross-node OVER-SPLIT.
+  Fix = **disjoint-support single-linkage self-merge** (`merge_atol`, default
+  `h_max`) — the disjoint-support condition collapses froth without merging
+  near-coalescent pairs (a distance-only merge regressed CPN.4/CRic.3/ffw_fig_4/6).
+  +PF.5.1, mutation-proven M7/M8, 12 scalar consumers GREEN. Residual double-pole
+  dups → `padetaylor-90oh`; recall gap = walk-coverage (filed follow-on).
+
+**Recurring lesson:** 2 of the 3 bugs were MIS-FRAMED — independent oracles +
+Rule-3 skepticism turned "fix the bug" into "the bug isn't what the bead says."
+Follow-ons filed: 61um (cut-crossing-vs-continuation, Fix-B auto-subdivision);
+fzse (90oh multiplicity co-design, recall/walk-coverage).
+
+## 🔬 SESSION (2026-06-13) — BUG-FIX CAMPAIGN (epic padetaylor-l7yt): 4 of 6 FIXED
 
 Full arc in **worklog 074**. Fixed the confirmed library bugs surfaced by the
 corpus-v2 + test-hardening sweeps, to the highest correctness bar (audition ≥2
