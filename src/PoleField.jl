@@ -107,10 +107,11 @@ adjacent pair is close, but the ends are `> cluster_atol` apart) and the
 pole fragments into 2–4 duplicate reps, each still clearing `min_support`.
 Widening `cluster_atol` is the wrong cure: it lets node-local aliases
 gather enough support to survive (calibration measured 21 spurious reps at
-`cluster_atol = 0.4, min_support = 2`). Instead a **post-pass single-linkage
-self-merge** (`merge_atol`, default `h_max`) collapses the duplicate chain
-*after* the `min_support` filter — by which point only genuine poles remain,
-so the wider merge radius cannot admit an alias.
+`cluster_atol = 0.4, min_support = 2`). Instead a **post-pass
+diameter-capped single-linkage self-merge** (`merge_atol`, default `h_max`)
+collapses the duplicate chain *after* the `min_support` filter — by which
+point only genuine poles remain, so the wider merge radius cannot admit an
+alias.
 
 The merge predicate is "close AND **disjoint-support**", not distance alone,
 because distance cannot tell over-split froth (one pole seen by many nodes)
@@ -125,6 +126,24 @@ The remaining case — a *double* pole that one node splits into two roots
 which reports it as one location of order 2 rather than two locations.
 Recall (which poles are *seen* at all) is unchanged: it is bounded by the
 walk's node coverage, not the clustering.
+
+The transitive closure is **diameter-capped** (bug `padetaylor-o0w4`).
+ADR-0032 shipped *unbounded* single-linkage, which chains transitively —
+`A~B` and `B~C` merge `{A,B,C}` even when `A` and `C` are far apart. On a
+*dense* field whose genuinely-distinct poles sit `< merge_atol` apart, that
+collapses a whole row of distinct poles into one representative and erases the
+pole-density gradient (FFW 2017 Fig 1's high-`Re ζ` region — measured
+high/low = 6/10, inverting it). The cure caps each merged *component's*
+**diameter** at `merge_atol`: over-split froth of one pole (its spread is
+sub-`merge_atol` by construction — that is what the merge targets) still
+collapses, but a chain of distinct dense poles spanning `> merge_atol`
+end-to-end is rejected. The disjoint-support **single**-linkage over the edge
+graph is kept (a froth fragment reaches the support-sharing dominant rep only
+*through* a disjoint intermediary — requiring all-pairs disjoint would orphan
+it and leave residual lattice duplicates). The equianharmonic-℘ calibration
+is unchanged (its froth diameter is `< merge_atol`; its distinct lattice poles
+are `≫ merge_atol` apart). See ADR-0032 §"Dense-field correction (bug
+`padetaylor-o0w4`)".
 
 ## Ground truth
 
@@ -259,12 +278,12 @@ function _extract_poles_core(centers, pades, hs;
     kept  = CT[reps[j] for j in keptj]
     ksupp = [support[j] for j in keptj]
 
-    # Post-pass single-linkage SELF-MERGE (bug padetaylor-fzse).  The greedy
-    # first-fit above cannot merge a CHAIN of representatives wider than
-    # `catol`: when a physical pole's cross-node estimates spread beyond
-    # `catol` (a dense 2D path-network sees one pole from many nodes at
-    # slightly different `t*`), the pole fragments into several duplicate reps,
-    # each still accruing ≥ min_support support.
+    # Post-pass DIAMETER-CAPPED single-linkage SELF-MERGE (bug padetaylor-fzse;
+    # dense-field correction padetaylor-o0w4).  The greedy first-fit above cannot
+    # merge a CHAIN of representatives wider than `catol`: when a physical pole's
+    # cross-node estimates spread beyond `catol` (a dense 2D path-network sees
+    # one pole from many nodes at slightly different `t*`), the pole fragments
+    # into several duplicate reps, each still accruing ≥ min_support support.
     #
     # The merge predicate is "close AND DISJOINT-support", not distance alone —
     # because distance cannot tell over-split FROTH (one pole) from a genuine
@@ -273,10 +292,29 @@ function _extract_poles_core(centers, pades, hs;
     # contributes to exactly ONE froth rep — the froth reps of a single pole
     # therefore have DISJOINT support.  A coalescent pair, by contrast, gives
     # each node TWO roots, so both reps SHARE that node.  So we merge reps `a`,
-    # `b` iff `|a−b| ≤ mtol` AND `support(a) ∩ support(b) = ∅`.  This collapses
-    # the cross-node duplicates while never merging coalescent pairs / doublets
-    # a single node resolved (CPN.4 near-coalescent sweep, CRic.3 Hermite
-    # zero-pair).  Keep the best-placed (smallest z_dist ⇒ smallest index).
+    # `b` only when `|a−b| ≤ mtol` AND `support(a) ∩ support(b) = ∅`.  This
+    # collapses the cross-node duplicates while never merging coalescent pairs /
+    # doublets a single node resolved (CPN.4 near-coalescent sweep, CRic.3
+    # Hermite zero-pair).  Keep the best-placed (smallest z_dist ⇒ smallest
+    # index).
+    #
+    # The transitive closure is DIAMETER-CAPPED (padetaylor-o0w4).  ADR-0032
+    # shipped UNBOUNDED single-linkage, which CHAINS transitively (A~B, B~C ⟹
+    # {A,B,C} merge even when |A−C| ≫ mtol).  In a DENSE pole field where
+    # genuinely-distinct poles sit `< mtol` apart, that chains a whole row of
+    # distinct poles into one rep and erases the pole-density gradient — measured
+    # on FFW Fig 1 (PIII spiral, high-Re-ζ region): unbounded single-linkage gave
+    # high/low = 6/10, INVERTING the gradient FFW md:72 requires.  Capping each
+    # merged COMPONENT's DIAMETER at `mtol` cures it: froth-of-one-pole (spread
+    # `< mtol` — exactly what the merge targets) still fully collapses, but a
+    # chain of distinct poles spanning `> mtol` end-to-end is rejected.  The
+    # disjoint-support SINGLE-linkage over the edge graph is RETAINED (a froth
+    # fragment reaches the support-sharing dominant rep only THROUGH a disjoint
+    # intermediary — requiring all-pairs disjoint would orphan it; see
+    # `_diam_capped_merge`).  The equianharmonic-℘ calibration is untouched (its
+    # froth diameter ≤ ~0.35 at `mtol = h_max`, its distinct lattice poles are
+    # `≫ mtol` apart — PF.5.1: n = 24, ndup = 2).  See ADR-0032
+    # §"Dense-field correction (bug padetaylor-o0w4)".
     #
     # Two further safety properties: (1) the merge runs on the min_support-
     # FILTERED survivors — at the tight default `catol` all genuine poles, since
@@ -291,27 +329,86 @@ function _extract_poles_core(centers, pades, hs;
     # (bead padetaylor-90oh).  Recall is walk-coverage-bounded and unchanged.
     # Override via `merge_atol`; `merge_atol = 0` disables the self-merge.
     mtol = merge_atol === nothing ? h_max : RT(merge_atol)
-    return _single_linkage_merge(kept, ksupp, mtol)
+    return _diam_capped_merge(kept, ksupp, mtol)
 end
 
-# Single-linkage merge of `reps` within `mtol` AND only between DISJOINT-support
-# representatives (see the call site: this is what separates over-split froth
-# from a genuine near-coalescent pair).  Returns one representative per merged
-# component — the smallest-index member (best-placed, since the caller passes
-# reps in z_dist order).  Union-find with the smaller index as the component
-# root; O(n²) over the (few tens of) surviving reps.
-function _single_linkage_merge(reps::AbstractVector{T},
-                               supports::AbstractVector, mtol::Real) where {T}
+# DIAMETER-CAPPED single-linkage merge of `reps` (bug `padetaylor-o0w4`, the
+# dense-field correction to ADR-0032).  Two reps are joined by an EDGE iff they
+# are close (`|a−b| ≤ mtol`) AND DISJOINT-support; reps are merged by the
+# single-linkage transitive closure over those edges, EXCEPT that a union is
+# rejected whenever it would push the merged component's DIAMETER (its widest
+# member-to-member distance) past `mtol`.  Returns one representative per
+# surviving component — the smallest-index member (best-placed, since the caller
+# passes reps in z_dist order).
+#
+# Why this exact shape — the interplay of the two guards:
+#
+#   * DISJOINT-support, SINGLE-linkage on that graph (ADR-0032, kept).  Distance
+#     alone cannot tell over-split FROTH (one pole seen by many nodes at slightly
+#     different `t*`) from a genuine near-COALESCENT PAIR (two distinct poles at
+#     small separation).  Support sets can: a node sees one pole at ONE `t*`, so
+#     froth reps of a single pole have DISJOINT support, while a coalescent pair
+#     gives each node TWO roots → both reps SHARE that node.  Edges only between
+#     disjoint-support reps therefore never link a coalescent pair / a
+#     single-node-resolved doublet (CPN.4, CRic.3) regardless of distance.  The
+#     linkage over those edges must stay TRANSITIVE (single): the DOMINANT rep of
+#     a froth cluster shares support with most of its fragments (it is seen by
+#     many of the same nodes), so a fragment often reaches the dominant rep only
+#     THROUGH a disjoint intermediary fragment.  Requiring ALL-pairs disjoint
+#     (pure complete-linkage) would orphan such fragments and leave residual
+#     duplicates on the ℘ lattice (measured: 3 vs the calibrated 2 — PF.5.1 (b)).
+#
+#   * DIAMETER cap on DISTANCE (the o0w4 fix).  ADR-0032's plain single-linkage
+#     chains transitively without bound: in a DENSE pole field where
+#     genuinely-distinct poles sit `< mtol` apart, a whole row collapses into one
+#     rep end-to-end far wider than `mtol`, erasing the pole-density gradient
+#     (FFW 2017 Fig 1 high-Re-ζ region — the single-linkage bug inverted it to
+#     high/low = 6/10).  Froth of ONE pole has small diameter (its spread is what
+#     the merge targets, `≪ mtol`), so the cap never blocks it; a chain of
+#     distinct poles has diameter `≫ mtol`, so the cap stops it collapsing.  The
+#     equianharmonic-℘ froth (diameter ≤ ~0.35 at `mtol = h_max = 0.5`) still
+#     fully collapses → PF.5.1 calibration (n = 24, ndup = 2) is preserved.
+#
+# Edges are processed in increasing distance so the tightest froth links form
+# first; the would-be-diameter test scans the two components' members (each a few
+# reps).  Union-find with the smaller index as the component root keeps the
+# best-placed rep.  O(n²) edges + O(n²) per accepted union over the (few tens of)
+# surviving reps — negligible at these sizes.
+function _diam_capped_merge(reps::AbstractVector{T},
+                            supports::AbstractVector, mtol::Real) where {T}
     n = length(reps)
     (n ≤ 1 || mtol ≤ 0) && return collect(reps)
-    parent = collect(1:n)
+    parent  = collect(1:n)
     root(x) = parent[x] == x ? x : (parent[x] = root(parent[x]))
+    members = [Int[i] for i in 1:n]         # members[r] is valid only at a root r
+
+    # Candidate edges: close AND disjoint-support, in increasing distance.
+    edges = Tuple{real(float(T)), Int, Int}[]
     @inbounds for a in 1:n, b in (a+1):n
-        if abs(reps[a] - reps[b]) ≤ mtol && isdisjoint(supports[a], supports[b])
-            ra, rb = root(a), root(b)
-            ra, rb = ra ≤ rb ? (ra, rb) : (rb, ra)
-            parent[rb] = ra              # smaller index becomes the root
+        d = abs(reps[a] - reps[b])
+        if d ≤ mtol && isdisjoint(supports[a], supports[b])
+            push!(edges, (real(float(T))(d), a, b))
         end
+    end
+    sort!(edges; by = e -> e[1])
+
+    @inbounds for (_, a, b) in edges
+        ra, rb = root(a), root(b)
+        ra == rb && continue
+        # Reject the union if the merged component would exceed diameter `mtol`
+        # (the o0w4 cap that stops a dense chain of DISTINCT poles collapsing).
+        within = true
+        for x in members[ra], y in members[rb]
+            if abs(reps[x] - reps[y]) > mtol
+                within = false
+                break
+            end
+        end
+        within || continue
+        ra, rb = ra ≤ rb ? (ra, rb) : (rb, ra)   # smaller index becomes the root
+        append!(members[ra], members[rb])
+        parent[rb]  = ra
+        members[rb] = Int[]
     end
     return T[reps[a] for a in 1:n if root(a) == a]
 end
@@ -352,14 +449,21 @@ clustered:
                      pass `min_support = 1` to disable it, e.g. when
                      reading poles off a single-node network.
   - `merge_atol`   — the post-pass self-merge radius (bug
-                     `padetaylor-fzse`). After the support filter, the
-                     surviving representatives are single-linkage merged
-                     when they are within `merge_atol` AND have
-                     *disjoint* support, so a physical pole whose
-                     cross-node estimates spread beyond `cluster_atol`
-                     does not fragment into duplicates (the greedy
-                     first-fit cannot self-merge such a chain). The
-                     disjoint-support condition is what separates that
+                     `padetaylor-fzse`; dense-field correction
+                     `padetaylor-o0w4`). After the support filter, the
+                     surviving representatives are *diameter-capped
+                     single-linkage* merged — reps within `merge_atol` AND
+                     with *disjoint* support form edges; the transitive
+                     closure of those edges is collapsed, except a union is
+                     rejected when it would push the merged group's
+                     *diameter* past `merge_atol`. So a physical pole whose
+                     cross-node estimates spread beyond `cluster_atol` does
+                     not fragment into duplicates (the greedy first-fit
+                     cannot self-merge such a chain), while a *chain* of
+                     genuinely-distinct dense poles is not transitively
+                     over-collapsed (the diameter cap — the
+                     `padetaylor-o0w4` fix to unbounded single-linkage).
+                     The disjoint-support condition is what separates
                      over-split froth from a genuine near-coalescent pole
                      pair (two distinct poles a single node resolves —
                      shared support — are never merged; see the module

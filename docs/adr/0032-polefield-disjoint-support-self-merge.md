@@ -108,9 +108,96 @@ the same lattice poles the walk visited).
   porting this disjoint-support post-pass there is a follow-on if a dense vector
   pole field over-splits.
 
+## Dense-field correction (bug `padetaylor-o0w4`, 2026-06-19)
+
+**Status of this section**: accepted — extends the decision above. Resolves
+`padetaylor-o0w4` (P1, the suite was RED on `test/ffw_fig_1_test.jl` FF1.1.6).
+
+### The bug the original single-linkage introduced
+
+The self-merge above was specified and shipped as **single-linkage**: a
+union-find over the "close (`≤ merge_atol`) AND disjoint-support" edge graph.
+Single-linkage **chains transitively** — `A~B` and `B~C` merge `{A,B,C}` even
+when `|A − C| ≫ merge_atol`. On the equianharmonic-℘ calibration that is benign
+(its froth sits within `merge_atol`; its genuinely-distinct lattice poles are
+spaced `2ω ≈ 2.73 ≫ merge_atol = h_max`, so no chain bridges two real poles).
+
+It is **not** benign on a *dense* pole field whose genuinely-distinct poles sit
+**closer than `merge_atol`**. The FFW 2017 Fig 1 PIII three-sheet spiral
+(`test/ffw_fig_1_test.jl`) has exactly that in its high-`Re ζ` region: FFW md:72
+says "pole density will increase rapidly on the region `Re ζ ≫ 0`", so adjacent
+distinct poles there are `< h_max` apart. Single-linkage chained a whole row of
+distinct poles into a handful of representatives, **erasing the pole-density
+gradient** the figure is built to show.
+
+Measured (`extract_poles` at `cluster_atol = 0.15, min_support = 2`, sheet 0):
+
+| variant | FF1.1.5 total | FF1.1.6 high `Re∈[3,5]` | FF1.1.6 low `Re∈[-1,1]` | FF1.1.6 |
+|---|---|---|---|---|
+| pre-fzse (no self-merge) | 2259 | 374 | 18 | PASS |
+| fzse single-linkage (shipped) | 178 | **6** | **10** | **FAIL** (gradient inverted) |
+| o0w4 diameter-capped (this fix) | 870 | 107 | 12 | PASS |
+
+Single-linkage over-collapsed `2259 → 178` overall *and* inverted the gradient
+(`6 < 10`). The `2259 → 870` de-frothing is still real and desirable; only the
+dense-region over-merge was the defect.
+
+### Decision: diameter-cap the single-linkage transitive closure
+
+Keep the disjoint-support **single**-linkage edge graph — it is load-bearing and
+must stay transitive (see below) — but **reject any union that would push the
+merged component's diameter past `merge_atol`**. Edges are processed in
+increasing distance; a union is accepted only if every member-to-member distance
+in the would-be-merged component stays `≤ merge_atol`. This bounds each merged
+group's diameter at `merge_atol`:
+
+- **Over-split froth of one pole** has diameter `≪ merge_atol` (its cross-node
+  spread is precisely what the merge targets — measured ≤ ~0.35 on the ℘
+  lattice at `merge_atol = h_max = 0.5`), so the cap never blocks it: the
+  calibration is **unchanged** (`n = 24, ndup = 2`, PF.5.1 still GREEN).
+- **A chain of distinct dense poles** spans `> merge_atol` end-to-end, so the
+  diameter test rejects the bridging union and the poles stay distinct: FFW
+  Fig 1's gradient is preserved.
+
+### Why NOT pure complete-linkage (the obvious alternative, and why it fails)
+
+The first attempt was *complete*-linkage (merge a set only when **all** pairwise
+distances `≤ merge_atol` AND all pairs disjoint-support). It capped the diameter
+correctly and fixed FF1.1.6, but it **regressed PF.5.1** (`ndup(merged) = 3`,
+the calibrated value is 2). Root cause, traced on the ℘ lattice
+(`external/probes` ad-hoc, near `z = -0.363 + 2.36i`): a froth cluster's
+**dominant** representative is seen by *many* nodes, so it **shares support**
+with most of its own fragments. A fragment therefore reaches the dominant rep
+**only through a disjoint intermediary fragment** (single-linkage's transitive
+route, e.g. `15 ~disjoint~ 23 ~disjoint~ 24 ~disjoint~ 9`). Requiring *all-pairs*
+disjoint orphans such a fragment, leaving a residual lattice duplicate. The
+support-dimension linkage must stay **single** (transitive); only the
+**distance** dimension takes the diameter cap. The shipped fix is therefore
+*diameter-capped single-linkage*, not complete-linkage.
+
+### Mutation-proof (Rule 4)
+
+`test/ffw_fig_1_test.jl` FF1.1.6 is the load-bearing assertion. Removing the
+diameter cap (forcing `within = true` ⇒ unbounded single-linkage) reproduces the
+bug **exactly**: FF1.1.5 = 178, FF1.1.6 high/low = 6/10, both FF1.1.6 asserts
+RED. Restoring the cap returns FF1.1.5 = 870, high/low = 107/12, GREEN. (The
+prior M7/M8 mutations — self-merge OFF, disjoint-support dropped — remain valid
+against PF.5.1 and the coalescent-pair fixtures; the diameter cap is a third,
+orthogonal, load-bearing knob.)
+
+### Scope of the change
+
+`src/PoleField.jl` only: `_single_linkage_merge` → `_diam_capped_merge` (the
+diameter-cap on the union step), the call site rename, and the paired docstring
+updates. No test tolerance was relaxed (Rule 2). All FF1.* / PF.* / corpus
+coalescent-pair fixtures (CPN.4, CRic.3, CRic.4) and the ffw_fig_4 / ffw_fig_6
+pole-gradient tests stay GREEN. The disjoint-support guard and `merge_atol = 0`
+legacy escape hatch are unchanged.
+
 ## References
 
-- `src/PoleField.jl` — `_extract_poles_core` (the self-merge + `_single_linkage_merge`).
+- `src/PoleField.jl` — `_extract_poles_core` (the self-merge + `_diam_capped_merge`).
 - `test/polefield_test.jl` — PF.5.1 + the M7/M8 mutation footer.
+- `test/ffw_fig_1_test.jl` — FF1.1.5 / FF1.1.6 (the `padetaylor-o0w4` regression).
 - `external/probes/fzse-calibration/probe.jl` — the calibration (re-runnable).
 - `figures/demo_lattice_singularities.jl` — the discovery demo (workaround removed).
