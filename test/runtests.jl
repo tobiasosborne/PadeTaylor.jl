@@ -177,6 +177,10 @@ using PadeTaylor
     include("vector_pipeline_oracle_test.jl")
     include("heun_test.jl")
     include("corpus_heun_test.jl")
+    # Stage 4c of the P1 Heun epic (bead padetaylor-4lh): Schwarzschild QNM
+    # FREQUENCY via Leaver's radial continued fraction, pinned to the
+    # cross-verified Leaver 1985 targets in docs/teukolsky_heun_mapping.md §3.2.1.
+    include("teukolsky_qnm_test.jl")
     include("corpus_special_fn_test.jl")
     include("corpus_riccati_rational_test.jl")
     include("corpus_riccati_special_test.jl")
