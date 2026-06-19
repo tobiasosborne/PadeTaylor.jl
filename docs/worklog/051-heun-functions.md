@@ -232,10 +232,91 @@ Per CLAUDE.md Rule 9:
   - **HeunB / HeunD / HeunT** (biconfluent / doubly-confluent /
     triconfluent).
 
+## Stage 4c/6 addendum (2026-06-19) — Teukolsky → Schwarzschild scalar QNM
+
+The two open stages closed this session: Stage 4c (the Teukolsky-QNM
+demo) and the QNM half of Stage 6 (the headline figure).  The
+take-home of the addendum is a single number with provenance.
+
+### The result
+
+`examples/teukolsky_qnm.jl` computes the **fundamental Schwarzschild
+scalar quasinormal mode** (`ℓ = 2`, `n = 0`, `s = 0`) by root-finding
+**Leaver's radial continued fraction** in the complex frequency plane.
+Recovered, in `M = 1` units (dimensionless `Mω`):
+
+    Mω = 0.483644 − 0.096759i
+
+against the Leaver 1985 Table I reference `0.483642 − 0.096766i` —
+`|err| ≈ 7.5·10⁻⁶`.  Cross-checked on the `s = 2` gravitational
+mode: `0.373672 − 0.088962i`, agreeing with the published value.
+Regression-pinned in `test/teukolsky_qnm_test.jl`.
+
+### The figure
+
+`figures/teukolsky_qnm_demo.jl` → `figures/output/teukolsky_qnm_demo.png`,
+two panels: **(A)** the QNM frequency as the complex zero of Leaver's
+radial continued fraction (the CF magnitude over the `ω`-plane with the
+recovered root marked); **(B)** the corresponding radial QNM
+eigenfunction `R(r)` over `r ∈ [r₊, ∞)`.  This is the QNM half of the
+Stage-6 headline set; the HeunG/HeunC complex-plane portrait
+(`figures/output/heun_complex_portrait.png`,
+`figures/heun_complex_portrait.jl`) shipped alongside it.
+
+### The ground-truth-acquisition story
+
+This stage was where Law 1 earned its keep.  The §3.2 recurrence
+parameterisation pinned in the *previous* session — the schematic
+`α_n = n²+(c₀+1)n+c₀` form "attributed to BCS §4.6 Eq. (79)" — turned
+out to be a **mis-citation**.  Berti–Cardoso–Starinets 2009 gives only
+the recurrence *form* and explicitly defers the explicit constants to
+"the original work [Leaver:1985ax]"; Leaver 1985 itself was not in
+`references/`.  Worse, the schematic constant-`cᵢ` decomposition does
+not exist for the authentic coefficients (which are fully
+`ω`-dependent), and its minimal-solution continued fraction **does not
+vanish at the true frequency** — so it could never have produced a QNM.
+
+The fix was to acquire the explicit Schwarzschild Leaver coefficients
+and **cross-verify them across three independent sources that agree**:
+the Black Hole Perturbation Toolkit `QuasiNormalModes.m` (citing Leaver
+1985 + Nollert 1993), arXiv:2509.07235 Eqs. 29–31 (massless-scalar
+limit), and arXiv:2604.18680 Eqs. 7–9 (`s = 2`).  A fourth candidate
+(arXiv:2405.12671) carries a `+2` typo in the `β` constant term and was
+excluded.  The corrected, source-cited coefficients and both validation
+targets are now in `docs/teukolsky_heun_mapping.md` §3.2.1.  Tracked as
+bead `padetaylor-t0bf`.
+
+### A reframing worth recording
+
+The QNM *frequency* is **not** something you read off `heun_c`
+evaluated about a regular point.  It is a **connection condition** — the
+discrete set of `ω` at which the confluent-Heun solution that is ingoing
+at the horizon analytically continues to the outgoing solution at
+infinity.  Leaver's radial continued fraction is precisely the
+numerically stable form of that confluent-Heun minimal-solution
+condition, so the QNM frequency is obtained by root-finding the CF, not
+by a single `heun_c` call.  `heun_c`'s role is downstream: rendering the
+QNM *eigenfunction* `R(r)` once the frequency is in hand.  Conflating
+"we have `heun_c`" with "we can read off the QNM" was the conceptual
+trap this stage had to step around.
+
+### Deferred
+
+  - **HeunC-eigenfunction overlay** on Panel B — overlaying the
+    `heun_c`-rendered confluent-Heun eigenfunction against the
+    Leaver-series `R(r)` as an independent visual cross-check.  Panel B
+    currently shows the Leaver-series eigenfunction only.  Tracked as
+    bead `padetaylor-ec3m`.
+
 ## Beads
 
-  - **Epic `padetaylor-?`** (Heun arc): in progress; ~70 % complete
-    (Stages 0–5 of 6).
+  - **Epic `padetaylor-?`** (Heun arc): Stages 0–6 complete; the
+    HeunC-eigenfunction overlay (`padetaylor-ec3m`) is the lone
+    deferred follow-up.
+  - Stage 4c: `padetaylor-4lh` — closed (this addendum).
+  - Stage 6 (QNM figure): closed (this addendum).
+  - QNM ground-truth acquisition: `padetaylor-t0bf` — closed.
+  - HeunC-eigenfunction overlay: `padetaylor-ec3m` — open (deferred).
   - Stage 0: `padetaylor-tzq` — closed.
   - Stage 1: `padetaylor-3it` — closed.
   - Stage 2: `padetaylor-3a3` — closed.

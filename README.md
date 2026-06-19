@@ -133,6 +133,26 @@ poles(sol)                                   # → the pole locations, as a list
 
 The Fornberg–Weideman papers are full of such pictures. This repository reproduces **thirteen of them** as runnable scripts under [`figures/`](figures/) — including the package's showpiece, FW Fig. 4.1, where a BVP, an initial-value pole-field run, and a second BVP are *composed* into one solution spanning poles and smooth regions alike.
 
+## 8. Beyond Painlevé: Heun functions and a black-hole quasinormal mode
+
+The same machinery that bridges poles for the Painlevé transcendents turns out to evaluate a second family of "hard" special functions essentially for free: the **Heun functions**. Heun's general equation (DLMF Ch. 31) sits one rung above the hypergeometric `₂F₁` — four regular singular points instead of three — and its confluent cousin merges two of them into an irregular singularity at infinity. These functions are everywhere in mathematical physics (black-hole perturbation theory, the hydrogen molecule ion, integrable spin chains; Lamé and Mathieu functions are special cases), yet good numerical implementations have been notoriously scarce — Mathematica's are closed-source and fragile past the second singular point, and the only prior open-source code was Motygin's GPL-3.0 MATLAB.
+
+PadeTaylor.jl ships `heun_g` and `heun_c` as first-class public API. The recipe is exactly the package's existing apparatus pointed at a different ODE: a **Frobenius series at `z = 0`** for the initial condition (DLMF 31.3 recurrence for HeunG; Motygin 2018 for HeunC), then a **path-network walk** that steers around the regular singular points at `z = 0, 1, a` to reach any target in the plane. Both are validated to machine precision against a wolframscript oracle, cross-checked against Motygin's MATLAB. See `docs/adr/0018-heun-module.md` and `src/Heun.jl`.
+
+![HeunG and HeunC domain-colouring portraits in the complex plane](figures/output/heun_complex_portrait.png)
+
+*Domain-colour portraits of `HeunG` (left) and `HeunC` (right): hue encodes phase, brightness encodes magnitude. The structure pinned to the regular singular points — at `z = 0, 1, a` — is exactly what the path-network walker detours around to evaluate these functions reliably across the plane.*
+
+That confluent-Heun capability buys something concrete in physics. The radial Teukolsky equation governing perturbations of a Schwarzschild black hole **is** a confluent-Heun equation, and the famous **quasinormal-mode (QNM) frequencies** — the complex "ringdown" tones a black hole emits after it is struck — are precisely the frequencies at which its confluent-Heun solution joins an ingoing wave at the horizon to an outgoing wave at infinity. That connection condition has a numerically stable form: the vanishing of **Leaver's radial continued fraction** (Leaver 1985). PadeTaylor.jl's `examples/teukolsky_qnm.jl` root-finds it for the fundamental scalar mode and recovers
+
+> **Mω = 0.483644 − 0.096759i**   (ℓ = 2, n = 0, s = 0),
+
+matching Leaver 1985 (Table I) to `|err| ≈ 7.5·10⁻⁶`, and independently cross-checked on the `s = 2` gravitational mode (`0.373672 − 0.088962i`). The explicit recurrence coefficients and their provenance — including the correction of an earlier mis-citation, with the authentic Leaver coefficients re-acquired and cross-verified against the Black Hole Perturbation Toolkit, arXiv:2509.07235, and arXiv:2604.18680 — are recorded in `docs/teukolsky_heun_mapping.md` §3.2.1.
+
+![Schwarzschild scalar QNM: the Leaver continued-fraction zero and the radial eigenfunction](figures/output/teukolsky_qnm_demo.png)
+
+*Panel A: the QNM frequency as the complex zero of Leaver's radial continued fraction. Panel B: the corresponding radial QNM eigenfunction `R(r)` across `r ∈ [r₊, ∞)`. Reproduce with `julia --project=figures figures/teukolsky_qnm_demo.jl`.*
+
 ---
 
 ## The architecture, briefly
@@ -146,6 +166,7 @@ The package is a layered stack — each tier builds on the one below, and you ca
 | **Path network** | navigate the whole complex plane around pole fields | `path_network_solve`, `extract_poles`, `quality_diagnose` |
 | **BVP + composition** | spectral BVP solver; auto IVP/BVP dispatch in 1-D and 2-D | `bvp_solve`, `dispatch_solve`, `lattice_dispatch_solve`, `edge_gated_pole_field_solve` |
 | **Multivalued tier** | coordinate transforms (PIII/PV) + Riemann-sheet tracking (PVI) + walker-side cut respect | `pIII_transformed_rhs`, `pV_z_to_ζ`, `pVI_eta_transformed_rhs`, `sheet_index`, `path_network_solve(...; branch_points, cross_branch, grid_sheet)`, `eval_at`, `eval_at_sheet` |
+| **Special-function tier** | Heun functions (general + confluent) via Frobenius-at-0 + path-network walk around the regular singular points | `heun_g`, `heun_c` |
 | **Painlevé layer** | per-equation problem builder + self-describing solution wrapper | `PainleveProblem`, `PainleveSolution`, `tritronquee`, `hastings_mcleod` |
 
 Internally the core itself is four layers: an SVD dispatcher (`LinAlg`) → robust Padé conversion (`RobustPade`) → Taylor jet generation (`Coefficients`) and step control (`StepControl`) → the one-step orchestrator (`PadeStepper`). Every source module is a self-contained, literate "chapter" kept under 200 lines. See `docs/adr/0001-four-layer-architecture.md` for the rationale.
@@ -154,7 +175,9 @@ Internally the core itself is four layers: an SVD dispatcher (`LinAlg`) → robu
 
 **v0.1.0 — research-grade; all architectural tiers shipped.** The package is not yet registered in the Julia General registry. **2447 / 2447 tests passing.**
 
-Headline empirical result: the FW 2011 Table 5.1 long-range integration of the equianharmonic Weierstrass ℘-function to `z = 30` reaches a relative error of `2.13·10⁻¹⁴` in 256-bit precision — beating the `8.34·10⁻¹⁴` reported by Fornberg & Weideman. See `CHANGELOG.md` for the full release notes, per-tier deliverables, and known limitations.
+Headline empirical result: the FW 2011 Table 5.1 long-range integration of the equianharmonic Weierstrass ℘-function to `z = 30` reaches a relative error of `2.13·10⁻¹⁴` in 256-bit precision — beating the `8.34·10⁻¹⁴` reported by Fornberg & Weideman.
+
+The same path-network core now also ships the Heun special functions (`heun_g`, `heun_c`) and, on top of confluent Heun, a worked Schwarzschild scalar quasinormal-mode computation (`Mω = 0.483644 − 0.096759i`, matching Leaver 1985 to `|err| ≈ 7.5·10⁻⁶`). See `CHANGELOG.md` for the full release notes, per-tier deliverables, and known limitations.
 
 ## Installation
 
