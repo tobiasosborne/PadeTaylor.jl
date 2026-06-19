@@ -116,6 +116,16 @@ include("VectorStepControl.jl")
 # Additive — the global-collocation substrate the v0.2 P_I^(2)
 # tritronquée figure stands on (bead padetaylor-0ln.26, VB3, ADR-0023).
 include("VectorBVP.jl")
+# OutOfClass enforces solve_pade's meromorphic-only contract (bug
+# padetaylor-v1ub, ADR-0033): a history-gated two-order Padé convergence
+# defect that fails loud (OutOfClassError) on essential singularities /
+# natural boundaries.  It reuses PadeStepper's step primitives
+# (_rescale_by_powers, _evaluate_pade) so it loads AFTER PadeStepper and
+# BEFORE Problems (whose solve_pade driver constructs the checker).  The
+# unchecked pade_step_with_pade! hot path is left byte-for-byte unchanged;
+# OutOfClass provides a separate checked stepper.  Additive — the default
+# escape hatch (check_in_class = false) recovers legacy behaviour.
+include("OutOfClass.jl")
 include("Problems.jl")
 # VectorProblems is the top-level driver for first-order vector ODEs
 # y' = f(z, y), y ∈ ℂ^d: a problem container, a fixed-step loop over
@@ -234,6 +244,7 @@ using .VectorProblems: VectorPadeTaylorProblem, VectorPadeTaylorSolution,
 # solver; the global-collocation counterpart to the IVP vector_solve_pade
 # (ADR-0023).
 using .VectorBVP:   vector_bvp_solve, VectorBVPSolution
+using .OutOfClass:  OutOfClassError
 using .NoumiYamada: noumi_yamada_rhs, NoumiYamadaProblem
 using .NoumiYamadaSymmetry: noumi_yamada_rational, noumi_yamada_backlund,
                             noumi_yamada_rotation
@@ -309,6 +320,7 @@ export VectorPadeStepperState, vector_pade_step!, vector_pade_step_with_pade!
 export vector_step_jorba_zou
 export VectorPadeTaylorProblem, VectorPadeTaylorSolution, vector_solve_pade
 export vector_bvp_solve, VectorBVPSolution
+export OutOfClassError
 export noumi_yamada_rhs, NoumiYamadaProblem
 export noumi_yamada_rational, noumi_yamada_backlund, noumi_yamada_rotation
 export painleve_hierarchy, painleve_hierarchy_jacobian,

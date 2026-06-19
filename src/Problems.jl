@@ -89,6 +89,7 @@ module Problems
 using ..RobustPade:   PadeApproximant
 using ..PadeStepper:  PadeStepperState, pade_step_with_pade!,
                       _evaluate_pade, _evaluate_pade_deriv
+using ..OutOfClass:   OutOfClassChecker, pade_step_with_defect!, check_in_class!
 
 export PadeTaylorProblem, solve_pade, PadeTaylorSolution, taylor_eval
 
@@ -164,8 +165,8 @@ end
 # -----------------------------------------------------------------------------
 
 """
-    solve_pade(prob::PadeTaylorProblem; h_max, max_steps = 100_000)
-        -> PadeTaylorSolution
+    solve_pade(prob::PadeTaylorProblem; h_max, max_steps = 100_000,
+               check_in_class = true) -> PadeTaylorSolution
 
 Take fixed-`h_max` Padé-Taylor steps until the integration window is
 exhausted.  Each segment stores the local Padé approximant for later
@@ -176,10 +177,31 @@ The span may be ASCENDING (`z_end > z_start`) or DESCENDING
 and the underlying stepper round-trips signed `h` exactly, so a leftward
 integration is fully supported (bug `padetaylor-xhjw`).  For a descending
 span `sol.z` is *decreasing*; the callable handles either ordering.
+
+## Meromorphic-only contract — now ENFORCED (Rule 1; bug `padetaylor-v1ub`)
+
+`solve_pade` is meromorphic-only: it bridges *poles*, not essential
+singularities or natural boundaries.  Driving it toward a NON-pole
+singularity used to return finite, plausible, *wrong* values with no throw
+(the `padetaylor-v1ub` silent-lie bug — e.g. `u'' = u(1+2z)/z⁴`, exact
+`u = e^{1/z}`, essential singularity at `z = 0`).  This is now caught: with
+`check_in_class = true` (the default) the driver watches the per-step
+two-order Padé convergence defect δ and throws an `OutOfClassError` once δ
+exceeds the calibrated threshold AND has grown monotonically over the last
+few steps — the signature of a jet leaving the meromorphic class
+(`src/OutOfClass.jl`; GGT 2013 §8; ADR-0033).  The guard cannot fire on a
+single isolated step (the across-0 bridge stays green) and does not trip on
+legitimate pole bridging (δ stays at the rational-approximation floor while
+bridging a pole).
+
+Pass `check_in_class = false` to disable the guard — for a user knowingly
+probing an out-of-class input, or one certain the input is meromorphic.
+Disabling restores the legacy unguarded behaviour and adds zero cost back.
 """
 function solve_pade(prob::PadeTaylorProblem{F, T, Y};
                     h_max::Real,
-                    max_steps::Integer = 100_000) where {F, T, Y}
+                    max_steps::Integer = 100_000,
+                    check_in_class::Bool = true) where {F, T, Y}
     h_max > 0 || throw(ArgumentError(
         "solve_pade: h_max must be positive (got $h_max). " *
         "Suggestion: pass a strictly-positive step length."))
@@ -205,6 +227,13 @@ function solve_pade(prob::PadeTaylorProblem{F, T, Y};
     h_vec    = T[]
     pade_vec = P_T[]
 
+    # Out-of-class guard (bug padetaylor-v1ub, ADR-0033): when enabled, the
+    # checked stepper additionally returns the per-step two-order Padé
+    # convergence defect δ, and `check_in_class!` throws OutOfClassError on
+    # sustained monotone growth past τ.  `nothing` when disabled keeps the
+    # default path on the unchecked `pade_step_with_pade!` (zero added cost).
+    checker = check_in_class ? OutOfClassChecker() : nothing
+
     steps = 0
     while dir * (z_end - state.z) > zero(T)
         steps += 1
@@ -215,7 +244,12 @@ function solve_pade(prob::PadeTaylorProblem{F, T, Y};
             "window.")
         gap    = z_end - state.z
         h_step = dir * min(h_max_T, abs(gap))     # signed; |h_step| ≤ h_max
-        _, P_u = pade_step_with_pade!(state, prob.f, prob.order, h_step)
+        if checker === nothing
+            _, P_u = pade_step_with_pade!(state, prob.f, prob.order, h_step)
+        else
+            _, P_u, δ = pade_step_with_defect!(state, prob.f, prob.order, h_step)
+            check_in_class!(checker, δ, state.z)
+        end
         # On the final clamped step `h_step == gap`, so `state.z` lands on
         # `z_end` exactly (`x + (z_end - x) == z_end`, verified over a wide
         # span/h_max sweep) and the loop then terminates; the `max_steps`

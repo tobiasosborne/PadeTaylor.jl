@@ -8,7 +8,51 @@
 > previous session already paid for. The frictions surfaced are
 > recorded in `docs/worklog/001-stages-Z-1-2-handoff.md`.
 
-## 🔬 LATEST SESSION (2026-06-19) — P1 HEUN EPIC (padetaylor-72w) CLOSED + a pre-existing regression caught & fixed
+## 🔬 LATEST SESSION (2026-06-19, later) — v0.2 vector epic CLOSED + the v1ub out-of-class guard (the last silent-wrong-answer bug)
+
+**Headline:** two consequential closes, fully verified + pushed.
+**(1)** The **v0.2 vector epic `0ln`** critical path (`d4a`/`zcz`/`0ln.40`) was
+*secretly DONE* — figure wired (`on_target_failure=:skip` + dense targets),
+rendered, ~29 % certified coverage saturated, full `Pkg.test` green — but never
+closed (a stale in-progress P1). Reconciled against ground truth by 3 read-only
+scouts; finalized ADR-0026, gitignored the 4 diagnostic scratch probes, closed
+the three beads (commit `cb15ba0`).
+**(2)** Fixed **`padetaylor-v1ub`**, the ONLY confirmed silent-wrong-answer bug.
+`solve_pade` is meromorphic-only but silently returned finite, plausible, WRONG
+values on out-of-class input (`u''=u(1+2z)/z⁴`, exact `u=e^{1/z}`, essential
+singularity at z=0: relerr 4e-10 @|z|=0.1 → 1.2e17 AND wrong sign @0.02, no
+throw). Now fails loud with `OutOfClassError`. Suite **9333 pass / 2 broken / 0
+fail** (broken 3→2; CFail.1d auto-flip marker flipped).
+
+**v1ub design (ADR-0033) — the discriminator is Padé CONVERGENCE, not radius.**
+The obvious guard (watch Jorba–Zou radius / coefficient growth, trip on collapse)
+is WRONG and would break pole bridging: the radius of convergence equals
+distance-to-nearest-singularity for BOTH a pole and an essential point, so it
+collapses identically — blind to singularity *type*. The sound signal is the
+**two-order Padé convergence defect** δ (GGT 2013 §8, de Montessus /
+Nuttall–Pommerenke): build `[m,n]` and `[m-1,n-1]` Padé from the same scaled jet,
+compare at the step endpoint; meromorphic ⇒ they agree (even bridging a pole),
+essential ⇒ they diverge. **History-gated** throw (δ>τ AND monotone-grown over
+K=2 steps) is the safety — fires on the e^{1/z} approach, CANNOT trip on the
+single-step across-0 bridge or a one-off pole spike. Calibration DERIVED (not
+fitted): max in-class δ = 3.9e-7 vs e^{1/z} fires at 0.99 → τ=1e-3, K=2. New
+literate `src/OutOfClass.jl`; `PadeStepper.pade_step_with_pade!` left
+byte-for-byte unchanged (separate checked stepper) → zero hot-path regression.
+Default-on with `check_in_class=false` escape hatch. Mutation-proven (2 guard
+mutations, both conjuncts load-bearing). Worklog 076.
+
+**bd-export operational lesson (corrected the memory).** The git-tracked
+`.beads/issues.jsonl` resync is `bd export -o .beads/issues.jsonl` (explicit
+`-o`). A bare `bd export` writes to STDOUT (never touches the file); the
+auto-export-on-close hook can write a PARTIAL/stale file (only 1 of 3 closes
+landed, while `bd show` was correct); `bd dolt commit` is not a real subcommand
+(no-op). Verify with `git diff --cached` (export auto-stages).
+
+**Follow-ons filed:** out-of-class guard for `path_network_solve`/vector wedge
+walk (deferred, δ is type-generic); CFail.2 Chazy natural-boundary fixture
+(needs far-side oracle); `OutOfClass._evaluate_pade_deriv_via` DRY cleanup (P4).
+
+## 🔬 SESSION (2026-06-19, earlier) — P1 HEUN EPIC (padetaylor-72w) CLOSED + a pre-existing regression caught & fixed
 
 **Headline:** the P1 epic **Heun functions as first-class citizen (`72w`) is CLOSED**, and
 running the full `Pkg.test()` — the FIRST one actually executed in this repo since the

@@ -21,37 +21,48 @@
 # upward without bound); nothing in the solver inspects that drift, so the
 # meromorphic-only contract has NO guard against this input.
 #
-# THE EMPIRICAL v1ub FINDING  (CONFIRMED — silent bridge)
-# -------------------------------------------------------
-# Driving the REAL solve_pade (NOT an mpmath emulation) settles the open
-# question for bead padetaylor-v1ub.  VERDICT: **v1ub is CONFIRMED.** The
-# solver SILENTLY returns finite, plausible-looking values with NO throw and
-# NO NaN as it integrates toward (and, for a single large step, ACROSS) z=0.
-# Measured relerr-vs-distance-to-0 curve, real-increasing march z0=-1 → z<0,
-# fixed h=0.1 (oracle e^{1/z}, mpmath dps=50):
+# THE EMPIRICAL v1ub FINDING  (CONFIRMED — then RESOLVED by ADR-0033)
+# -------------------------------------------------------------------
+# Driving the REAL solve_pade (NOT an mpmath emulation) settled the open
+# question for bead padetaylor-v1ub.  VERDICT: **v1ub was CONFIRMED.** The
+# solver SILENTLY returned finite, plausible-looking values with NO throw and
+# NO NaN as it integrated toward z=0.  Measured relerr-vs-distance-to-0 curve,
+# real-increasing march z0=-1 → z<0, fixed h=0.1 (oracle e^{1/z}, dps=50):
 #
 #     |z|=0.5  relerr 2.1e-16   (machine precision — far from 0, accurate)
 #     |z|=0.2  relerr 3.1e-14
 #     |z|=0.1  relerr 4.0e-10   (still excellent)
 #     |z|=0.05 relerr 4.9e-02   (degrading — the jet is going out-of-class)
-#     |z|=0.02 relerr 1.2e+17   (TOTAL GARBAGE, yet u is FINITE and even has
-#                                the WRONG SIGN: e^{1/z}>0 always, but the
-#                                solver returns u≈-2.4e-5 with no complaint)
+#     |z|=0.02 relerr 1.2e+17   (TOTAL GARBAGE, yet u was FINITE and even had
+#                                the WRONG SIGN: e^{1/z}>0 always, yet the
+#                                solver returned u≈-2.4e-5 with no complaint)
 #
-# So accuracy collapses near the essential singularity while the OUTPUT stays
-# finite — a pure Rule-1 silent lie.  ACROSS z=0: a single large step
-# (z0=-0.2 → +0.2, h=0.4) "bridges" the essential singularity to ~6 digits
-# (relerr 5.8e-6) and returns finite — the headline "bridges across 0" claim,
-# confirmed.  (Smaller across-0 steps DO sometimes throw a TaylorSeries Inf-
-# coefficient ArgumentError or return NaN, so the across-0 regime is step-
-# dependent; the robust, step-independent confirmation is the APPROACH side,
-# which is what the auto-flip marker below exercises.)
+# Accuracy collapsed near the essential singularity while the OUTPUT stayed
+# finite — a pure Rule-1 silent lie.
 #
-# Because v1ub is CONFIRMED, this file ships ONE `@test_broken` (CFail.1d): a
-# `refuses(...)` helper that is currently `false` (the solver does NOT refuse)
-# ⇒ "broken", and auto-flips to "unexpectedly passes" the day an out-of-class
-# diagnostic (coefficient-growth / Padé-defect monotone drift) makes the
-# solver throw.  Every other assertion @test-pins the documented REALITY.
+# RESOLUTION (bug padetaylor-v1ub, ADR-0033).  solve_pade now ENFORCES its
+# meromorphic-only contract by default (`check_in_class = true`): the driver
+# watches the per-step two-order Padé convergence defect δ and throws an
+# `OutOfClassError` once δ exceeds the calibrated threshold τ=1e-3 AND has
+# grown monotonically over the last K=2 steps — the de-Montessus /
+# Nuttall–Pommerenke signature of a jet leaving the meromorphic class (GGT
+# 2013 §8; src/OutOfClass.jl).  Consequences pinned below:
+#
+#   - The APPROACH now THROWS once δ runs away.  Measured: solve_pade to
+#     z=-0.5/-0.2/-0.1/-0.05 still returns finite accurate/degraded values
+#     (δ at/below the floor — the guard is silent); solve_pade to z=-0.02
+#     THROWS OutOfClassError (δ climbs 2.7e-14 → 3.2e-10 → 0.99, the gate
+#     fires).  So CFail.1a/1b keep their finite pins; CFail.1c flips from
+#     pinning the silent lie to asserting the throw.
+#   - The across-0 single big step (CFail.1e) CANNOT trip the guard — one
+#     step leaves no ≥2-step monotone history — so it still bridges to ~6
+#     digits and returns finite, exactly as before (the gate is the safety).
+#   - CFail.1d, the auto-flip marker (`refuses_out_of_class`), now returns
+#     `true`, so its former `@test_broken` is flipped to a passing `@test`.
+#
+# This is a legitimate behaviour change (silent-lie → fail-loud), NOT a
+# tolerance relaxation: every reframed assertion is documented inline with
+# its v1ub/ADR-0033 citation, and the mutation-proof footer was re-run.
 #
 # CFail.2 Chazy: DEFERRED (no far-side oracle past a movable natural boundary,
 # plan Family G); not shipped here.  See report / follow-on bead.
@@ -63,10 +74,13 @@
 #     jet has not yet sensed the essential singularity (relerr measured 2e-16…
 #     4e-10).  The z=-0.1 pin is loosened to 1e-8 (measured 4e-10) — the last
 #     point before the out-of-class collapse.
-#   * the COLLAPSE pins (z=-0.05, -0.02): asserted as INEQUALITIES on relerr
-#     (>1e-3 at -0.05, >1.0 at -0.02) — we pin the *failure*, not a value, plus
-#     `isfinite` (the silent-lie signature: finite-but-wrong).  These are
-#     structural, not fitted.
+#   * the DEGRADATION pin (z=-0.05): asserted as an INEQUALITY on relerr
+#     (>1e-3) — we pin the *degradation*, not a value, plus `isfinite` (the
+#     guard is still silent here: δ has not yet run away).  Structural, not
+#     fitted.
+#   * the COLLAPSE point (z=-0.02): post-ADR-0033 this no longer returns a
+#     finite lie — it THROWS OutOfClassError.  CFail.1c asserts the throw
+#     (`@test_throws`), the fail-loud replacement for the old finite-lie pin.
 #   * across-0 bridge (h=0.4): relerr < 1e-4 AND isfinite — pins the silent
 #     bridge to ≥4 digits (measured 5.8e-6).
 #
@@ -100,9 +114,10 @@ const UP0  = -exp(-1.0)
 
 # v1ub AUTO-FLIP HELPER.  Boolean: does the solver REFUSE this out-of-class
 # input (throw, or return a non-finite sentinel) rather than silently lie?
-# Avoids the "@test_broken throws → errors the expression" trap: we return a
-# clean Bool.  Currently `false` (no out-of-class guard) ⇒ the @test_broken is
-# "broken"; flips to "unexpectedly passes" when a future diagnostic lands.
+# Avoids the "@test throws → errors the expression" trap: we return a clean
+# Bool.  Post-ADR-0033 the out-of-class guard makes solve_pade throw on the
+# approach, so this returns `true` — CFail.1d below is now a passing @test
+# (it was @test_broken while v1ub was open).
 function refuses_out_of_class(zend; h = 0.1)
     try
         prob = PadeTaylorProblem(fess, (U0, UP0), (Z0, zend); order = 30)
@@ -147,42 +162,61 @@ end
         @test isfinite(u_h)
         @test isapprox(u_h, CFAIL_U_AT_NEG0p1; rtol = 1e-8)   # measured 4.0e-10
 
+        # z=-0.05: STILL finite and accurate-enough that the out-of-class
+        # guard (ADR-0033) does NOT fire — δ has not yet run away monotonically
+        # past τ at this distance — so solve_pade returns the degraded-but-
+        # finite value (the guard is correctly silent here; it only throws
+        # once the δ-runaway is sustained, which happens between -0.05 and
+        # -0.02, see CFail.1c).
         prob2 = PadeTaylorProblem(fess, (U0, UP0), (Z0, -0.05); order = 30)
-        sol2  = solve_pade(prob2; h_max = 0.1)
+        sol2  = solve_pade(prob2; h_max = 0.1)   # guard silent: no throw at -0.05
         u_h2, _ = sol2(-0.05)
         relerr = abs(u_h2 - CFAIL_U_AT_NEG0p05) / abs(CFAIL_U_AT_NEG0p05)
-        @test isfinite(u_h2)         # STILL finite — the silent-lie signature
+        @test isfinite(u_h2)         # finite — guard not yet fired
         @test relerr > 1e-3          # but already DEGRADED (measured ~4.9e-2)
     end
 
     # ----------------------------------------------------------------------
-    # CFail.1c  SILENT-LIE collapse.  Within ~0.02 of z=0 the returned value
-    # is TOTAL GARBAGE (relerr ≫ 1) yet FINITE — and even the SIGN is wrong
-    # (e^{1/z} > 0 for all real z, but the solver returns u < 0).  This is the
-    # core Rule-1 violation: a confident, finite, plausible-looking lie.
+    # CFail.1c  FAIL-LOUD collapse (post-ADR-0033).  Within ~0.02 of z=0 the
+    # jet has decisively left the meromorphic class: the two-order Padé
+    # convergence defect δ has grown monotonically (2.7e-14 → 3.2e-10 → 0.99)
+    # past τ, so solve_pade now THROWS OutOfClassError instead of returning
+    # the old finite, wrong-signed lie (relerr ~1.2e17, u<0 for the strictly
+    # positive e^{1/z}).  This is the v1ub fix: a confident finite lie is
+    # replaced by a fail-loud refusal (Rule 1).  We assert the THROW.
+    # (Reframed from the old "silent finite-but-wrong lie" pin — bug
+    # padetaylor-v1ub, ADR-0033; a behaviour change, not a tolerance relax.)
     # ----------------------------------------------------------------------
-    @testset "CFail.1c  silent finite-but-wrong lie near z=0 (z=-0.02)" begin
+    @testset "CFail.1c  fail-loud refusal near z=0 (z=-0.02 throws)" begin
         prob = PadeTaylorProblem(fess, (U0, UP0), (Z0, -0.02); order = 30)
-        sol  = solve_pade(prob; h_max = 0.1)
+        # The driver throws inside solve_pade as the δ-runaway gate fires —
+        # the integration never produces the old finite-wrong value at -0.02.
+        @test_throws OutOfClassError solve_pade(prob; h_max = 0.1)
+
+        # Escape hatch (ADR-0033): a user who knowingly probes out-of-class
+        # can opt out; then the LEGACY silent-lie behaviour is recovered
+        # verbatim — finite, relerr ≫ 1, wrong sign.  This pins both the
+        # opt-out and the documented legacy reality it restores.
+        sol  = solve_pade(prob; h_max = 0.1, check_in_class = false)
         u_h, _ = sol(-0.02)
         ex = uexact(-0.02)
         relerr = abs(u_h - ex) / abs(ex)
-        @test isfinite(u_h)          # finite — no throw, no NaN
+        @test isfinite(u_h)          # opt-out: finite — no throw, no NaN
         @test relerr > 1.0           # but utterly wrong (measured ~1.2e17)
         @test u_h < 0                # WRONG SIGN — e^{1/z} is strictly positive
     end
 
     # ----------------------------------------------------------------------
-    # CFail.1d  v1ub AUTO-FLIP MARKER (the only @test_broken in this file).
-    # The solver does NOT refuse this out-of-class input on the approach side
-    # — it silently returns a finite (wrong) value.  `refuses_out_of_class`
-    # is currently `false` ⇒ @test_broken.  When a future out-of-class
-    # diagnostic (coefficient-growth / Padé-defect monotone drift) makes the
-    # solver throw, `refuses` flips to `true` and this @test_broken reports
-    # "Unexpectedly passing" — the auto-flip that closes v1ub.
+    # CFail.1d  v1ub AUTO-FLIP MARKER — now FLIPPED to a passing @test.
+    # The solver now REFUSES this out-of-class input on the approach side: it
+    # throws OutOfClassError as the δ-runaway gate fires, so
+    # `refuses_out_of_class` returns `true`.  This was a `@test_broken` while
+    # v1ub was open (the solver silently returned a finite wrong value); the
+    # out-of-class diagnostic (two-order Padé convergence defect + monotone
+    # gate, src/OutOfClass.jl / ADR-0033) closes v1ub and flips the marker.
     # ----------------------------------------------------------------------
-    @testset "CFail.1d  v1ub: solver SHOULD refuse out-of-class input" begin
-        @test_broken refuses_out_of_class(-0.02; h = 0.1)
+    @testset "CFail.1d  v1ub: solver REFUSES out-of-class input (resolved)" begin
+        @test refuses_out_of_class(-0.02; h = 0.1)     # was @test_broken; v1ub fixed
     end
 
     # ----------------------------------------------------------------------
@@ -207,31 +241,34 @@ end
 # ============================================================================
 # MUTATION-PROOF PROCEDURE (Rule 4) — ACTUALLY EXECUTED, then restored exactly.
 #
-# M-oracle (CFail.1a): in test/_oracle_corpus_out_of_class.jl change the
-#   leading digit of CFAIL_U_AT_NEG0p5 from 0.1353… to 0.1453… (a meaningful
-#   ~7% flip, well above the 1e-13 tol).  Result: ONLY the CFail.1a `u_h`
-#   assertion went RED (isapprox(0.13533…, 0.14533…; rtol=1e-13) = false);
-#   all other 11 assertions stayed GREEN — the 1b/1c collapse pins use the
-#   Float64 `uexact` helper, not this literal, so they are independent, and
-#   the 1d @test_broken stayed broken.  Restored the literal; suite GREEN.
+# The NEW load-bearing assertions are the fail-loud guard: CFail.1c
+# (`@test_throws OutOfClassError`) and CFail.1d (the flipped `@test`).  Both
+# were mutation-proven against the out-of-class guard in src/OutOfClass.jl
+# (bug padetaylor-v1ub, ADR-0033).  TWO independent guard mutations, each of
+# which DISABLES firing, were run RED and restored byte-for-byte.
 #
-# M-impl (the gold standard): in src/PadeStepper.jl `_evaluate_pade`, change
-#   the return `num / den` to `(num / den) * (1 + 1e-7)` — a 1e-7 relative
-#   perturbation of every stored Padé value (the handle the CPB/CRic/CVrow
-#   mutation-proofs use).  Result: exactly the FOUR load-bearing value/sign
-#   assertions reddened (8 pass / 4 fail / 1 broken):
-#     - CFail.1a  z=-0.5 (rtol 1e-13): 0.135335408… vs 0.135335283… RED;
-#     - CFail.1a  z=-0.2 (rtol 1e-9):  0.006738187… vs 0.006737947… RED;
-#     - CFail.1b  z=-0.1 (rtol 1e-8):  5.2906e-5    vs 4.5400e-5    RED;
-#     - CFail.1c  sign pin `u_h < 0`:  the 1e-7 scaling tipped the garbage
-#       value to +1.527, so the WRONG-SIGN assertion flipped RED.
-#   The by-design non-quantitative pins stayed GREEN — the inequality relerr
-#   pins (1b relerr>1e-3, 1c relerr>1.0) are already so far past threshold a
-#   1e-7 nudge can't cross them; the 1e across-0 bridge (relerr<1e-4, measured
-#   5.8e-6) is far enough below 1e-4 that the 1e-7 perturbation stays inside;
-#   the 1d @test_broken (refuses==false) is structural.  Restored
-#   src/PadeStepper.jl byte-for-byte (`git status --porcelain src/` empty);
-#   suite GREEN (12 pass / 1 broken).
+# M-guard-τ: in src/OutOfClass.jl bump `OUT_OF_CLASS_TAU` 1.0e-3 → 1.0e10, so
+#   no measured δ ever exceeds the threshold and the guard never fires.
+#   Result: solve_pade no longer throws on the approach — exactly CFail.1c
+#   (`@test_throws`) and CFail.1d (`@test refuses…`) reddened (12 pass / 2
+#   fail).  The far-accurate pins (1a, 1b) and the across-0 bridge (1e) stayed
+#   GREEN — they never depended on the throw.  Restored τ; suite GREEN (14/14).
+#
+# M-guard-monotone (the gold standard): in src/OutOfClass.jl `check_in_class!`
+#   flip the monotone-growth test `history[i] > history[i-1]` → `<`, so a
+#   GROWING δ sequence never satisfies the gate and the guard never fires.
+#   Result: identical reddening — only CFail.1c + CFail.1d went RED (12 pass /
+#   2 fail).  This proves the HISTORY GATE itself (not just the threshold) is
+#   load-bearing: without monotone-growth detection the e^{1/z} runaway is not
+#   caught.  Restored the comparison byte-for-byte (`git status --porcelain
+#   src/OutOfClass.jl` empty); suite GREEN (14/14).
+#
+# Why two mutations: the guard fires on `δ > τ AND monotone-growth-over-K`.
+# M-guard-τ kills the first conjunct, M-guard-monotone the second; each alone
+# reddens the same two assertions, confirming both halves of the AND are
+# necessary and neither is dead.  The legacy M-oracle / M-impl value pins
+# (CFail.1a value, CFail.1c opt-out sign) remain valid against the finite
+# escape-hatch assertions and are still exercised by the suite.
 #
 # Run standalone with:
 #   julia --project=. test/corpus_out_of_class_test.jl

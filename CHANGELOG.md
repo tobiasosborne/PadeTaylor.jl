@@ -11,6 +11,31 @@ Post-v0.1.0 work, all on `main` and pushed.  Test suite **2447 / 2447
 GREEN** (up from 1311 at the v0.1.0 tag).  21 source modules (up from
 14); 13 ADRs (up from 4); 45 worklog shards (up from 18).
 
+### Fixed — out-of-class guard (bug `padetaylor-v1ub`, ADR-0033)
+
+  - **`solve_pade` now FAILS LOUD on out-of-class (non-meromorphic)
+    input** instead of silently returning finite, plausible, *wrong*
+    values (the only confirmed silent-wrong-answer bug).  On a recast
+    whose solution has an essential singularity (`u'' = u(1+2z)/z⁴`,
+    exact `u = e^{1/z}`) the solver used to integrate toward `z = 0`
+    returning finite values that degrade to relerr ≈ 1.2e17 with the
+    WRONG SIGN, no throw, no NaN — a Rule-1 violation.  The new guard
+    watches the per-step **two-order Padé convergence defect** δ (the
+    disagreement between the working `[m,n]` and reduced `[m-1,n-1]`
+    Padé of the same scaled jet at the step endpoint) and throws an
+    `OutOfClassError` once δ exceeds τ = 1e-3 AND has grown monotonically
+    over the last K = 2 steps — the de Montessus / Nuttall–Pommerenke
+    signature of a jet leaving the meromorphic class (GGT 2013 §8).  The
+    history gate makes the guard safe: it fires on the e^{1/z} approach
+    but CANNOT trip on the single-step across-0 bridge or on legitimate
+    pole bridging (δ stays at the rational-approximation floor while
+    bridging a pole — measured max in-class δ ≈ 4e-7, ~3.8 orders below
+    τ).  Default-on; pass `check_in_class = false` to opt out (legacy
+    behaviour, byte-for-byte identical numerics).  New module
+    `src/OutOfClass.jl` (literate); the perf-critical
+    `PadeStepper.pade_step_with_pade!` hot path is left byte-for-byte
+    unchanged.  See ADR-0033 and `test/corpus_out_of_class_test.jl`.
+
 ### Added — worklogs 020–033
 
   - `RobustPade.classical_pade_diagonal` — the classical FW 2011

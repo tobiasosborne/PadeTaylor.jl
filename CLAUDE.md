@@ -176,7 +176,7 @@ right but aren't.
   (each its own runbook). The runner is STRICTLY SERIAL by construction — each
   gate is a separate `julia` child that exits before the next (Rule 7; no `&`,
   ever). It interprets results FOR you and surfaces the two EXPECTED-NOISE facts
-  so a passing run reads green: the **3 `@test_broken` markers are intentional**
+  so a passing run reads green: the **2 `@test_broken` markers are intentional**
   (investigate only FAILs — bd memory corpus-v2-expected-broken-count) and the
   **2 mutation survivors under bead 98pe are tracked** (exit 0 is clean). Use
   `--dry-run` to print the exact command plan; perf needs an IDLE box.

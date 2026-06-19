@@ -27,15 +27,16 @@
 # processes is the inherently Rule-7-safe shape.
 #
 # EXPECTED-NOISE (the two facts a passing run must NOT look alarming over):
-#   1. The full Pkg.test() suite is GREEN at N pass / 3 BROKEN / 0 fail. The
-#      3 broken are INTENTIONAL @test_broken markers: 1 auto-flip marker for a
-#      known open bug (v1ub×1, CFail.1d) + 2 deferred-feature markers
+#   1. The full Pkg.test() suite is GREEN at N pass / 2 BROKEN / 0 fail. The
+#      2 broken are INTENTIONAL @test_broken markers: 2 deferred-feature markers
 #      (cm-n2 collision in corpus_vector_polefield_test, pi2-tritronquee in
 #      corpus_painleve_rational_test). [Was 10; on 2026-06-13 padetaylor-53tu's
 #      3 markers (CBvx.4.2, CBvx.4.4, CBV.7) AND padetaylor-q0yq's 1 marker
 #      (CBV.9) were FIXED and flipped to @test_throws; then padetaylor-61um's
 #      3 markers (CWD.5, CBr.3, CPN.7.3) were REFRAMED 6→3 (winding_delta is
-#      correct; the fix is BranchTracker's grazing guard — ADR-0031).  NB the
+#      correct; the fix is BranchTracker's grazing guard — ADR-0031); then on
+#      2026-06-19 padetaylor-v1ub's auto-flip marker (CFail.1d) was FIXED 3→2
+#      (the out-of-class fail-loud guard — ADR-0033).  NB the
 #      conditional kkg_pi2_figure_test markers contribute 0 when the Stage-B
 #      march succeeds, as in the canonical run.] A nonzero broken count is EXPECTED, not a regression — each
 #      auto-flip marker flips to "Unexpected Pass" the day its bug is fixed
