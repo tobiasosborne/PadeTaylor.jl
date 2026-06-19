@@ -60,6 +60,16 @@ figures/output/kkg_pi2_zoom_cache.jld2
 external/probes/heun-oracle/capture.log
 external/probes/heun-oracle/capture.stderr
 
+# Diagnostic scratch probes from the v0.2 vector-walk coverage investigation
+# (bead 0ln.40 / ADR-0026, which at §199 marks these "reproducible,
+# gitignored").  Their findings are recorded inline in ADR-0026 (Amendments
+# 5/9) and the close reasons of beads f4e/roe/nri/gt1 — these are one-off
+# diagnostics, not reusable oracles like external/probes/corpus-oracles/.
+external/probes/coverage-plateau-f4e/
+external/probes/s8-froissart-diagnosis/
+external/probes/vector-walk-collapse/
+external/probes/pole-census/
+
 # Supposition.jl property-test example database (test/property_test.jl,
 # bead padetaylor-krgy.1).  Supposition records each found counterexample
 # here for deterministic replay on the next run.  The gate's reproducibility

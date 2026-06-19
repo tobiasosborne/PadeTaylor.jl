@@ -1,6 +1,8 @@
 # ADR-0026 — Vector path-network: a resilient walk + dense targets for the headline figure
 
-**Status**: Accepted (2026-05-22). Supersedes the mis-framed deferred
+**Status**: **Accepted — implemented & closed 2026-05-26** (the D1–S8 +
+`tf9` arc is complete; Amendment 10 is the closeout — see "ADR-0026 closes
+here", below). Supersedes the mis-framed deferred
 bead `padetaylor-0ln.38` ("2D re-expansion lattice — a different
 architecture"). **Bead**: `padetaylor-0ln.40`. **Follows**: worklog 059
 (the honest reassessment), ADR-0025 Amendment 13.
