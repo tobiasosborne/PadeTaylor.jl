@@ -8,7 +8,64 @@
 > previous session already paid for. The frictions surfaced are
 > recorded in `docs/worklog/001-stages-Z-1-2-handoff.md`.
 
-## 🔬 LATEST SESSION (2026-06-14) — BUG-FIX CAMPAIGN COMPLETE (epic padetaylor-l7yt): final 3 FIXED
+## 🔬 LATEST SESSION (2026-06-19) — P1 HEUN EPIC (padetaylor-72w) CLOSED + a pre-existing regression caught & fixed
+
+**Headline:** the P1 epic **Heun functions as first-class citizen (`72w`) is CLOSED**, and
+running the full `Pkg.test()` — the FIRST one actually executed in this repo since the
+bug-fix campaign (worklog 075 only *predicted* green) — caught a real pre-existing P1
+regression, which we then fixed. Suite now **9331 pass / 3 broken / 0 fail** (9334 total, ~25.5 min).
+
+**Orchestration (Rule-7-safe, the campaign pattern):** read-only Sonnet investigators in
+parallel (scoping, literature acquisition — no julia); serial Opus coding agents one at a
+time (each owns the single julia process); orchestrator verifies every result (Rule 3),
+commits + pushes per step. (Session began by reconciling a bd-jsonl desync: the campaign's
+bead closures lived only on GitHub's jsonl; the local Dolt DB was stale — `git pull` + `bd import`.)
+
+**Heun epic (`72w`) — all children done:**
+- **`t0bf`** (`bcff01b`) — ground-truth acquisition. The doc §3.2 "BCS §4.6 Eq.79" attribution
+  for the Leaver recurrence was a **mis-citation** (BCS `qnmcqg4.tex:2196` defers the explicit
+  constants to Leaver 1985, not in repo; the schematic `c_0..c_5` form does not even produce a
+  QNM). Acquired + cross-verified the explicit ω-dependent Schwarzschild coefficients (BHPT
+  `QuasiNormalModes.m` citing Leaver 1985+Nollert; arXiv:2509.07235; arXiv:2604.18680; excluded
+  arXiv:2405.12671 β-typo) → `docs/teukolsky_heun_mapping.md` §3.2.1.
+- **`4lh`** (`3e85048`, `1e7b42a`) — Schwarzschild scalar QNM. `examples/teukolsky_qnm.jl`
+  root-finds Leaver's radial continued fraction; **Mω = 0.483644 − 0.096759i** vs Leaver 1985
+  (|err| 7.5e-6), s=2 gravitational cross-check `0.373672 − 0.088962i`. Test + mutation-proof +
+  2-panel headline figure. REFRAMING: the QNM frequency is the confluent-Heun connection /
+  minimal-solution condition at the IRREGULAR point r=∞ → Leaver radial CF, NOT obtainable
+  from `heun_c` about a regular point (verified — the package's HeunC Frobenius CF does not
+  vanish at the QNM).
+- **`e4z`** (`402c49e`, `70fbe18`) — README §8 + Special-function architecture row + worklog 051
+  addendum + 3 Heun figures: heun_complex_portrait (existing), teukolsky_qnm_demo (new),
+  heun_closed_form_reduction (new, HeunG→₂F₁ machine-precision vs the closed form). The
+  originally-planned `heun_vs_mathematica_failures` figure is NOT substantiable read-only
+  (the in-repo "disagreement" is a documented sheet/convention mismatch, not a Mathematica
+  error — Rule 5/Law 1) → re-scoped to `v1de`.
+- Deferred follow-ons: `ec3m` (heun_c QNM-eigenfunction overlay — exact Fiziev→DLMF param +
+  variable map), `v1de` (Mathematica-failure figure needs a captured failure case vs a trusted oracle).
+
+**`o0w4` (`be00389`) — PRE-EXISTING regression caught by the full suite & FIXED.** The `fzse`
+extract_poles self-merge (`4d97319`, ADR-0032) used **unbounded disjoint-support single-linkage**,
+which chains transitively and over-collapses DENSE pole fields — inverting FFW Fig 1's FF1.1.6
+pole-density gradient. Proven by reverting only `PoleField.jl` (pre-fzse 2259 / high·low 374·18
+PASS; post-fzse 178 / 6·10 FAIL). Fix = **diameter-capped** merge (`_diam_capped_merge`): keep the
+single-linkage edge graph (a froth fragment reaches its support-sharing dominant rep only via a
+disjoint intermediary — complete-linkage orphans it and regresses PF.5.1), but reject any union
+whose merged-component diameter would exceed `merge_atol`. FF1.1.6 now 107·12; de-frothing
+preserved (870 vs the pre-fzse 2259 over-split); equianharmonic PF.5.1 unchanged. Mutation-proven;
+cross-validated green on ffw_fig_1/4/6, polefield, corpus_riccati_*, corpus_pathnet_*,
+corpus_periodic_pole. ADR-0032 extended (Law 2). **Lesson: the campaign never ran a full
+`Pkg.test()` in this repo — it shipped this regression undetected. Always run the full suite
+before claiming green.**
+
+**bd/git operational lesson (bit 3× this session):** `bd close`/`create` write the Dolt *working
+set* (default `dolt-auto-commit=off`), which `bd show` reads — but `bd export` reads the committed
+snapshot, so the git-tracked `issues.jsonl` can LAG a just-issued close, and `bd export`
+auto-STAGES the file (so plain `git diff` reads empty; use `git diff --cached`). RULE: after any
+`bd close`/`create`, run `bd export`, then verify `git show HEAD:.beads/issues.jsonl` matches
+`bd show` for the affected beads before declaring synced.
+
+## 🔬 SESSION (2026-06-14) — BUG-FIX CAMPAIGN COMPLETE (epic padetaylor-l7yt): final 3 FIXED
 
 Full arc in **worklog 075**. The 3 bugs left after worklog 074 are FIXED, pushed,
 closed — **the campaign is DONE (6/6 epic children + the x0p0 sibling)**.

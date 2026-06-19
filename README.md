@@ -17,7 +17,7 @@ Most numerical software for differential equations quietly assumes the answer st
 - **map the pole field** — return the actual locations of the poles as a picture;
 - **handle the six Painlevé equations**, a famous family of "untameable" nonlinear ODEs central to modern mathematical physics.
 
-It is a faithful, test-driven Julia implementation of the methodology of Fornberg & Weideman (2011) and the robust-Padé algorithm of Gonnet, Güttel & Trefethen (2013). **1630 / 1630 tests pass**; results are cross-validated against closed-form solutions and independent solvers.
+It is a faithful, test-driven Julia implementation of the methodology of Fornberg & Weideman (2011) and the robust-Padé algorithm of Gonnet, Güttel & Trefethen (2013). **9331 tests pass**; results are cross-validated against closed-form solutions and independent solvers.
 
 ---
 
@@ -173,7 +173,7 @@ Internally the core itself is four layers: an SVD dispatcher (`LinAlg`) → robu
 
 ## Status
 
-**v0.1.0 — research-grade; all architectural tiers shipped.** The package is not yet registered in the Julia General registry. **2447 / 2447 tests passing.**
+**v0.1.0 — research-grade; all architectural tiers shipped.** The package is not yet registered in the Julia General registry. **9331 tests passing, 0 failing** (plus 3 intentional `@test_broken` markers that track known-open-bug fixtures and auto-flip the day each bug is fixed).
 
 Headline empirical result: the FW 2011 Table 5.1 long-range integration of the equianharmonic Weierstrass ℘-function to `z = 30` reaches a relative error of `2.13·10⁻¹⁴` in 256-bit precision — beating the `8.34·10⁻¹⁴` reported by Fornberg & Weideman.
 
