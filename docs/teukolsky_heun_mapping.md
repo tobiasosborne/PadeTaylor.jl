@@ -206,6 +206,64 @@ is the **vanishing of the continued fraction** (Leaver's Eq. 27 translated):
 
     β_0 - α_0 γ_1 / (β_1 - α_1 γ_2 / (β_2 - ...)) = 0
 
+### 3.2.1 Explicit Schwarzschild recurrence coefficients (acquired ground truth, 2026-06-19)
+
+**Correction.** The `c_0..c_5` parameterisation in §3.2 above, attributed to
+"BCS §4.6 Eq. (79)", is a **mis-citation**. Berti–Cardoso–Starinets 2009
+(`references/tex/heun/teukolsky/BertiCardosoStarinets2009_QNM_review_0905.2975/qnmcqg4.tex:2196`)
+gives only the recurrence *form* (their Eq. `recur`) and explicitly defers the
+explicit constants to *"the original work [Leaver:1985ax]"*. Leaver 1985 is not
+in `references/`. The authentic Leaver coefficients are **fully ω-dependent** and
+admit no constant `c_i` decomposition; the schematic `α_n = n²+(c0+1)n+c0` form
+above does not reproduce a QNM (its minimal-solution CF does not vanish at the
+true frequency). The explicit coefficients below were acquired and
+**cross-verified (2026-06-19)** against three independent sources that agree:
+the Black Hole Perturbation Toolkit `QuasiNormalModes.m` (which cites Leaver 1985
++ Nollert 1993), arXiv:2509.07235 Eqs. 29–31 (massless-scalar limit), and
+arXiv:2604.18680 Eqs. 7–9 (s=2). One source (arXiv:2405.12671) carries a `+2`
+typo in the β constant term and is excluded.
+
+**Series ansatz** (M=1 units, horizon r₊ = 2M = 2; time convention e^{-iωt}):
+
+    R(r) = e^{iωr} (r-2M)^{-2iωM} r^{4iωM} · Σ_{n≥0} a_n [1 - 2M/r]^n
+
+**Three-term recurrence**  α_n a_{n+1} + β_n a_n + γ_n a_{n-1} = 0  (n ≥ 1),
+seed  β_0 a_0 + α_0 a_1 = 0, with spin weight `s`, multipole `ℓ`, and auxiliary
+`β_aux = s² - 1`:
+
+    M=1 units (ω ≡ Mω, the dimensionless QNM):
+      α_n = (n+1)(n + 1 - 4iω)
+      β_n = -2n² + (-2 + 16iω)·n + 32ω² + 8iω - ℓ(ℓ+1) + β_aux
+      γ_n = (n - 4iω)² - (β_aux + 1)            [s=0 ⟹ γ_n = (n-4iω)²]
+
+    2M=1 units (ω_{2M=1} = 2·Mω; via M = 1/2):
+      α_n = (n+1)(n + 1 - 2iω)
+      β_n = -2n² + (-2 + 8iω)·n + 8ω² + 4iω - ℓ(ℓ+1) + β_aux
+      γ_n = (n - 2iω)² - (β_aux + 1)            [s=0 ⟹ γ_n = (n-2iω)²]
+
+(`s=0 ⟹ β_aux = -1`; `s=2 ⟹ β_aux = +3`.)
+
+**QNM condition** (0th inversion, fundamental n=0); truncate the CF at depth
+N ~ 50–100 and root-find in the complex ω-plane (Newton/Müller) seeded at
+0.4836 − 0.0968i:
+
+    0 = β_0 - α_0 γ_1 / (β_1 - α_1 γ_2 / (β_2 - ⋯))
+
+**Validation targets** (dimensionless Mω, M=1 units):
+
+    s=0, ℓ=2, n=0:  Mω = 0.483642 − 0.096766i   (Leaver 1985; arXiv:2509.07235 Table 2)
+    s=2, ℓ=2, n=0:  Mω = 0.373672 − 0.088962i   (cross-check; arXiv:2604.18680 / 2404.09672)
+
+The QNM *frequency* is obtained from this Leaver radial continued fraction — which
+is the numerically-stable form of the confluent-Heun minimal-solution (connection)
+condition. PadeTaylor's `heun_c` is then used to render the QNM *eigenfunction*
+R(r) across r ∈ [r₊, ∞) at the recovered frequency (the Stage-6 showcase figure).
+
+**Provenance.** BHPT `QuasiNormalModes.m`
+(github.com/BlackHolePerturbationToolkit/QuasiNormalModes); E. W. Leaver,
+*Proc. R. Soc. Lond. A* **402** (1985) 285; H.-P. Nollert, *Phys. Rev. D* **47**
+(1993) 5253; cross-checks arXiv:2509.07235, arXiv:2604.18680.
+
 ---
 
 ## 4. Boundary Conditions in HeunC Language
