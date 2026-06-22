@@ -8,7 +8,48 @@
 > previous session already paid for. The frictions surfaced are
 > recorded in `docs/worklog/001-stages-Z-1-2-handoff.md`.
 
-## 🔬 LATEST SESSION (2026-06-19, later) — v0.2 vector epic CLOSED + the v1ub out-of-class guard (the last silent-wrong-answer bug)
+## 🔬 LATEST SESSION (2026-06-22) — v1.0-blocking public-API canonicalisation (gvz/xds/0xn) — both registration prerequisites now cleared
+
+**Headline:** all THREE v1.0-blocking findings of the API audit
+(`docs/api-review-2026-05-16.md` §9 rows 1-3) shipped, backward-compatible,
+full `Pkg.test` GREEN **9361 pass / 2 broken / 0 fail** (commit `799bb44`).
+Combined with the prior `v1ub` soundness fix, the two registration blockers
+(a confirmed silent-wrong-answer bug; an inconsistent public kwarg surface)
+are both gone.
+
+- **gvz** — `pii_rational`/`pii_airy`/`piv_entire` were `export`ed from the
+  `Painleve` submodule but omitted from the MAIN module's selective import +
+  export block → `using PadeTaylor; pii_rational(1)` threw `UndefVarError`.
+  Now exported; regression-guarded by `painleve_closed_form_test.jl` CF.5.1
+  (the other CF tests used the qualified `PadeTaylor.Painleve.…` path, which
+  masked the bug).
+- **xds** — step-size kwarg canonicalised to `h`: `solve_pade` `h_max`→`h`,
+  `lattice_dispatch_solve` `h_path`→`h`, `PadeTaylorAlg` field+kwarg `h_max`→`h`.
+  The struct FIELD rename is a clean break (Julia binds fields by name —
+  unshimmable; sole consumer is the in-repo CommonSolve ext, updated in
+  lockstep, flagged "Breaking (theoretical, pre-v1.0)" in CHANGELOG). The
+  `solve_pade` shim composes with the `check_in_class` guard from ADR-0033.
+- **0xn** — iteration caps snake-cased to `max_iter` (NAMING only, concepts
+  NOT unified): `bvp_solve` both overloads + `vector_bvp_solve` `maxiter`→
+  `max_iter`; `dispatch_solve` `bvp_maxiter`→`bvp_max_iter`. `max_steps` /
+  `max_rescales` / `max_steps_per_target` / edge-gated `max_iter` left alone
+  (genuinely different loops — see api-review §3(a).2).
+
+**Mechanism.** Kwarg-alias-with-`depwarn` shims (Julia's `@deprecate_binding`
+does NOT cover kwargs). All ~150 in-repo call sites (src/test/figures/benchmark/
+ext/README) migrated to canonical names; the deprecated names still work +
+warn, guarded by the new `test/api_kwarg_deprecation_test.jl` (warn-assertion
+gated to `Pkg.test`'s `--depwarn=yes`). Orchestration: 2 read-only Sonnet scouts
+mapped the exhaustive blast radius → 1 serial Opus implementer → orchestrator
+independent residual-grep + full-suite verify + commit.
+
+**Remaining for a v0.2 release:** the vector epic's deferred children (`0ln.19`
+docs/release prep, `0ln.21/0ln.22` vector edge-detection/sheet-tracking — both
+behind unmet forcing conditions), the `krgy` test-hardening epic (`krgy.15`
+metamorphic relations = deepest oracle-free correctness work), and `x1y`
+honest-disc theory. No registration BLOCKER remains.
+
+## 🔬 SESSION (2026-06-19, later) — v0.2 vector epic CLOSED + the v1ub out-of-class guard (the last silent-wrong-answer bug)
 
 **Headline:** two consequential closes, fully verified + pushed.
 **(1)** The **v0.2 vector epic `0ln`** critical path (`d4a`/`zcz`/`0ln.40`) was
