@@ -112,7 +112,7 @@ using PadeTaylor.Painleve: PainleveProblem
         sol = solve_pole_free_hybrid(pp, sector,
                 z -> pIII_asymptotic_ic(z; n_terms = 2, β = β, δ = δ);
                 pfs_kwargs = (; h = 0.2, max_steps_per_target = 100),
-                bvp_kwargs = (; N = 10, tol = 1e-10, maxiter = 30),
+                bvp_kwargs = (; N = 10, tol = 1e-10, max_iter = 30),
                 n_slices = 4, glue_tol = 1e-6)
 
         @test length(sol.bvp_slices) == 4        # sanity: real slice stack

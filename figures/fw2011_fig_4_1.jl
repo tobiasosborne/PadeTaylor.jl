@@ -95,7 +95,7 @@ nearest_idx(v, x) = argmin(abs.(collect(v) .- x))
 z_a = -Z_BVP * im
 z_b =  Z_BVP * im
 spine = bvp_solve(bvp_f, bvp_∂f_∂u, z_a, z_b, leading(z_a), leading(z_b);
-                  N = N_AXIS, initial_guess = leading, tol = 1e-13, maxiter = 20)
+                  N = N_AXIS, initial_guess = leading, tol = 1e-13, max_iter = 20)
 
 u0,  up0  = spine(0.0 + 0.0im)
 u20, up20 = spine(Z_BVP * im)
@@ -192,7 +192,7 @@ n_runs, n_fallback = let nr = 0, nf = 0
             filled = false
             try
                 rsol = bvp_solve(bvp_f, bvp_∂f_∂u, z_L, z_R, u_L, u_R;
-                                 N = Nrun, initial_guess = leading, maxiter = 25)
+                                 N = Nrun, initial_guess = leading, max_iter = 25)
                 for k in run_lo:run_hi
                     uval[k, j] = rsol(xs[k] + im * y)[1]
                 end

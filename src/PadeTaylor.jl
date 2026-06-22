@@ -271,7 +271,8 @@ using .SheetTracker:    pVI_transformed_rhs,
                         winding_delta, accumulate_winding, sheet_index
 using .Painleve:        PainleveProblem, PainleveSolution,
                         poles, grid_values, equation, parameters, solutionname,
-                        tritronquee, hastings_mcleod
+                        tritronquee, hastings_mcleod,
+                        pii_rational, pii_airy, piv_entire
 using .IVPBVPHybrid:    solve_pole_free_hybrid, IVPBVPSolution, pIII_asymptotic_ic
 using .Heun:            heun_g, heun_c
 
@@ -281,19 +282,43 @@ using .Heun:            heun_g, heun_c
 # on it).  Per ADR-0003 "Translation only — no algorithmic logic in the
 # extension".  The methods live in `ext/PadeTaylorCommonSolveExt.jl`.
 """
-    PadeTaylorAlg{H <: Real}(; h_max, max_steps = 100_000)
+    PadeTaylorAlg{H <: Real}(; h, max_steps = 100_000)
 
 `CommonSolve.jl`-compatible algorithm marker for `solve(prob, alg)` /
 `init(prob, alg)`.  Loaded only when `using CommonSolve` activates the
 `PadeTaylorCommonSolveExt` extension; constructing without that load
 gives a plain struct with no integrator methods attached.
+
+`h` is the fixed step length the integrator takes (clamped only at the
+span end so the last step lands exactly on `z_end`).  The kwarg was
+renamed from `h_max` to `h` (api-review §3(a).1, bead `xds`); the old
+`h_max` name is still accepted as a deprecated alias on the constructor.
+The struct FIELD was likewise renamed `h_max` → `h` — a clean break
+that cannot be shimmed (Julia binds fields by name); the sole consumer
+is the in-repo `PadeTaylorCommonSolveExt`.  See the CHANGELOG
+"Breaking (theoretical, pre-v1.0)" note.
 """
 struct PadeTaylorAlg{H <: Real}
-    h_max     :: H
+    h         :: H
     max_steps :: Int
 end
-PadeTaylorAlg(; h_max::Real, max_steps::Integer = 100_000) =
-    PadeTaylorAlg{typeof(h_max)}(h_max, Int(max_steps))
+# Canonical constructor (`h`) plus a deprecated `h_max` alias.  Julia's
+# `Base.@deprecate_binding` does not work for keyword arguments, so we
+# accept both as `nothing`-defaulted kwargs and emit a `depwarn` when the
+# legacy name is supplied (api-review §3(a).1, bead `xds`).
+function PadeTaylorAlg(; h::Union{Real,Nothing} = nothing,
+                       h_max::Union{Real,Nothing} = nothing,
+                       max_steps::Integer = 100_000)
+    if h_max !== nothing
+        Base.depwarn("`PadeTaylorAlg(; h_max = …)` is deprecated; use `h`.",
+                     :PadeTaylorAlg)
+        h === nothing && (h = h_max)
+    end
+    h !== nothing || throw(ArgumentError(
+        "PadeTaylorAlg: `h` is required.  " *
+        "Suggestion: pass a strictly-positive step length `h`."))
+    return PadeTaylorAlg{typeof(h)}(h, Int(max_steps))
+end
 
 """
     painleveplot(sol::PainleveSolution; kwargs...) -> Makie.Figure
@@ -344,6 +369,7 @@ export pVI_transformed_rhs,
 export PainleveProblem, PainleveSolution
 export poles, grid_values, equation, parameters, solutionname
 export tritronquee, hastings_mcleod
+export pii_rational, pii_airy, piv_entire
 export solve_pole_free_hybrid, IVPBVPSolution, pIII_asymptotic_ic
 export heun_g, heun_c
 export PadeTaylorAlg

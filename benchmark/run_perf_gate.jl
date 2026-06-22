@@ -125,7 +125,7 @@ const BENCHMARKS = Pair{String,Function}[
     # The two allocation-heavy paths get MORE samples + `gcsample=true` so their
     # minimum (the gate estimator) stabilises against GC-driven jitter.
     "solve_pade_wp_multiseg" => () -> @benchmark(
-        solve_pade(prob; h_max = 0.3),
+        solve_pade(prob; h = 0.3),
         setup = (prob = PadeTaylorProblem($_fW, ($_U0_FW, $_UP0_FW),
                                           (0.0, 1.5); order = $_ORDER)),
         samples = 400, seconds = 8, gcsample = true),

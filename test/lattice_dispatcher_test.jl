@@ -43,7 +43,7 @@ using PadeTaylor
         prob  = PadeTaylorProblem(f_PI, (u_tri, up_tri), zspan; order = 30)
 
         sol = lattice_dispatch_solve(prob, f_PI_1, ∂f_PI_1, xs, ys;
-                                     h_path = 0.5, order = 30)
+                                     h = 0.5, order = 30)
 
         @test size(sol.grid_u)  == (N, N)
         @test size(sol.grid_up) == (N, N)
@@ -91,7 +91,7 @@ using PadeTaylor
         end
 
         sol = lattice_dispatch_solve(prob, f_lin_1, ∂f_lin_1, xs, ys;
-                                     h_path = 0.5, order = 20, mask = mask)
+                                     h = 0.5, order = 20, mask = mask)
 
         # Each interior row should have one bridgeable smooth run, so
         # we expect N-2 = 9 BVP solutions.
@@ -135,7 +135,7 @@ using PadeTaylor
 
         mask_zero = falses(N, N)
         sol = lattice_dispatch_solve(prob, f_lin_1, ∂f_lin_1, xs, ys;
-                                     h_path = 0.5, order = 20, mask = mask_zero)
+                                     h = 0.5, order = 20, mask = mask_zero)
         @test length(sol.bvp_solutions) == 0
         @test count(sol.region_tag .== :bvp) == 0
         @test all(sol.region_tag .== :ivp_only)
@@ -193,11 +193,11 @@ using PadeTaylor
         mask0 = falses(N, N)
 
         sol_default = lattice_dispatch_solve(prob4, f_lin_1, ∂f_lin_1, xs, ys;
-                                             h_path = 0.5, mask = mask0)
+                                             h = 0.5, mask = mask0)
         sol_ord4    = lattice_dispatch_solve(prob4, f_lin_1, ∂f_lin_1, xs, ys;
-                                             h_path = 0.5, order = 4, mask = mask0)
+                                             h = 0.5, order = 4, mask = mask0)
         sol_ord30   = lattice_dispatch_solve(prob4, f_lin_1, ∂f_lin_1, xs, ys;
-                                             h_path = 0.5, order = 30, mask = mask0)
+                                             h = 0.5, order = 30, mask = mask0)
 
         @test sol_default.grid_u == sol_ord4.grid_u     # honours prob.order
         @test sol_default.grid_u != sol_ord30.grid_u    # not the old hard-coded 30
@@ -250,12 +250,12 @@ using PadeTaylor
         # Default (strict=true) — must throw, message-matched.
         @test_throws ErrorException lattice_dispatch_solve(
             prob, f_PI_1, ∂f_PI_1, xs, ys;
-            h_path = 0.5, order = 20, mask = mask, bvp_tol = 1e-300)
+            h = 0.5, order = 20, mask = mask, bvp_tol = 1e-300)
 
         # Explicit strict=true — same.
         @test_throws ErrorException lattice_dispatch_solve(
             prob, f_PI_1, ∂f_PI_1, xs, ys;
-            h_path = 0.5, order = 20, mask = mask, bvp_tol = 1e-300,
+            h = 0.5, order = 20, mask = mask, bvp_tol = 1e-300,
             strict = true)
     end
 
@@ -280,7 +280,7 @@ using PadeTaylor
 
         # Fail-soft — must NOT throw, must return a LatticeSolution.
         sol = lattice_dispatch_solve(prob, f_PI_1, ∂f_PI_1, xs, ys;
-                                     h_path = 0.5, order = 20,
+                                     h = 0.5, order = 20,
                                      mask = mask, bvp_tol = 1e-300,
                                      strict = false)
         @test sol isa LatticeSolution
@@ -313,7 +313,7 @@ using PadeTaylor
         end
 
         sol = lattice_dispatch_solve(prob, f_PI_1, ∂f_PI_1, xs, ys;
-                                     h_path = 0.5, order = 20,
+                                     h = 0.5, order = 20,
                                      mask = mask, bvp_tol = 1e-300,
                                      strict = false)
         # Every bridgeable run hits divergence ⇒ at least one :bvp_fail.
@@ -346,7 +346,7 @@ using PadeTaylor
         end
 
         sol = lattice_dispatch_solve(prob, f_lin_1, ∂f_lin_1, xs, ys;
-                                     h_path = 0.5, order = 20,
+                                     h = 0.5, order = 20,
                                      mask = mask, bvp_tol = 1e-300,
                                      strict = false)
 
@@ -386,7 +386,7 @@ using PadeTaylor
             mask[9, j] = true
         end
         sol = lattice_dispatch_solve(prob, f_lin_1, ∂f_lin_1, xs, ys;
-                                     h_path = 0.5, order = 20, mask = mask)
+                                     h = 0.5, order = 20, mask = mask)
         @test sol isa LatticeSolution
         @test size(sol.grid_u) == (N, N)
         @test sol.region_tag[3, 6] == :ivp
@@ -415,7 +415,7 @@ using PadeTaylor
             mask[9, j] = true
         end
         sol = lattice_dispatch_solve(prob, f_PI_1, ∂f_PI_1, xs, ys;
-                                     h_path = 0.5, order = 20,
+                                     h = 0.5, order = 20,
                                      mask = mask, bvp_tol = 1e-300,
                                      strict = false)
         allowed = Set([:ivp, :bvp, :bvp_fail, :ivp_only])
@@ -438,7 +438,7 @@ using PadeTaylor
         zspan = (0.0 + 0.0im, ComplexF64(4.0 * sqrt(2)))
         prob  = PadeTaylorProblem(f_PI, (u_tri, up_tri), zspan; order = 30)
         sol = lattice_dispatch_solve(prob, f_PI_1, ∂f_PI_1, xs, ys;
-                                     h_path = 0.5, order = 30, strict = false)
+                                     h = 0.5, order = 30, strict = false)
         @test sol isa LatticeSolution
         # Auto path: region tags use the full enum.
         @test all(t -> t in (:ivp, :bvp, :bvp_fail, :ivp_only), sol.region_tag)

@@ -1221,7 +1221,7 @@ function surf_anchor_bvp()
     return vector_bvp_solve(f, x_l, x_r, Ba, Bb, g;
                             N        = 128,
                             tol      = SURF_BVP_TOL,
-                            maxiter  = SURF_BVP_MAXITER,
+                            max_iter  = SURF_BVP_MAXITER,
                             jacobian = Jf,
                             initial_guess =
                                 z -> pI2_tritronquee_ic(z; t = SURF_T,

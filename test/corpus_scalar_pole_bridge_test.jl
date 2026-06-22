@@ -74,7 +74,7 @@ include(joinpath(@__DIR__, "_oracle_corpus_scalar_pole_bridge.jl"))
     @testset "CPB.1  WP(z-1;0,2): Padé bridges the double pole at z=1" begin
         fW(z, u, up) = 6 * u^2
         prob = PadeTaylorProblem(fW, (WP_U0, WP_UP0), (0.0, 1.5); order = 30)
-        sol  = solve_pade(prob; h_max = 1.5)         # single seg, pole at t~0.667
+        sol  = solve_pade(prob; h = 1.5)         # single seg, pole at t~0.667
         u_before, _ = sol(0.5)
         u_past, up_past = sol(1.05)                  # PAST the pole
         u_far, _ = sol(1.4)
@@ -92,7 +92,7 @@ include(joinpath(@__DIR__, "_oracle_corpus_scalar_pole_bridge.jl"))
             up0 = parse(BigFloat, "1.71033735317678620846433189149624950839231872")
             zsp = (BigFloat(0), BigFloat(3) / 2)
             prob = PadeTaylorProblem(fW, (u0, up0), zsp; order = 40)
-            sol  = solve_pade(prob; h_max = BigFloat(3) / 2)
+            sol  = solve_pade(prob; h = BigFloat(3) / 2)
             u_ref = parse(BigFloat, WP_U_AT_1p05_STR)
             u_eval, _ = sol(BigFloat(105) / 100)
             # order=40 BF-256 converges to the IC-precision floor (see
@@ -107,7 +107,7 @@ include(joinpath(@__DIR__, "_oracle_corpus_scalar_pole_bridge.jl"))
     @testset "CPB.2  tan(z): bridge the simple pole at pi/2" begin
         ftan(z, u, up) = 2 * u + 2 * u^3
         prob = PadeTaylorProblem(ftan, (0.0, 1.0), (0.0, 3.0); order = 30)
-        sol  = solve_pade(prob; h_max = 3.0)         # pi/2 at t~0.524, interior
+        sol  = solve_pade(prob; h = 3.0)         # pi/2 at t~0.524, interior
         u2, up2 = sol(2.0)                           # PAST pole pi/2
         u25, _  = sol(2.5)
         @test isapprox(u2,  TAN_U_AT_2p0;  rtol = 1e-9)
@@ -121,7 +121,7 @@ include(joinpath(@__DIR__, "_oracle_corpus_scalar_pole_bridge.jl"))
     @testset "CPB.3  1/(1-z): exact-rational bridge of the pole at z=1" begin
         fsp(z, u, up) = 2 * u^3
         prob = PadeTaylorProblem(fsp, (1.0, 1.0), (0.0, 2.0); order = 30)
-        sol  = solve_pade(prob; h_max = 2.0)         # pole z=1 at t=0.5 (midpoint)
+        sol  = solve_pade(prob; h = 2.0)         # pole z=1 at t=0.5 (midpoint)
         u_before, _ = sol(0.5)
         u_past, up_past = sol(1.5)                   # PAST pole
         u_end, _ = sol(2.0)
@@ -139,7 +139,7 @@ include(joinpath(@__DIR__, "_oracle_corpus_scalar_pole_bridge.jl"))
         fcoth(z, u, up) = -2 * u + 2 * u^3
         prob = PadeTaylorProblem(fcoth, (COTH_U0_M1, COTH_UP0_M1),
                                  (-1.0, 1.0); order = 30)
-        sol  = solve_pade(prob; h_max = 2.0)         # pole z=0 at t=0.5 (midpoint)
+        sol  = solve_pade(prob; h = 2.0)         # pole z=0 at t=0.5 (midpoint)
         u1, up1 = sol(1.0)                           # PAST pole; odd symm u(1)=-u(-1)
         @test isapprox(u1,  COTH_U_AT_1p0;  rtol = 1e-9)
         @test isapprox(up1, COTH_UP_AT_1p0; rtol = 1e-8)
@@ -154,7 +154,7 @@ include(joinpath(@__DIR__, "_oracle_corpus_scalar_pole_bridge.jl"))
     @testset "CPB.5  FW Riccati-Bessel: bridge the t~2.003 Bessel pole" begin
         ffw(z, u, up) = 2 * z + 2 * z^2 * u + 2 * u^3
         prob = PadeTaylorProblem(ffw, (0.0, 0.0), (0.0, 2.5); order = 30)
-        sol  = solve_pade(prob; h_max = 2.5)         # t1~2.003 at t~0.801, interior
+        sol  = solve_pade(prob; h = 2.5)         # t1~2.003 at t~0.801, interior
         u05, _ = sol(0.5)
         u15, _ = sol(1.5)                            # just BEFORE the pole
         u21, _ = sol(2.1)                            # PAST the pole
@@ -209,7 +209,7 @@ include(joinpath(@__DIR__, "_oracle_corpus_scalar_pole_bridge.jl"))
         # tan: pole at pi/2; evaluate at z=2.0, past the natural radius.
         ftan(z, u, up) = 2 * u + 2 * u^3
         prob = PadeTaylorProblem(ftan, (0.0, 1.0), (0.0, 3.0); order = 30)
-        sol  = solve_pade(prob; h_max = 3.0)
+        sol  = solve_pade(prob; h = 3.0)
         u_pade, _ = sol(2.0)
         c_tan = taylor_coefficients_2nd(ftan, 0.0, 0.0, 1.0, 30)
         u_taylor = PadeTaylor.taylor_eval(c_tan, 2.0)
@@ -219,7 +219,7 @@ include(joinpath(@__DIR__, "_oracle_corpus_scalar_pole_bridge.jl"))
         # fw-riccati-bessel: pole at t~2.003; evaluate at z=2.1.
         ffw(z, u, up) = 2 * z + 2 * z^2 * u + 2 * u^3
         probf = PadeTaylorProblem(ffw, (0.0, 0.0), (0.0, 2.5); order = 30)
-        solf  = solve_pade(probf; h_max = 2.5)
+        solf  = solve_pade(probf; h = 2.5)
         uf_pade, _ = solf(2.1)
         c_fw = taylor_coefficients_2nd(ffw, 0.0, 0.0, 0.0, 30)
         uf_taylor = PadeTaylor.taylor_eval(c_fw, 2.1)

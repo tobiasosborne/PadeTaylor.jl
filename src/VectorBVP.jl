@@ -88,7 +88,7 @@ idiom as `BVP.jl`.  `Complex{T}` endpoints propagate through `s`.
 
 ## Fail-fast contract (CLAUDE.md Rule 1)
 
-Throws with a `Suggestion` / `detail` line on: `N < 4`; `maxiter < 1`;
+Throws with a `Suggestion` / `detail` line on: `N < 4`; `max_iter < 1`;
 `tol < 0`; dimension mismatches in `B_a`/`B_b`/`g` or the RHS output;
 non-convergent Newton; a singular Jacobian; out-of-segment evaluation.
 
@@ -148,7 +148,7 @@ end
 
 """
     vector_bvp_solve(f, z_a, z_b, B_a, B_b, g;
-                     N::Integer = 20, tol = nothing, maxiter::Integer = 10,
+                     N::Integer = 20, tol = nothing, max_iter::Integer = 10,
                      initial_guess = nothing, jacobian = nothing)
         -> VectorBVPSolution
 
@@ -167,7 +167,9 @@ Kwargs:
   - `N::Integer = 20`     : `N+1` collocation nodes; must be `≥ 4`.
   - `tol = nothing`       : Newton step-norm tolerance; default
     `eps(real(T))^(3/4)`.
-  - `maxiter::Integer = 10` : Newton iteration cap.
+  - `max_iter::Integer = 10` : Newton iteration cap.  (Renamed from
+    `maxiter`, api-review §3(a).2, bead `0xn`; `maxiter` still accepted
+    as a deprecated alias.)
   - `initial_guess = nothing` : callable `z -> Vector` (length `d`);
     default is a zero `d`-vector at every node.
   - `jacobian = nothing`  : optional `(z,y) -> d×d matrix`; when
@@ -180,16 +182,26 @@ Jacobian (each with a suggestion).
 function vector_bvp_solve(f, z_a, z_b, B_a, B_b, g;
                           N::Integer = 20,
                           tol = nothing,
-                          maxiter::Integer = 10,
+                          max_iter::Integer = 10,
+                          maxiter::Union{Integer,Nothing} = nothing,
                           initial_guess = nothing,
                           jacobian = nothing)
+
+    # Deprecation shim (api-review §3(a).2, bead `0xn`): `maxiter` →
+    # `max_iter`.
+    if maxiter !== nothing
+        Base.depwarn(
+            "`vector_bvp_solve(; maxiter = …)` is deprecated; use `max_iter`.",
+            :vector_bvp_solve)
+        max_iter = maxiter
+    end
 
     # ---- validate -----------------------------------------------------------
     N ≥ 4 || throw(ArgumentError(
         "vector_bvp_solve: N must be ≥ 4 (got $N).  Suggestion: increase to " *
         "≥ 10 — the algorithm needs a handful of interior collocation nodes."))
-    maxiter ≥ 1 || throw(ArgumentError(
-        "vector_bvp_solve: maxiter must be ≥ 1 (got $maxiter)."))
+    max_iter ≥ 1 || throw(ArgumentError(
+        "vector_bvp_solve: max_iter must be ≥ 1 (got $max_iter)."))
 
     d = length(g)
     size(B_a) == (d, d) || throw(ArgumentError(
@@ -250,7 +262,7 @@ function vector_bvp_solve(f, z_a, z_b, B_a, B_b, g;
     step_inf     = T(Inf)
     converged    = false
 
-    for k in 1:maxiter
+    for k in 1:max_iter
         iter = k
         # Full Newton residual (collocation rows + τ-method BC rows).
         R = _residual(ctx, Y)
@@ -280,10 +292,10 @@ function vector_bvp_solve(f, z_a, z_b, B_a, B_b, g;
 
     if !converged
         throw(ErrorException(
-            "vector_bvp_solve: Newton did not converge in $maxiter iterations.  " *
+            "vector_bvp_solve: Newton did not converge in $max_iter iterations.  " *
             "Final ‖ΔY‖_∞ = $step_inf > tol = $tol_T (‖R‖_∞ = $residual_inf).  " *
             "Suggestion: (a) increase N; (b) provide a closer `initial_guess`; " *
-            "(c) raise `maxiter`; (d) verify the BVP has a unique solution."))
+            "(c) raise `max_iter`; (d) verify the BVP has a unique solution."))
     end
 
     # Final residual diagnostic at the converged Y — the same `_residual`

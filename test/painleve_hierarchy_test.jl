@@ -136,7 +136,7 @@ using PadeTaylor
 
         # v0.1 path.  (Scalar solve_pade takes `h_max`, not `h`.)
         pp  = PainleveProblem(:I; u0 = u0, up0 = up0, zspan = xspan, order = 30)
-        s01 = solve_pade(pp; h_max = 0.05)
+        s01 = solve_pade(pp; h = 0.05)
 
         # Hierarchy m=1 path.
         php = PainleveHierarchyProblem(1; y0 = [u0, up0], xspan = xspan,

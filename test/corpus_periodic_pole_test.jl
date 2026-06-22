@@ -101,7 +101,7 @@ flogistic(z, u, up) = u * (1 - u) * (1 - 2u)
     # ----------------------------------------------------------------------
     @testset "CVrow.1  logistic spot values (closed form, dps=50)" begin
         prob_r = PadeTaylorProblem(flogistic, (0.5, 0.25), (0.0, 2.5); order = 30)
-        sol_r  = solve_pade(prob_r; h_max = 2.5)
+        sol_r  = solve_pade(prob_r; h = 2.5)
         u1, _ = sol_r(1.0)
         u2, _ = sol_r(2.0)
         # Real-axis, no pole between z0 and z: machine precision.

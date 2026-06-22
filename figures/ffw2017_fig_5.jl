@@ -327,7 +327,7 @@ sol = solve_pole_free_hybrid(pp, sector, asymptotic_ic_fn;
                       k_conservative = K_CONS,
                       max_rescales = 50,
                       max_steps_per_target = 800),
-        bvp_kwargs = (; N = N_BVP_COLL, tol = 1e-10, maxiter = 30),
+        bvp_kwargs = (; N = N_BVP_COLL, tol = 1e-10, max_iter = 30),
         n_slices   = N_SLICES,
         glue_tol   = GLUE_TOL)
 @printf("Hybrid solve in %.2f s; %d BVP slices.\n",

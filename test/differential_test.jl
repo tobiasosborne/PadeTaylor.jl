@@ -131,7 +131,7 @@ const N_RK = 2000
 
     @testset "D.1  u''=-u ⇒ cos z, arc [0,1] — agree to 1e-9 (val) / 1e-8 (der)" begin
         prob = PadeTaylorProblem(f_cos, (1.0, 0.0), (0.0, 1.0); order = 30)
-        sol  = solve_pade(prob; h_max = 0.5)            # two segments
+        sol  = solve_pade(prob; h = 0.5)            # two segments
         u_p, up_p = sol(1.0)
         u_r, up_r = rk4_reference(f_cos, 1.0, 0.0, 0.0, 1.0, N_RK)
 
@@ -147,7 +147,7 @@ const N_RK = 2000
 
     @testset "D.2  u''=6u² ℘ short arc [0,0.5] (pole-free) — agree to 1e-9" begin
         prob = PadeTaylorProblem(f_wp, (U0_FW, UP0_FW), (0.0, 0.5); order = 30)
-        sol  = solve_pade(prob; h_max = 0.5)            # single segment
+        sol  = solve_pade(prob; h = 0.5)            # single segment
         u_p, up_p = sol(0.5)
         u_r, up_r = rk4_reference(f_wp, U0_FW, UP0_FW, 0.0, 0.5, N_RK)
 
@@ -166,7 +166,7 @@ const N_RK = 2000
 
     @testset "D.3  u''=(1+z²)u ⇒ exp(z²/2), arc [0,1] — variable-coeff, agree 1e-9" begin
         prob = PadeTaylorProblem(f_gauss, (1.0, 0.0), (0.0, 1.0); order = 30)
-        sol  = solve_pade(prob; h_max = 0.5)            # two segments
+        sol  = solve_pade(prob; h = 0.5)            # two segments
         u_p, up_p = sol(1.0)
         u_r, up_r = rk4_reference(f_gauss, 1.0, 0.0, 0.0, 1.0, N_RK)
 

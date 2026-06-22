@@ -193,7 +193,7 @@ end
 
         pivprob = PainleveProblem(:IV; α = a, β = b,
                                   u0 = y1, up0 = yp1, zspan = (t1, t0))
-        pivsol  = solve_pade(pivprob; h_max = 0.05)
+        pivsol  = solve_pade(pivprob; h = 0.05)
 
         # Endpoints first: at τ = 1.4 the PIV IC IS the translated v0.2
         # state, so agreement there is exact-by-construction; the real
@@ -277,7 +277,7 @@ end
         # u(z) = -2z (piv_entire's documented (α,β); RF 2014 md:91).
         cfprob = piv_entire(:minus_2z; zspan = (1.0, 2.0))
         @test cfprob.params == (; α = 0, β = -2)   # matches the A_2^(1) map
-        cfsol = solve_pade(cfprob; h_max = 0.1)
+        cfsol = solve_pade(cfprob; h = 0.1)
         for z in 1.0:0.25:2.0
             y, yp = cfsol(z)
             @test y  ≈ -2 * z atol = 1e-9          # closed form u = -2z

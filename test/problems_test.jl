@@ -27,7 +27,7 @@ include(joinpath(@__DIR__, "_oracle_problems.jl"))
 
     @testset "6.1.1  sol(0.5) ~ WeierstrassP(0.5) to 1e-13 [3-source]" begin
         prob = PadeTaylorProblem(fW, (u_0_FW, up_0_FW), (0.0, 1.5); order = 30)
-        sol = solve_pade(prob; h_max = 1.5)
+        sol = solve_pade(prob; h = 1.5)
         u, up = sol(0.5)
         @test isapprox(u,  u_at_0_5;  rtol = 1e-13)
         @test isapprox(up, up_at_0_5; rtol = 1e-13)
@@ -35,7 +35,7 @@ include(joinpath(@__DIR__, "_oracle_problems.jl"))
 
     @testset "6.1.2  sol(0.95) ~ WeierstrassP(0.95) to 1e-9 [near-pole, 3-source]" begin
         prob = PadeTaylorProblem(fW, (u_0_FW, up_0_FW), (0.0, 1.5); order = 30)
-        sol = solve_pade(prob; h_max = 1.5)
+        sol = solve_pade(prob; h = 1.5)
         u, up = sol(0.95)
         @test isapprox(u,  u_at_0_95;  rtol = 1e-9)
         @test isapprox(up, up_at_0_95; rtol = 1e-9)
@@ -47,7 +47,7 @@ include(joinpath(@__DIR__, "_oracle_problems.jl"))
         # Padé tracks the closed-form to 1e-9 because the denominator zero
         # at t ≈ 0.667 captures the lattice pole structure.
         prob = PadeTaylorProblem(fW, (u_0_FW, up_0_FW), (0.0, 1.5); order = 30)
-        sol = solve_pade(prob; h_max = 1.5)
+        sol = solve_pade(prob; h = 1.5)
         u, up = sol(1.05)
         @test isapprox(u,  u_at_1_05;  rtol = 1e-9)
         @test isapprox(up, up_at_1_05; rtol = 1e-9)
@@ -55,7 +55,7 @@ include(joinpath(@__DIR__, "_oracle_problems.jl"))
 
     @testset "6.1.4  sol(1.4) ~ WeierstrassP(1.4) to 1e-7 -- further past pole" begin
         prob = PadeTaylorProblem(fW, (u_0_FW, up_0_FW), (0.0, 1.5); order = 30)
-        sol = solve_pade(prob; h_max = 1.5)
+        sol = solve_pade(prob; h = 1.5)
         u, up = sol(1.4)
         @test isapprox(u,  u_at_1_4;  rtol = 1e-7)
         @test isapprox(up, up_at_1_4; rtol = 1e-7)
@@ -67,7 +67,7 @@ include(joinpath(@__DIR__, "_oracle_problems.jl"))
         # convergence at z = 1, plain Taylor explodes by orders of magnitude;
         # Padé continues to track the closed-form ℘.
         prob = PadeTaylorProblem(fW, (u_0_FW, up_0_FW), (0.0, 1.5); order = 30)
-        sol = solve_pade(prob; h_max = 1.5)
+        sol = solve_pade(prob; h = 1.5)
         u_pade, _ = sol(1.05)
 
         coefs_u = taylor_coefficients_2nd(fW, 0.0, u_0_FW, up_0_FW, 30)
@@ -99,7 +99,7 @@ include(joinpath(@__DIR__, "_oracle_problems.jl"))
             zend   = BigFloat(3) / BigFloat(2)   # exact 1.5
 
             prob = PadeTaylorProblem(fW, (u0_bf, up0_bf), (zstart, zend); order = 40)
-            sol = solve_pade(prob; h_max = BigFloat(3) / BigFloat(2))
+            sol = solve_pade(prob; h = BigFloat(3) / BigFloat(2))
 
             u_ref  = parse(BigFloat, u_at_1_05_80dps_str)
             up_ref = parse(BigFloat, up_at_1_05_80dps_str)
@@ -128,7 +128,7 @@ end
     # GM-1/EC-1/EC-2: single descending segment (0,-0.5), h_max=0.5.
     @testset "6.2.1  descending single segment: value + exact endpoint" begin
         prob = PadeTaylorProblem(fW, y0, (0.0, -0.5); order = 30)
-        sol  = solve_pade(prob; h_max = 0.5)
+        sol  = solve_pade(prob; h = 0.5)
         @test length(sol.h) == 1               # EC-1: one step, NOT degenerate
         @test sol.z == [0.0, -0.5]             # EC-2: no spurious residue step
         @test sol.z[end] == -0.5               # snap: endpoint EXACT
@@ -148,7 +148,7 @@ end
     # would pick the wrong segment (off by ~0.06 at z=-1.8).
     @testset "6.2.2  descending multi-segment: clamp + scan (incl. pole-bridge)" begin
         # (a) smooth span (0,-1.0), h=0.2 ⇒ 5 segments (clamp: NOT one big step).
-        sol = solve_pade(PadeTaylorProblem(fW, y0, (0.0, -1.0); order = 30); h_max = 0.2)
+        sol = solve_pade(PadeTaylorProblem(fW, y0, (0.0, -1.0); order = 30); h = 0.2)
         @test length(sol.h) == 5
         @test sol.z[1] == 0.0 && sol.z[end] == -1.0
         @test issorted(sol.z; rev = true)            # strictly DECREASING
@@ -158,7 +158,7 @@ end
         # z=-1.726 sits in segment 2.  sol(-1.8) is PAST the pole — only
         # segment 2's pole-bridging Padé values it right, so the scan MUST select
         # it (the assertion that makes the direction-aware scan load-bearing).
-        solp = solve_pade(PadeTaylorProblem(fW, y0, (0.0, -1.95); order = 30); h_max = 1.0)
+        solp = solve_pade(PadeTaylorProblem(fW, y0, (0.0, -1.95); order = 30); h = 1.0)
         @test length(solp.h) == 2
         @test solp.z[end] == -1.95
         @test isapprox(solp(-1.8)[1], u_at_m1_8; rtol = 1e-7)   # scan-sensitive
@@ -168,7 +168,7 @@ end
     # EC-4: just-outside on BOTH sides throws the reframed [lo,hi] window guard.
     @testset "6.2.3  window guard rejects just-outside on both ends" begin
         prob = PadeTaylorProblem(fW, y0, (0.0, -0.5); order = 30)
-        sol  = solve_pade(prob; h_max = 0.5)
+        sol  = solve_pade(prob; h = 0.5)
         @test_throws DomainError sol(1e-9)         # above hi = 0.0
         @test_throws DomainError sol(-0.5 - 1e-9)  # below lo = -0.5
     end
@@ -176,9 +176,9 @@ end
     # GM-4: forward∘reverse round-trip recovers the IC (no external oracle) —
     # the krgy.3 MM.5 reversibility invariant at the solve_pade level.
     @testset "6.2.4  forward∘reverse round-trip recovers the IC" begin
-        solA = solve_pade(PadeTaylorProblem(fW, y0, (0.0, 0.5); order = 30); h_max = 1.5)
+        solA = solve_pade(PadeTaylorProblem(fW, y0, (0.0, 0.5); order = 30); h = 1.5)
         uE, upE = solA(0.5)
-        solB = solve_pade(PadeTaylorProblem(fW, (uE, upE), (0.5, 0.0); order = 30); h_max = 1.5)
+        solB = solve_pade(PadeTaylorProblem(fW, (uE, upE), (0.5, 0.0); order = 30); h = 1.5)
         u0, up0 = solB(0.0)
         @test isapprox(u0,  u_0_FW;  rtol = 1e-11)
         @test isapprox(up0, up_0_FW; rtol = 1e-11)
@@ -193,11 +193,11 @@ end
             h   = BigFloat(3) / BigFloat(2)
             half = BigFloat(1) / 2                       # exact 0.5 in BigFloat
             solA = solve_pade(PadeTaylorProblem(fW, y0b, (BigFloat(0), half);
-                                                order = 40); h_max = h)
+                                                order = 40); h = h)
             @test solA.z[end] == half                    # snap exact in BigFloat
             uE, upE = solA(half)
             solB = solve_pade(PadeTaylorProblem(fW, (uE, upE), (half, BigFloat(0));
-                                                order = 40); h_max = h)
+                                                order = 40); h = h)
             u0, up0 = solB(BigFloat(0))
             @test isapprox(u0,  y0b[1]; rtol = BigFloat("1e-13"))
             @test isapprox(up0, y0b[2]; rtol = BigFloat("1e-13"))

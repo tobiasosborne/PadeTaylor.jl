@@ -136,10 +136,10 @@ const _UP0_FW = 1.710337353176786
         for α in (0.5, 1.0, 2.0)
             sp = solve_pade(PainleveProblem(:II; α =  α, u0 =  u0p, up0 =  up0p,
                                             zspan = (0.0, 1.5), order = 30);
-                            h_max = 0.5)
+                            h = 0.5)
             sn = solve_pade(PainleveProblem(:II; α = -α, u0 = -u0p, up0 = -up0p,
                                             zspan = (0.0, 1.5), order = 30);
-                            h_max = 0.5)
+                            h = 0.5)
             for z in (0.0, 0.4, 0.8, 1.2, 1.5)
                 up_, upp_ = sp(z)
                 un_, upn_ = sn(z)
@@ -179,12 +179,12 @@ const _UP0_FW = 1.710337353176786
             su = solve_pade(PainleveProblem(:IV; α = α, β = β,
                                             u0 = u0v, up0 = up0v,
                                             zspan = (-L, 0.0), order = 30);
-                            h_max = 0.4)
+                            h = 0.4)
             u_at0, up_at0 = su(0.0)
             sv = solve_pade(PainleveProblem(:IV; α = α, β = β,
                                             u0 = -u_at0, up0 = up_at0,
                                             zspan = (0.0, L), order = 30);
-                            h_max = 0.4)
+                            h = 0.4)
             for z in (0.2, 0.4, 0.6)
                 vv, vvp = sv(z)
                 uu, uup = su(-z)

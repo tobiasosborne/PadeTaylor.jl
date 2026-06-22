@@ -169,7 +169,7 @@ function surf_ray_bvp(f, Jf, φ::Real; r_in::Real = SURF_R_INNER_BC)
     return vector_bvp_solve(f, z_a, z_b, Ba, Bb, g;
                             N        = SURF_BVP_N,
                             tol      = SURF_BVP_TOL,
-                            maxiter  = SURF_BVP_MAXITER,
+                            max_iter  = SURF_BVP_MAXITER,
                             jacobian = Jf,
                             initial_guess =
                                 z -> pI2_tritronquee_ic(z; t = SURF_T,

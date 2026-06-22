@@ -102,7 +102,7 @@ _hermite_m3p(z) = (-4*(2z^2 - 1) + 4z*(4z)) / (2z^2 - 1)^2
         function bridge(n, za, zb, h)
             u0, up0 = _u_pii_rational(n, za)
             solve_pade(PainleveProblem(:II; α = n, u0 = u0, up0 = up0,
-                                       zspan = (za, zb), order = 30); h_max = h)
+                                       zspan = (za, zb), order = 30); h = h)
         end
         # u_1: bridge pole at z=0; far-side u(1) = -1 exact.
         s1 = bridge(1, -1.0, 1.0, 2.0)
@@ -165,7 +165,7 @@ _hermite_m3p(z) = (-4*(2z^2 - 1) + 4z*(4z)) / (2z^2 - 1)^2
         pp  = PainleveProblem(:IV; α = -3, β = -8, u0 = _hermite_m3(0.3),
                               up0 = _hermite_m3p(0.3), zspan = (0.3, 1.3),
                               order = 30)
-        sol = solve_pade(pp; h_max = 1.0)
+        sol = solve_pade(pp; h = 1.0)
         @test isapprox(sol(1.3)[1], _hermite_m3(1.3); atol = 1e-9)
         ps = poles(sol)
         @test any(p -> isapprox(p,  1/sqrt(2) + 0im; atol = 1e-7), ps)
@@ -173,7 +173,7 @@ _hermite_m3p(z) = (-4*(2z^2 - 1) + 4z*(4z)) / (2z^2 - 1)^2
         # m4 pole locations (algebraic): 0 and ±√6/2 (zeros of H_3=4z(2z²-3)).
         @test isapprox(sqrt(6)/2, 1.224744871391589; atol = 1e-12)
         # PIV entire -2z: linear ⇒ solver exact, no poles.
-        se = solve_pade(piv_entire(:minus_2z; zspan = (1.0, 3.0)); h_max = 0.5)
+        se = solve_pade(piv_entire(:minus_2z; zspan = (1.0, 3.0)); h = 0.5)
         @test isapprox(se(3.0)[1], _u_piv_entire(:minus_2z, 3.0)[1]; atol = 1e-10)
     end
 
@@ -195,7 +195,7 @@ _hermite_m3p(z) = (-4*(2z^2 - 1) + 4z*(4z)) / (2z^2 - 1)^2
     # -----------------------------------------------------------------------
     @testset "CPR.8  directive-7: HM~Ai(x) + tritronquée pole-free sector" begin
         # --- Hastings–McLeod: u(x) → Ai(x) on the positive axis ---
-        hm = solve_pade(hastings_mcleod(; zspan = (0.0, 5.0)); h_max = 0.5)
+        hm = solve_pade(hastings_mcleod(; zspan = (0.0, 5.0)); h = 0.5)
         @test isapprox(hm(0.0)[1], 0.3670615515480784; atol = 1e-10)  # IC oracle
         # The ratio u(x)/Ai(x) → 1 as x grows — the HM defining asymptotic.
         for (x, rtol) in ((3.0, 1e-4), (4.0, 1e-6), (5.0, 1e-8))
@@ -220,7 +220,7 @@ _hermite_m3p(z) = (-4*(2z^2 - 1) + 4z*(4z)) / (2z^2 - 1)^2
         @test rat(-5.0, gu[4]) < rat(-1.0, gu[1])      # tightening asymptotic
 
         # --- tritronquée FIRST REAL POLE: POSITIVE axis (ERRATA fix) ---
-        fwd = solve_pade(tritronquee(:I; zspan = (0.0, 4.0)); h_max = 4.0)
+        fwd = solve_pade(tritronquee(:I; zspan = (0.0, 4.0)); h = 4.0)
         pps = poles(fwd)
         pos = filter(p -> abs(imag(p)) < 1e-3 && real(p) > 0, pps)
         @test !isempty(pos)

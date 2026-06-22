@@ -914,7 +914,7 @@ const SURF2 = kkg_pi2_surface()      # second run, for reproducibility
                                         t = SURF_T, n_terms = 2)
                 ComplexF64[sa[1], sa[2], sb[1], sb[2]]
             end;
-            N = 6, tol = SURF_BVP_TOL, maxiter = SURF_BVP_MAXITER,
+            N = 6, tol = SURF_BVP_TOL, max_iter = SURF_BVP_MAXITER,
             jacobian = Jf8,
             initial_guess = z -> pI2_tritronquee_ic(z; t = SURF_T,
                                                     n_terms = 2))
@@ -1133,7 +1133,7 @@ const SURF2 = kkg_pi2_surface()      # second run, for reproducibility
             sb = pI2_tritronquee_ic(z_b; t = SURF_T, n_terms = 2)
             vector_bvp_solve(f11, z_a, z_b, Ba, Bb,
                              CT[sa[1], sa[2], sb[1], sb[2]];
-                             N = 220, tol = 1e-9, maxiter = 40,
+                             N = 220, tol = 1e-9, max_iter = 40,
                              jacobian = Jf11,
                              initial_guess = z -> pI2_tritronquee_ic(z;
                                  t = SURF_T, n_terms = 2))

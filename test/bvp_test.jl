@@ -150,7 +150,7 @@ include(joinpath(@__DIR__, "_oracle_bvp.jl"))
 
         # maxiter zero.
         @test_throws ArgumentError bvp_solve(f_lin, ∂f_lin, -1.0, 1.0, 1.0, 1.0;
-                                             N = 8, maxiter = 0)
+                                             N = 8, max_iter = 0)
 
         # Negative tol.
         @test_throws ArgumentError bvp_solve(f_lin, ∂f_lin, -1.0, 1.0, 1.0, 1.0;
@@ -163,7 +163,7 @@ include(joinpath(@__DIR__, "_oracle_bvp.jl"))
         bad_init(z) = 1000.0 + z   # very far from any PI solution
         @test_throws ErrorException bvp_solve(f_PI, ∂f_PI, -18.0, -14.0,
                                               sqrt(18 / 6), sqrt(14 / 6);
-                                              N = 8, maxiter = 1,
+                                              N = 8, max_iter = 1,
                                               initial_guess = bad_init)
 
         # Out-of-segment evaluation throws DomainError.

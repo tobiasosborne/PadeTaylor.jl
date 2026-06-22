@@ -176,7 +176,7 @@ end
                               k_conservative = 1e-3,
                               max_rescales = 50,
                               max_steps_per_target = 500),
-                bvp_kwargs = (; N = 30, tol = 1e-10, maxiter = 30),
+                bvp_kwargs = (; N = 30, tol = 1e-10, max_iter = 30),
                 n_slices = 5,
                 glue_tol = 1e-8)
 
@@ -233,7 +233,7 @@ end
                               k_conservative = 1e-3,
                               max_rescales = 50,
                               max_steps_per_target = 500),
-                bvp_kwargs = (; N = 30, tol = 1e-10, maxiter = 30),
+                bvp_kwargs = (; N = 30, tol = 1e-10, max_iter = 30),
                 n_slices = 5,
                 glue_tol = 1e-8)
 

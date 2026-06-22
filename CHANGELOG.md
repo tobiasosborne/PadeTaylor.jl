@@ -220,6 +220,74 @@ steps shipped** as of worklog 045.
     `padetaylor-gvz`) + 5 P3 cosmetic + 4 P4 defer.  12 follow-up beads
     spawned in total; these constitute the v1.0 normalisation work backlog.
 
+### Changed — public-API kwarg canonicalisation (beads `xds` + `0xn`)
+
+  Implements the three v1.0-blocking findings of the API audit
+  (`docs/api-review-2026-05-16.md` §3(a).1, §3(a).2, §9 rows 1-2).
+  All renames are **backward-compatible** via deprecation shims (see
+  the "Deprecated" section below); every in-repo call site (src, tests,
+  figures, benchmark, ext, README) was migrated to the canonical name.
+
+  - **Step-size kwarg canonicalised to `h`** (api-review §3(a).1):
+    - `solve_pade(; h_max)` → `solve_pade(; h)` (still required).  Added
+      a docstring note that `solve_pade` is a *fixed-step* solver — `h`
+      is the exact step, clamped only at the span end.
+    - `lattice_dispatch_solve(; h_path)` → `lattice_dispatch_solve(; h)`;
+      the internal forwarding to `path_network_solve` /
+      `edge_gated_pole_field_solve` now passes a single `h`, retiring the
+      apologetic `h_path`-vs-`h` docstring parenthetical.
+    - `PadeTaylorAlg(; h_max)` constructor kwarg → `PadeTaylorAlg(; h)`.
+  - **Iteration-cap kwargs snake-cased to `max_iter`** (api-review
+    §3(a).2) — *naming only; the distinct concepts are NOT unified*:
+    - `bvp_solve(; maxiter)` (both 2-arg and 3-arg overloads) →
+      `bvp_solve(; max_iter)`.
+    - `vector_bvp_solve(; maxiter)` → `vector_bvp_solve(; max_iter)`.
+    - `dispatch_solve(; bvp_maxiter)` → `dispatch_solve(; bvp_max_iter)`;
+      its internal `bvp_solve` forwarding now passes `max_iter`.
+    - Untouched (already correct, distinct concepts): `max_steps`,
+      `max_rescales`, `max_steps_per_target`, and
+      `edge_gated_pole_field_solve`'s existing `max_iter`.
+
+### Breaking (theoretical, pre-v1.0) — `PadeTaylorAlg` field rename
+
+  - The `PadeTaylorAlg` struct **field** `h_max` was renamed to `h`
+    (`PadeTaylorAlg{H}.h`).  Julia binds struct fields by name, so —
+    unlike a kwarg — a field cannot be shimmed; this is a clean break.
+    The only consumer is the in-repo `PadeTaylorCommonSolveExt`
+    (`alg.h_max` → `alg.h`), updated in lockstep.  No external code is
+    known to read the field directly.  The *constructor* kwarg `h_max`
+    remains accepted as a deprecated alias (above), so
+    `PadeTaylorAlg(; h_max = …)` still works.
+
+### Deprecated — old kwarg names (one-release shims; beads `xds` + `0xn`)
+
+  Each renamed kwarg accepts its OLD name as a deprecated alias that
+  maps onto the new name and emits a `Base.depwarn` (the kwarg form;
+  `Base.@deprecate_binding` does not cover keyword arguments).  To be
+  removed in a future release.
+
+  - `solve_pade(; h_max = …)`           → use `h`.
+  - `PadeTaylorAlg(; h_max = …)`        → use `h`.
+  - `lattice_dispatch_solve(; h_path = …)` → use `h`.
+  - `bvp_solve(; maxiter = …)`          → use `max_iter`.
+  - `vector_bvp_solve(; maxiter = …)`   → use `max_iter`.
+  - `dispatch_solve(; bvp_maxiter = …)` → use `bvp_max_iter`.
+
+  Regression guard: `test/api_kwarg_deprecation_test.jl` asserts each
+  alias still produces the identical result AND emits the deprecation
+  (the warn-assertion is meaningful under `Pkg.test`'s `--depwarn=yes`).
+
+### Fixed — closed-form Painlevé constructors now exported (bead `gvz`)
+
+  - `pii_rational`, `pii_airy`, `piv_entire` are now reachable through
+    bare `using PadeTaylor` (api-review §9 row 3).  They were `export`ed
+    from the `Painleve` submodule but omitted from the main module's
+    selective `using .Painleve: …` import and top-level `export` block,
+    so `using PadeTaylor; pii_rational(1)` threw `UndefVarError`.
+    Regression-guarded by `test/painleve_closed_form_test.jl` CF.5.1
+    (asserts main-module resolution, not the qualified
+    `PadeTaylor.Painleve.…` path the other CF tests use).
+
 ### Open follow-ups (B5 remaining)
 
   - FFW Fig 3 (PVI phase portraits, bead `padetaylor-a1l`, blocked by

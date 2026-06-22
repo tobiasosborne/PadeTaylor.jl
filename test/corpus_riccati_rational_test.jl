@@ -74,7 +74,7 @@ using PadeTaylor
     @testset "CRic.3  Hermite H₄′/H₄: bridge the inner zero-pair pole" begin
         fH(z, u, up) = 2u^3 - 6u^2 * z + 4u * z^2 + 18u - 16z
         prob = PadeTaylorProblem(fH, (0.0, -8.0), (0.0, 1.4); order = 30)
-        sol  = solve_pade(prob; h_max = 1.4)        # inner pole 0.5246 interior
+        sol  = solve_pade(prob; h = 1.4)        # inner pole 0.5246 interior
 
         u03, up03 = sol(0.3)                         # BEFORE the inner pole
         u08, up08 = sol(0.8)                         # PAST the inner pole
@@ -115,7 +115,7 @@ using PadeTaylor
             return (2u^3 * d + 3u^2 * z * (z^2 - 1) + u * (33 - 30z^2) - 48z) / d
         end
         prob = PadeTaylorProblem(fC, (0.0, -16.0), (0.0, 0.85); order = 30)
-        sol  = solve_pade(prob; h_max = 0.85)       # inner pole 0.3827 interior
+        sol  = solve_pade(prob; h = 0.85)       # inner pole 0.3827 interior
 
         u02, up02 = sol(0.2)                         # BEFORE the inner pole
         u05, up05 = sol(0.5)                         # PAST the inner pole

@@ -142,8 +142,8 @@ using PadeTaylor
         @test sol_pp.raw.grid_u == sol_raw.grid_u
         @test sol_pp.raw.grid_up == sol_raw.grid_up
 
-        sp_pp  = solve_pade(pp; h_max = 0.5)
-        sp_raw = solve_pade(pp.problem; h_max = 0.5)
+        sp_pp  = solve_pade(pp; h = 0.5)
+        sp_raw = solve_pade(pp.problem; h = 0.5)
         @test sp_pp isa PainleveSolution
         @test sp_pp.raw.y == sp_raw.y
 
@@ -158,7 +158,7 @@ using PadeTaylor
         solIII = path_network_solve(ppIII, ComplexF64[2.5 + 0im]; h = 0.5)
         @test solIII isa PainleveSolution
         @test solIII.frame == :transformed
-        @test_throws ArgumentError solve_pade(ppIII; h_max = 0.5)
+        @test_throws ArgumentError solve_pade(ppIII; h = 0.5)
     end
 
     @testset "PV.4.1: end-to-end -- PII pole field is finite" begin

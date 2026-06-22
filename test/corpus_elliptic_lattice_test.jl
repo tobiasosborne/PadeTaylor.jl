@@ -86,7 +86,7 @@ include(joinpath(@__DIR__, "_oracle_corpus_elliptic_lattice.jl"))
     @testset "CEl.1  ℘(z−1;1,0): Padé bridges the SQUARE-lattice pole at z=1" begin
         f(z, u, up) = 6 * u^2 - 1 // 2
         prob = PadeTaylorProblem(f, (CEL1_U0, CEL1_UP0), (0.0, 1.5); order = 30)
-        sol  = solve_pade(prob; h_max = 1.5)         # single seg, pole at t≈0.667
+        sol  = solve_pade(prob; h = 1.5)         # single seg, pole at t≈0.667
         u_before, _      = sol(0.5)
         u_past, up_past  = sol(1.05)                 # PAST the double pole
         u_far, _         = sol(1.4)

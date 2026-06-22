@@ -208,7 +208,7 @@ function kkg_bvp_solve()
     return vector_bvp_solve(f, KKG_X_L, KKG_X_R, Ba, Bb, g;
                             N        = KKG_BVP_N,
                             tol      = KKG_BVP_TOL,
-                            maxiter  = KKG_BVP_MAXITER,
+                            max_iter  = KKG_BVP_MAXITER,
                             jacobian = Jf,
                             initial_guess =
                                 z -> pI2_tritronquee_ic(z; t = KKG_T,

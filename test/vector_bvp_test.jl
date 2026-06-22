@@ -197,7 +197,7 @@ using .BVP
         @test_throws ArgumentError vector_bvp_solve(f1, 0.0, 1.0, Ba1, Bb1, g1; N = 3)
         # maxiter zero.
         @test_throws ArgumentError vector_bvp_solve(f1, 0.0, 1.0, Ba1, Bb1, g1;
-                                                    N = 8, maxiter = 0)
+                                                    N = 8, max_iter = 0)
         # Negative tol.
         @test_throws ArgumentError vector_bvp_solve(f1, 0.0, 1.0, Ba1, Bb1, g1;
                                                     N = 8, tol = -1.0)
@@ -211,7 +211,7 @@ using .BVP
         fnl(z, y) = [y[1]^2 + 1.0]
         bad_init(z) = [1.0e6]
         @test_throws ErrorException vector_bvp_solve(fnl, 0.0, 1.0, Ba1, Bb1, g1;
-                                                     N = 8, maxiter = 1,
+                                                     N = 8, max_iter = 1,
                                                      initial_guess = bad_init)
         # Out-of-segment evaluation.
         sol = vector_bvp_solve(f1, 0.0, 1.0, Ba1, Bb1, g1; N = 12)

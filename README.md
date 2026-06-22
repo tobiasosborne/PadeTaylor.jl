@@ -17,7 +17,7 @@ Most numerical software for differential equations quietly assumes the answer st
 - **map the pole field** — return the actual locations of the poles as a picture;
 - **handle the six Painlevé equations**, a famous family of "untameable" nonlinear ODEs central to modern mathematical physics.
 
-It is a faithful, test-driven Julia implementation of the methodology of Fornberg & Weideman (2011) and the robust-Padé algorithm of Gonnet, Güttel & Trefethen (2013). **9333 tests pass**; results are cross-validated against closed-form solutions and independent solvers.
+It is a faithful, test-driven Julia implementation of the methodology of Fornberg & Weideman (2011) and the robust-Padé algorithm of Gonnet, Güttel & Trefethen (2013). **9361 tests pass**; results are cross-validated against closed-form solutions and independent solvers.
 
 ---
 
@@ -52,7 +52,7 @@ f(z, u, up) = 6u^2
 # cover a pole at z = 1 — which lands strictly inside the step.
 prob = PadeTaylorProblem(f, (1.071822516416917, 1.710337353176786),
                          (0.0, 1.5); order = 30)
-sol  = solve_pade(prob; h_max = 1.5)
+sol  = solve_pade(prob; h = 1.5)
 
 sol(0.5)    # ≈ (4.0044,    15.9643)    — before the pole
 sol(0.95)   # ≈ (400.00,    15999.9)    — climbing toward it
@@ -173,7 +173,7 @@ Internally the core itself is four layers: an SVD dispatcher (`LinAlg`) → robu
 
 ## Status
 
-**v0.1.0 — research-grade; all architectural tiers shipped.** The package is not yet registered in the Julia General registry. **9333 tests passing, 0 failing** (plus 2 intentional `@test_broken` markers that track known-open-bug fixtures and auto-flip the day each bug is fixed).
+**v0.1.0 — research-grade; all architectural tiers shipped.** The package is not yet registered in the Julia General registry. **9361 tests passing, 0 failing** (plus 2 intentional `@test_broken` markers that track known-open-bug fixtures and auto-flip the day each bug is fixed).
 
 Headline empirical result: the FW 2011 Table 5.1 long-range integration of the equianharmonic Weierstrass ℘-function to `z = 30` reaches a relative error of `2.13·10⁻¹⁴` in 256-bit precision — beating the `8.34·10⁻¹⁴` reported by Fornberg & Weideman.
 

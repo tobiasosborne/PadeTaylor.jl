@@ -49,7 +49,7 @@ using PadeTaylor
 
     @testset "PS.1.1: provenance fields + accessors" begin
         pp  = PainleveProblem(:I; u0 = 0.1, up0 = 0.2, zspan = (0.0, 1.0))
-        sol = solve_pade(pp; h_max = 0.5)
+        sol = solve_pade(pp; h = 0.5)
         @test sol isa PainleveSolution
         @test sol.raw isa PadeTaylorSolution
         @test equation(sol)     == :I
@@ -59,7 +59,7 @@ using PadeTaylor
 
         ppII = PainleveProblem(:II; α = 0.7, u0 = 0.0, up0 = 1.0,
                                zspan = (0.0, 0.5))
-        solII = solve_pade(ppII; h_max = 0.5)
+        solII = solve_pade(ppII; h = 0.5)
         @test equation(solII)   == :II
         @test parameters(solII) == (; α = 0.7)
     end
@@ -68,7 +68,7 @@ using PadeTaylor
         # PII α=0, u(0)=0, u'(0)=1 -- smooth near the origin.
         pp  = PainleveProblem(:II; α = 0.0, u0 = 0.0, up0 = 1.0,
                               zspan = (0.0, 0.6))
-        sol = solve_pade(pp; h_max = 0.3)
+        sol = solve_pade(pp; h = 0.3)
         # The wrapper callable is byte-identical to the raw callable for
         # a :direct problem.
         for z in (0.0, 0.15, 0.42, 0.6)
@@ -99,7 +99,7 @@ using PadeTaylor
         # and the callable's ζ->z map.
         ppV = PainleveProblem(:V; α = 0.1, β = 0.1, γ = 0.1, δ = 0.1,
                               u0 = 0.5, up0 = 0.1, zspan = (2.0, 3.0))
-        sol = solve_pade(ppV; h_max = 0.2)
+        sol = solve_pade(ppV; h = 0.2)
         @test sol isa PainleveSolution
         @test sol.frame == :transformed
         u0, up0 = sol(2.0)                      # the IC point z0 = 2.0
@@ -139,7 +139,7 @@ using PadeTaylor
     @testset "PS.4.1: show -- multi-line provenance + one-line form" begin
         pp  = PainleveProblem(:II; α = 0.7, u0 = 0.0, up0 = 1.0,
                               zspan = (0.0, 0.5))
-        sol = solve_pade(pp; h_max = 0.5)
+        sol = solve_pade(pp; h = 0.5)
 
         full = sprint(show, MIME("text/plain"), sol)
         @test occursin("Painlevé II", full)

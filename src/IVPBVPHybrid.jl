@@ -802,7 +802,7 @@ function (sol::IVPBVPSolution{T})(ζ) where T
             "$(sol.slice_re[i+1])): |Δw| = $jump exceeds the catastrophe bound " *
             "$(3 * scale) (3× the smaller slice value).  A BVP slice likely " *
             "failed to converge to the correct branch.  Suggestion: re-solve " *
-            "with larger N / maxiter, verify every slice.residual_inf < tol, " *
+            "with larger N / max_iter, verify every slice.residual_inf < tol, " *
             "or widen the PFS wedge so the boundary harvest is clean."))
         return ((1 - ξ) * w_a + ξ * w_b,
                 (1 - ξ) * up_a + ξ * up_b)

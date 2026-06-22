@@ -128,12 +128,12 @@ const _LEDGER_CASES = let
         end,
         "solve_pade_wp_z05" => function ()
             prob = PadeTaylorProblem(fW, (u_0_FW, up_0_FW), (0.0, 1.5); order = 30)
-            u, _ = solve_pade(prob; h_max = 1.5)(0.5)
+            u, _ = solve_pade(prob; h = 1.5)(0.5)
             return _relerr(u, u_at_0_5)
         end,
         "solve_pade_wp_z14" => function ()
             prob = PadeTaylorProblem(fW, (u_0_FW, up_0_FW), (0.0, 1.5); order = 30)
-            u, _ = solve_pade(prob; h_max = 1.5)(1.4)
+            u, _ = solve_pade(prob; h = 1.5)(1.4)
             return _relerr(u, u_at_1_4)
         end,
         "taylor_jet_wp" => function ()

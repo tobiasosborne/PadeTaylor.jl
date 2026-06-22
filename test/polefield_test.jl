@@ -193,7 +193,7 @@ in_box(z, xlo, xhi, ylo, yhi) =
         # extract_poles must read it back off a `PadeTaylorSolution`
         # exactly as it does off a path-network's per-node store.
         prob = PadeTaylorProblem(fW, (u_0_FW, up_0_FW), (0.0, 1.5); order = 30)
-        sol  = solve_pade(prob; h_max = 1.5)
+        sol  = solve_pade(prob; h = 1.5)
         @test sol isa PadeTaylorSolution
         @test length(sol.h) == 1                  # single segment
 
@@ -212,7 +212,7 @@ in_box(z, xlo, xhi, ylo, yhi) =
         # method) demand three independent sightings and discard it.
         # This pins the changed default as doing real work.
         prob = PadeTaylorProblem(fW, (u_0_FW, up_0_FW), (0.0, 1.5); order = 30)
-        sol  = solve_pade(prob; h_max = 1.5)
+        sol  = solve_pade(prob; h = 1.5)
 
         @test !isempty(extract_poles(sol))                    # default = 1
         @test isempty(extract_poles(sol; min_support = 3))    # one segment < 3
@@ -247,10 +247,10 @@ in_box(z, xlo, xhi, ylo, yhi) =
         # The NEW clustering orders by z-plane distance, so the z-closest
         # node (z_ctr=0.8, z-dist=0.2) wins — placement 2.94e-9.
         prob_c = PadeTaylorProblem(fW, (u_0_FW, up_0_FW), (0.0, 0.5); order = 30)
-        sol_c  = solve_pade(prob_c; h_max = 0.5)
+        sol_c  = solve_pade(prob_c; h = 0.5)
         u05, up05 = sol_c(0.5)
         prob_f = PadeTaylorProblem(fW, (u05, up05), (0.5, 0.85); order = 30)
-        sol_f  = solve_pade(prob_f; h_max = 0.05)
+        sol_f  = solve_pade(prob_f; h = 0.05)
 
         Tt = Float64
         Yt = Tuple{Float64, Float64}

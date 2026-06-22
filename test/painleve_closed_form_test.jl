@@ -73,7 +73,7 @@ using SpecialFunctions: airyai, airyaiprime, airybi, airybiprime
         # well clear of any real-axis poles so the IVP is genuinely regular.
         for n in (1, 2)
             pp  = pii_rational(n; zspan = (1.0, 1.5))
-            sol = solve_pade(pp; h_max = 0.05)
+            sol = solve_pade(pp; h = 0.05)
             u_exact, up_exact = _u_pii_rational(n, 1.5)
             u_num,  up_num   = sol(1.5)
             @test isapprox(u_num,  u_exact;  rtol = 1e-10)
@@ -81,7 +81,7 @@ using SpecialFunctions: airyai, airyaiprime, airybi, airybiprime
         end
         # u_3 has a pole near z ≈ 1.508; integrate from (0, 0) up to z = 1.0.
         pp  = pii_rational(3; zspan = (0.0, 1.0))
-        sol = solve_pade(pp; h_max = 0.05)
+        sol = solve_pade(pp; h = 0.05)
         u_ex, up_ex = _u_pii_rational(3, 1.0)
         u_n,  up_n  = sol(1.0)
         @test isapprox(u_n,  u_ex;  rtol = 1e-10)
@@ -140,7 +140,7 @@ using SpecialFunctions: airyai, airyaiprime, airybi, airybiprime
         # First Airy zero of Ai(-z/2^⅓) at z ≈ 2.946 (θ=0); integrate up
         # to z = 1.0 to stay clear of it.
         pp  = pii_airy(0; zspan = (0.0, 1.0))
-        sol = solve_pade(pp; h_max = 0.05)
+        sol = solve_pade(pp; h = 0.05)
         u_ex, up_ex = _u_pii_airy(0, 0.0, 1.0)
         u_n,  up_n  = sol(1.0)
         @test isapprox(u_n,  u_ex;  rtol = 1e-9)
@@ -194,7 +194,7 @@ using SpecialFunctions: airyai, airyaiprime, airybi, airybiprime
     @testset "CF.3.3: piv_entire solver ≡ closed form (linear ⇒ machine precision)" begin
         for kind in (:minus_2z, :minus_two_thirds_z)
             pp  = piv_entire(kind; zspan = (1.0, 3.0))
-            sol = solve_pade(pp; h_max = 0.1)
+            sol = solve_pade(pp; h = 0.1)
             u_ex, up_ex = _u_piv_entire(kind, 3.0)
             u_n,  up_n  = sol(3.0)
             # Linear ⇒ exact up to roundoff accumulation over the IVP
@@ -234,6 +234,25 @@ using SpecialFunctions: airyai, airyaiprime, airybi, airybiprime
         # zspan[1] = 0 with a pole-pointing message rather than emit ±Inf
         # into the IVP state (CLAUDE.md Rule 1).
         @test_throws ArgumentError pii_rational(1; zspan = (0.0, 5.0))
+    end
+
+    @testset "CF.5.1: closed-form constructors are EXPORTED from PadeTaylor (bead gvz)" begin
+        # Regression guard for `padetaylor-gvz` (api-review §9 row 3): the
+        # three closed-form constructors are `export`ed from the `Painleve`
+        # submodule but were once omitted from the MAIN module's selective
+        # `using .Painleve: …` import + top-level `export` block, so bare
+        # `using PadeTaylor; pii_rational(1)` threw `UndefVarError`.  This
+        # test pins resolution through the MAIN module (NOT the qualified
+        # `PadeTaylor.Painleve.…` path that the CF.1–4 tests use).
+        for sym in (:pii_rational, :pii_airy, :piv_entire)
+            @test sym in names(PadeTaylor)          # in the export list
+            @test isdefined(PadeTaylor, sym)        # bound in the main module
+        end
+        # And they construct a `PainleveProblem` when reached via the main
+        # module's binding (PadeTaylor.<name>, not the Painleve.<name> import).
+        @test PadeTaylor.pii_rational(1)             isa PainleveProblem
+        @test PadeTaylor.pii_airy(0)                 isa PainleveProblem
+        @test PadeTaylor.piv_entire(:minus_2z)       isa PainleveProblem
     end
 end
 

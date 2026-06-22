@@ -60,7 +60,7 @@ include(joinpath(@__DIR__, "_oracle_corpus_heun.jl"))
         fairy(z, u, up) = z * u
         # Positive real axis via solve_pade (z increasing).
         prob = PadeTaylorProblem(fairy, (AIRY_AI0, AIRY_AIP0), (0.0, 3.0); order = 30)
-        sol  = solve_pade(prob; h_max = 0.5)
+        sol  = solve_pade(prob; h = 0.5)
         @test isapprox(sol(1.0)[1], AIRY_Z1; rtol = 1e-11)
         @test isapprox(sol(2.0)[1], AIRY_Z2; rtol = 1e-11)
         @test isapprox(sol(3.0)[1], AIRY_Z3; rtol = 1e-11)
@@ -82,7 +82,7 @@ include(joinpath(@__DIR__, "_oracle_corpus_heun.jl"))
     @testset "CSF.2  Bessel u''+u'/z+u=0, u=J_0(z)" begin
         fbes(z, u, up) = -up / z - u
         prob = PadeTaylorProblem(fbes, (BESSEL_J0_1, -BESSEL_J1_1), (1.0, 5.0); order = 30)
-        sol  = solve_pade(prob; h_max = 0.5)
+        sol  = solve_pade(prob; h = 0.5)
         @test isapprox(sol(2.0)[1], BESSEL_J0_2; rtol = 1e-11)
         @test isapprox(sol(3.0)[1], BESSEL_J0_3; rtol = 1e-11)   # past first zero
         @test isapprox(sol(5.0)[1], BESSEL_J0_5; rtol = 1e-11)   # past second zero
@@ -95,7 +95,7 @@ include(joinpath(@__DIR__, "_oracle_corpus_heun.jl"))
         fg(z, u, up) = (-(5/4 - (11/6)*z)*up + (1/6)*u) / (z*(1-z))
         prob = PadeTaylorProblem(fg, (GAUSS2F1_U0_005, GAUSS2F1_UP0_005),
                                  (0.05, 0.9); order = 30)
-        sol  = solve_pade(prob; h_max = 0.45)
+        sol  = solve_pade(prob; h = 0.45)
         @test isapprox(sol(0.4)[1], GAUSS2F1_Z0p4; rtol = 1e-10)
         @test isapprox(sol(0.7)[1], GAUSS2F1_Z0p7; rtol = 1e-10)
         # z=0.9 crowds the branch point at z=1 → 1e-7.
@@ -113,7 +113,7 @@ include(joinpath(@__DIR__, "_oracle_corpus_heun.jl"))
         fe(z, u, up) = (-(3 - (3+1/2+1)*z)*up + 3*(1/2)*u) / (z*(1-z))
         prob = PadeTaylorProblem(fe, (F2F1ELEM_U0_005, F2F1ELEM_UP0_005),
                                  (0.05, 0.9); order = 30)
-        sol  = solve_pade(prob; h_max = 0.45)
+        sol  = solve_pade(prob; h = 0.45)
         @test isapprox(sol(0.4)[1], (1 - 0.4)^(-0.5); rtol = 1e-10)
         # z=0.9 crowds the algebraic branch point at z=1 → 1e-7.
         @test isapprox(sol(0.9)[1], (1 - 0.9)^(-0.5); rtol = 1e-7)

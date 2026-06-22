@@ -121,7 +121,7 @@ end
     u0_FW  = 1.071822516416917
     up0_FW = 1.710337353176786
     prob = PadeTaylorProblem(fW, (u0_FW, up0_FW), (0.0, 1.5); order = 30)
-    sol  = solve_pade(prob; h_max = 1.5)
+    sol  = solve_pade(prob; h = 1.5)
 
     # -----------------------------------------------------------------------
     # CO.1 — the certification step in isolation: the published FW IC golden

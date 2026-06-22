@@ -3,7 +3,7 @@
 # Validates the `PadeTaylorCommonSolveExt` package extension per ADR-0003:
 # `solve(prob, ::PadeTaylorAlg)` produces a `PadeTaylorSolution`
 # bit-identical (modulo trivial evaluation-order differences) to a
-# direct `solve_pade(prob; h_max, max_steps)` call on the same problem.
+# direct `solve_pade(prob; h, max_steps)` call on the same problem.
 #
 # Reference: docs/adr/0003-extensions-pattern.md (extensions pattern);
 # ext/PadeTaylorCommonSolveExt.jl (the adapter being tested).
@@ -17,7 +17,7 @@
 #   CS.1.3  solve! produces same PadeTaylorSolution as solve
 #   CS.2.1  Streaming: integrator's `done` flag flips at z_end
 #   CS.2.2  Degenerate zspan: born-done integrator
-#   CS.3.1  Fail-fast: h_max ≤ 0 throws ArgumentError
+#   CS.3.1  Fail-fast: h ≤ 0 throws ArgumentError
 #   CS.3.2  Fail-fast: max_steps overrun throws ErrorException
 #   CS.4.1  Mutation-proof commentary (verified manually)
 
@@ -30,16 +30,16 @@ include(joinpath(@__DIR__, "_oracle_problems.jl"))
 @testset "CommonSolveAdapter (Phase 7): SciML init/step!/solve!/solve" begin
 
     # Equianharmonic ℘ ODE: u'' = 6u^2, FW 2011 IC at z=0.  Single
-    # pole-bridge segment with h_max=1.5 brackets the pole at z=1
+    # pole-bridge segment with h=1.5 brackets the pole at z=1
     # (same setup as Phase-6 test 6.1.5's headline demo).
     fW(z, u, up) = 6 * u^2
 
     prob = PadeTaylorProblem(fW, (u_0_FW, up_0_FW), (0.0, 1.5); order = 30)
-    alg  = PadeTaylorAlg(; h_max = 1.5)
+    alg  = PadeTaylorAlg(; h = 1.5)
 
-    @testset "CS.1.1: solve(prob, alg) ≡ solve_pade(prob; h_max=alg.h_max)" begin
+    @testset "CS.1.1: solve(prob, alg) ≡ solve_pade(prob; h=alg.h)" begin
         sol_cs    = CommonSolve.solve(prob, alg)
-        sol_pade  = solve_pade(prob; h_max = 1.5)
+        sol_pade  = solve_pade(prob; h = 1.5)
         # Parallel-vector equality.
         @test sol_cs.z    == sol_pade.z
         @test sol_cs.y    == sol_pade.y
@@ -66,7 +66,7 @@ include(joinpath(@__DIR__, "_oracle_problems.jl"))
         end
         @test integ.done
         # The trajectory matches solve_pade.
-        sol_pade = solve_pade(prob; h_max = 1.5)
+        sol_pade = solve_pade(prob; h = 1.5)
         @test integ.z_vec == sol_pade.z
         @test integ.y_vec == sol_pade.y
         @test integ.h_vec == sol_pade.h
@@ -77,7 +77,7 @@ include(joinpath(@__DIR__, "_oracle_problems.jl"))
         integ    = CommonSolve.init(prob, alg)
         sol_via_solve!  = CommonSolve.solve!(integ)
         sol_via_solve   = CommonSolve.solve(prob, alg)
-        sol_pade        = solve_pade(prob; h_max = 1.5)
+        sol_pade        = solve_pade(prob; h = 1.5)
         @test sol_via_solve!.z == sol_pade.z
         @test sol_via_solve!.y == sol_pade.y
         @test sol_via_solve.z  == sol_pade.z
@@ -88,13 +88,13 @@ include(joinpath(@__DIR__, "_oracle_problems.jl"))
     end
 
     @testset "CS.2.1: streaming — done flag flips at z_end, uneven final step" begin
-        # Uneven final step exercise: zspan (0, 0.55) with h_max=0.2.
+        # Uneven final step exercise: zspan (0, 0.55) with h=0.2.
         # Even loop: 0.2 + 0.2 + 0.15 = 0.55.  The MIN clamp on the final
         # step is load-bearing — without it the integrator would overshoot
         # to z=0.6.  This is the mutation-G target.
         prob_uneven = PadeTaylorProblem(fW, (u_0_FW, up_0_FW), (0.0, 0.55);
                                         order = 30)
-        alg_uneven  = PadeTaylorAlg(; h_max = 0.2)
+        alg_uneven  = PadeTaylorAlg(; h = 0.2)
         integ       = CommonSolve.init(prob_uneven, alg_uneven)
         @test !integ.done
         steps_done = 0
@@ -125,20 +125,20 @@ include(joinpath(@__DIR__, "_oracle_problems.jl"))
                                                     (0.5, 0.5); order = 30)
     end
 
-    @testset "CS.3.1: fail-fast — h_max ≤ 0 throws at init" begin
+    @testset "CS.3.1: fail-fast — h ≤ 0 throws at init" begin
         # PadeTaylorAlg constructor doesn't validate; init does.
-        bad_alg_neg = PadeTaylorAlg(; h_max = -0.5)
+        bad_alg_neg = PadeTaylorAlg(; h = -0.5)
         @test_throws ArgumentError CommonSolve.init(prob, bad_alg_neg)
-        bad_alg_zero = PadeTaylorAlg(; h_max = 0.0)
+        bad_alg_zero = PadeTaylorAlg(; h = 0.0)
         @test_throws ArgumentError CommonSolve.init(prob, bad_alg_zero)
     end
 
     @testset "CS.3.2: fail-fast — max_steps overrun throws at step!" begin
         # max_steps too small for the segment ⇒ step! errors mid-loop.
-        # zspan (0, 1.5) with h_max=0.1 → ~15 steps; max_steps=3 ⇒ overrun.
+        # zspan (0, 1.5) with h=0.1 → ~15 steps; max_steps=3 ⇒ overrun.
         prob_long  = PadeTaylorProblem(fW, (u_0_FW, up_0_FW), (0.0, 1.5);
                                        order = 30)
-        alg_short  = PadeTaylorAlg(; h_max = 0.1, max_steps = 3)
+        alg_short  = PadeTaylorAlg(; h = 0.1, max_steps = 3)
         integ      = CommonSolve.init(prob_long, alg_short)
         # First 3 step!s succeed; 4th throws.
         CommonSolve.step!(integ)
@@ -153,8 +153,8 @@ end # @testset CommonSolveAdapter
 
 # CS.4.1  Mutation-proof procedure (verified 2026-05-13):
 #
-#   Mutation G  --  in `step!`, change `h_step = min(h_max_T, z_end - state.z)`
-#     to `h_step = h_max_T` (never clamp the final step to land on z_end).
+#   Mutation G  --  in `step!`, change `h_step = min(h_T, z_end - state.z)`
+#     to `h_step = h_T` (never clamp the final step to land on z_end).
 #     Verified bite: 2 fails on CS.2.1 — `integ.z_vec[end] ≈ 0.55` evaluates
 #     `0.6 ≈ 0.55` (overshoot); `integ.h_vec[end] ≈ 0.15` evaluates `0.2 ≈ 0.15`
 #     (unclamped step length).  The min-clamp on the final step is what

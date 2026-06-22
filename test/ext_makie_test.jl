@@ -39,7 +39,7 @@ using Makie
     @testset "MK.1.1: trajectory-backed solution → titled Figure + Axis" begin
         pp  = PainleveProblem(:II; α = 0.0, u0 = 0.0, up0 = 1.0,
                               zspan = (0.0, 0.6))
-        sol = solve_pade(pp; h_max = 0.3)
+        sol = solve_pade(pp; h = 0.3)
         fig = painleveplot(sol)
         @test fig isa Makie.Figure
         ax = fig.content[1]

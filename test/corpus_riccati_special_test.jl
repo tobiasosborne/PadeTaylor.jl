@@ -81,7 +81,7 @@ fPCF(z, u, up)    = 2u^3 - 2u * z^2 - 2z                       # CRic.5
     # ----------------------------------------------------------------------
     @testset "CRic.2  Bessel −J₁/J₀: positive-axis row via solve_pade" begin
         prob = PadeTaylorProblem(fBessel, (CRic2_U0, CRic2_UP0), (1.0, 4.0); order = 30)
-        sol  = solve_pade(prob; h_max = 3.5)             # j_{0,1}≈2.405 interior
+        sol  = solve_pade(prob; h = 3.5)             # j_{0,1}≈2.405 interior
 
         u15, _ = sol(1.5)                                # BEFORE the pole
         u20, _ = sol(2.0)
@@ -131,7 +131,7 @@ fPCF(z, u, up)    = 2u^3 - 2u * z^2 - 2z                       # CRic.5
 
         # Pos-axis (pole-free) tight-accuracy leg via solve_pade.
         probp = PadeTaylorProblem(fAiry, (CRic1_U0, CRic1_UP0), (0.0, 1.5); order = 30)
-        solp  = solve_pade(probp; h_max = 1.5)
+        solp  = solve_pade(probp; h = 1.5)
         @test isapprox(solp(0.5)[1], CRic1_U_p0p5; rtol = 1e-11)
         @test isapprox(solp(1.0)[1], CRic1_U_p1;   rtol = 1e-11)
     end

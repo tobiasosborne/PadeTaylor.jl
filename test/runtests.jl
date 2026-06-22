@@ -90,6 +90,10 @@ using PadeTaylor
     include("phase9_tritronquee_test.jl")
     include("lattice_dispatcher_test.jl")
     include("edge_gated_solve_test.jl")
+    # Public-API kwarg deprecation shims (beads xds, 0xn; api-review §3(a)).
+    # Asserts each renamed kwarg's deprecated alias still WORKS (same result)
+    # AND WARNS.  The WARNS half is meaningful under Pkg.test's `--depwarn=yes`.
+    include("api_kwarg_deprecation_test.jl")
     include("ext_commonsolve_test.jl")
     include("ext_arblib_test.jl")
     include("ext_makie_test.jl")

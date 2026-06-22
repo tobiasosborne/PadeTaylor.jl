@@ -64,7 +64,7 @@ using PadeTaylor
 
     @testset "NT.2.1: `name` propagates through the solvers" begin
         # solve_pade -> PainleveSolution carries the tag.
-        sol = solve_pade(tritronquee(:I; zspan = (0.0, 0.5)); h_max = 0.5)
+        sol = solve_pade(tritronquee(:I; zspan = (0.0, 0.5)); h = 0.5)
         @test sol isa PainleveSolution
         @test solutionname(sol) == :tritronquee
         @test equation(sol) == :I
@@ -83,9 +83,9 @@ using PadeTaylor
         # negatives -- a genuine cross-check that the branch sign is
         # wired through both the IC *and* the integration.
         sp = solve_pade(hastings_mcleod(; branch = :positive,
-                                        zspan = (0.0, 2.0)); h_max = 0.5)
+                                        zspan = (0.0, 2.0)); h = 0.5)
         sn = solve_pade(hastings_mcleod(; branch = :negative,
-                                        zspan = (0.0, 2.0)); h_max = 0.5)
+                                        zspan = (0.0, 2.0)); h = 0.5)
         for z in (0.0, 0.4, 1.1, 1.8)
             up_pos, upp_pos = sp(z)
             up_neg, upp_neg = sn(z)
@@ -98,7 +98,7 @@ using PadeTaylor
         # HM (α=0) is pole-free and non-oscillatory on ℝ, with
         # u(x) ~ Ai(x) -> 0 as x -> +∞ (FW 2014).  Integrating the
         # :positive branch from 0, |u| must shrink from its IC value.
-        sol = solve_pade(hastings_mcleod(; zspan = (0.0, 3.0)); h_max = 0.5)
+        sol = solve_pade(hastings_mcleod(; zspan = (0.0, 3.0)); h = 0.5)
         u0, _ = sol(0.0)
         u3, _ = sol(3.0)
         @test u0 ≈ 0.3670615515480784 atol = 1e-10   # IC reproduced

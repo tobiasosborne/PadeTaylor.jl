@@ -24,7 +24,7 @@ Phase-6 v1 acceptance is a *demonstration* rather than a long-range
 integration.  The canonical test problem is `u'' = 6u^2` with the
 Fornberg-Weideman 2011 ICs at `z = 0`; the closed-form solution
 `u(z) = ℘(z + c₁; 0, c₂)` has a lattice pole at `z = 1`.  With
-`h_max = 1.5` we build a *single* segment that brackets the pole
+`h = 1.5` we build a *single* segment that brackets the pole
 (at rescaled `t = 1/1.5 ≈ 0.667`, strictly inside `[0, 1]`).  The same
 stored Padé, evaluated at `t = z / 1.5`, returns correct values both
 *before* the pole (`z = 0.5, 0.95`) and *after* (`z = 1.05, 1.4`).
@@ -35,17 +35,17 @@ test setup; tests 6.1.3 + 6.1.5 are the headline.
 
 ## v1 / v2 acceptance scope (worklog 004 + bead `padetaylor-8cr`)
 
-**v1 (this implementation)**: pure fixed-`h_max` stepping, no vault,
+**v1 (this implementation)**: pure fixed-`h` stepping, no vault,
 no Jorba-Zou.  The architecture supports *multi*-segment trajectories
 (the `solve_pade` loop steps in the direction of `sign(z_end - z_start)`,
 so both ascending and DESCENDING spans are integrated — bug
 `padetaylor-xhjw`), but the v1 test corpus mostly exercises the
-single-segment `h_max = 1.5` case.
+single-segment `h = 1.5` case.
 
 **v2 (deferred, P0 bead `padetaylor-8cr`)**: the FW 2011 §3.1 path-
 network for long-range integration crossing many lattice poles, and/or
 adaptive step-size selectors that compose with Padé-bridge stepping.
-Two prior subagents established that fixed-`h_max` real-axis stepping
+Two prior subagents established that fixed-`h` real-axis stepping
 alone cannot reach the FW 2011 Table 5.1 `5e-13` budget at `z = 30`;
 the path-network is the only route.  See worklog 004 for the failure
 analysis.
@@ -69,7 +69,7 @@ beats re-Padé"); we generalise to arbitrary `t ∈ [0, 1]` here.
 ## Fail-fast contract (CLAUDE.md Rule 1)
 
 Bad inputs throw with a `Suggestion` line: negative `order`, empty
-`zspan`, non-positive `h_max`, evaluating outside `[z_start, z_end]`,
+`zspan`, non-positive `h`, evaluating outside `[z_start, z_end]`,
 exhausting `max_steps` before reaching `z_end`.  Numerical breakdowns
 inside the stepper (singular `C̃`, `Q(t) = 0` at evaluation point)
 propagate from the lower layers unchanged.
@@ -165,15 +165,22 @@ end
 # -----------------------------------------------------------------------------
 
 """
-    solve_pade(prob::PadeTaylorProblem; h_max, max_steps = 100_000,
+    solve_pade(prob::PadeTaylorProblem; h, max_steps = 100_000,
                check_in_class = true) -> PadeTaylorSolution
 
-Take fixed-`h_max` Padé-Taylor steps until the integration window is
+Take fixed-`h` Padé-Taylor steps until the integration window is
 exhausted.  Each segment stores the local Padé approximant for later
 dense evaluation via the callable interface.
 
+`solve_pade` is a **fixed-step** solver: `h` is the exact step length,
+clamped only at the span end so the final step lands precisely on
+`z_end`.  There is no `min(h, h_adapt)` selection — the name was
+`h_max` historically (api-review §3(a).1, bead `xds`), which misled by
+implying an adaptive ceiling; it is now `h`.  The legacy `h_max` kwarg
+is still accepted as a deprecated alias.
+
 The span may be ASCENDING (`z_end > z_start`) or DESCENDING
-(`z_end < z_start`); the driver steps with `sign(z_end - z_start)·h_max`
+(`z_end < z_start`); the driver steps with `sign(z_end - z_start)·h`
 and the underlying stepper round-trips signed `h` exactly, so a leftward
 integration is fully supported (bug `padetaylor-xhjw`).  For a descending
 span `sol.z` is *decreasing*; the callable handles either ordering.
@@ -199,11 +206,24 @@ probing an out-of-class input, or one certain the input is meromorphic.
 Disabling restores the legacy unguarded behaviour and adds zero cost back.
 """
 function solve_pade(prob::PadeTaylorProblem{F, T, Y};
-                    h_max::Real,
+                    h::Union{Real,Nothing} = nothing,
+                    h_max::Union{Real,Nothing} = nothing,
                     max_steps::Integer = 100_000,
                     check_in_class::Bool = true) where {F, T, Y}
-    h_max > 0 || throw(ArgumentError(
-        "solve_pade: h_max must be positive (got $h_max). " *
+    # Deprecation shim (api-review §3(a).1, bead `xds`): `h_max` → `h`.
+    # `Base.@deprecate_binding` does not cover kwargs, so we accept both
+    # as `nothing`-defaulted kwargs and `depwarn` when the legacy name is
+    # supplied, mapping it onto `h` if `h` was not given explicitly.
+    if h_max !== nothing
+        Base.depwarn("`solve_pade(; h_max = …)` is deprecated; use `h`.",
+                     :solve_pade)
+        h === nothing && (h = h_max)
+    end
+    h !== nothing || throw(ArgumentError(
+        "solve_pade: `h` is required. " *
+        "Suggestion: pass a positive step length `h`."))
+    h > 0 || throw(ArgumentError(
+        "solve_pade: h must be positive (got $h). " *
         "Suggestion: pass a strictly-positive step length."))
     Y <: Tuple || error(
         "solve_pade: 1st-order (scalar y0) branch is not implemented in " *
@@ -212,7 +232,7 @@ function solve_pade(prob::PadeTaylorProblem{F, T, Y};
         "support.")
 
     z_start, z_end = prob.zspan
-    h_max_T = T(h_max)
+    h_T     = T(h)
     state   = PadeStepperState{T}(z_start, prob.y0[1], prob.y0[2])
     # Integration direction (bug padetaylor-xhjw): the stepper accepts a signed
     # h and round-trips correctly (krgy.3 MM.5), so a DESCENDING span
@@ -243,7 +263,7 @@ function solve_pade(prob::PadeTaylorProblem{F, T, Y};
             "Suggestion: increase max_steps, or shorten the integration " *
             "window.")
         gap    = z_end - state.z
-        h_step = dir * min(h_max_T, abs(gap))     # signed; |h_step| ≤ h_max
+        h_step = dir * min(h_T, abs(gap))         # signed; |h_step| ≤ h
         if checker === nothing
             _, P_u = pade_step_with_pade!(state, prob.f, prob.order, h_step)
         else
@@ -252,7 +272,7 @@ function solve_pade(prob::PadeTaylorProblem{F, T, Y};
         end
         # On the final clamped step `h_step == gap`, so `state.z` lands on
         # `z_end` exactly (`x + (z_end - x) == z_end`, verified over a wide
-        # span/h_max sweep) and the loop then terminates; the `max_steps`
+        # span/h sweep) and the loop then terminates; the `max_steps`
         # guard above backstops any pathological non-landing.
         push!(z_vec, state.z)
         push!(y_vec, (state.u, state.up))

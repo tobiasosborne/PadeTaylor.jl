@@ -53,7 +53,7 @@ using PadeTaylor
     # the pin (N=220: err_up ≈ 4.9e-10 — fails).
     sol = bvp_solve(bvp_f, bvp_∂f_∂u, z_a, z_b, u_a, u_b;
                      N = 240, initial_guess = leading,
-                     tol = 1e-13, maxiter = 20)
+                     tol = 1e-13, max_iter = 20)
 
     @testset "FF.1.1: Newton converged" begin
         @test sol.iterations ≤ 10
@@ -136,7 +136,7 @@ using PadeTaylor
         @test_throws ErrorException bvp_solve(
             bvp_f, bvp_∂f_∂u, z_a, z_b, leading_pos(z_a), leading_pos(z_b);
             N = 240, initial_guess = leading_pos,
-            tol = 1e-13, maxiter = 10)
+            tol = 1e-13, max_iter = 10)
     end
 
 end # @testset FW 2011 Fig 4.1
@@ -174,7 +174,7 @@ end # @testset FW 2011 Fig 4.1
     # Step (i): the imaginary-axis BVP spine (the recipe pinned above).
     z_a, z_b = -20.0im, 20.0im
     spine = bvp_solve(bvp_f, bvp_∂f_∂u, z_a, z_b, leading(z_a), leading(z_b);
-                      N = 240, initial_guess = leading, tol = 1e-13, maxiter = 20)
+                      N = 240, initial_guess = leading, tol = 1e-13, max_iter = 20)
     u0, up0 = spine(0.0 + 0.0im)
 
     # Step (ii): edge-gated pole-field run-out from the BVP-derived IC.
@@ -237,7 +237,7 @@ end # @testset FW 2011 Fig 4.1
         za, zb = 2.0im, 8.0im
         fill_sol = bvp_solve(bvp_f, bvp_∂f_∂u, za, zb,
                              spine(za)[1], spine(zb)[1];
-                             N = 60, initial_guess = leading, maxiter = 25)
+                             N = 60, initial_guess = leading, max_iter = 25)
         worst = 0.0
         for y in (3.0, 4.0, 5.0, 6.0, 7.0)
             worst = max(worst, abs(fill_sol(im * y)[1] - spine(im * y)[1]))

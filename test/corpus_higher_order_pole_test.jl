@@ -106,7 +106,7 @@ const CHOP1_LOC_TOL = Dict(2 => 1e-7,  3 => 1e-5,  4 => 1e-3,  5 => 5e-3)
     @testset "CHop.1  u=(1-z)^-$k: bridge the order-$k pole at z=1" for k in 2:5
         f(z, u, up) = (k * (k + 1)) * u / (1 - z)^2
         prob = PadeTaylorProblem(f, (1.0, float(k)), (0.0, 1.5); order = 30)
-        sol  = solve_pade(prob; h_max = 1.5)          # pole z=1 at t≈0.667, interior
+        sol  = solve_pade(prob; h = 1.5)          # pole z=1 at t≈0.667, interior
         u05,  _      = sol(0.5)
         u105, up105  = sol(1.05)                       # PAST the order-k pole
         # Past-pole exact rationals (per-k tol justified by the measured floor).
@@ -141,7 +141,7 @@ const CHOP1_LOC_TOL = Dict(2 => 1e-7,  3 => 1e-5,  4 => 1e-3,  5 => 5e-3)
             f(z, u, up) = BigFloat(k * (k + 1)) * u / (1 - z)^2
             prob = PadeTaylorProblem(f, (BigFloat(1), BigFloat(k)),
                                      (BigFloat(0), BigFloat(3) / 2); order = 40)
-            sol  = solve_pade(prob; h_max = BigFloat(3) / 2)
+            sol  = solve_pade(prob; h = BigFloat(3) / 2)
             u105, _ = sol(BigFloat(105) / 100)
             uex = (BigFloat(-5) / 100)^(-k)            # exact = 400
             @test isapprox(u105, uex; rtol = BigFloat("1e-30"))

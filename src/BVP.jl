@@ -126,9 +126,9 @@ Keeping the API split avoids a per-call `hasmethod` probe and keeps the
 
 Throws with a `Suggestion` line on:
   - `N < 4` (need ≥ 3 interior collocation nodes for a meaningful Newton).
-  - `maxiter < 1`.
+  - `max_iter < 1`.
   - `tol < 0`.
-  - Non-convergent Newton (final `‖R‖_∞ > tol` after `maxiter` steps).
+  - Non-convergent Newton (final `‖R‖_∞ > tol` after `max_iter` steps).
   - Singular Newton Jacobian (linear solve fails).
   - Evaluating the callable outside `[z_a, z_b]`'s pre-image disc
     (i.e., `|t*| > 1` by more than `100·eps`): silent extrapolation
@@ -203,7 +203,7 @@ end
     bvp_solve(f, ∂f_∂u, z_a, z_b, u_a, u_b;
               N::Integer = 20,
               tol = nothing,
-              maxiter::Integer = 10,
+              max_iter::Integer = 10,
               initial_guess = nothing) -> BVPSolution
 
 Solve `u'' = f(z, u)` on the complex segment `[z_a, z_b]` with
@@ -228,8 +228,10 @@ Kwargs:
     a Newton target.  The residual `‖R‖_∞` is recorded in the
     solution for diagnostics but is not the convergence test.
     See `references/bvp_recipe.md §7` open-spec-gap note.
-  - `maxiter::Integer = 10`     : Newton iteration cap.  FW 2011 line
-    190 reports ≤ 6 in practice; we leave headroom.
+  - `max_iter::Integer = 10`    : Newton iteration cap.  FW 2011 line
+    190 reports ≤ 6 in practice; we leave headroom.  (Renamed from
+    `maxiter`, api-review §3(a).2, bead `0xn`; `maxiter` still accepted
+    as a deprecated alias.)
   - `initial_guess = nothing`   : if supplied, a function `z -> Number`
     evaluated at each node; otherwise a linear ramp from `u_a` to `u_b`.
 
@@ -239,16 +241,26 @@ on non-convergence (with a suggestion).
 function bvp_solve(f, ∂f_∂u, z_a, z_b, u_a, u_b;
                    N::Integer = 20,
                    tol = nothing,
-                   maxiter::Integer = 10,
+                   max_iter::Integer = 10,
+                   maxiter::Union{Integer,Nothing} = nothing,
                    initial_guess = nothing)
+
+    # Deprecation shim (api-review §3(a).2, bead `0xn`): `maxiter` →
+    # `max_iter`.  Kwargs cannot use `Base.@deprecate_binding`; `depwarn`
+    # and map the legacy name when supplied.
+    if maxiter !== nothing
+        Base.depwarn("`bvp_solve(; maxiter = …)` is deprecated; use `max_iter`.",
+                     :bvp_solve)
+        max_iter = maxiter
+    end
 
     # ---- validate -----------------------------------------------------------
     N ≥ 4 || throw(ArgumentError(
         "bvp_solve: N must be ≥ 4 (got $N).  Suggestion: increase to ≥ 10 " *
         "for any nontrivial nonlinear problem; the algorithm needs at least " *
         "a handful of interior collocation nodes."))
-    maxiter ≥ 1 || throw(ArgumentError(
-        "bvp_solve: maxiter must be ≥ 1 (got $maxiter)."))
+    max_iter ≥ 1 || throw(ArgumentError(
+        "bvp_solve: max_iter must be ≥ 1 (got $max_iter)."))
 
     # ---- type promotion -----------------------------------------------------
     CT  = promote_type(typeof(z_a), typeof(z_b), typeof(u_a), typeof(u_b))
@@ -303,7 +315,7 @@ function bvp_solve(f, ∂f_∂u, z_a, z_b, u_a, u_b;
     step_inf     = T(Inf)
     converged    = false
 
-    for k in 1:maxiter
+    for k in 1:max_iter
         iter = k
         # Residual R = (D₂ u)_int − scale · f(z_int, u_int) — diagnostic only.
         F_vals       = CT[f(z_int[j], u_int[j]) for j in eachindex(u_int)]
@@ -330,11 +342,11 @@ function bvp_solve(f, ∂f_∂u, z_a, z_b, u_a, u_b;
 
     if !converged
         throw(ErrorException(
-            "bvp_solve: Newton did not converge in $maxiter iterations.  " *
+            "bvp_solve: Newton did not converge in $max_iter iterations.  " *
             "Final ‖Δu‖_∞ = $step_inf > tol = $tol_T (‖R‖_∞ = $residual_inf).  " *
             "Suggestion: (a) increase N (better resolution lowers truncation " *
             "error); (b) provide a closer `initial_guess` (Newton can stall " *
-            "far from the basin of attraction); (c) raise `maxiter`; " *
+            "far from the basin of attraction); (c) raise `max_iter`; " *
             "(d) verify the BVP has a unique solution on this segment."))
     end
 
@@ -346,7 +358,7 @@ end
 
 """
     bvp_solve(f, ∂f_∂u, ∂f_∂up, z_a, z_b, u_a, u_b;
-              N::Integer = 20, tol = nothing, maxiter::Integer = 10,
+              N::Integer = 20, tol = nothing, max_iter::Integer = 10,
               initial_guess = nothing, initial_guess_up = nothing) -> BVPSolution
 
 Three-argument-RHS overload: solve `u'' = f(z, u, u')` on the complex
@@ -370,16 +382,25 @@ future quasi-linearisation extensions.
 function bvp_solve(f, ∂f_∂u, ∂f_∂up, z_a, z_b, u_a, u_b;
                    N::Integer = 20,
                    tol = nothing,
-                   maxiter::Integer = 10,
+                   max_iter::Integer = 10,
+                   maxiter::Union{Integer,Nothing} = nothing,
                    initial_guess = nothing,
                    initial_guess_up = nothing)
 
     initial_guess_up  # currently unused; reserved.
 
+    # Deprecation shim (api-review §3(a).2, bead `0xn`): `maxiter` →
+    # `max_iter`.
+    if maxiter !== nothing
+        Base.depwarn("`bvp_solve(; maxiter = …)` is deprecated; use `max_iter`.",
+                     :bvp_solve)
+        max_iter = maxiter
+    end
+
     N ≥ 4 || throw(ArgumentError(
         "bvp_solve: N must be ≥ 4 (got $N).  Suggestion: increase to ≥ 10."))
-    maxiter ≥ 1 || throw(ArgumentError(
-        "bvp_solve: maxiter must be ≥ 1 (got $maxiter)."))
+    max_iter ≥ 1 || throw(ArgumentError(
+        "bvp_solve: max_iter must be ≥ 1 (got $max_iter)."))
 
     CT  = promote_type(typeof(z_a), typeof(z_b), typeof(u_a), typeof(u_b))
     T   = float(real(CT))
@@ -427,7 +448,7 @@ function bvp_solve(f, ∂f_∂u, ∂f_∂up, z_a, z_b, u_a, u_b;
     # boundary contribution to up_int (constant across Newton iterates).
     bc_col_D1 = D1_ib * CT[u_b_CT, u_a_CT]    # length N-1
 
-    for k in 1:maxiter
+    for k in 1:max_iter
         iter = k
         up_int = (D1_ii * u_int .+ bc_col_D1) .* inv_hd
         F_vals = CT[f(z_int[j], u_int[j], up_int[j]) for j in eachindex(u_int)]
@@ -454,10 +475,10 @@ function bvp_solve(f, ∂f_∂u, ∂f_∂up, z_a, z_b, u_a, u_b;
 
     if !converged
         throw(ErrorException(
-            "bvp_solve(3-arg): Newton did not converge in $maxiter iterations.  " *
+            "bvp_solve(3-arg): Newton did not converge in $max_iter iterations.  " *
             "Final ‖Δu‖_∞ = $step_inf > tol = $tol_T (‖R‖_∞ = $residual_inf).  " *
             "Suggestion: (a) increase N; (b) provide a closer `initial_guess`; " *
-            "(c) raise `maxiter`; (d) verify ∂f/∂u and ∂f/∂u' are correct."))
+            "(c) raise `max_iter`; (d) verify ∂f/∂u and ∂f/∂u' are correct."))
     end
 
     u_nodes[int] = u_int

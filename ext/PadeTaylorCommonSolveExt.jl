@@ -10,7 +10,7 @@ per ADR-0003 (Stage 1 design lock).  Loaded automatically when both
 using PadeTaylor, CommonSolve
 
 prob = PadeTaylorProblem(f, (u0, up0), (0.0, 1.5); order = 30)
-alg  = PadeTaylorAlg(; h_max = 0.5)
+alg  = PadeTaylorAlg(; h = 0.5)
 
 # Convenience (CommonSolve's default `solve = solve! ∘ init`):
 sol = solve(prob, alg)
@@ -32,7 +32,7 @@ sol = solve!(integ)
     the inner `PadeStepperState` + accumulators.  Pre-pushes the IC
     onto the trajectory.
   - `step!(integ)` — calls `pade_step_with_pade!` once, sized as
-    `min(alg.h_max, z_end - state.z)` so the final step lands exactly
+    `min(alg.h, z_end - state.z)` so the final step lands exactly
     on `z_end`.  Mutates the integrator; returns it for chaining.
     Sets `integ.done = true` when `state.z ≥ z_end`.
   - `solve!(integ)` — drives `step!` in a loop until `integ.done`;
@@ -43,14 +43,14 @@ sol = solve!(integ)
 
 This is a **translation layer**.  The trajectory bytes from
 `solve(prob, alg)` are bit-identical to
-`solve_pade(prob; h_max = alg.h_max, max_steps = alg.max_steps)`
+`solve_pade(prob; h = alg.h, max_steps = alg.max_steps)`
 modulo trivial evaluation-order differences (none here —
 `pade_step_with_pade!` is deterministic and the integrator's `step!`
 calls it with identical inputs).
 
 ## Fail-fast contract
 
-  - `init` enforces `alg.h_max > 0` and the same 2nd-order requirement
+  - `init` enforces `alg.h > 0` and the same 2nd-order requirement
     as `solve_pade`.
   - `step!` on a `done` integrator is a no-op (returns the integrator
     unchanged); not an error.  Matches `OrdinaryDiffEq.jl` semantics.
@@ -101,8 +101,8 @@ end
 
 function CommonSolve.init(prob::PadeTaylorProblem{F, T, Y},
                           alg::PadeTaylorAlg{H}) where {F, T, Y, H <: Real}
-    alg.h_max > 0 || throw(ArgumentError(
-        "PadeTaylorAlg: h_max must be positive (got $(alg.h_max)).  " *
+    alg.h > 0 || throw(ArgumentError(
+        "PadeTaylorAlg: h must be positive (got $(alg.h)).  " *
         "Suggestion: pass a strictly-positive step length."))
     Y <: Tuple || error(
         "init(prob, ::PadeTaylorAlg): 1st-order (scalar y0) branch is not " *
@@ -131,11 +131,11 @@ function CommonSolve.step!(integ::PadeTaylorIntegrator{F, T, Y, P, H}) where {F,
     integ.steps > integ.alg.max_steps && error(
         "step!: exceeded max_steps = $(integ.alg.max_steps) " *
         "(current z = $(integ.state.z), target z_end = $(integ.prob.zspan[2])).  " *
-        "Suggestion: raise max_steps, shorten zspan, or increase h_max.")
+        "Suggestion: raise max_steps, shorten zspan, or increase h.")
 
-    z_end   = integ.prob.zspan[2]
-    h_max_T = T(integ.alg.h_max)
-    h_step  = min(h_max_T, z_end - integ.state.z)
+    z_end  = integ.prob.zspan[2]
+    h_T    = T(integ.alg.h)
+    h_step = min(h_T, z_end - integ.state.z)
 
     _, P_u = pade_step_with_pade!(integ.state, integ.prob.f, integ.prob.order, h_step)
 

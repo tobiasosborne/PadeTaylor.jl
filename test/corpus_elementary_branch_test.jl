@@ -90,7 +90,7 @@ include(joinpath(@__DIR__, "_oracle_corpus_elementary_branch.jl"))
         # (a) Real probe.  Recast u''=-1/z^2 as a 2nd-order RHS (z,u,up)->u''.
         rhs = (z, u, up) -> -1 / z^2
         prob = PadeTaylorProblem(rhs, (0.0, 1.0), (1.0, 3.0); order = 30)
-        sol  = solve_pade(prob; h_max = 0.25)
+        sol  = solve_pade(prob; h = 0.25)
         u2, up2 = sol(2.0)
         ue, _   = sol(ℯ)
         @test isapprox(u2, CBR2_U_AT_2; atol = 1e-12)    # log 2
@@ -123,7 +123,7 @@ include(joinpath(@__DIR__, "_oracle_corpus_elementary_branch.jl"))
         # (a) Real probe inside (-1,1).  Recast u''=4z/(1-z^2)^2.
         rhs = (z, u, up) -> 4z / (1 - z^2)^2
         prob = PadeTaylorProblem(rhs, (0.0, 2.0), (0.0, 0.5); order = 30)
-        sol  = solve_pade(prob; h_max = 0.1)
+        sol  = solve_pade(prob; h = 0.1)
         uh, uph = sol(0.5)
         @test isapprox(uh, CBR3_U_AT_HALF; atol = 1e-12)   # 2*atanh(1/2)
         @test isapprox(uh, CBR3_LOG3; atol = 1e-12)        # = log 3 (cross-check)

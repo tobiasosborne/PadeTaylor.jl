@@ -121,7 +121,7 @@ const UP0  = -exp(-1.0)
 function refuses_out_of_class(zend; h = 0.1)
     try
         prob = PadeTaylorProblem(fess, (U0, UP0), (Z0, zend); order = 30)
-        sol  = solve_pade(prob; h_max = h)
+        sol  = solve_pade(prob; h = h)
         u, _ = sol(zend)
         return !isfinite(u)          # NaN/Inf would also be "did not silently lie"
     catch
@@ -139,13 +139,13 @@ end
     # ----------------------------------------------------------------------
     @testset "CFail.1a  accurate far from z=0 (z=-0.5, -0.2)" begin
         prob = PadeTaylorProblem(fess, (U0, UP0), (Z0, -0.5); order = 30)
-        sol  = solve_pade(prob; h_max = 0.1)
+        sol  = solve_pade(prob; h = 0.1)
         u_h, _ = sol(-0.5)
         @test isfinite(u_h)
         @test isapprox(u_h, CFAIL_U_AT_NEG0p5; rtol = 1e-13)
 
         prob2 = PadeTaylorProblem(fess, (U0, UP0), (Z0, -0.2); order = 30)
-        sol2  = solve_pade(prob2; h_max = 0.1)
+        sol2  = solve_pade(prob2; h = 0.1)
         u_h2, _ = sol2(-0.2)
         @test isapprox(u_h2, CFAIL_U_AT_NEG0p2; rtol = 1e-9)
     end
@@ -157,7 +157,7 @@ end
     # ----------------------------------------------------------------------
     @testset "CFail.1b  error inflation onset (z=-0.1 good, z=-0.05 degraded)" begin
         prob = PadeTaylorProblem(fess, (U0, UP0), (Z0, -0.1); order = 30)
-        sol  = solve_pade(prob; h_max = 0.1)
+        sol  = solve_pade(prob; h = 0.1)
         u_h, _ = sol(-0.1)
         @test isfinite(u_h)
         @test isapprox(u_h, CFAIL_U_AT_NEG0p1; rtol = 1e-8)   # measured 4.0e-10
@@ -169,7 +169,7 @@ end
         # once the δ-runaway is sustained, which happens between -0.05 and
         # -0.02, see CFail.1c).
         prob2 = PadeTaylorProblem(fess, (U0, UP0), (Z0, -0.05); order = 30)
-        sol2  = solve_pade(prob2; h_max = 0.1)   # guard silent: no throw at -0.05
+        sol2  = solve_pade(prob2; h = 0.1)   # guard silent: no throw at -0.05
         u_h2, _ = sol2(-0.05)
         relerr = abs(u_h2 - CFAIL_U_AT_NEG0p05) / abs(CFAIL_U_AT_NEG0p05)
         @test isfinite(u_h2)         # finite — guard not yet fired
@@ -191,13 +191,13 @@ end
         prob = PadeTaylorProblem(fess, (U0, UP0), (Z0, -0.02); order = 30)
         # The driver throws inside solve_pade as the δ-runaway gate fires —
         # the integration never produces the old finite-wrong value at -0.02.
-        @test_throws OutOfClassError solve_pade(prob; h_max = 0.1)
+        @test_throws OutOfClassError solve_pade(prob; h = 0.1)
 
         # Escape hatch (ADR-0033): a user who knowingly probes out-of-class
         # can opt out; then the LEGACY silent-lie behaviour is recovered
         # verbatim — finite, relerr ≫ 1, wrong sign.  This pins both the
         # opt-out and the documented legacy reality it restores.
-        sol  = solve_pade(prob; h_max = 0.1, check_in_class = false)
+        sol  = solve_pade(prob; h = 0.1, check_in_class = false)
         u_h, _ = sol(-0.02)
         ex = uexact(-0.02)
         relerr = abs(u_h - ex) / abs(ex)
@@ -230,7 +230,7 @@ end
     @testset "CFail.1e  silent bridge ACROSS z=0 (single large step)" begin
         prob = PadeTaylorProblem(fess, (exp(-5.0), -exp(-5.0) / 0.04),
                                  (-0.2, 0.2); order = 30)
-        sol  = solve_pade(prob; h_max = 0.4)          # one segment spans [-0.2,0.2]
+        sol  = solve_pade(prob; h = 0.4)          # one segment spans [-0.2,0.2]
         u_h, _ = sol(0.2)
         relerr = abs(u_h - CFAIL_U_AT_POS0p2) / abs(CFAIL_U_AT_POS0p2)
         @test isfinite(u_h)          # bridged z=0 with no throw/NaN (silent)

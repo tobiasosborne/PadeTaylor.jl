@@ -187,7 +187,7 @@ end
                    derivative_match_tol = 1e-7,
                    derivative_match_strict = false,
                    h = 0.5, order = prob_ivp.order,
-                   N_bvp = 20, bvp_tol = nothing, bvp_maxiter = 10,
+                   N_bvp = 20, bvp_tol = nothing, bvp_max_iter = 10,
                    wedge_angles = nothing) -> DispatcherSolution
 
 Compose an ordered chain of IVP and BVP segments into a single dense
@@ -219,8 +219,18 @@ function dispatch_solve(prob_ivp::PadeTaylorProblem,
                         order::Integer = prob_ivp.order,
                         N_bvp::Integer = 20,
                         bvp_tol = nothing,
-                        bvp_maxiter::Integer = 10,
+                        bvp_max_iter::Integer = 10,
+                        bvp_maxiter::Union{Integer,Nothing} = nothing,
                         wedge_angles = nothing)
+
+    # Deprecation shim (api-review §3(a).2, bead `0xn`): `bvp_maxiter` →
+    # `bvp_max_iter` (cascades the BVP `maxiter` → `max_iter` rename).
+    if bvp_maxiter !== nothing
+        Base.depwarn(
+            "`dispatch_solve(; bvp_maxiter = …)` is deprecated; use `bvp_max_iter`.",
+            :dispatch_solve)
+        bvp_max_iter = bvp_maxiter
+    end
 
     # ---- validate ----------------------------------------------------------
     isempty(segments) && throw(ArgumentError(
@@ -309,19 +319,19 @@ function dispatch_solve(prob_ivp::PadeTaylorProblem,
             bvp_sol = if ig === nothing && bvp_tol === nothing
                 bvp_solve(f_bvp, ∂f_∂u_bvp, cur_z, CT(seg.z_end),
                           cur_u, seg.u_b;
-                          N = N_bvp, maxiter = bvp_maxiter)
+                          N = N_bvp, max_iter = bvp_max_iter)
             elseif ig === nothing
                 bvp_solve(f_bvp, ∂f_∂u_bvp, cur_z, CT(seg.z_end),
                           cur_u, seg.u_b;
-                          N = N_bvp, maxiter = bvp_maxiter, tol = bvp_tol)
+                          N = N_bvp, max_iter = bvp_max_iter, tol = bvp_tol)
             elseif bvp_tol === nothing
                 bvp_solve(f_bvp, ∂f_∂u_bvp, cur_z, CT(seg.z_end),
                           cur_u, seg.u_b;
-                          N = N_bvp, maxiter = bvp_maxiter, initial_guess = ig)
+                          N = N_bvp, max_iter = bvp_max_iter, initial_guess = ig)
             else
                 bvp_solve(f_bvp, ∂f_∂u_bvp, cur_z, CT(seg.z_end),
                           cur_u, seg.u_b;
-                          N = N_bvp, maxiter = bvp_maxiter,
+                          N = N_bvp, max_iter = bvp_max_iter,
                           tol = bvp_tol, initial_guess = ig)
             end
             push!(bvp_solutions, bvp_sol)

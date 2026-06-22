@@ -225,7 +225,7 @@ end
 
 """
     lattice_dispatch_solve(prob, bvp_f, bvp_∂f_∂u, xs, ys;
-                           h_path = 0.5, order = prob.order,
+                           h = 0.5, order = prob.order,
                            edge_level = :auto,
                            N_bvp = 20, bvp_tol = nothing,
                            mask = nothing,
@@ -235,10 +235,12 @@ See module docstring for the algorithm.  `order` defaults to
 `prob.order` and is threaded into the IVP step for the path network.
 
 Kwargs:
-  - `h_path` — IVP step size for the path-network walker.  Forwarded
-    as `h_path` to `path_network_solve` (manual-fallback path) and as
-    `h` to `edge_gated_pole_field_solve` (default path — the kwarg
-    name on edge-gated is `h`, not `h_path`).
+  - `h` — IVP step size for the path-network walker.  Forwarded as `h`
+    to whichever IVP driver runs (`edge_gated_pole_field_solve` on the
+    default path; `path_network_solve` on the manual-fallback path).
+    The kwarg was renamed from `h_path` to `h` (api-review §3(a).1,
+    bead `xds`); the legacy `h_path` name is still accepted as a
+    deprecated alias.
   - `order` — Padé / Taylor order.  Forwarded to whichever IVP driver
     runs.
   - `edge_level` — edge-detector threshold.  Forwarded to either the
@@ -257,13 +259,24 @@ function lattice_dispatch_solve(prob::PadeTaylorProblem,
                                 bvp_f, bvp_∂f_∂u,
                                 xs::AbstractVector{<:Real},
                                 ys::AbstractVector{<:Real};
-                                h_path::Real      = 0.5,
+                                h::Real           = 0.5,
+                                h_path::Union{Real,Nothing} = nothing,
                                 order::Integer    = prob.order,
                                 edge_level::Union{Real,Symbol} = :auto,
                                 N_bvp::Integer    = 20,
                                 bvp_tol           = nothing,
                                 mask              = nothing,
                                 strict::Bool      = true)
+
+    # Deprecation shim (api-review §3(a).1, bead `xds`): `h_path` → `h`.
+    # `Base.@deprecate_binding` does not cover kwargs; emit a `depwarn`
+    # when the legacy name is supplied and map it onto `h`.
+    if h_path !== nothing
+        Base.depwarn(
+            "`lattice_dispatch_solve(; h_path = …)` is deprecated; use `h`.",
+            :lattice_dispatch_solve)
+        h = h_path
+    end
 
     nx = length(xs); ny = length(ys)
     nx ≥ 3 || throw(ArgumentError(
@@ -321,7 +334,7 @@ function lattice_dispatch_solve(prob::PadeTaylorProblem,
 
     if mask === nothing
         gated = edge_gated_pole_field_solve(prob, xs, ys;
-                                            h          = h_path,
+                                            h          = h,
                                             order      = order,
                                             edge_level = edge_level)
         pn_sol  = gated.pn_solution
@@ -356,7 +369,7 @@ function lattice_dispatch_solve(prob::PadeTaylorProblem,
             "lattice_dispatch_solve: mask must have shape ($nx, $ny); " *
             "got $(size(mask))."))
         pn_sol = path_network_solve(prob, vec(grid_mat);
-                                    h = h_path, order = order)
+                                    h = h, order = order)
         u_grid  = Matrix{CT}(reshape(pn_sol.grid_u,  (nx, ny)))
         up_grid = Matrix{CT}(reshape(pn_sol.grid_up, (nx, ny)))
         mask_used = convert(BitMatrix, mask)

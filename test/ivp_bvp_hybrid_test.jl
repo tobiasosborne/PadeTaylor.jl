@@ -157,7 +157,7 @@ using PadeTaylor.CoordTransforms: pIII_z_to_ζ, pIII_ζ_to_z
                 z -> pIII_asymptotic_ic(z; n_terms = 2, β = β, δ = δ);
                 pfs_kwargs = (; h = 0.2,
                               max_steps_per_target = 100),
-                bvp_kwargs = (; N = 10, tol = 1e-10, maxiter = 30),
+                bvp_kwargs = (; N = 10, tol = 1e-10, max_iter = 30),
                 n_slices = 4,
                 glue_tol = 1e-6)
 
@@ -211,7 +211,7 @@ using PadeTaylor.CoordTransforms: pIII_z_to_ζ, pIII_ζ_to_z
                 z -> pIII_asymptotic_ic(z; n_terms = 2, β = β, δ = δ);
                 pfs_kwargs = (; h = 0.2,
                               max_steps_per_target = 200),
-                bvp_kwargs = (; N = 10, tol = 1e-10, maxiter = 30),
+                bvp_kwargs = (; N = 10, tol = 1e-10, max_iter = 30),
                 n_slices = 5,
                 glue_tol = 1e-6)
 
@@ -365,7 +365,7 @@ using PadeTaylor.CoordTransforms: pIII_z_to_ζ, pIII_ζ_to_z
                 z -> pIII_asymptotic_ic(z; n_terms = 2, β = β, δ = δ);
                 pfs_kwargs = (; h = 0.2,
                               max_steps_per_target = 100),
-                bvp_kwargs = (; N = 10, tol = 1e-10, maxiter = 30),
+                bvp_kwargs = (; N = 10, tol = 1e-10, max_iter = 30),
                 n_slices = 3,
                 glue_tol = 1e-6)
         # ζ at re = re_anchor + 10 (way outside).
