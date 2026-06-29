@@ -8,7 +8,48 @@
 > previous session already paid for. The frictions surfaced are
 > recorded in `docs/worklog/001-stages-Z-1-2-handoff.md`.
 
-## 🛑 LATEST SESSION (2026-06-29) — CRITICAL bug ROOT-CAUSED: path_network is path-DEPENDENT (the FW Fig 4.7 "seam"). PROJECT FROZEN on new work per maintainer directive
+## 🛑 LATEST SESSION (2026-06-29, later) — Fig 4.7 seam CURE SCOPED + CONFIRMED by measurement (windowed composite). STILL FROZEN: no cure code applied
+
+**Headline.** Continuation of the root-cause session below. The seam's cure was
+**scoped, auditioned, and confirmed by measurement** — but per the freeze, **no
+cure code was written** (worklog 078; probes `p3/p4/p4b/p5`). Five cure families
+were developed and adversarially verified (all `partial` — no clean monotherapy);
+three measurements then settled the design.
+
+**P3 — the decisive measurement: regime B (pole-field INTERIOR).** Re-solving the
+seed-0 edge-gated *confinement* (what `fig_4_7.jl:106` already does) at two seeds
+leaves the pole-count seed-variance **unchanged (172 → 171)**. The grain boundary
+is *inside* the pole field; edge-gating does NOT cure it. ⇒ This **eliminates the
+smooth-fill candidates `fe9`/`8dg` as cures** — they produce no poles, so they
+cannot move the pole scatter that IS the bug (now re-scoped FIELD-only, for Fig 4.1).
+
+**P4/P4b — mechanism selection: windowing, not reconciliation.** A bounded-window
+composite shrinks the seed-variance even for far/long-trunk tiles (|Δ| 13 → 1);
+reconciliation's cross-branch overlap constraints are only **~1.9 %** of the disc
+graph (98 % are same-branch, already consistent) → too sparse, needs regularization
+= the forbidden smoothing.
+
+**P5 — confirmation (the acceptance test).** A full 5×5 composite over `[-50,50]²`
+drops the two-seed pole-count **|Δ| 151 → 12**, pole-set match **77 % → 99.4 %**,
+median pole displacement **→ 0.000**, with **no tile-boundary seam**, and **~2×
+faster** than the monolithic solve. Residual |Δ|=12 is *containment*, matching FW's
+own posture (md:208/304-310).
+
+**Cure decision.** `padetaylor-xwzf` — new `windowed_path_network_solve`
+(bounded-window composite, FW md:147), **gated by `padetaylor-sny7`** (re-scoped to
+a **truth-anchored pole-set seed-invariance** test: RED on monolithic |Δ|=151,
+GREEN on composite |Δ|=12; ℘-anchored so it cannot be gamed by freezing/smoothing).
+Residuals filed: `padetaylor-ingn` (verify the ~220 suppressed poles are spurious
+not real, via the ℘ oracle), `padetaylor-mro9` (per-window edge-gating with a
+window-local seed). `fe9`/`8dg` re-scoped FIELD-only.
+
+**Pointers.** Worklog `docs/worklog/078-fig47-seam-cure-scoping.md` (companion to
+077). Probes `external/probes/fig47-seam-diagnosis/{p3,p4,p4b,p5}` (runnable).
+Commit `84e21de` (worklog 078 + probes + beads). Still **FROZEN**; no `src/` change.
+The 3 figure PNGs remain untouched (still a partial regen — regenerate the full set
+or `git checkout figures/output/`).
+
+## 🛑 SESSION (2026-06-29) — CRITICAL bug ROOT-CAUSED: path_network is path-DEPENDENT (the FW Fig 4.7 "seam"). PROJECT FROZEN on new work per maintainer directive
 
 **Headline.** Regenerating FW Fig 4.7 surfaced the long-standing spurious
 **discontinuity / grain-boundary seam** (worst in panels **(e)**, **(a)**;

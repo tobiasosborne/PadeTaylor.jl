@@ -11,6 +11,9 @@
 **Status:** **ROOT-CAUSED ONLY. No fix applied** — by explicit user
 directive ("maximum critical priority; no further progress until completely
 root caused"). This worklog is the root cause; the fix is gated behind it.
+**→ Cure scoped, mechanism-selected, and confirmed by measurement in worklog
+078 (bounded-window composite; bead `padetaylor-xwzf`, gated by `sny7`); still
+no cure code applied (freeze).**
 
 > **Take-home.** `path_network_solve` enforces **no path-independence**.
 > A single-valued meromorphic `u(z)` reached by two different walk
