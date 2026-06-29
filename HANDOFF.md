@@ -8,7 +8,71 @@
 > previous session already paid for. The frictions surfaced are
 > recorded in `docs/worklog/001-stages-Z-1-2-handoff.md`.
 
-## 🔬 LATEST SESSION (2026-06-22) — v1.0-blocking public-API canonicalisation (gvz/xds/0xn) — both registration prerequisites now cleared
+## 🛑 LATEST SESSION (2026-06-29) — CRITICAL bug ROOT-CAUSED: path_network is path-DEPENDENT (the FW Fig 4.7 "seam"). PROJECT FROZEN on new work per maintainer directive
+
+**Headline.** Regenerating FW Fig 4.7 surfaced the long-standing spurious
+**discontinuity / grain-boundary seam** (worst in panels **(e)**, **(a)**;
+present in all six; spurious poles incl. (f)'s forbidden sectors). It has
+existed since project start (worklog 014, "y=0 row discontinuity"), was never
+pinned, and "makes all progress brittle." It is now **completely root-caused**.
+The maintainer declared it **maximum critical priority: no further progress on
+the project until it is fixed.** Root cause is recorded; **NO FIX APPLIED yet.**
+
+**ROOT CAUSE — path-DEPENDENCE of the monolithic walk (NOT the Stage-2 stitch).**
+`path_network_solve` enforces no path-independence: the shuffled-tree walk
+(`src/PathNetwork.jl:481`) reaches spatially-adjacent regions via different
+branches that accumulate different IVP error in the smooth/unstable sectors
+(FW md:401); each node's Padé is built from its own propagated state (`:605`);
+nothing makes two reconstructions agree where they meet → the seam. A
+single-valued meromorphic `u` MUST be path-independent; ours is not.
+
+**Evidence (measured; `external/probes/fig47-seam-diagnosis/`):** two-seed field
+diff at `[-50,50]²` = **35 % of cells differ >1 %, max rel 1.0**; pole **count**
+is seed-dependent (**8159 vs 7987**); the seam **moves** with `rng_seed`. The
+Stage-2 Voronoi stitch is FINE (nearest-vs-2nd-nearest jump max **1.4e-4**) —
+this **refutes** the deep-research report's leading H1 ("the stitch is the
+seam"); the bug is the WALK. Amplifier = window size: diff is **8.5e-3 at
+`[-25,25]²` but 1.0 at `[-50,50]²`**.
+
+**Why FW don't see it (the core puzzle).** We are *not* doing the same as FW.
+FW *do* see it (md:208: "low level ridges in flat areas… different paths…
+amplified by /h²") and dismiss it — it's in the smooth regions they ignore and
+Fig 4.7 plots *poles*, not the field. And FW md:147: each Fig-4.7**a–e** panel is a
+**5×5 composite of 25 independent 20×20 runs** — short windows keep the
+path-dependence harmless. We run **one monolithic 100×100 solve**, so it grows
+large enough to corrupt pole positions and surface in the scatter.
+
+**Do NOT (the wrong tracks, paid for this session):** (1) don't "fix" it with
+`enforce_real_axis_symmetry` — that *masks* the error (FW's own error gauge),
+doesn't remove it, and ignores off-axis seams. (2) Don't trust global stats
+(recall/precision/symmetry/spacing, or `quality_diagnose` percentiles) — they
+average a localized line away. (3) Don't analyse the extracted pole *points* —
+a grain boundary is an *orientation* discontinuity, blind to spacing metrics.
+(4) Don't validate on Weierstrass-℘ — it's doubly-periodic, closes its loops,
+stays green while the artifact is broken. (5) Don't dismiss linear features as
+"Moiré" without the falsification (a real seam is fixed under refinement and
+*moves* under `rng_seed`).
+
+**The diagnostic that works (and the reusable lesson):** interrogate the FIELD
+and test the INVARIANT, not the aggregate. The invariant is **path-independence**
+— re-solve with a different `rng_seed` and require agreement (the **two-seed
+test**; flags 35 % of cells here). Plus the ψ₆ bond-orientation map and a field
+phase/magnitude portrait.
+
+**Pointers.** Full write-up: `docs/worklog/077-fig47-path-dependence-seam-rootcause.md`.
+Probe + reproduction scripts: `external/probes/fig47-seam-diagnosis/` (REPORT.md
++ 4 runnable `.jl`). Beads: **`padetaylor-vwgl`** (P0, the bug/cure),
+**`padetaylor-sny7`** (P1, the seed-invariance regression gate — land RED first).
+Cure direction (gated, not started): smooth-region BVP fill (`padetaylor-fe9`/`8dg`,
+FW md:170-192) / bounded-window composite (FW md:147) / K-nearest consensus Stage-2
+(`padetaylor-6b5`). The Voronoi stitch needs no change; the WALK does.
+
+**Suite/figures note.** No source changed this session (diagnosis only). 3 figure
+PNGs (`fw2011_fig_4_1/4_7/4_8`) are regenerated-but-uncommitted in the working
+tree from the interrupted figure batch — left as-is (a partial, inconsistent
+regen); regenerate the full set or `git checkout figures/output/` to restore.
+
+## 🔬 SESSION (2026-06-22) — v1.0-blocking public-API canonicalisation (gvz/xds/0xn) — both registration prerequisites now cleared
 
 **Headline:** all THREE v1.0-blocking findings of the API audit
 (`docs/api-review-2026-05-16.md` §9 rows 1-3) shipped, backward-compatible,
