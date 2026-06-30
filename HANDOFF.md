@@ -8,7 +8,46 @@
 > previous session already paid for. The frictions surfaced are
 > recorded in `docs/worklog/001-stages-Z-1-2-handoff.md`.
 
-## 🛑 LATEST SESSION (2026-06-29, later) — Fig 4.7 seam CURE SCOPED + CONFIRMED by measurement (windowed composite). STILL FROZEN: no cure code applied
+## ✅ LATEST SESSION (2026-06-30) — Fig 4.7 seam CURED, verified, and pushed. PROJECT UNFROZEN
+
+**Headline.** The P0 path-dependence seam (`padetaylor-vwgl`) is **fixed** and the
+freeze is lifted. The bounded-window composite scoped the day before (worklog 078)
+was implemented, gated, verified, and the figures regenerated. Full `Pkg.test()`
+**GREEN at 9369 pass / 2 broken / 0 fail**. Pushed to `main` (commits c7b78d4 →
+1b45854).
+
+**What shipped (worklog 079, ADR-0034).**
+- `src/WindowedComposite.jl` (~199 LOC) — `windowed_path_network_solve` (tile →
+  independent per-window solve from the IC at a per-window seed → Voronoi-core
+  composite, FW md:147), `windowed_extract_poles`, and the production figure driver
+  `edge_gated_windowed_poles` (windowed solve for seam-free poles + edge-gated mask
+  filter for bloom-free poles), `WindowedCompositeSolution`.
+- `test/field_seam_test.jl` (`padetaylor-sny7`) — NON-GAMEABLE seed-invariance gate
+  (FSEAM.1 proves the seeds genuinely re-randomise every window; FSEAM.2 asserts
+  pole-set seed-invariance ≥0.90). Mutation-proven (M-frozen-seed→FSEAM.1 RED,
+  M-monolithic→FSEAM.2 RED). GREEN in-suite at 97.0–97.2% (monolithic 77.6% RED).
+- `figures/fw2011_fig_4_7.jl` + `4_8.jl` rewired to `edge_gated_windowed_poles`;
+  PNGs regenerated. Panel (f) tritronquée: 1452 poles, clean wedge, empty forbidden
+  sectors (vs plain-windowed 7353 / 4475 off-wedge bloom).
+
+**Measured outcomes.** Interior pole lattice seed-invariant **97.6–97.8%** (the seam
+is cured); full 5×5 composite |Δ| **151→12**, match **77→99.4%**, ~2× faster; bloom
+off-wedge **4475→0**; Weierstrass-℘ verify (`ingn`, probe p6) **PASS** (windowed
+recall 1.000 = monolithic, precision 1.000 > 0.998 — drops zero real poles).
+
+**The ONE open residual.** `padetaylor-us19` (P3, NOT blocking): boundary-pole
+flicker at the sparse pole-field *perimeter* (match 79.9–89.6%) — marginal poles at
+the edge flip in/out between seeds. The INTERIOR seam (the bug) is gone; this is a
+separate, milder, second-order effect. Not the seam.
+
+**Beads.** Closed: `vwgl` (P0), `xwzf` (impl), `sny7` (gate), `ingn` (℘ verify, PASS),
+`mro9` (superseded by the post-hoc-filter driver). Open: `us19` (P3 residual).
+
+**Working tree.** `figures/output/fw2011_fig_4_1.png` remains a PRE-EXISTING
+uncommitted change (the imaginary-axis BVP figure, unrelated to the seam) — left
+untouched this session; regenerate or `git checkout` it as you see fit.
+
+## 🛑 SESSION (2026-06-29, later) — Fig 4.7 seam CURE SCOPED + CONFIRMED by measurement (windowed composite)
 
 **Headline.** Continuation of the root-cause session below. The seam's cure was
 **scoped, auditioned, and confirmed by measurement** — but per the freeze, **no
