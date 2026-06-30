@@ -119,7 +119,7 @@ Different starting conditions produce strikingly different global pole patterns:
 
 ![FW 2011 Fig. 4.7 — six Painlevé-I pole fields](figures/output/fw2011_fig_4_7.png)
 
-*Six solutions of the first Painlevé equation, each a map of its poles over a `100×100` window. Some fill the plane almost uniformly (a, c, d); others carve out smooth channels (b, e). Panel (f) is the celebrated **tritronquée** — French for "triply truncated" — the unique solution whose poles vanish from a huge sector of the plane. A naïve solver fills that empty sector with garbage; getting it right needs the edge-gated, region-growing solver in this package.*
+*Six solutions of the first Painlevé equation, each a map of its poles over a `100×100` window. Some fill the plane almost uniformly (a, c, d); others carve out smooth channels (b, e). Panel (f) is the celebrated **tritronquée** — French for "triply truncated" — the unique solution whose poles vanish from a huge sector of the plane. A naïve solver fills that empty sector with garbage; getting it right needs the edge-gated, region-growing solver in this package. Figs. 4.7 and 4.8 are produced by `edge_gated_windowed_poles` (ADR-0034), the seam-free bounded-window composite driver that eliminates the path-dependence grain boundary inherent in a monolithic walk.*
 
 The package knows these equations by name. `PainleveProblem(:I; …)` builds the problem for any of the six; the named constructors `tritronquee(:I)` and `hastings_mcleod()` bake in the precise, literature-pinned initial conditions of the two most important special solutions — so the famous transcendents are one line away:
 
@@ -164,6 +164,7 @@ The package is a layered stack — each tier builds on the one below, and you ca
 | **Core** | Taylor series → robust Padé → one solver step | `robust_pade`, `taylor_coefficients_2nd`, `pade_step!` |
 | **IVP driver** | march along a path, with dense output | `PadeTaylorProblem`, `solve_pade` |
 | **Path network** | navigate the whole complex plane around pole fields | `path_network_solve`, `extract_poles`, `quality_diagnose` |
+| **Windowed composite** | bounded-window composite solve — tile, solve each window independently from the IC, composite by Voronoi-core; cures the Fig 4.7 path-dependence seam (ADR-0034) | `windowed_path_network_solve`, `windowed_extract_poles`, `edge_gated_windowed_poles`, `WindowedCompositeSolution` |
 | **BVP + composition** | spectral BVP solver; auto IVP/BVP dispatch in 1-D and 2-D | `bvp_solve`, `dispatch_solve`, `lattice_dispatch_solve`, `edge_gated_pole_field_solve` |
 | **Multivalued tier** | coordinate transforms (PIII/PV) + Riemann-sheet tracking (PVI) + walker-side cut respect | `pIII_transformed_rhs`, `pV_z_to_ζ`, `pVI_eta_transformed_rhs`, `sheet_index`, `path_network_solve(...; branch_points, cross_branch, grid_sheet)`, `eval_at`, `eval_at_sheet` |
 | **Special-function tier** | Heun functions (general + confluent) via Frobenius-at-0 + path-network walk around the regular singular points | `heun_g`, `heun_c` |

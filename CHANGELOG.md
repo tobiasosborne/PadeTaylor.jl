@@ -11,6 +11,40 @@ Post-v0.1.0 work, all on `main` and pushed.  Test suite **2447 / 2447
 GREEN** (up from 1311 at the v0.1.0 tag).  21 source modules (up from
 14); 13 ADRs (up from 4); 45 worklog shards (up from 18).
 
+### Fixed — Fig 4.7 / 4.8 path-dependence seam (bug `padetaylor-vwgl`, ADR-0034, worklogs 077/078/079)
+
+  - **`src/WindowedComposite.jl` — bounded-window composite solve** cures the
+    seed-dependent grain boundary in `path_network_solve`'s monolithic walk tree.
+    Tiles the domain into overlapping windows, solves each independently from the
+    shared IC at a per-window seed (`_window_seed(rng_seed, wi)`), and composites
+    by Voronoi-core ownership.  Confirmed numbers (5×5 composite over `[-50,50]²`,
+    two global seeds): pole-count seed-variance |Δ| **151→12**, pole-set match
+    **77.1%→99.4%**, median pole displacement **0.076→0.000**, ~2× faster than
+    monolithic.  New public API: `windowed_path_network_solve`,
+    `windowed_extract_poles`, `WindowedCompositeSolution`.
+  - **`edge_gated_windowed_poles`** — production driver for Fig 4.7 / 4.8: run
+    `edge_gated_pole_field_solve` for the bloom-free pole-field mask, run the
+    windowed composite, filter extracted poles to the mask.  Measured on the PI
+    tritronquée over `[-50,50]²`: off-wedge bloom **4475→0**; 97.6% agreement
+    with the edge-gated baseline in the pole field.  `fw2011_fig_4_7.jl` and
+    `fw2011_fig_4_8.jl` rewired to this driver.
+  - **`test/field_seam_test.jl`** (bead `padetaylor-sny7`) — non-gameable
+    seed-invariance gate: FSEAM.1 asserts two global seeds genuinely re-randomise
+    every window's walk; FSEAM.2 asserts the composited pole field is
+    seed-invariant (bidirectional match ≥ 0.90 — composite 97.0–97.2% GREEN,
+    monolithic 77.6% RED).  Mutation-proven: M-frozen-seed → FSEAM.1 RED,
+    M-monolithic → FSEAM.2 RED (both executed + restored byte-clean).
+  - **INGN ℘ verification** (bead `padetaylor-ingn`, probe
+    `p6_ingn_pole_truth.jl`, Weierstrass-℘ oracle at `HALF=30`): windowed
+    recall=1.000 == monolithic (drops zero real poles); windowed
+    precision=1.000 > monolithic 0.998 (suppresses spurious seed-dependent
+    poles).  The composite's ~220 fewer poles are spurious ones correctly
+    removed, not real poles dropped.
+  - **Residual** (Rule 9, bead `padetaylor-us19`, P3): the interior pole lattice
+    (≥3 rings inside the mask) is seed-invariant at 97.6–97.8% (seam cured);
+    perimeter poles flicker at 79.9–89.6% match (boundary-pole flicker, not
+    blocking, benign for single-seed figures).
+
 ### Fixed — out-of-class guard (bug `padetaylor-v1ub`, ADR-0033)
 
   - **`solve_pade` now FAILS LOUD on out-of-class (non-meromorphic)
