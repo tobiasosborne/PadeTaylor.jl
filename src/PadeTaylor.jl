@@ -210,6 +210,7 @@ include("BVP.jl")
 include("Dispatcher.jl")
 include("EdgeDetector.jl")
 include("EdgeGatedSolve.jl")
+include("WindowedComposite.jl")
 include("LatticeDispatcher.jl")
 include("CoordTransforms.jl")
 # Laplace2D is the in-house 2D-Chebyshev spectral Dirichlet Laplace
@@ -263,6 +264,8 @@ using .Dispatcher:  dispatch_solve, DispatcherSolution, IVPSegment, BVPSegment
 using .Laplace2D:  laplace2d_solve, Laplace2DSolution
 using .EdgeDetector: laplacian_residual, pole_field_mask
 using .EdgeGatedSolve: edge_gated_pole_field_solve, EdgeGatedSolution
+using .WindowedComposite: windowed_path_network_solve, windowed_extract_poles,
+                          WindowedCompositeSolution
 using .LatticeDispatcher: lattice_dispatch_solve, LatticeSolution
 using .CoordTransforms: pIII_transformed_rhs, pV_transformed_rhs,
                         pIII_z_to_ζ, pIII_ζ_to_z, pV_z_to_ζ, pV_ζ_to_z
@@ -361,6 +364,8 @@ export laplacian_residual, pole_field_mask
 export laplace2d_solve, Laplace2DSolution
 export lattice_dispatch_solve, LatticeSolution
 export edge_gated_pole_field_solve, EdgeGatedSolution
+export windowed_path_network_solve, windowed_extract_poles,
+       WindowedCompositeSolution
 export pIII_transformed_rhs, pV_transformed_rhs,
        pIII_z_to_ζ, pIII_ζ_to_z, pV_z_to_ζ, pV_ζ_to_z
 export pVI_transformed_rhs,

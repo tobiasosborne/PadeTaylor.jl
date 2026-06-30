@@ -90,6 +90,15 @@ using PadeTaylor
     include("phase9_tritronquee_test.jl")
     include("lattice_dispatcher_test.jl")
     include("edge_gated_solve_test.jl")
+    # Seed-invariance gate for the FW 2011 Fig 4.7 "seam" (bead padetaylor-sny7,
+    # P0 epic padetaylor-vwgl).  Guards that windowed_path_network_solve
+    # (src/WindowedComposite.jl) produces a SEED-INVARIANT pole field where the
+    # monolithic path_network_solve does not.  FSEAM.1 pins NON-TRIVIALITY (the
+    # two global seeds genuinely re-randomised every window — the anti-gaming
+    # guard) so the FSEAM.2 pole-set seed-invariance (≥0.90 both ways; measured
+    # mono 77.6% RED vs composite 97.2% GREEN) certifies real path-independence,
+    # not a frozen pipeline.  See docs/worklog/078-fig47-seam-cure-scoping.md.
+    include("field_seam_test.jl")
     # Public-API kwarg deprecation shims (beads xds, 0xn; api-review §3(a)).
     # Asserts each renamed kwarg's deprecated alias still WORKS (same result)
     # AND WARNS.  The WARNS half is meaningful under Pkg.test's `--depwarn=yes`.
