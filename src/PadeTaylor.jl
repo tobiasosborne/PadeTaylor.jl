@@ -265,7 +265,7 @@ using .Laplace2D:  laplace2d_solve, Laplace2DSolution
 using .EdgeDetector: laplacian_residual, pole_field_mask
 using .EdgeGatedSolve: edge_gated_pole_field_solve, EdgeGatedSolution
 using .WindowedComposite: windowed_path_network_solve, windowed_extract_poles,
-                          WindowedCompositeSolution
+                          edge_gated_windowed_poles, WindowedCompositeSolution
 using .LatticeDispatcher: lattice_dispatch_solve, LatticeSolution
 using .CoordTransforms: pIII_transformed_rhs, pV_transformed_rhs,
                         pIII_z_to_ζ, pIII_ζ_to_z, pV_z_to_ζ, pV_ζ_to_z
@@ -365,7 +365,7 @@ export laplace2d_solve, Laplace2DSolution
 export lattice_dispatch_solve, LatticeSolution
 export edge_gated_pole_field_solve, EdgeGatedSolution
 export windowed_path_network_solve, windowed_extract_poles,
-       WindowedCompositeSolution
+       edge_gated_windowed_poles, WindowedCompositeSolution
 export pIII_transformed_rhs, pV_transformed_rhs,
        pIII_z_to_ζ, pIII_ζ_to_z, pV_z_to_ζ, pV_ζ_to_z
 export pVI_transformed_rhs,

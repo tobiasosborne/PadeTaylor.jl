@@ -123,9 +123,10 @@ module WindowedComposite
 using ..Problems:    PadeTaylorProblem
 using ..PathNetwork: path_network_solve, PathNetworkSolution
 using ..PoleField:   extract_poles
+using ..EdgeGatedSolve: edge_gated_pole_field_solve
 
 export windowed_path_network_solve, windowed_extract_poles,
-       WindowedCompositeSolution
+       edge_gated_windowed_poles, WindowedCompositeSolution
 
 """
     WindowedCompositeSolution{T}
@@ -389,6 +390,95 @@ function windowed_extract_poles(wsol::WindowedCompositeSolution{T};
         end
     end
     return kept
+end
+
+# True iff pole `p`'s nearest grid cell, or any of its 8 neighbours (a 1-ring
+# tolerance = edge gate's final dilation), is set — inline, not `_dilate` (ADR-0023).
+function _in_field_mask(p::Complex, mask::BitMatrix, xs, ys)
+    nx, ny = size(mask)
+    i = argmin(k -> abs(xs[k] - real(p)), 1:nx)
+    j = argmin(k -> abs(ys[k] - imag(p)), 1:ny)
+    @inbounds for dj in -1:1, di in -1:1
+        ii = i + di; jj = j + dj
+        (1 ≤ ii ≤ nx && 1 ≤ jj ≤ ny) || continue
+        mask[ii, jj] && return true
+    end
+    return false
+end
+
+"""
+    edge_gated_windowed_poles(prob::PadeTaylorProblem,
+                              xs::AbstractVector{<:Real},
+                              ys::AbstractVector{<:Real};
+                              window_extent = 20.0, overlap = 6.0,
+                              h = 0.5, order = prob.order, rng_seed = 0,
+                              edge_level = :auto, seed_radius = nothing,
+                              grow_rings = 3, open_radius = 1,
+                              extract_kwargs...)
+        -> Vector{Complex{T}}
+
+The production pole-location driver for FW 2011 Fig 4.7 / 4.8: the
+windowed composite's *seam-free* poles, filtered to the edge-gated
+pole-field mask so the smooth sectors stay empty.  Returns the **pole
+locations** (one `Complex{T}` per pole) for a pole *scatter* plot — not
+a `|u|` field.
+
+## Why both stages are needed
+
+Neither half alone is correct on the PI tritronquée — the worst case,
+pole-free in four of its five sectors:
+
+  - **`edge_gated_pole_field_solve` alone** confines the walk to the
+    pole field, so the smooth sectors stay empty (no *bloom*), but it
+    runs one monolithic, seed-dependent walk and so still carries the
+    Fig 4.7 path-dependence **seam** — a Regime-B pole-field-*interior*
+    grain boundary the confinement does not touch (ADR-0034, worklog
+    077–078).
+  - **`windowed_path_network_solve` alone** cures the seam by
+    construction (every cell hangs off the same short trunk, so there is
+    no cross-branch differential to disagree), but run plain over the
+    whole window it re-admits the smooth-sector **bloom**: the windows
+    are not edge-gated, so IVP error off the tritronquée manifold blooms
+    spurious off-wedge poles.  Measured on the tritronquée over
+    `[-50,50]²`: **7353 poles, 4475 of them spurious off-wedge**, versus
+    the edge-gated baseline's 1496 poles / 0 off-wedge.
+
+The composition takes the seam-free poles from the windowed solve and
+keeps only those that land inside the edge-confirmed pole-field mask.
+Same tritronquée probe: **1452 poles, 0 off-wedge, 97.6 % agreement**
+with the edge-gated poles inside the pole field — seam-free *and*
+bloom-free, with no masked-solve surgery (worklog 078–079, ADR-0034).
+
+## Algorithm
+
+  1. `edge_gated_pole_field_solve(prob, xs, ys; …)` → `field_mask`,
+     the bloom-free pole-field footprint.
+  2. `windowed_path_network_solve(prob, xs, ys; …)` → the seam-free
+     composite solve.
+  3. `windowed_extract_poles(wsol; extract_kwargs…)` → its pole field.
+  4. Keep a pole iff its nearest grid cell — *or* any of that cell's 8
+     neighbours (a 1-ring tolerance matching the edge gate's own final
+     1-ring dilation) — is `true` in `field_mask` (`_in_field_mask`).
+
+Kwargs routing: `window_extent`, `overlap`, `rng_seed` → the windowed
+solve; `edge_level`, `seed_radius`, `grow_rings`, `open_radius` → the
+edge gate; `h`, `order` → both; `extract_kwargs…` → `windowed_extract_
+poles` → `PoleField.extract_poles`.
+"""
+function edge_gated_windowed_poles(prob::PadeTaylorProblem, xs, ys;
+                                   window_extent = 20.0, overlap = 6.0,
+                                   h = 0.5, order = prob.order, rng_seed = 0,
+                                   edge_level = :auto, seed_radius = nothing,
+                                   grow_rings = 3, open_radius = 1,
+                                   extract_kwargs...)
+    egs = edge_gated_pole_field_solve(prob, xs, ys; h = h, order = order,
+                                      edge_level = edge_level, seed_radius = seed_radius,
+                                      grow_rings = grow_rings, open_radius = open_radius)
+    wsol = windowed_path_network_solve(prob, xs, ys; window_extent = window_extent,
+                                       overlap = overlap, h = h, order = order,
+                                       rng_seed = rng_seed)
+    poles = windowed_extract_poles(wsol; extract_kwargs...)
+    return [p for p in poles if _in_field_mask(p, egs.field_mask, xs, ys)]
 end
 
 end # module WindowedComposite

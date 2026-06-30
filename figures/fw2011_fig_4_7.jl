@@ -45,16 +45,20 @@
 # poles where there should be none (confirmed empirically — over
 # [-50,50]² the plain solve's pole field is nearly angle-uniform).
 #
-# So every panel here uses `edge_gated_pole_field_solve` (bead
-# `padetaylor-dmb`, worklog 028): the region-growing solve that starts
-# from a seed at the IC and expands the IVP's target set only into
-# cells the FW §3.2.2 edge detector confirms as pole-field.  For the
-# generic panels (a, c, d) the pole field covers essentially the whole
-# window, so the gated solve grows to fill it — equivalent to the plain
-# solve, just reached safely.  For the panels with smooth regions (b,
-# e, f) the gate keeps the IVP out of them, and the pole-free regions
-# stay correctly empty.  This is FW's own "fully automated" workflow
-# (md:401), uniform across all six panels.
+# So every panel here uses `edge_gated_windowed_poles` (ADR-0034), which
+# composes two cures.  (1) The edge gate (`edge_gated_pole_field_solve`,
+# bead `padetaylor-dmb`, worklog 028) starts from a seed at the IC and
+# expands the IVP's target set only into cells the FW §3.2.2 edge
+# detector confirms as pole-field, so the unbounded smooth sectors stay
+# correctly empty — no spurious-pole *bloom*.  (2) The bounded-window
+# composite (`windowed_path_network_solve`, FW md:147) replaces the one
+# monolithic seed-dependent walk tree with many short independent runs,
+# curing the Fig 4.7 path-dependence *seam* — a pole-field-interior grain
+# boundary the edge gate alone does not touch (ADR-0034, worklog 077-078).
+# `edge_gated_windowed_poles` runs both and keeps only the seam-free
+# windowed poles that fall inside the edge-confirmed mask: seam-free and
+# bloom-free at once.  This productionises FW's own "fully automated"
+# workflow (md:401, md:147), uniform across all six panels.
 #
 # Step length h = 0.5 and Taylor order = 30 are FW 2011's working
 # defaults (md:279).
@@ -103,12 +107,11 @@ for (k, (label, u0, up0)) in enumerate(PANELS)
     prob = PadeTaylorProblem(pI, (u0, up0), (0.0, HALF); order = ORDER)
 
     t0  = time()
-    egs = edge_gated_pole_field_solve(prob, xs, ys;
+    # windowed composite (seam-free, ADR-0034) + edge-gated mask filter (bloom-free)
+    poles = edge_gated_windowed_poles(prob, xs, ys;
                                       h = H_STEP, order = ORDER, grow_rings = GROW)
-    poles = extract_poles(egs.pn_solution)
-    @printf("  %d region-growing passes, %d pole-field cells, %d visited nodes; %d poles extracted; %.1f s\n",
-            egs.iterations, count(egs.field_mask),
-            length(egs.pn_solution.visited_z), length(poles), time() - t0)
+    @printf("  panel %d/%d: %d poles extracted; %.1f s\n",
+            k, length(PANELS), length(poles), time() - t0)
 
     row = (k + 1) ÷ 2          # 1,1,2,2,3,3
     col = isodd(k) ? 1 : 2     # 1,2,1,2,1,2

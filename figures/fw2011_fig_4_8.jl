@@ -24,15 +24,18 @@
 # ----------------------------------------------------------------------
 # Method
 #
-# Same as `fw2011_fig_4_7.jl`: `edge_gated_pole_field_solve` (the
-# region-growing IVP confined to the pole field, FW md:401, bead
-# `padetaylor-dmb`) followed by `PoleField.extract_poles` (bead
-# `padetaylor-xvf`).  FW computed Fig. 4.8 as "a composite of 18
-# independent runs" (md:147) — a pure IVP fill, because this solution
-# carries poles throughout the window with no extended smooth bands.
-# The edge-gated solve reduces to exactly that pure IVP fill when the
-# pole field covers the window, while still confining the path-network
-# safely around the sharp transition region.
+# Same as `fw2011_fig_4_7.jl`: `edge_gated_windowed_poles` (ADR-0034) —
+# FW's own bounded-window composite of independent runs (md:147) wrapped
+# around the region-growing edge-gated solve (FW md:401, bead
+# `padetaylor-dmb`), with the seam-free windowed poles filtered to the
+# edge-confirmed pole-field mask.  FW computed Fig. 4.8 itself as "a
+# composite of 18 independent runs" (md:147); the windowing reproduces
+# that construction directly and cures the Fig 4.7/4.8 path-dependence
+# *seam* — a pole-field-interior grain boundary the edge gate alone does
+# not touch (ADR-0034, worklog 077-078) — while the edge-gated mask keeps
+# any stray smooth cells out of the pole scatter.  This solution carries
+# poles throughout the window, so the gate reduces to a near-full IVP fill
+# while still confining the walk safely around the sharp transition region.
 #
 # Step length h = 0.5, Taylor order = 30 — FW 2011 working defaults
 # (md:279).
@@ -73,12 +76,10 @@ ys = range(YLIM[1], YLIM[2]; step = STEP)
 prob = PadeTaylorProblem(pI, (U0, UP0), (0.0, abs(XLIM[1])); order = ORDER)
 
 t0  = time()
-egs = edge_gated_pole_field_solve(prob, xs, ys;
+# windowed composite (seam-free, ADR-0034) + edge-gated mask filter (bloom-free)
+poles = edge_gated_windowed_poles(prob, xs, ys;
                                   h = H_STEP, order = ORDER, grow_rings = GROW)
-poles = extract_poles(egs.pn_solution)
-@printf("  %d region-growing passes, %d pole-field cells, %d visited nodes; %d poles extracted; %.1f s\n",
-        egs.iterations, count(egs.field_mask),
-        length(egs.pn_solution.visited_z), length(poles), time() - t0)
+@printf("  %d poles extracted; %.1f s\n", length(poles), time() - t0)
 
 # Quantitative companion to the visual acceptance: report the gap in the
 # pole field along the negative real axis.  FW md:271 places the sharp
