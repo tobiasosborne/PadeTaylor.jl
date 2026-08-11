@@ -148,7 +148,7 @@ right but aren't.
   precision-loss caveat documented in ADR-0002.
 
 - **`padeapprox.m` does QR-reweighting beyond GGT 2013 Algorithm 2.**
-  Lines 278–280 of `external/chebfun/padeapprox.m` are NOT in the
+  Lines 111–117 of `external/chebfun/padeapprox.m` are NOT in the
   paper. Port these explicitly; without them, near-tol blocks misbehave
   (RESEARCH.md §2.2).
 

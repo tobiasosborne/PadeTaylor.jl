@@ -348,15 +348,25 @@ This matches the scientist-workbench "honest scope" discipline.
 
 Local source: `external/chebfun/padeapprox.m`. Three lines marked by
 `% reweighting` comments **go beyond GGT 2013 Algorithm 2**
-`[GGT2013: line 236; padeapprox.m lines 278–280]`:
+`[GGT2013: line 236; padeapprox.m lines 111–117]`:
 
 ```matlab
 [U,S,V] = svd(C, 0);
 b = V(:, n+1);                          % null vector gives initial b
 D = diag(abs(b) + sqrt(eps));            % reweighting preserves zeros better
-[Q, R] = qr((C*D).');                    % so does final computation via QR
+[Q, R] = qr((C*D)');                     % so does final computation via QR
 b = D*Q(:, n+1);  b = b / norm(b);       % compensate for reweighting
 ```
+
+> **Transpose warning (corrected 2026-08-11).** This snippet previously
+> reproduced `qr((C*D).')` — MATLAB's **non-conjugating** transpose. That is
+> the pre-July-2018 Chebfun bug; the live source carries the inline comment
+> "until July 2018 there was an erroneous `.'` here"
+> (`external/chebfun/padeapprox.m:113`). For the **complex** Taylor jets that
+> dominate the path-network walker, `.'` vs `'` is a silent-wrong-answer
+> difference. The implementation is already correct — `src/RobustPade.jl:443`
+> and `src/SharedPade.jl:290` both use `adjoint(...)`. **Do not "fix" the code
+> to match an older copy of this document.**
 
 The motivation: **for blocks corresponding to approximation accuracies
 close to `tol`**, the SVD's null vector picks up small noise in

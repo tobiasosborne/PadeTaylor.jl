@@ -17,7 +17,7 @@ Most numerical software for differential equations quietly assumes the answer st
 - **map the pole field** — return the actual locations of the poles as a picture;
 - **handle the six Painlevé equations**, a famous family of "untameable" nonlinear ODEs central to modern mathematical physics.
 
-It is a faithful, test-driven Julia implementation of the methodology of Fornberg & Weideman (2011) and the robust-Padé algorithm of Gonnet, Güttel & Trefethen (2013). **9361 tests pass**; results are cross-validated against closed-form solutions and independent solvers.
+It is a faithful, test-driven Julia implementation of the methodology of Fornberg & Weideman (2011) and the robust-Padé algorithm of Gonnet, Güttel & Trefethen (2013). **9369 tests pass**; results are cross-validated against closed-form solutions and independent solvers.
 
 ---
 
@@ -169,12 +169,14 @@ The package is a layered stack — each tier builds on the one below, and you ca
 | **Multivalued tier** | coordinate transforms (PIII/PV) + Riemann-sheet tracking (PVI) + walker-side cut respect | `pIII_transformed_rhs`, `pV_z_to_ζ`, `pVI_eta_transformed_rhs`, `sheet_index`, `path_network_solve(...; branch_points, cross_branch, grid_sheet)`, `eval_at`, `eval_at_sheet` |
 | **Special-function tier** | Heun functions (general + confluent) via Frobenius-at-0 + path-network walk around the regular singular points | `heun_g`, `heun_c` |
 | **Painlevé layer** | per-equation problem builder + self-describing solution wrapper | `PainleveProblem`, `PainleveSolution`, `tritronquee`, `hastings_mcleod` |
+| **Vector tier** (v0.2, in progress) | the whole stack lifted to systems `y' = f(z, y)`, `y ∈ ℂᵈ`, on a *shared* denominator (type-II Hermite–Padé) — one `Q` per node whose roots are every component's poles | `shared_denominator_pade`, `vector_solve_pade`, `vector_bvp_solve`, `vector_path_network_solve`, `extract_poles_shared_q` |
+| **Higher Painlevé** (v0.2, in progress) | multi-component Painlevé-type systems built on the vector tier: Noumi–Yamada `A_n^(1)` and the Painlevé-I hierarchy | `NoumiYamadaProblem`, `noumi_yamada_backlund`, `painleve_hierarchy`, `pI2_tritronquee_ic` |
 
-Internally the core itself is four layers: an SVD dispatcher (`LinAlg`) → robust Padé conversion (`RobustPade`) → Taylor jet generation (`Coefficients`) and step control (`StepControl`) → the one-step orchestrator (`PadeStepper`). Every source module is a self-contained, literate "chapter" kept under 200 lines. See `docs/adr/0001-four-layer-architecture.md` for the rationale.
+Internally the core itself is four layers: an SVD dispatcher (`LinAlg`) → robust Padé conversion (`RobustPade`) → Taylor jet generation (`Coefficients`) and step control (`StepControl`) → the one-step orchestrator (`PadeStepper`). Every source module is a self-contained, literate "chapter", held to 200 *effective* lines (blank lines and pure docstring blocks excluded) wherever practical — five of the 43 currently exceed it and carry split plans or an ADR that accepted the overrun (`PathNetwork`, `IVPBVPHybrid`, `VectorPathNetwork`, `BVP`, `VectorBVP`; see bead `padetaylor-qum` and `docs/adr/0014-ivp-bvp-hybrid.md`). See `docs/adr/0001-four-layer-architecture.md` for the rationale.
 
 ## Status
 
-**v0.1.0 — research-grade; all architectural tiers shipped.** The package is not yet registered in the Julia General registry. **9361 tests passing, 0 failing** (plus 2 intentional `@test_broken` markers that track known-open-bug fixtures and auto-flip the day each bug is fixed).
+**v0.1.0 — research-grade; all architectural tiers shipped.** The package is not yet registered in the Julia General registry. **9369 tests passing, 0 failing** (plus 2 intentional `@test_broken` markers that track known-open-bug fixtures and auto-flip the day each bug is fixed), as of the last recorded full `Pkg.test()` run on 2026-06-30.
 
 Headline empirical result: the FW 2011 Table 5.1 long-range integration of the equianharmonic Weierstrass ℘-function to `z = 30` reaches a relative error of `2.13·10⁻¹⁴` in 256-bit precision — beating the `8.34·10⁻¹⁴` reported by Fornberg & Weideman.
 
@@ -225,8 +227,8 @@ The repository carries its full design rationale and research record:
 - **`DESIGN.md`** — the original phased execution plan (a Stage-1 snapshot; see `HANDOFF.md` and the status table above for the current state).
 - **`HANDOFF.md`** — the running session log: where the project is, what shipped, and the hard-won lessons.
 - **`CLAUDE.md`** — the project discipline (ground-truth-before-code, test-driven development with mutation-proofing, literate programming, ≤ 200 LOC per module).
-- **`docs/adr/`** — eight accepted Architecture Decision Records (0001–0008), from the four-layer core to the named-transcendent constructors.
-- **`docs/worklog/`** — 31 frozen snapshots of substantive iterations, each recording the frictions surfaced and lessons learnt.
+- **`docs/adr/`** — 34 accepted Architecture Decision Records (0001–0034), from the four-layer core through the Painlevé/Heun layers and the vector stack to the bounded-window composite solve.
+- **`docs/worklog/`** — 79 frozen snapshots of substantive iterations, each recording the frictions surfaced and lessons learnt.
 - **`docs/figure_catalogue.md`** — the figure-acceptance catalogue across the whole Fornberg–Weideman family of papers.
 - **`references/`** — the load-bearing PDFs, each with a markdown extract under `references/markdown/` for line-cited reasoning in commits and ADRs.
 

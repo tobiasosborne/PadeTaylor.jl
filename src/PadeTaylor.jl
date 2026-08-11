@@ -13,8 +13,12 @@ Four algorithmically independent layers, per ADR-0001:
   2. `RobustPade`    — GGT 2013 Algorithm 2 + Chebfun reweighting; the
                        single point of truth for Padé conversion.
   3. `Coefficients`  — Wraps `TaylorSeries.jl::Taylor1{T}` for our use.
-  4. `StepControl`   — Jorba-Zou 2005 §3.2 (default) and FW 2011 §3.1
-                       Padé-root distance (alternative).
+  4. `StepControl`   — Jorba-Zou 2005 §3.3.1 eq. 11 (default) and FW 2011
+                       §3.1 Padé-root distance (alternative).  NB the
+                       "§3.2, eq. 3-8" citation carried by older revisions
+                       of this file and by `RESEARCH.md:528-535` does not
+                       exist in the paper; see `src/StepControl.jl:24-70`
+                       for the refutation and the shipped formula.
   5. `PadeStepper`   — Orchestrates one step: Taylor → Padé → step.
   6. `Problems`      — `PadeTaylorProblem` / `solve_pade` public API.
   7. `PathNetwork`   — FW 2011 §3.1 5-direction wedge path-tree (Tier-2).
@@ -36,6 +40,18 @@ Four algorithmically independent layers, per ADR-0001:
  15. `CoordTransforms`   — Exponential coordinate maps for PIII / PV (FFW 2017 §2.1, Tier-4).
  16. `SheetTracker`      — PVI ζ-plane RHS + winding-number primitives (FFW 2017 §2.2, Tier-5).
  17. `BranchTracker`     — Walker-side cut-crossing predicate + per-branch sheet bookkeeping (ADR-0013).
+
+**This enumeration covers the v0.1 scalar spine only.** The package has since
+grown to 43 source files: the shared-denominator (type-II Hermite–Padé)
+sub-stack `SharedPade{,CellB,Defect,Dispatch}` (ADR-0019/0027/0028), the
+additive v0.2 vector lift `Vector*` (ADR-0020..0023, 0026), the higher-Painlevé
+builders `NoumiYamada{,Symmetry}` / `PainleveHierarchy`, the meromorphic-contract
+guard `OutOfClass` (ADR-0033), the bounded-window composite `WindowedComposite`
+(ADR-0034), plus `Laplace2D`, `EdgeGatedSolve`, `LatticeDispatcher`,
+`IVPBVPHybrid` and `Heun`. **The `include` chain below (and the `export` block
+at the foot of this file) is the authoritative inventory — not this list.**
+Three further files (`PainleveSolution.jl`, `PainleveNamed.jl`,
+`PainleveClosedForm.jl`) are included one level down, inside `module Painleve`.
 
 ## Determinism
 

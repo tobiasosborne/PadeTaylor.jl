@@ -7,9 +7,16 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
-Post-v0.1.0 work, all on `main` and pushed.  Test suite **2447 / 2447
-GREEN** (up from 1311 at the v0.1.0 tag).  21 source modules (up from
-14); 13 ADRs (up from 4); 45 worklog shards (up from 18).
+Post-v0.1.0 work, all on `main` and pushed.  Test suite **9369 pass / 2
+broken / 0 fail** at the last recorded full `Pkg.test()` run (2026-06-30,
+the Fig 4.7 seam cure; up from 1311 at the v0.1.0 tag).  43 source modules
+(up from 14); 34 ADRs (up from 4); 79 worklog shards (up from 18).
+
+> The two `@test_broken` markers are intentional deferred-feature fixtures
+> (`cm-n2` in `corpus_vector_polefield_test`, `pi2-tritronquee` in
+> `corpus_painleve_rational_test`) that auto-flip to "Unexpected Pass" the
+> day their bug is fixed.  Investigate only FAILs.  See
+> `scripts/quality_gate.sh` "EXPECTED-NOISE".
 
 ### Fixed — Fig 4.7 / 4.8 path-dependence seam (bug `padetaylor-vwgl`, ADR-0034, worklogs 077/078/079)
 

@@ -80,7 +80,7 @@ no roots).
 ## The QR-reweighting (ported unchanged from padeapprox.m)
 
 After the SVD picks the null vector `b₀ = Vt[end,:]`, Chebfun's
-`padeapprox.m` (lines 278–280, *beyond* GGT 2013 Algorithm 2 itself)
+`padeapprox.m` (lines 111–117, *beyond* GGT 2013 Algorithm 2 itself)
 refines it: `D = diag(|b₀| + √ε)`, `QR((A_full·D)ᵀ)`, `b = D·Q[:,end]`.
 The column-reweighting better preserves the genuine exact zeros of `b`
 for blocks at accuracy near the tolerance (pillar A §4, last bullet:
@@ -116,7 +116,7 @@ Two failure modes still throw rather than return a NaN/zero lie:
     §2.2 eq. (2.6), p. 12 — the block-Toeplitz null-space system.
   - `src/RobustPade.jl` — the scalar `d=1` special case; conventions
     (`_lower_tri_toeplitz`, QR-reweighting, `b[1]=1`) mirrored here.
-  - `external/chebfun/padeapprox.m` lines 278–280 — QR-reweighting port.
+  - `external/chebfun/padeapprox.m` lines 111–117 — QR-reweighting port.
 """
 module SharedPade
 
@@ -275,7 +275,7 @@ function shared_denominator_pade(jets::AbstractVector{<:AbstractVector{T}},
         end
     end
 
-    # --- Step 5: QR-reweighting (padeapprox.m lines 278–280) ----------------
+    # --- Step 5: QR-reweighting (padeapprox.m lines 111–117) ----------------
     # Ported unchanged from RobustPade's `:svd` path.  `Vt[end,:]` is the
     # smallest-singular-value right null vector = denominator estimate b₀.
     b_init = Vector{T}(Vt[end, :])

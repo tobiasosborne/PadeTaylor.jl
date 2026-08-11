@@ -8,7 +8,154 @@
 > previous session already paid for. The frictions surfaced are
 > recorded in `docs/worklog/001-stages-Z-1-2-handoff.md`.
 
-## ✅ LATEST SESSION (2026-06-30) — Fig 4.7 seam CURED, verified, and pushed. PROJECT UNFROZEN
+## 🧹 LATEST SESSION (2026-08-11) — orientation sweep: TRACKER REPAIRED + Law-2 doc-drift swept. NO code behaviour changed. SUITE NOT RE-RUN
+
+**Headline.** A full-repo orientation pass (9 parallel read-only agents + a
+completeness critic) surfaced two classes of rot, both now fixed: a **stale
+beads database that could have deleted 142 issues from version control**, and a
+spread of **Law-2 doc drift** including three wrong primary-source citations.
+No `src/` behaviour changed — every source edit is docstring/comment-only.
+
+**⚠️ THE SUITE WAS NOT RE-RUN THIS SESSION.** Three `julia` processes belonging
+to *another* project (`DiscreteAnalyticFunction.jl`) were live on the shared
+`~/.julia` depot, so launching `Pkg.test()` would have violated Rule 7
+(precompile-cache contention is depot-wide, not project-wide — **check
+`pgrep -a julia` across ALL projects, not just this one**). The test counts
+written into README/CHANGELOG this session are the **last recorded** run
+(9369 pass / 2 broken / 0 fail, 2026-06-30), labelled as such in both files.
+**First job next session: `scripts/quality_gate.sh full` on an idle box**, then
+drop the "as of the last recorded run" qualifier if it holds.
+
+### 1. Beads tracker REPAIRED (was: a live data-loss hazard)
+
+The `bd` CLI was reading a stale embedded-dolt DB with **169** issues while the
+git-tracked `.beads/issues.jsonl` held **311**. Consequences measured directly:
+two of the three live epics (`krgy`, `xw3`) were **invisible** to `bd`; nine
+issues it called OPEN were CLOSED; `bd show padetaylor-vwgl` (and `sny7`,
+`ingn`, `us19`, `98pe`) returned "no issue found" even though the commits citing
+them are correct.
+
+**Why it was dangerous, not merely annoying:** `.beads/config.yaml` auto-enables
+JSONL export when a git remote exists (it does), `.claude/settings.json` fires
+`bd prime` on SessionStart *and* PreCompact, and `AGENTS.md` mandates a
+`bd dolt push` session close. Any routine `bd close` could have exported the
+stale 169-issue DB over the tracked 311-issue file — **silently deleting 142
+issues, including both invisible epics** — and `bd export` auto-STAGES, so plain
+`git diff` would have read empty.
+
+**Repair performed (safe direction only, DB ← jsonl):** backed up the jsonl,
+`bd import --dry-run`, then `bd import` → DB now 313. Verified semantically
+(python id/status diff): **0 issues lost, 0 status changes on pre-existing
+issues, 0 title changes**; the 2 additions are the phantoms below. Canonical
+counts unchanged at **67 open / 1 in_progress / 245 closed**.
+
+**Two phantom P1s closed.** `padetaylor-ciy` (SharedPade `_toeplitz_block`
+off-by-one) and `padetaylor-bb2` (bug sweep) existed **only** in the stale DB,
+never in the canonical jsonl, and topped `bd ready` as though they were the most
+urgent work. Both verified superseded before closing: `ciy` was settled
+mathematically in `docs/worklog/066-sharedpade-window-rootcause-resolved.md`
+(answer: `c_{m+1}`, the "+2", at every `d`) and shipped as `d3a`/`3p9c`, both
+closed 2026-06-02; `bb2` became epic `l7yt`, closed 2026-06-14.
+
+**Standing rule going forward:** `bd` and the jsonl now agree, but treat any
+`bd` write as repo-modifying and check `git diff --cached .beads/` after it.
+Note also that `bd` is **single-writer** — a subagent running `bd show` locks
+out the parent with an "exclusive lock" error.
+
+### 2. Law-2 doc drift swept
+
+**Three wrong primary-source citations (Law 1 violations), all corrected:**
+- `external/chebfun/padeapprox.m` QR-reweighting cited as **lines 278–280** in
+  `CLAUDE.md:151`, `RESEARCH.md:351` and `src/SharedPade.jl` (×3). **That file
+  is 157 lines long.** The real location is **111–117**, cited correctly only in
+  `src/RobustPade.jl:22-23`. All five sites fixed.
+- `RESEARCH.md`'s reproduced reweighting snippet used MATLAB's
+  **non-conjugating** `qr((C*D).')` — the pre-July-2018 Chebfun bug (the live
+  source carries the comment "until July 2018 there was an erroneous `.'` here"
+  at `padeapprox.m:113`). For the **complex** jets that dominate the
+  path-network walker this is silent-wrong-answer territory. Corrected to `'`
+  **plus an explicit warning block** telling the next reader NOT to "fix" the
+  code to match an older copy of the doc — `src/RobustPade.jl:443` and
+  `src/SharedPade.jl:290` already use `adjoint(...)` and are right.
+- `src/PadeTaylor.jl` cited Jorba-Zou "§3.2" for the step formula. Real is
+  **§3.3.1 eq. 11**; the "§3.2 eq. 3-8" formula in `RESEARCH.md:528-535` is a
+  **hallucination** that appears nowhere in the paper (`grep -c '0\.7'` → 0).
+  Pointer added to `src/StepControl.jl:24-70`, which carries the refutation.
+
+**Stale self-description corrected:**
+- `CHANGELOG.md` `[Unreleased]` preamble said "2447 tests, 21 source modules,
+  13 ADRs, 45 worklogs" → now 9369 / 43 / 34 / 79, with the expected-noise note.
+- `README.md`: 9361 → 9369 tests (×2, both labelled with run provenance);
+  "eight accepted ADRs (0001–0008)" → 34; "31 worklogs" → 79.
+- `README.md` claimed **"Every source module … kept under 200 lines"** — false
+  by the repo's own Rule-6 measure. **Five files exceed it** (effective LOC:
+  `PathNetwork` 513, `IVPBVPHybrid` 290, `VectorPathNetwork` 263, `BVP` 242,
+  `VectorBVP` 207). Reworded honestly, pointing at bead `qum` and ADR-0014.
+- `README.md`'s architecture table documented **only** the v0.1 scalar tier
+  while the whole v0.2 vector stack is already exported from the top-level
+  module. Added two rows (vector tier; higher-Painlevé builders).
+- `src/PadeTaylor.jl`'s architecture docstring enumerated 17 modules against 39
+  includes. Added a block naming the post-v0.1 additions and stating that **the
+  include chain + export block are authoritative, not the list**.
+- `figures/README.md`'s Fig 4.7 row and acceptance paragraph still described the
+  pre-ADR-0034 `edge_gated_pole_field_solve` driver; the scripts were rewired to
+  `edge_gated_windowed_poles` in commit `1b45854`. Both updated.
+
+### 3. Found, NOT fixed — filed for a future session
+
+- **Three git-tracked memories carry user veto force but never auto-load.**
+  They live at `.claude/projects/-home-tobias-Projects-PadeTaylor-jl/memory/`,
+  keyed `-home-tobias-…`, while the live session path is
+  `-home-tobiasosborne-…`. **Read them manually every session.** They forbid:
+  hardwiring any absolute length scale ("scale-fixing heresy" — `h` and every
+  compared length must derive from local pole spacing; a fixed-`h` "coverage
+  ceiling" is a scale-mismatch artifact, *not* an architectural limit); porting
+  `PathNetwork._solve_with_schwarz_reflection` to the vector stack; and running
+  long Julia jobs without `flush(stdout)` phase markers + `stdbuf -oL -eL … |
+  tee` (short-interval polling learns nothing — Julia block-buffers under
+  redirection).
+- **`AGENTS.md` contradicts `CLAUDE.md`** — its auto-generated beads block lists
+  `bd edit` among usable commands (CLAUDE.md Rule 8 bans it outright) and
+  mandates a `bd dolt push` close. Treat that block as tool boilerplate, not
+  project policy; CLAUDE.md wins (Rule 13).
+- **The Documenter build is orphaned from every quality-gate tier.**
+  `julia --project=docs docs/make.jl` runs in no tier of
+  `scripts/quality_gate.sh`, covers **14 of 43** modules, and is configured
+  `checkdocs = :none` with `warnonly = [:missing_docs, …]` — so **it builds
+  GREEN no matter how far the API drifts**. A green docs build is not evidence
+  that new public API is documented. `docs/src/api.md` `@autodocs` a module
+  (`PadeTaylor.Painleve`) that is absent from `make.jl`'s MODULES list.
+- **Root `Manifest.toml` is git-tracked and pins `julia_version = "1.12.5"`;
+  the installed toolchain is 1.12.3.** The first `Pkg` operation rewrites a
+  committed file and dirties a clean tree — that churn is not work; `git
+  checkout Manifest.toml` after.
+- **`external/chebfun/padeapprox.m` is gitignored** and absent from a fresh
+  clone, as are the Arblib/TaylorSeries/TaylorIntegration/Polynomials/DMSUITE
+  clones. Only `external/probes/` (154 files) is tracked. Re-clone shallowly
+  before citing them.
+- **`docs/test_corpus/ERRATA.md` is load-bearing and under-referenced** — twelve
+  cases where the research *catalogue* was wrong and the library right, each
+  pinned with anti-regression guards. Two a newcomer will otherwise get
+  backwards: the PI tritronquée's first real pole is at **z ≈ +2.3841688** with
+  a pole-free negative axis (the −2.384 in circulation is a different PI
+  normalisation), and `cm-n2-imaginary-collision` has **no real collision** —
+  which is precisely why one of the two live `@test_broken` markers exists.
+- **ADR-0006:150-159's `prob.order` warning is stale.** Bead `9xf` is closed and
+  `src/PathNetwork.jl:378` now defaults `order = prob.order`. More generally:
+  ADRs record constraints *as of writing* — cross-check against current `src/`.
+
+### 4. Next up (canonical ready queue, from `.beads/issues.jsonl`)
+
+Three live epics: **`0ln`** (v0.2 vector, in_progress, 55/60 — open tails
+`0ln.21` edge detection, `0ln.22` sheet tracking, `0ln.19` docs, `0ln.27`
+ChebUtil de-dup, `0ln.39` asymptotic seed); **`krgy`** (test-hardening, 14/15 —
+only `krgy.15` metamorphic MR-02/07/09); **`xw3`** (Padé-aware honest-disc gate,
+six-phase P1–P6, entirely untouched, `x1y` the only ready entry point). Plus
+`us19` (P3, the one Fig 4.7 seam residual — perimeter pole flicker), `98pe`
+(P3, mutation survivors — `src/Coefficients.jl:199` up-resync is a REAL gap),
+and the P3 doc-vs-code chores `rsln` / `tqvz` / `39cb`.
+
+## ✅ SESSION (2026-06-30) — Fig 4.7 seam CURED, verified, and pushed. PROJECT UNFROZEN
 
 **Headline.** The P0 path-dependence seam (`padetaylor-vwgl`) is **fixed** and the
 freeze is lifted. The bounded-window composite scoped the day before (worklog 078)
@@ -43,9 +190,9 @@ separate, milder, second-order effect. Not the seam.
 **Beads.** Closed: `vwgl` (P0), `xwzf` (impl), `sny7` (gate), `ingn` (℘ verify, PASS),
 `mro9` (superseded by the post-hoc-filter driver). Open: `us19` (P3 residual).
 
-**Working tree.** `figures/output/fw2011_fig_4_1.png` remains a PRE-EXISTING
-uncommitted change (the imaginary-axis BVP figure, unrelated to the seam) — left
-untouched this session; regenerate or `git checkout` it as you see fit.
+**Working tree.** ~~`figures/output/fw2011_fig_4_1.png` remains a PRE-EXISTING
+uncommitted change~~ — **RESOLVED**: verified clean 2026-08-11 (`git status
+--porcelain` empty, `main` in sync with `origin/main`). Nothing outstanding.
 
 ## 🛑 SESSION (2026-06-29, later) — Fig 4.7 seam CURE SCOPED + CONFIRMED by measurement (windowed composite)
 

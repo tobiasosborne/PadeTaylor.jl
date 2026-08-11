@@ -57,7 +57,7 @@ a runnable script.
 | `fw2011_fig_4_3.jl` | FW 2011 Fig 4.3 (`...md:243-245`) | `\|u(z)\|` pole-field surface, NIST Handbook example `u(0)=0, u'(0)=1.8518` |
 | `fw2011_fig_4_1.jl` | FW 2011 Fig 4.1 (`...md:214-229`) | near-tritronquée `\|u(z)\|` surface composed by FW's 3-step recipe: (i) imaginary-axis `bvp_solve`, (ii) two `edge_gated_pole_field_solve` run-outs, (iii) per-row `bvp_solve` smooth-band fill |
 | `fw2011_fig_4_4.jl` | FW 2011 Fig 4.4 (`...md:253-255`) | `\|u(z)\|` pole-field surface, `u(0)=0, u'(0)=1.8519` — the tronquée-transition companion to Fig 4.3 |
-| `fw2011_fig_4_7.jl` | FW 2011 Fig 4.7 (`...md:307-308`) | six PI pole-location scatters over `[-50,50]²` for six IC choices; each via `edge_gated_pole_field_solve` + `extract_poles`; panel (f) is the sector-confined tritronquée |
+| `fw2011_fig_4_7.jl` | FW 2011 Fig 4.7 (`...md:307-308`) | six PI pole-location scatters over `[-50,50]²` for six IC choices; each via `edge_gated_windowed_poles` (ADR-0034 — windowed composite for a seam-free pole set, edge-gated mask filter for a bloom-free one); panel (f) is the sector-confined tritronquée |
 | `fw2011_fig_4_8.jl` | FW 2011 Fig 4.8 (`...md:312-314`) | PI pole-location scatter, `u(0)=-5, u'(0)=0`, over `[-90,30]×[-30,30]` — the sharp pattern transition near `Re(z)≈-60` |
 | `fw2011_fig_5_1.jl` | FW 2011 Fig 5.1 (`...md:281-318`) | Weierstrass-℘ test problem: analytic ℘ pole lattice + the Padé-integrator path to `z=30` |
 | `fw2011_fig_5_2.jl` | FW 2011 Fig 5.2 (`...md:320-326`) | `log₁₀`(rel-err) surface + accuracy/time contours over the `(order,h)` plane — the `order=30, h=0.5` justification |
@@ -87,8 +87,11 @@ not part of the figure scripts. Fig 4.1 is a visual `|u(z)|`-surface
 match for FW's 3-step BVP+IVP+BVP composition, cross-validated by
 `test/fw_fig_41_test.jl` `FF.2.*` (the step-(ii) IVP run-out and the
 step-(i) BVP spine agree to ≤1e-6 — independent methods). Fig 4.7 is a six-panel visual
-pole-location match (generic panels reduce to the plain pure-IVP fill;
-panel (f) the tritronquée is sector-confined by the edge-gated solve);
+pole-location match; both it and Fig 4.8 are driven by
+`edge_gated_windowed_poles` (ADR-0034), which composes the bounded-window
+composite (seam-free: pole-set seed-invariance 77%→99.4%, gated in-suite by
+`test/field_seam_test.jl`) with the edge-gated pole-field mask (bloom-free:
+off-wedge poles 4475→0 on panel (f), the sector-confined tritronquée).
 Fig 4.8 is a visual match for the pattern transition near `Re(z)≈-60`.
 Fig 5.1 is a match for the ℘ pole
 lattice + integrator path; Fig 5.2 meets the catalogue's quantitative
