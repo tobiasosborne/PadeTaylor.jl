@@ -25,7 +25,7 @@ session scratchpad; the beads carry the evidence.
 ### 0. Suite status
 Full gate GREEN at session start on `bed1e22`. Every later commit ran its
 touched test files standalone + `scripts/quality_gate.sh fast`; the FINAL full
-gate on HEAD `see git log` (after 7zw): **9501 pass / 2 broken / 0 fail, 17m00s, GREEN** — +132 tests this session.
+gate on HEAD `6d4047b` (after 7zw, before this handoff commit): **9501 pass / 2 broken / 0 fail, 17m00s, GREEN** — +132 tests this session.
 
 ### 1. Bugs fixed (all mutation-proven, Rule 4)
 - `ked0` (P1): `shared_denominator_pade` zero-input test was ABSOLUTE (`‖c‖ ≤ tol`)
