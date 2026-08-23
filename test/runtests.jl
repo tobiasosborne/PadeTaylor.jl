@@ -1,9 +1,22 @@
 using Test
 using PadeTaylor
 
+# `scripts/quality_gate.sh fast` runs ONLY the static-analysis gate, but that
+# file needs the test-target deps (Aqua, JET, ExplicitImports), which live in
+# Project.toml [extras] and are visible only inside `Pkg.test`'s sandbox env.
+# So the fast tier calls `Pkg.test(test_args=["quality-only"])` and we short-
+# circuit here.  (Before 2026-08-23 the tier ran the file under --project=.
+# and silently depended on Aqua being in the user's global env — bead 0dw7.)
+if "quality-only" in ARGS
+    @testset "PadeTaylor.jl (quality-only)" begin
+        include("quality_test.jl")
+    end
+    exit(0)
+end
+
 @testset "PadeTaylor.jl" begin
     @testset "umbrella loads" begin
-        # Confirms the umbrella module + its sub-modules (count asserted below) load cleanly.
+        # Confirms the umbrella module + its sub-modules load cleanly (29 representative ones asserted).
         @test isdefined(PadeTaylor, :LinAlg)
         @test isdefined(PadeTaylor, :RobustPade)
         @test isdefined(PadeTaylor, :SharedPade)

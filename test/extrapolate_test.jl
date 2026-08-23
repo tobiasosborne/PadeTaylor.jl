@@ -48,10 +48,35 @@ using PadeTaylor
         @test isfinite(real(up))
         @test isfinite(imag(up))
         # Note: the Padé is evaluated WAY past |t| = 1 (~17 units
-        # from nearest visited node at h=0.5), so the value will
-        # be very inaccurate — but it IS finite, which is what
-        # `extrapolate=true` promises.  We don't pin its value
-        # (degenerate extrapolation, not a meaningful target).
+        # from nearest visited node at h=0.5); measured 2026-08-23
+        # (bead padetaylor-ps4g): rel err 7.0e-6 at z=10, 1.7e-8 at
+        # z=8, 5.5e-12 at z=6 — graceful degradation, per ADR-0015.
+        # The `isfinite` checks above are the kwarg's promise; the
+        # VALUE pin lives in SX.1.2b below.
+    end
+
+    # ---- SX.1.2b — extrapolate=true VALUE pin just outside the disc -
+    # Bead padetaylor-ps4g (Rule 5): `isfinite` alone would pass a
+    # Padé evaluated at the wrong local `t`.  The IC is entire with
+    # closed form u(z) = exp(z - z₀) = exp(z), so the extrapolated
+    # value has an exact oracle.  Every query below is OUTSIDE every
+    # visited disc (default mode returns NaN — asserted, so the test
+    # cannot silently drift back onto the in-disc path) with local
+    # |t| ∈ (1, 3].  Measured 2026-08-23: rel err ≤ 7.2e-16 for u and
+    # u' at all six points (exp is entire; order-20 Padé is essentially
+    # exact at |h·t| ≤ 1.5).  Pinned at rtol=1e-12 — 4 orders looser
+    # than measured, 12 orders tighter than the ADR-0015 "degrades
+    # gracefully" floor; a wrong-`t` evaluation is off by O(1).
+    @testset "SX.1.2b: extrapolate=true pins to exp(z) just outside disc" begin
+        outside = ComplexF64[2.6+0im, 2.75+0im, 3.0+0im,
+                             -0.6+0im, -0.75+0im, 2.0+0.75im]
+        for z in outside
+            u_off, _ = eval_at(sol, z)
+            @test isnan(real(u_off))            # truly outside every disc
+            u, up = eval_at(sol, z; extrapolate = true)
+            @test isapprox(u,  exp(z - z₀); rtol = 1e-12)
+            @test isapprox(up, exp(z - z₀); rtol = 1e-12)
+        end
     end
 
     # ---- SX.1.3 — eval_at inside disc: extrapolate kwarg no-op ----
@@ -161,3 +186,12 @@ end # @testset extrapolate
 #     guard.  Verified bite: 1 RED of 30 — SX.1.5 — the far-cell
 #     eval_at_sheet returns finite instead of NaN under default
 #     extrapolate=false.
+#
+#   Mutation X4  (bead padetaylor-ps4g, 2026-08-23; 48 GREEN
+#     unmutated)  --  in eval_at, evaluate at the wrong local t
+#     (`t = (z_CT - z_v) / h_v` → `t = (z_CT - z_v) / (2h_v)`).
+#     Verified bite: 12 RED of 48 — SX.1.2b only: every u and u' pin
+#     at the six outside-disc points.  SX.1.3 / SX.1.6 compare
+#     on-vs-off (both go through the mutated line) so they do not
+#     bite, and SX.1.2's `isfinite` checks do not bite either — that
+#     was the Rule-5 gap this pin closes.

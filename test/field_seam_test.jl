@@ -129,6 +129,43 @@ end
     end
 end
 
+# ----------------------------------------------------------------------------
+# FSEAM.3  SINGLE-WINDOW DEGENERACY WARNING (bead padetaylor-fqwf).
+#          `_tile_centers` yields ONE window on an axis when window_extent ≥
+#          that axis's span, i.e. the "windowed" composite silently becomes
+#          the monolithic path-dependent solve the module exists to replace.
+#          The impl must @warn (naming the bead and the fix) on that axis,
+#          and must stay SILENT when the tiling is genuine.  Cheap problem:
+#          u'' = u' on a 5×5 lattice, so this adds well under a second.
+# ----------------------------------------------------------------------------
+@testset "FSEAM.3: warn when window_extent ≥ span collapses to one window" begin
+    f    = (z, u, up) -> up
+    prob = PadeTaylorProblem(f, (1.0 + 0im, 1.0 + 0im), (0.0 + 0im, 3.0 + 0im);
+                             order = 20)
+    xs = ys = range(-1.0, 1.0; length = 5)       # span 2.0 on both axes
+
+    # window_extent 20 ≥ span 2 on BOTH axes ⇒ exactly two warnings (x, y),
+    # each naming the bead and the fix.
+    rx = r"window_extent=20.0 ≥ x-span=2.0.*padetaylor-fqwf.*reduce window_extent"
+    ry = r"window_extent=20.0 ≥ y-span=2.0.*padetaylor-fqwf.*reduce window_extent"
+    wsol1 = @test_logs (:warn, rx) (:warn, ry) windowed_path_network_solve(
+        prob, xs, ys; window_extent = 20.0, overlap = 0.0, h = 0.5)
+    @test length(wsol1.centers) == 1                 # it really is 1×1
+    @test all(isfinite, wsol1.grid_u)                # and still a valid solve
+
+    # Mixed: collapse on y only (xs span 4 > extent 3; ys span 2 < 3).
+    xs4 = range(-2.0, 2.0; length = 9)
+    wsol_y = @test_logs (:warn, r"ONE window on y") windowed_path_network_solve(
+        prob, xs4, ys; window_extent = 3.0, overlap = 0.0, h = 0.5)
+    @test length(wsol_y.centers) == 2                # 2×1 tile grid
+
+    # Genuine tiling (extent 1 on span 2 ⇒ 2×2): NO warning may be emitted.
+    wsol4 = @test_logs min_level = Base.CoreLogging.Warn windowed_path_network_solve(
+        prob, xs, ys; window_extent = 1.0, overlap = 0.5, h = 0.5)
+    @test length(wsol4.centers) == 4
+end
+
+
 # ============================================================================
 # MUTATION-PROOF PROCEDURE (Rule 4) — the orchestrator EXECUTES each mutation,
 # confirms the predicted RED, then restores the source byte-clean.
@@ -158,6 +195,13 @@ end
 # seed-dependent poles (and does not DROP REAL poles) is bead padetaylor-ingn
 # (Weierstrass-℘ recall/precision truth anchor), out of scope for this seed-
 # invariance gate.
+#
+# Mutation F3 (bead padetaylor-fqwf, 2026-08-23; FSEAM.3 only, GREEN 7/7
+#   unmutated) — in `src/WindowedComposite.jl` `_warn_single_window`, change
+#   the guard `n == 1 && span > 0 || return` to `return` (never warn).
+#   Measured bite: 2 RED of 7 — the two `@test_logs (:warn, …)` blocks
+#   (x+y, and y-only) each fail with "Log Test Failed" (0 warnings seen);
+#   the silent-tiling check stays GREEN as it must.  Restored.
 #
 # STANDALONE RUN:
 #   julia --project=. test/field_seam_test.jl

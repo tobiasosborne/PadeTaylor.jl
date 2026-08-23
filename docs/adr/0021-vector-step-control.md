@@ -70,12 +70,31 @@ lost, it is a one-keyword opt-in.
 
 ## Why the 2-norm default
 
-Norm equivalence gives `‖s_k‖_∞ ≤ ‖s_k‖_2 ≤ √d · ‖s_k‖_∞`.  Since the
-step is *decreasing* in the coefficient measure, the 2-norm — being
-**at least as large** as the `∞`-norm — yields a step that is **at most
-as large**: the 2-norm is the *more conservative* choice, never
-overstepping relative to per-component-min.  Two reasons make it the
-right default:
+Norm equivalence gives `‖s_k‖_∞ ≤ ‖s_k‖_2 ≤ √d · ‖s_k‖_∞`.  In
+**absolute mode** (`ε = eps_abs`, norm-independent) the step
+`(ε / ‖s_k‖)^(1/k)` is *decreasing* in the coefficient measure, so the
+2-norm — being **at least as large** as the `∞`-norm — yields a step
+that is **at most as large**: there the 2-norm is the more conservative
+choice (test VSC.1.3).
+
+**This ordering does NOT hold in relative mode** (corrected 2026-08-23,
+bead `padetaylor-divo`; the original text of this section claimed it
+held unconditionally).  `ε` is resolved as `eps_rel · vnorm(c_0)`
+(`src/VectorStepControl.jl`, the `ε = …` line after `c0_norm`), i.e.
+the same norm rescales the numerator, and `‖c_0‖_2 / ‖c_0‖_∞` can be as
+large as `√d`.  Hand-verified counterexample, pinned by test VSC.1.3b:
+`c_0 = [1, 1]`, `c_1 = c_2 = [1, 0]`, `eps_abs = 1e-12`,
+`eps_rel = 1e-10` → `h_∞ = 1e-10`, `h_2 = √2 · 1e-10` (measured ratio
+`1.4142135623730954`).  So the honest statement is: the 2-norm step is
+never larger than the `∞`-norm step in absolute mode, and at most `√d`
+times larger in relative mode.  Jorba–Zou's own relative-error estimate
+(eq. 10, `references/markdown/JorbaZou2005_taylor_IVP_package_ExpMath14/JorbaZou2005_taylor_IVP_package_ExpMath14.md:601-604`)
+divides by the **sup norm** of `max{|x_n|, |ẋ_n|}`; a caller who wants
+the paper's relative mode passes `vnorm = v -> norm(v, Inf)`.
+
+The policy stays the 2-norm: the design rule is *one consistent norm on
+both sides of `ε / ‖s_k‖`*, not "always the smaller step".  Two reasons
+make it the right default:
 
   1. **It is the natural truncation-error norm.**  The local truncation
      error of the vector jet is the Euclidean length of the

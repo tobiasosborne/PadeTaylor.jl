@@ -17,6 +17,7 @@ asserts an invariant against a known-correct value (Rule 5):
     VSC.1.2  known vector jet    — hand-computed coefficient norms ⇒
                                    closed-form min over k of (ε/‖c_k‖)^(1/k)
     VSC.1.3  norm choice         — 2-norm vs ∞-norm documented ordering
+    VSC.1.3b relative mode       — ordering VIOLATED by √2 (bead divo)
     VSC.1.4  adaptive driver     — :jorba_zou integrates the harmonic
                                    system, h-ceiling respected; :fixed
                                    output unchanged
@@ -104,6 +105,29 @@ using PadeTaylor.VectorProblems:    VectorPadeTaylorProblem, vector_solve_pade
         @test h_2   ≈ min((ε / (3 * sqrt(2)))^(1 / 2),
                           (ε / (3 * sqrt(2)))^(1 / 3)) rtol = 1e-14
         @test h_inf ≈ min((ε / 3.0)^(1 / 2), (ε / 3.0)^(1 / 3)) rtol = 1e-14
+    end
+
+    @testset "VSC.1.3b relative mode — 2-norm step EXCEEDS ∞-norm by √2" begin
+        # Bead padetaylor-divo.  VSC.1.3 is absolute mode (eps_rel =
+        # eps_abs, and ε = eps_abs is norm-independent).  In RELATIVE
+        # mode ε = eps_rel · vnorm(c₀) is rescaled by the SAME norm, so
+        # the "2-norm is never less conservative" ordering breaks.
+        # c₀ = [1,1] (spread: ‖·‖₂ = √2, ‖·‖_∞ = 1), c₁ = c₂ = [1,0]
+        # (concentrated: both norms = 1).  With eps_abs = 1e-12 <
+        # eps_rel·‖c₀‖ = 1e-10 the relative branch fires in both norms:
+        #   h_∞ = min over k∈{1,2} of (1e-10·1 / 1)^(1/k)    = 1e-10
+        #   h_2 = min over k∈{1,2} of (1e-10·√2 / 1)^(1/k)   = √2·1e-10
+        # Measured 2026-08-23: h_2 = 1.4142135623730953e-10,
+        # h_∞ = 1.0e-10, ratio 1.4142135623730954.  Jorba–Zou eq. 10
+        # (md:601-604) normalises the relative error by the sup norm.
+        jets = [Float64[1.0, 1.0, 1.0], Float64[1.0, 0.0, 0.0]]
+        h_2   = vector_step_jorba_zou(jets, 1e-12; eps_rel = 1e-10)
+        h_inf = vector_step_jorba_zou(jets, 1e-12; eps_rel = 1e-10,
+                                      vnorm = v -> norm(v, Inf))
+        @test h_inf ≈ 1e-10           rtol = 1e-14
+        @test h_2   ≈ sqrt(2) * 1e-10 rtol = 1e-14
+        @test h_2 / h_inf ≈ sqrt(2)   rtol = 1e-14
+        @test h_2 > h_inf             # the documented ordering is violated here
     end
 
     @testset "VSC.1.4 adaptive driver — :jorba_zou vs :fixed" begin
@@ -217,6 +241,16 @@ using PadeTaylor.VectorProblems:    VectorPadeTaylorProblem, vector_solve_pade
     # All three mutations bit; impl restored to the correct state and
     # both this suite (69/69) and the V3b suite (72/72) re-confirmed
     # GREEN.
+    #
+    #   M4 — (bead padetaylor-divo, 2026-08-23; baseline 73/73 GREEN)
+    #        swap the norm that rescales ε: `c0_norm = vnorm(...)` →
+    #        `c0_norm = norm(_coef_vector(jets, 0, d), Inf)`, i.e. ε is
+    #        always resolved with the ∞-norm regardless of `vnorm`.
+    #        Under this mutation h_2 = h_∞ = 1e-10 in VSC.1.3b.
+    #        Observed: 4 of 73 failed — 3 in VSC.1.3b (the h_2 pin,
+    #        the ratio pin, and h_2 > h_inf) plus 1 in VSC.1.2 (whose
+    #        closed form also resolves ε through the 2-norm) — BIT.
+    #        Restored; 73/73.
     # -------------------------------------------------------------------------
 
 end

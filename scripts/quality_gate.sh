@@ -51,15 +51,14 @@
 #
 # TIERS (argument-selected; default `full`):
 #   fast  — static-analysis gate only (test/quality_test.jl: Aqua + JET +
-#           ExplicitImports), ~1.5 min cold. Pre-commit. NOTE: this is the
-#           STATIC-ANALYSIS subset only. The type-stability gate is deliberately
-#           NOT in `fast`: it depends on AllocCheck, which is a test-target dep
-#           NOT resolvable in the plain `--project=.` env (it lives only inside
-#           the Pkg.test sandbox), and reconstructing that sandbox by hand would
-#           be exactly the brittle shortcut a senior does not ship (Rule 9). Run
-#           `full` to exercise type-stability. quality_test.jl, by contrast, is
-#           self-contained and its deps stack cleanly outside the sandbox —
-#           verified standalone GREEN, krgy.10.
+#           ExplicitImports), ~1.5 min warm. Pre-commit. Runs as
+#           `Pkg.test(test_args=["quality-only"])`: runtests.jl short-circuits
+#           to quality_test.jl inside the Pkg.test sandbox, which is the ONLY
+#           env where the [extras] test deps resolve. (Until 2026-08-23 the
+#           tier ran the file under plain --project=. and passed only because
+#           Aqua/JET happened to sit in the user's GLOBAL env; once Aqua left
+#           it, `fast` was RED on a clean tree — bead 0dw7.) The type-stability
+#           gate (AllocCheck) is still deliberately NOT in `fast`; run `full`.
 #   full  — the authoritative correctness suite: `Pkg.test()`. ~24 min. The
 #           always-on gate; includes ALL in-suite gates (static analysis,
 #           property, metamorphic, certified-oracle, differential, convergence,
@@ -96,7 +95,7 @@ usage() {
 # ── Per-tier command plans (printed verbatim by --dry-run; run in order) ───────
 # Each element is a "<label>|<command>" the runner executes as ONE julia child.
 fast_plan() {
-  echo "static-analysis (quality_test.jl)|$JULIA --project=$REPO $REPO/test/quality_test.jl"
+  echo "static-analysis (quality_test.jl)|$JULIA --project=$REPO -e 'using Pkg; Pkg.test(test_args=[\"quality-only\"])'"
 }
 full_plan() {
   echo "correctness suite (Pkg.test)|$JULIA --project=$REPO -e 'using Pkg; Pkg.test()'"
@@ -157,7 +156,10 @@ interpret() {
       echo "        ($broken broken is EXPECTED: intentional @test_broken markers —"
       echo "         v1ub auto-flip + 2 deferred-feature (cm-n2, pi2-tritronquee)."
       echo "         q0yq/53tu/61um were FIXED. NOT a regression; investigate only"
-      echo "         FAILs. bd memory corpus-v2-expected-broken-count.)"
+      echo "         FAILs. Two dormant CONDITIONAL markers at"
+      echo "         test/kkg_pi2_figure_test.jl:154,178 count only if Stage-B fails;"
+      echo "         a Broken count of 4 means the Stage-B march regressed and must be"
+      echo "         investigated. bd memory corpus-v2-expected-broken-count.)"
       return 0
     fi
     echo "  FAIL  correctness suite — $failed failed (exit $rc). INVESTIGATE: real"

@@ -76,17 +76,38 @@ component-magnitudes of the `k`-th coefficient:
     and the `∞`-norm choice coincide here; the `∞`-norm is the cleaner
     statement of the same conservative rule.
   - **2-norm** (the default) keys off `sqrt(Σ_i |jets[i][k+1]|²)`.
-    Since `‖s_k‖_∞ ≤ ‖s_k‖_2 ≤ √d · ‖s_k‖_∞`, the 2-norm is **at least
-    as large** as the `∞`-norm, hence the 2-norm step is **at most as
-    large** — the 2-norm is the *more conservative* default.
+    Since `‖s_k‖_∞ ≤ ‖s_k‖_2 ≤ √d · ‖s_k‖_∞`, the 2-norm of each
+    coefficient vector is **at least as large** as its `∞`-norm.
 
-We default to the 2-norm because it is the truncation-error norm the
-Jorba–Zou bound is naturally stated in (the local truncation error of
-the vector jet is the Euclidean length of the per-component error
-vector), and it does not discard the contribution of the
-non-dominant components the way the `∞`-norm does.  A caller who wants
-the per-component-min idiom passes `vnorm = v -> norm(v, Inf)` and gets
-it exactly.
+**When the 2-norm is the more conservative choice — and when it is
+not.**  In *absolute* mode (`eps_abs ≥ eps_rel · vnorm(c_0)`, so
+`ε = eps_abs` is norm-independent) the step `(ε / ‖s_k‖)^(1/k)` is
+decreasing in `‖s_k‖`, hence the 2-norm step is **at most as large** as
+the `∞`-norm step — the 2-norm is the more conservative default there
+(test VSC.1.3).  In *relative* mode the ordering **does not hold**: `ε`
+itself is rescaled by the *same* `vnorm` applied to `c_0` (the
+`ε = eps_rel · vnorm(c_0)` branch below), so the norm enters both the
+numerator and the denominator of `ε / ‖s_k‖`.  Counterexample (bead
+`padetaylor-divo`, test VSC.1.3b): `c_0 = [1, 1]`, `c_1 = c_2 = [1, 0]`,
+`eps_abs = 1e-12`, `eps_rel = 1e-10` gives `h_∞ = 1e-10` but
+`h_2 = √2 · 1e-10` — the 2-norm step is *larger* by exactly
+`‖c_0‖_2 / ‖c_0‖_∞ = √2`, because `c_0` is spread across components
+while the later coefficients are concentrated in one.  In general the
+2-norm step exceeds the `∞`-norm step by at most a factor `√d` in
+relative mode, and never in absolute mode.  Jorba–Zou's own relative
+error (their eq. 10, `references/markdown/JorbaZou2005_taylor_IVP_package_ExpMath14/JorbaZou2005_taylor_IVP_package_ExpMath14.md:601-604`)
+normalises by the **sup norm** of `x_n`, so `vnorm = v -> norm(v, Inf)`
+is the choice closest to the paper's relative mode.
+
+We nonetheless default to the 2-norm because it is the truncation-error
+norm the Jorba–Zou bound is naturally stated in (the local truncation
+error of the vector jet is the Euclidean length of the per-component
+error vector), and it does not discard the contribution of the
+non-dominant components the way the `∞`-norm does.  The policy is
+"one consistent norm for both `ε` and `‖s_k‖`", not "always the
+smaller step".  A caller who wants the per-component-min idiom (or
+the paper's sup-norm relative mode) passes `vnorm = v -> norm(v, Inf)`
+and gets it exactly.
 
 ## The d = 1 reduction — the primary correctness oracle
 

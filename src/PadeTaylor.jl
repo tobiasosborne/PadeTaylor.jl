@@ -42,12 +42,12 @@ Four algorithmically independent layers, per ADR-0001:
  17. `BranchTracker`     — Walker-side cut-crossing predicate + per-branch sheet bookkeeping (ADR-0013).
 
 **This enumeration covers the v0.1 scalar spine only.** The package has since
-grown to 43 source files: the shared-denominator (type-II Hermite–Padé)
+grown to 44 source files: the shared-denominator (type-II Hermite–Padé)
 sub-stack `SharedPade{,CellB,Defect,Dispatch}` (ADR-0019/0027/0028), the
 additive v0.2 vector lift `Vector*` (ADR-0020..0023, 0026), the higher-Painlevé
 builders `NoumiYamada{,Symmetry}` / `PainleveHierarchy`, the meromorphic-contract
 guard `OutOfClass` (ADR-0033), the bounded-window composite `WindowedComposite`
-(ADR-0034), plus `Laplace2D`, `EdgeGatedSolve`, `LatticeDispatcher`,
++ its tiling geometry `WindowedTiling` (ADR-0034), plus `Laplace2D`, `EdgeGatedSolve`, `LatticeDispatcher`,
 `IVPBVPHybrid` and `Heun`. **The `include` chain below (and the `export` block
 at the foot of this file) is the authoritative inventory — not this list.**
 Three further files (`PainleveSolution.jl`, `PainleveNamed.jl`,
@@ -226,6 +226,11 @@ include("BVP.jl")
 include("Dispatcher.jl")
 include("EdgeDetector.jl")
 include("EdgeGatedSolve.jl")
+# WindowedTiling is the tiling geometry beneath WindowedComposite (core
+# centres, Voronoi ownership, per-window seeding, single-window warning).
+# Split out purely for the Rule 6 200-LOC cap; no reverse dependency, so
+# it loads before WindowedComposite, which `using`s it (bead fqwf).
+include("WindowedTiling.jl")
 include("WindowedComposite.jl")
 include("LatticeDispatcher.jl")
 include("CoordTransforms.jl")

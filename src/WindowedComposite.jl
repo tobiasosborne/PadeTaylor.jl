@@ -117,6 +117,10 @@ global seeds, poles in `[-49,49]²`:
     selection and the p5 confirmation numbers above.
   - `src/PathNetwork.jl`, `src/PoleField.jl` — the per-window solve
     and pole extraction this module composites.
+  - `src/WindowedTiling.jl` — the tiling geometry this module drives:
+    `_tile_centers`, `_nearest_center`, `_window_seed`, and the
+    single-window hazard check `_warn_single_window` (split out for the
+    Rule 6 LOC cap; read it for the Voronoi-ownership argument).
 """
 module WindowedComposite
 
@@ -124,6 +128,8 @@ using ..Problems:    PadeTaylorProblem
 using ..PathNetwork: path_network_solve, PathNetworkSolution
 using ..PoleField:   extract_poles
 using ..EdgeGatedSolve: edge_gated_pole_field_solve
+using ..WindowedTiling: _window_seed, _nearest_center, _tile_centers,
+                        _warn_single_window
 
 export windowed_path_network_solve, windowed_extract_poles,
        edge_gated_windowed_poles, WindowedCompositeSolution
@@ -163,46 +169,6 @@ struct WindowedCompositeSolution{T <: AbstractFloat}
     window_sols   :: Vector{PathNetworkSolution{T}}
 end
 
-# Deterministic, version-stable per-window seed.  Two distinct global
-# seeds re-randomise every window (the non-gameability property the
-# seed-invariance gate relies on — see the module docstring "Why
-# per-window seeding is load-bearing").  We combine arithmetically and
-# NOT with `hash`: `hash` is not stable across Julia versions, which
-# would silently break the package's bit-reproducibility contract.  The
-# `1_000_003` multiplier (a prime well above any realistic window count)
-# keeps `(rng_seed, wi)` pairs collision-free for sane inputs.
-_window_seed(rng_seed::Integer, wi::Integer) = Int(rng_seed) * 1_000_003 + wi
-
-# Index of the centre nearest to `z`, with a lowest-index tie-break.
-# We compare *squared* distances (`abs2`): monotone in distance, so the
-# argmin is identical, and it avoids a `sqrt` per candidate.  The strict
-# `<` is what makes the tie-break deterministic — on the exact core
-# boundary the lower window index wins, matching the Voronoi partition.
-function _nearest_center(z::Complex, centers::AbstractVector{<:Complex})
-    best = 1
-    @inbounds bestd = abs2(z - centers[1])
-    @inbounds for k in 2:length(centers)
-        d = abs2(z - centers[k])
-        if d < bestd
-            bestd = d
-            best  = k
-        end
-    end
-    return best
-end
-
-# Core-centre coordinates tiling `[lo, hi]` at `extent` spacing.  We use
-# `ceil(span/extent)` cores (≥1) and centre the run on the domain
-# midpoint, so the union of the cores `[c ± extent/2]` covers `[lo, hi]`
-# symmetrically.  Equal-size, equally-spaced cores ⇒ their Voronoi
-# partition is exactly this tiling, so every domain point lands in one.
-function _tile_centers(lo::T, hi::T, extent::T) where {T}
-    span  = hi - lo
-    n     = max(1, ceil(Int, span / extent))
-    start = (lo + hi) / 2 - n * extent / 2
-    return T[start + (k - T(0.5)) * extent for k in 1:n]
-end
-
 """
     windowed_path_network_solve(prob::PadeTaylorProblem,
                                 xs::AbstractVector{<:Real},
@@ -240,6 +206,13 @@ axis, non-increasing axes, `window_extent ≤ 0`, `overlap < 0`, or a
 window that captures no grid cell because the grid is too coarse for
 `window_extent`), and refuses to return a field with any unassigned
 cell (Rule 1 — a coverage bug, never a silent NaN).
+
+Warns (`@warn`, not an error) when `window_extent ≥` an axis's span, i.e.
+the tile grid is 1×1 along that axis: the "windowed" solve then IS the
+monolithic path-dependent solve and the Fig 4.7 seam cure is not in
+effect (bead `padetaylor-fqwf`; ADR-0034 "window_extent must be
+meaningfully smaller than the domain").  Fix: reduce `window_extent` so
+several windows tile each axis — FW's recipe is 5 per axis per half.
 """
 function windowed_path_network_solve(prob::PadeTaylorProblem,
                                      xs::AbstractVector{<:Real},
@@ -274,6 +247,8 @@ function windowed_path_network_solve(prob::PadeTaylorProblem,
     # Tile the domain into core centres = the Voronoi sites.
     xc = _tile_centers(xlo_d, xhi_d, ext)
     yc = _tile_centers(ylo_d, yhi_d, ext)
+    _warn_single_window(:x, length(xc), xhi_d - xlo_d, ext)
+    _warn_single_window(:y, length(yc), yhi_d - ylo_d, ext)
     centers = CT[complex(cx, cy) for cy in yc for cx in xc]
     nwin = length(centers)
 

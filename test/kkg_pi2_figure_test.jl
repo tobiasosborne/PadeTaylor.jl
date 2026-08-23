@@ -39,13 +39,13 @@
 # ## Honesty note (CLAUDE.md Rule 1, Rule 9)
 #
 # Panel A (the BVP) is solid — the probe RECIPE.md proves it.  Panel B
-# (the pole-field march) is the V8b open risk; the kernel's
-# `kkg_pole_field` is written to report a march failure honestly
-# (`march_ok = false`) rather than fabricate poles.  PI2F.1.4 / PI2F.1.5
-# are therefore guarded by `march_ok`: if a future regression breaks
-# the march they degrade to an informative `@info` + a `@test_broken`
-# rather than a hard failure that masks Panel A's correctness.  As
-# shipped the march DOES succeed (389 nodes, 21 poles).
+# (the pole-field march) is the V8b open risk; its kernel reports
+# `march_ok = false` rather than fabricate poles.  PI2F.1.4 / PI2F.1.5
+# are guarded by `march_ok`: a regression degrades to an informative
+# `@info` + `@test_broken` rather than a hard failure masking Panel A.
+# The two dormant CONDITIONAL markers at this file's lines 154 and 178
+# count zero while the shipped march succeeds (389 nodes, 21 poles).  A
+# Broken count of 4 means the Stage-B march regressed: investigate it.
 #
 # Self-contained: `using Test, PadeTaylor` only; runnable standalone
 # (`julia --project=. test/kkg_pi2_figure_test.jl`) and under

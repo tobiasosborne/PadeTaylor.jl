@@ -10,7 +10,7 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 Post-v0.1.0 work, all on `main` and pushed.  Test suite **9369 pass / 2
 broken / 0 fail**, re-confirmed by `scripts/quality_gate.sh full` on 2026-08-23
 (Julia 1.12.3, 17m50s; unchanged since the 2026-06-30 Fig 4.7 seam cure; up from
-1311 at the v0.1.0 tag).  43 source modules
+1311 at the v0.1.0 tag).  44 source modules
 (up from 14); 34 ADRs (up from 4); 79 worklog shards (up from 18).
 
 > The two `@test_broken` markers are intentional deferred-feature fixtures
@@ -18,6 +18,14 @@ broken / 0 fail**, re-confirmed by `scripts/quality_gate.sh full` on 2026-08-23
 > `corpus_painleve_rational_test`) that auto-flip to "Unexpected Pass" the
 > day their bug is fixed.  Investigate only FAILs.  See
 > `scripts/quality_gate.sh` "EXPECTED-NOISE".
+
+### Fixed — quality gate
+
+- `scripts/quality_gate.sh fast` was RED on a clean tree: it ran
+  `test/quality_test.jl` under `--project=.` where the `[extras]` test deps
+  (Aqua, ExplicitImports) do not resolve; it had only ever passed via the
+  user's global env. Now `Pkg.test(test_args=["quality-only"])` with a
+  short-circuit in `runtests.jl` (bead `padetaylor-0dw7`).
 
 ### Tests — rigour audit 2026-08-23 (beads `padetaylor-aqw1`, `padetaylor-urmg`, `padetaylor-ll3t`)
 
@@ -41,6 +49,36 @@ broken / 0 fail**, re-confirmed by `scripts/quality_gate.sh full` on 2026-08-23
   it lacked: sign-flipping the lagged term of the HeunG (`_heun_g_frobenius_at_0`)
   and HeunC (`_heun_c_frobenius_at_0`) recurrences each RED the corresponding
   30-digit oracle testset (HG.2 3/6, HC.2 3/6); restored, 49/49 GREEN.
+
+### Tests + docs — rigour audit 2026-08-23, second batch (beads `padetaylor-ps4g`, `padetaylor-divo`, `padetaylor-fqwf`)
+
+- **`padetaylor-ps4g`** — `test/extrapolate_test.jl` SX.1.2b value-pins
+  `eval_at(; extrapolate=true)` against the entire closed form `exp(z - z₀)`
+  at six points outside every visited disc (local `|t| ∈ (1, 3]`; default mode
+  asserted NaN there).  Measured rel. err ≤ 7.2e-16 for `u` and `u'`; pinned
+  at `rtol = 1e-12`.  Far-out degradation recorded (7.0e-6 at `z = 10`).
+  Mutation X4 (wrong local `t`): 12 RED of 48; the old `isfinite` checks alone
+  did not bite.
+- **`padetaylor-divo`** — `src/VectorStepControl.jl` docstring and ADR-0021
+  corrected: the "2-norm step is never larger than the ∞-norm step" ordering
+  holds only in absolute mode; in relative mode `ε` is rescaled by the same
+  `vnorm(c₀)` and the 2-norm step can exceed the ∞-norm step by up to `√d`
+  (Jorba–Zou eq. 10 uses the sup norm, md:601-604).  Policy stays 2-norm.
+  New test VSC.1.3b pins the counterexample ratio `h₂/h_∞ = √2`
+  (measured 1.4142135623730954); mutation M4 (ε via ∞-norm regardless of
+  `vnorm`): 4 RED of 73.
+- **`padetaylor-fqwf`** — `windowed_path_network_solve` now `@warn`s when
+  `window_extent ≥` an axis's span (1×1 tile grid on that axis: the composite
+  silently degenerates to the monolithic path-dependent solve), naming the bead
+  and the fix (reduce `window_extent`); documented in the docstring validation
+  list; ADR-0034 no longer claims a warning that did not exist.  New test
+  FSEAM.3 (`@test_logs`, both warn and must-be-silent cases); mutation F3
+  (never warn): 2 RED of 7.  The warning pushed `src/WindowedComposite.jl`
+  to 211 effective LOC, so the tiling geometry (`_tile_centers`,
+  `_nearest_center`, `_window_seed`, `_warn_single_window`) moved verbatim
+  into new `src/WindowedTiling.jl` (50 LOC, literate docstring citing
+  ADR-0034 + FW 2011 md:141-147); `WindowedComposite.jl` is now 166 LOC.
+  Pure relocation — no behaviour change.
 
 ### Fixed — input validation in the Padé layer (beads `padetaylor-ked0`, `padetaylor-lbqb`)
 

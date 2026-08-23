@@ -177,7 +177,13 @@ overlap-core partition handled it.
   (measured: HALF=25 gave composite 91 % ≈ monolithic 93 %; HALF=30 gave
   composite 97 % vs monolithic 78 %).  Figures use `[-50,50]` with the
   default 20.0 (5 per axis on each domain half), well inside the good regime.
-  The `windowed_path_network_solve` docstring warns on this.
+  Since 2026-08-23 (bead `padetaylor-fqwf`) `windowed_path_network_solve`
+  emits a runtime `@warn` whenever `window_extent ≥` an axis's span (a 1×1
+  tile grid on that axis — the composite has silently become the monolithic
+  solve), naming the fix (reduce `window_extent`); the docstring documents
+  the warning, and `test/field_seam_test.jl` FSEAM.3 pins it with
+  `@test_logs`.  Before that date no warning existed — the original text of
+  this bullet claimed one did.
 
 - **Default path unchanged.**  `path_network_solve` is not touched; the
   `@inferred`/allocation type-stability gates remain green; zero regression on
