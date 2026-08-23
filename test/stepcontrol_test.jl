@@ -92,6 +92,21 @@ include("_oracle_stepcontrol.jl")
         # parts of the roots; the real-part projection is still exactly 3.
         @test isapprox(h, step_4_1_4_expected; rtol = 1e-12, atol = 1e-13)
     end
+
+    @testset "4.1.6 step_jorba_zou: a length-2 jet (p = 1) must throw (lkrk 3)" begin
+        # With p = 1 the candidate set {p-1, p} = {0, 1} contains k = 0 and
+        # `(ε/|c_0|)^(1/0)` is `x^Inf` — 0 for |c_0| > ε, silently handing the
+        # integrator a zero step.  Jorba-Zou eq. (8) needs two NON-trivial
+        # trailing coefficients, i.e. p ≥ 2 ⇔ length ≥ 3.  Rule 1: throw.
+        @test_throws ArgumentError step_jorba_zou([1.0, 0.5], 1e-12)
+        err = try step_jorba_zou([1.0, 0.5], 1e-12); nothing catch e; e end
+        @test err isa ArgumentError && occursin("length ≥ 3", err.msg)
+        @test occursin("Suggestion", err.msg)
+        # The shortest admissible jet (length 3, p = 2) works and is finite.
+        h3 = step_jorba_zou([1.0, 0.5, 0.25], 1e-12)
+        @test 0 < h3 < Inf
+        @test h3 ≈ min((1e-12 / 0.5)^(1 / 1), (1e-12 / 0.25)^(1 / 2))
+    end
 end
 
 #=
@@ -99,6 +114,10 @@ Phase 4 mutation-proof procedure (test 4.1.5) — VERIFIED 2026-05-09
 ──────────────────────────────────────────────────────────────────
 Both load-bearing functions independently mutation-tested before commit;
 both mutations RED'd the test suite.
+
+  Mutation D (bead lkrk 3, 2026-08-23) — revert the `length(coefs) ≥ 3`
+    guard to `≥ 2`: 4.1.6's `@test_throws` and the `err` assertions go
+    RED (the call returns h = 0 silently).  Observed: 3 RED of 4.1.6.
 
   Mutation A — off-by-one in the Jorba-Zou exponent
   (`src/StepControl.jl`, `step_jorba_zou`, line ~183):

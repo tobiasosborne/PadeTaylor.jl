@@ -89,6 +89,11 @@ const CATALOGUE = Mutant[
         "s += b_full[j + 1] * cv[k - j + 1]", "s -= b_full[j + 1] * cv[k - j + 1]",
         "classical numerator recurrence sign (FW eq. 5.5) (new)", :killed),
     Mutant("RobustPade", "RobustPade.jl", "robustpade_test.jl",
+        "b = D * F.Q[:, n + 1]", "b = b_init .+ 0 * (D * F.Q[:, n + 1])",
+        "drop the padeapprox.m:111-117 QR-reweighting (use the raw SVD null " *
+        "vector) — hand-verified 5 RED: 2.1.2 coefs, 2.1.4 ν + pole set " *
+        "(bead padetaylor-044m)", :killed),
+    Mutant("RobustPade", "RobustPade.jl", "robustpade_test.jl",
         "ρ = count(s -> s > ts_typed, S)", "ρ = count(s -> s >= ts_typed, S)",
         "SVD rank-count threshold <→<= — LIKELY EQUIVALENT MUTANT: differs only " *
         "at an exact-threshold σ (bead padetaylor-98pe)", :survived),

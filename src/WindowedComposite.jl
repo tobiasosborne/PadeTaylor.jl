@@ -205,7 +205,9 @@ Throws `ArgumentError` on a malformed request (fewer than 3 nodes per
 axis, non-increasing axes, `window_extent ≤ 0`, `overlap < 0`, or a
 window that captures no grid cell because the grid is too coarse for
 `window_extent`), and refuses to return a field with any unassigned
-cell (Rule 1 — a coverage bug, never a silent NaN).
+cell (Rule 1 — a coverage bug, never a silent NaN). Integer or
+mixed-precision axes are promoted up front to one common float type
+`T` (the solution's type parameter).
 
 Warns (`@warn`, not an error) when `window_extent ≥` an axis's span, i.e.
 the tile grid is 1×1 along that axis: the "windowed" solve then IS the
@@ -239,7 +241,10 @@ function windowed_path_network_solve(prob::PadeTaylorProblem,
         "windowed_path_network_solve: overlap must be ≥ 0 (got $overlap). " *
         "Suggestion: FW 2011's composites use an overlap margin of ~6.0."))
 
-    T   = float(typeof(real(first(xs))))
+    # Promote both axes to one float type up front (bead lkrk 4): mixed
+    # Int / Float32 / Float64 axes must not silently demote the solve.
+    T   = float(promote_type(eltype(xs), eltype(ys)))
+    xs  = collect(T, xs); ys = collect(T, ys)
     CT  = Complex{T}
     ext = T(window_extent); ov = T(overlap); half = ext / 2
     xlo_d = T(xs[1]); xhi_d = T(xs[end]); ylo_d = T(ys[1]); yhi_d = T(ys[end])

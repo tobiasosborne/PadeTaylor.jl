@@ -171,7 +171,8 @@ For `d = 1` this reduces bit-identically to
 `StepControl.step_jorba_zou(jets[1], eps_abs; eps_rel)`.
 
 Throws `ArgumentError` (Rule 1 — fail loud) if `jets` is empty, if any
-jet has fewer than 2 entries (no notion of "last two coefficients"), if
+jet has fewer than 3 entries (`p ≥ 2`; a length-2 jet puts `k = 0` in
+the candidate set and `x^(1/0)` silently yields `h = 0`), if
 the jets are ragged (unequal length — a malformed vector jet), or if
 every coefficient vector has zero norm (no nonzero coefficient to
 estimate a step from).
@@ -186,10 +187,11 @@ function vector_step_jorba_zou(jets::AbstractVector{<:AbstractVector{T}},
         "Suggestion: pass a non-empty collection of per-component jets."))
 
     len = length(jets[1])
-    len ≥ 2 || throw(ArgumentError(
-        "vector_step_jorba_zou: each jet must have length ≥ 2 (got " *
-        "$len); the formula uses the last two Taylor coefficients. " *
-        "Suggestion: pass per-component jets of order ≥ 1."))
+    len ≥ 3 || throw(ArgumentError(
+        "vector_step_jorba_zou: each jet must have length ≥ 3 (got " *
+        "$len); the formula uses the last two Taylor coefficients with " *
+        "p ≥ 2 — for p = 1 the k = 0 candidate silently gives h = 0. " *
+        "Suggestion: pass per-component jets of order ≥ 2."))
     for i in 2:d
         length(jets[i]) == len || throw(ArgumentError(
             "vector_step_jorba_zou: ragged jets — jet 1 has length $len " *

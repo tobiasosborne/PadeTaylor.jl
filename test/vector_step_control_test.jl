@@ -193,7 +193,15 @@ using PadeTaylor.VectorProblems:    VectorPadeTaylorProblem, vector_solve_pade
     end
 
     @testset "VSC.1.5 failure modes throw informatively" begin
-        # Jets shorter than 2 — no notion of "last two coefficients".
+        # Jets shorter than 3 — a length-2 jet (p = 1) puts k = 0 in the
+        # {p-1, p} candidate set and `x^(1/0)` silently yields h = 0
+        # (bead padetaylor-lkrk 3); shorter still has no "last two".
+        @test_throws ArgumentError vector_step_jorba_zou(
+            [Float64[1.0, 0.5], Float64[2.0, 0.5]], 1e-9)
+        err = try
+            vector_step_jorba_zou([Float64[1.0, 0.5]], 1e-9); nothing
+        catch e; e end
+        @test err isa ArgumentError && occursin("length ≥ 3", err.msg)
         @test_throws ArgumentError vector_step_jorba_zou(
             [Float64[1.0]], 1e-9)
         @test_throws ArgumentError vector_step_jorba_zou(

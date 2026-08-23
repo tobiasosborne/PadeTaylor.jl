@@ -27,6 +27,50 @@ broken / 0 fail**, re-confirmed by `scripts/quality_gate.sh full` on 2026-08-23
   user's global env. Now `Pkg.test(test_args=["quality-only"])` with a
   short-circuit in `runtests.jl` (bead `padetaylor-0dw7`).
 
+### Fixed / Tests — validation audit 2026-08-23 (beads `padetaylor-lkrk`, `padetaylor-cwcp`, `padetaylor-044m`)
+
+- **`padetaylor-lkrk`** — five input-validation gaps closed, each RED-first
+  with a Rule-1 `ArgumentError` + suggestion and mutation-proven (guard
+  removed → RED, restored): (1) `edge_gated_pole_field_solve` now checks
+  EVERY axis step (`all(diff(xs) .≈ Δx)`, same for `ys`), as its docstring
+  always promised, not just the first; (2) `max_iter ≥ 1` is required and
+  exhausting it before the region-growing fixpoint THROWS with the field /
+  frontier sizes and pass count instead of returning a half-grown field;
+  (3) `step_jorba_zou` / `vector_step_jorba_zou` require jet length ≥ 3
+  (`p ≥ 2`) — a length-2 jet put `k = 0` in the candidate set and
+  `(ε/|c₀|)^(1/0)` silently yielded `h = 0`; (4) `edge_gated_pole_field_solve`
+  and `windowed_path_network_solve` promote integer / mixed-precision axes
+  up front to `float(promote_type(eltype(xs), eltype(ys)))` — RED-first
+  showed a `Float32` `xs` with `Float64` `ys` silently DEMOTED the whole
+  solve to single precision (the audit's predicted `TypeError` for `Int`
+  axes did not reproduce: `new` converts ranges); (5) `EdgeGatedSolution.
+  field_mask` docstring now says "admitted/anchored region incl. the
+  unclassified seed disc", not "confirmed by the edge detector".  Tests:
+  EG.2.1 (+11), EG.2.2 (new), 4.1.6 (new), VSC.1.5 (+2), FSEAM.4 (new).
+- **`padetaylor-cwcp`** — `src/LinAlg.jl` "Why we expose `full`" docstring
+  said the null right singular vector is `transpose(Vt[end,:])`; `Vt = V'`
+  is the conjugate transpose, so for complex input it is `conj(Vt[end,:])`
+  (code unaffected — `RobustPade.jl:450` takes `abs.()` and recomputes `b`
+  by adjoint-QR).  New `linalg_test.jl` 1.1.3c: complex rank-deficient 3×4
+  with a genuinely complex null vector, both backends (LAPACK `ComplexF64`,
+  GenericLinearAlgebra `Complex{BigFloat}`); asserts `‖A·conj(Vt[end,:])‖ ≤
+  1e-12‖A‖` AND that the unconjugated row is NOT null (`> 0.1‖A‖`).
+  Mutation `return conj(F.Vt)` → 6 RED in 1.1.3c, 1.1.3b (real) GREEN.
+- **`padetaylor-044m`** — `test/robustpade_test.jl` header over-claimed
+  "six captured oracles"; now lists per case exactly what is pinned (2.1.1 /
+  2.1.2 / 2.1.5 coefficients; 2.1.3 / 2.1.6 degrees only; 2.1.4 degrees +
+  poles).  2.1.4 now asserts the captured `padeapprox.m` tan(z⁴) pole set
+  (`_oracles.jl:28-31`, `padeapprox.m:150`) as a bidirectional set match —
+  measured max nearest-neighbour distance `1.35e-14`, pinned `1e-12`; the
+  inner ring is anchored to the true `(π/2)^(1/4)` to `1e-5` (measured
+  2.1e-6), the outer ring is an approximant artefact (1.4993 ≠ `(3π/2)^(1/4)`
+  = 1.4734) and is pinned to the capture only.  The 2.1.7 note wrongly said
+  2.1.3 carries a coefficient match — corrected.  New mutant in
+  `test/mutation/run_mutation_gate.jl` (catalogue #6, 13 total): drop the
+  `padeapprox.m:111-117` QR-reweighting (`src/RobustPade.jl:450-462`) —
+  hand-verified 5 RED (2.1.2 coefs ×2, 2.1.4 ν + pole set ×2), gate run on
+  index 6 alone → KILLED.
+
 ### Tests — rigour audit 2026-08-23 (beads `padetaylor-aqw1`, `padetaylor-urmg`, `padetaylor-ll3t`)
 
 - **`padetaylor-aqw1`** — `test/pathnetwork_test.jl` PN.2.4 pins FW 2011

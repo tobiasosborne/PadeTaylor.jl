@@ -165,6 +165,26 @@ end
     @test length(wsol4.centers) == 4
 end
 
+# ----------------------------------------------------------------------------
+@testset "FSEAM.4: integer / mixed axes are promoted up front (lkrk 4)" begin
+    # `T` used to be keyed off `first(xs)` alone, so a Float32 `xs` paired
+    # with a Float64 `ys` silently DEMOTED the solve to single precision.
+    # Both axes must be promoted to one common float type before any work.
+    f    = (z, u, up) -> up
+    prob = PadeTaylorProblem(f, (1.0 + 0im, 1.0 + 0im), (0.0 + 0im, 3.0 + 0im);
+                             order = 20)
+    wsol_i = windowed_path_network_solve(prob, -2:2, -2:2;
+                                         window_extent = 2.0, overlap = 0.5,
+                                         h = 0.5)
+    @test wsol_i isa WindowedCompositeSolution{Float64}
+    @test eltype(wsol_i.xs) === Float64 && wsol_i.xs == -2.0:1.0:2.0
+    @test all(isfinite, wsol_i.grid_u)
+    wsol_m = windowed_path_network_solve(prob, Float32.(-2:2), -2.0:1.0:2.0;
+                                         window_extent = 2.0, overlap = 0.5,
+                                         h = 0.5)
+    @test wsol_m isa WindowedCompositeSolution{Float64}
+end
+
 
 # ============================================================================
 # MUTATION-PROOF PROCEDURE (Rule 4) — the orchestrator EXECUTES each mutation,
@@ -202,6 +222,13 @@ end
 #   Measured bite: 2 RED of 7 — the two `@test_logs (:warn, …)` blocks
 #   (x+y, and y-only) each fail with "Log Test Failed" (0 warnings seen);
 #   the silent-tiling check stays GREEN as it must.  Restored.
+#
+# Mutation F4 (bead padetaylor-lkrk 4, 2026-08-23; FSEAM.4, GREEN 4/4
+#   unmutated) — in `windowed_path_network_solve` revert the up-front
+#   promotion `T = float(promote_type(eltype(xs), eltype(ys)))` +
+#   `collect(T, ·)` to the old `T = float(typeof(real(first(xs))))`.
+#   Measured bite (this was the RED-first run): 1 RED of 4 — the mixed
+#   Float32/Float64 case returns a `WindowedCompositeSolution{Float32}`.
 #
 # STANDALONE RUN:
 #   julia --project=. test/field_seam_test.jl

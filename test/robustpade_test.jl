@@ -2,20 +2,37 @@
 # robustpade_test.jl — Phase 2 tests for PadeTaylor.RobustPade.robust_pade.
 #
 # Test plan from DESIGN.md §4 Phase 2.  Eight tests covering the GGT 2013
-# Algorithm 2 + Chebfun reweighting port.  Six of them carry numerical
-# oracle values captured by running Chebfun's `padeapprox.m` (commit
-# 7574c77) under Octave 8.4.0; see `external/probes/padeapprox-oracle/`
-# for the capture script.  The remaining two test BigFloat precision and
-# the mutation-proof discipline.
+# Algorithm 2 + Chebfun reweighting port.  Oracle values were captured by
+# running Chebfun's `padeapprox.m` (commit 7574c77) under Octave 8.4.0
+# (`external/probes/padeapprox-oracle/capture.m` → `test/_oracles.jl`).
+# What each case actually pins against that capture (bead padetaylor-044m):
+#
+#   2.1.1  exp (2,2)       — degrees + COEFFICIENTS a, b (1e-13, closed form
+#                             AND the captured oracle; :classical path).
+#   2.1.2  exp (20,20)     — degrees (7,7) + COEFFICIENTS a, b (1e-9) +
+#                             r(z) function values (1e-14); :svd path.
+#   2.1.3  log(1.2-z)      — DEGREES ONLY (10,10) + r(z) values.  The
+#                             captured a, b are deliberately NOT asserted
+#                             (GGT 2013 §7 ill-posedness at the block
+#                             boundary; see the note in the testset).
+#   2.1.4  tan(z⁴)         — degrees (20,16) + the captured POLE SET
+#                             (16 poles, bidirectional set match, 1e-12).
+#   2.1.5  1+z² (1,1)      — degrees (0,0) + COEFFICIENTS a = b = [1].
+#   2.1.6  noisy 1/(1-z)   — DEGREES ONLY (0,1); a different RNG
+#                             realisation from the Octave capture, so the
+#                             captured a, b are not comparable.
+#   2.1.7  mutation-proof procedure (documentation only).
+#   2.1.8  BigFloat-256 exp (20,20) — type genericity + r(z) accuracy; no
+#                             Octave oracle (Octave is Float64-only).
 #
 # Tolerances are chosen to match `padeapprox.m`'s own behaviour, not
-# eyeballed.  The 1e-12 relative match is two orders looser than the
-# Chebfun internal `tol = 1e-14` to allow for the known floating-point
-# non-uniqueness of QR sign conventions.
+# eyeballed.  The coefficient tolerances admit the known floating-point
+# non-uniqueness of QR sign conventions between two LAPACK pipelines.
 # =============================================================================
 
 using Test
 using LinearAlgebra
+using Polynomials: Polynomials
 using PadeTaylor: robust_pade, PadeApproximant
 
 # Load Octave-captured oracle data.
@@ -141,7 +158,9 @@ include("_oracles.jl")
     # GGT 2013 Fig. 6 demonstrates that the robust algorithm removes 4
     # Froissart doublets from the (20, 20) approximation of tan(z⁴),
     # yielding (μ, ν) = (20, 16).  We assert (μ, ν) match exactly when
-    # the same FFT-derived coefficients padeapprox saw are passed in.
+    # the same FFT-derived coefficients padeapprox saw are passed in, AND
+    # that the 16 surviving poles match the captured `padeapprox.m` pole
+    # set (`poles = roots(b(end:-1:1))`, padeapprox.m:150) as a SET.
     # -------------------------------------------------------------------------
     @testset "2.1.4 tan(z⁴) (20,20) removes Froissart doublets" begin
         # Use the Octave-FFT-derived coefficients to stay byte-exact with
@@ -152,6 +171,33 @@ include("_oracles.jl")
         P = robust_pade(c, 20, 20; method = :svd)
         @test P.μ == test_2_1_4_tan_z4_20_20_mu  # 20
         @test P.ν == test_2_1_4_tan_z4_20_20_nu  # 16
+
+        # Pole-set match (bead padetaylor-044m).  Octave's `roots` and
+        # Polynomials.jl's `roots` order the roots differently, so match
+        # as a set: every captured pole has one of ours within `tol` and
+        # vice versa, with equal cardinality.  Measured agreement on
+        # 2026-08-23 (Julia 1.12, OpenBLAS LAPACK): max nearest-neighbour
+        # distance 1.35e-14 in both directions.  1e-12 is pinned — ~100×
+        # headroom over the measurement for LAPACK / companion-matrix
+        # eigensolver variation, and still 4 orders tighter than the 1e-8
+        # that would let a Froissart-doublet residue (|z| ~ 1e-7 shifts)
+        # slip through.
+        ours = Polynomials.roots(Polynomials.Polynomial(P.b))
+        ref  = test_2_1_4_tan_z4_20_20_poles
+        @test length(ours) == length(ref) == 16
+        tol  = 1e-12
+        @test maximum(r -> minimum(o -> abs(o - r), ours), ref) < tol
+        @test maximum(o -> minimum(r -> abs(o - r), ref), ours) < tol
+        # Ground-truth anchor for the oracle itself.  These are the
+        # APPROXIMANT's poles, not tan(z⁴)'s: the inner ring of 8 sits at
+        # |z| = 1.1195172 vs the true nearest singularities (π/2)^(1/4) =
+        # 1.1195151 (2.1e-6 off — the (20,16) Padé resolves the nearest
+        # ring to ~6 digits), while the outer ring at |z| = 1.4993 is an
+        # approximant artefact that does NOT sit on the true second ring
+        # (3π/2)^(1/4) = 1.4734 and is therefore not pinned to closed form.
+        moduli = sort(abs.(ref))
+        @test all(abs.(moduli[1:8] .- (π / 2)^(1 / 4)) .< 1e-5)
+        @test all(abs.(moduli[9:16] .- 1.4992939919206) .< 1e-12)   # captured
     end
 
     # -------------------------------------------------------------------------
@@ -214,12 +260,17 @@ include("_oracles.jl")
     #
     #   b = vec(Vt[end, :])
     #
-    # and run the test suite.  Tests 2.1.2 (exp 20→7) and 2.1.3 (log
-    # 20→10) are expected to RED their coefficient-match — without
-    # reweighting, the leading/trailing-zero trim picks up sub-tol noise
-    # that perturbs the exact-zero coefficients.
+    # and run this file standalone.  2.1.3 has NO coefficient-match
+    # assertion (see the header and the note in that testset), so it is
+    # NOT where this mutation bites.  Verified by hand 2026-08-23 (bead
+    # padetaylor-044m), 5 RED of 66: 2.1.2's two coefficient-match
+    # assertions (1e-9) and, in 2.1.4, the ν == 16 degree assertion plus
+    # both pole-set assertions — the un-reweighted null vector no longer
+    # hits the exact zeros of b, so the Froissart-doublet trim is lost.
+    # 2.1.1/2.1.3/2.1.5/2.1.6/2.1.8 stay GREEN.  This mutation is now in
+    # the periodic gate catalogue, `test/mutation/run_mutation_gate.jl`.
     # -------------------------------------------------------------------------
-    # Documented only; mutation discipline runs in pre-commit.
+    # Documented only; the executable form lives in the mutation gate.
 
     # -------------------------------------------------------------------------
     # 2.1.8 — BigFloat at precision = 256 bits: exp(z) (20,20).

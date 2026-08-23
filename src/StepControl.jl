@@ -160,17 +160,19 @@ the candidate set are skipped.  When both `c_{p-1}` and `c_p` are
 zero, falls back to the TI.jl second-stepsize scan over indices
 `1 ≤ j ≤ p-2`, taking the maximum of `(1 / |c[j+1]|)^(1/j)`.
 
-Throws `ArgumentError` if `coefs` has fewer than 2 entries (no notion
-of "last two"), or if every nonzero candidate has been exhausted —
+Throws `ArgumentError` if `coefs` has fewer than 3 entries (`p ≥ 2`;
+with `p = 1` the candidate set contains `k = 0` and `x^(1/0)` silently
+yields `h = 0`), or if every nonzero candidate has been exhausted —
 both indicate caller-side bugs that we surface loudly per Rule 1
 rather than silently returning a meaningless `Inf` or `0`.
 """
 function step_jorba_zou(coefs::AbstractVector{T}, eps_abs::Real;
                         eps_rel::Real = eps_abs) where {T}
-    length(coefs) ≥ 2 || throw(ArgumentError(
-        "step_jorba_zou: coefs must have length ≥ 2 (got $(length(coefs))); " *
-        "the formula uses the last two coefficients. " *
-        "Suggestion: pass a Taylor jet of order ≥ 1."))
+    length(coefs) ≥ 3 || throw(ArgumentError(
+        "step_jorba_zou: coefs must have length ≥ 3 (got $(length(coefs))); " *
+        "the formula uses the last two coefficients c_{p-1}, c_p with " *
+        "p ≥ 2 — for p = 1 the k = 0 candidate (ε/|c_0|)^(1/0) silently " *
+        "gives h = 0. Suggestion: pass a Taylor jet of order ≥ 2."))
 
     p = length(coefs) - 1
     R = float(real(T))

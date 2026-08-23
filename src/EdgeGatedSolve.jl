@@ -116,8 +116,10 @@ export edge_gated_pole_field_solve, EdgeGatedSolution
 Output of `edge_gated_pole_field_solve`. Fields:
 
   - `xs`, `ys` — the lattice axes (`grid[i,j] = xs[i] + im·ys[j]`).
-  - `field_mask::BitMatrix` — `true` ⟺ cell `(i,j)` was confirmed
-    pole-field by the edge detector during region growing.
+  - `field_mask::BitMatrix` — `true` ⟺ cell `(i,j)` is in the admitted
+    (anchored) pole-field region: the seed disc around the IC, which is
+    admitted *unclassified*, plus every cell the edge detector confirmed
+    and the flood-fill connected to it during region growing.
   - `pn_solution::PathNetworkSolution{T}` — the final IVP solve,
     confined to `field_mask` dilated by one ring. Pass *this* to
     `PoleField.extract_poles` for the sector-confined pole scatter.
@@ -263,12 +265,17 @@ Kwargs:
   - `open_radius` — morphological-opening radius applied to each
     pass's edge mask before the flood-fill (`0` disables it). Removes
     false-positive specks and bridges thinner than `2·open_radius`.
-  - `max_iter` — safety cap on growth passes.
+  - `max_iter` — safety cap on growth passes (`≥ 1`). Exhausting it
+    before the region-growing fixpoint throws (Rule 1) rather than
+    returning a half-grown field as if it had converged.
 
 Requires `xs`, `ys` strictly increasing with a common, uniform step
-(the FW eq. 3.3 stencil is isotropic). Use a spacing `≲ 1` — see the
-module docstring "Grid resolution matters". Throws `ArgumentError` on
-a malformed lattice or `grow_rings < 2`.
+(the FW eq. 3.3 stencil is isotropic) — *every* step is checked, not
+just the first. Integer or mixed-precision axes are promoted up front
+to one common float type `T`. Use a spacing `≲ 1` — see the module
+docstring "Grid resolution matters". Throws `ArgumentError` on a
+malformed lattice, `grow_rings < 2`, `max_iter < 1`, or `max_iter`
+exhaustion.
 """
 function edge_gated_pole_field_solve(prob::PadeTaylorProblem,
                                      xs::AbstractVector{<:Real},
@@ -293,13 +300,26 @@ function edge_gated_pole_field_solve(prob::PadeTaylorProblem,
         "so grow_rings = 1 can never confirm a new cell."))
     open_radius ≥ 0 || throw(ArgumentError(
         "edge_gated_pole_field_solve: open_radius must be ≥ 0 (got $open_radius)."))
+    max_iter ≥ 1 || throw(ArgumentError(
+        "edge_gated_pole_field_solve: max_iter must be ≥ 1 (got $max_iter); " *
+        "detail: zero growth passes can never reach the fixpoint."))
 
-    T = float(eltype(xs))
-    Δx = T(xs[2] - xs[1]); Δy = T(ys[2] - ys[1])
-    isapprox(Δx, Δy; rtol = 1e-10) || throw(ArgumentError(
+    # Promote the axes to one float type up front (bead lkrk 4): mixed
+    # Int / Float32 / Float64 axes must neither demote the wider axis
+    # nor surface as a constructor error after the full solve.
+    T  = float(promote_type(eltype(xs), eltype(ys)))
+    xs = collect(T, xs); ys = collect(T, ys)
+    Δx = xs[2] - xs[1]; Δy = ys[2] - ys[1]
+    # The docstring promises a uniform lattice; check EVERY step, not
+    # just the first (bead lkrk 1), because the stencil is isotropic.
+    (isapprox(Δx, Δy; rtol = 1e-10) &&
+     all(isapprox.(diff(xs), Δx; rtol = 1e-10)) &&
+     all(isapprox.(diff(ys), Δy; rtol = 1e-10))) || throw(ArgumentError(
         "edge_gated_pole_field_solve: xs and ys must share one uniform " *
-        "step (got Δx = $Δx, Δy = $Δy); detail: the 5-point stencil is " *
-        "isotropic."))
+        "step (got Δx = $Δx, Δy = $Δy, max |Δ−Δx| = " *
+        "$(max(maximum(abs.(diff(xs) .- Δx)), maximum(abs.(diff(ys) .- Δy))))); " *
+        "detail: the 5-point stencil is isotropic. Suggestion: pass " *
+        "`range(lo, hi; length = N)` axes with equal steps."))
     h_grid = Δx
 
     seed_r = seed_radius === nothing ? max(T(3), T(5) * h_grid / 2) : T(seed_radius)
@@ -341,6 +361,14 @@ function edge_gated_pole_field_solve(prob::PadeTaylorProblem,
         verbose && @info "edge_gated_pole_field_solve" pass=iters new=n_new field=count(field)
         n_new == 0 && break
         field .|= new_cells
+        # Rule 1: exhausting the cap is a failure, not a fixpoint.
+        iters == max_iter && throw(ArgumentError(
+            "edge_gated_pole_field_solve: max_iter = $max_iter exhausted " *
+            "after $iters passes without reaching the region-growing " *
+            "fixpoint (last pass admitted $n_new new cells; field = " *
+            "$(count(field)) cells, frontier = $(count(targets) - count(field)) " *
+            "cells). Suggestion: raise max_iter or grow_rings, or shrink " *
+            "the lattice."))
     end
 
     # --- Final solve over field + one thin frontier ring ------------------

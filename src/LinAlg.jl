@@ -37,9 +37,13 @@ GGT 2013 Algorithm 2 needs the **null right singular vector** of an
 `n × (n+1)` Toeplitz matrix `C̃`. In the thin SVD (`full=false`), Vt is
 `n × (n+1)` and V is `(n+1) × n` — the `(n+1)`-th column of full V is
 not produced. With `full=true`, Vt is `(n+1) × (n+1)` and the null
-vector is `transpose(Vt[end, :])`. RobustPade calls `pade_svd(C̃;
-full=true)` for this reason. Default `full=false` keeps the rest of
-the API the cheaper thin path.
+vector is the last column of `V`, i.e. `conj(Vt[end, :])` — `Vt` is
+the *conjugate* transpose `V'`, so for complex input the bare row
+`Vt[end, :]` is **not** a null vector (test 1.1.3c); for real input
+the conjugate is a no-op. RobustPade calls `pade_svd(C̃; full=true)`
+for this reason (it takes `abs.()` of the row and recomputes `b` by
+adjoint-QR, so it never consumes the row unconjugated). Default
+`full=false` keeps the rest of the API the cheaper thin path.
 
 ## API
 

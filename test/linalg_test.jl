@@ -108,6 +108,41 @@ using PadeTaylor: LinAlg
     end
 
     # -------------------------------------------------------------------------
+    # 1.1.3c — COMPLEX full SVD: the null right singular vector is
+    # `conj(Vt[end, :])`, NOT `transpose(Vt[end, :])` (bead padetaylor-cwcp).
+    #
+    # `Vt = V'` is the conjugate transpose, so the last column of V is the
+    # conjugate of the last row of Vt.  For real input the two coincide
+    # (1.1.3b cannot tell them apart); for complex input only the conjugate
+    # annihilates A.  The null space of A below is spanned by
+    # v = (-i, -(1+2i), -3, 1), genuinely complex, so the unconjugated row
+    # is NOT a null vector — that second assertion is what makes this test
+    # discriminating.  Both backends (LAPACK ComplexF64, GenericLinearAlgebra
+    # Complex{BigFloat}) must honour the same convention.
+    # -------------------------------------------------------------------------
+    @testset "1.1.3c complex full=true null vector is conj(Vt[end,:])" begin
+        for (label, A) in (("ComplexF64",
+                            ComplexF64[1 0 0 im; 0 1 0 1+2im; 0 0 1 3]),
+                           ("Complex{BigFloat}",
+                            Complex{BigFloat}[1 0 0 im; 0 1 0 1+2im; 0 0 1 3]))
+            U, S, Vt = LinAlg.pade_svd(A; full = true)
+            @test size(Vt) == (4, 4)
+            v_null = conj(vec(Vt[end, :]))
+            v_wrong = transpose(vec(Vt[end, :]))            # a 1×4 row
+            @test norm(A * v_null) ≤ 1e-12 * norm(A)
+            # The unconjugated row is NOT in the null space: |A·Vt[end,:]|
+            # is O(1)·|A| (the imaginary parts flip sign).  Pin the scale so
+            # a bogus "≈ 0" can never sneak through rounding.
+            @test norm(A * vec(v_wrong)) > 0.1 * norm(A)
+            # Sanity: it really is the null direction (unit 2-norm, and the
+            # ratio of its entries matches the hand-derived null vector).
+            @test abs(norm(v_null) - 1) ≤ 1e-12
+            v_ref = [-im, -(1 + 2im), -3, 1]
+            @test norm(v_null / v_null[end] - v_ref) ≤ 1e-12 * norm(v_ref)
+        end
+    end
+
+    # -------------------------------------------------------------------------
     # 1.1.4 — Rank-deficient [1 2; 2 4] BigFloat — small SV is genuinely zero.
     #
     # The matrix [1 2; 2 4] has rank 1 exactly: column 2 = 2·column 1.  A
@@ -156,6 +191,13 @@ using PadeTaylor: LinAlg
     #
     # If the mutation does not trigger RED, the test is not load-bearing
     # and must be strengthened.
+    #
+    # Mutation for 1.1.3c (bead padetaylor-cwcp, 2026-08-23): in BOTH
+    # complex `pade_svd` methods return `conj(F.Vt)` (i.e. transpose(V)
+    # instead of the adjoint V').  Observed: 1.1.3c goes RED on the
+    # `norm(A * v_null)`, `v_wrong` and `v_ref` assertions for both backends
+    # (observed 6 RED of 10),
+    # while 1.1.3b (real) stays GREEN — exactly the gap this test closes.
     # -------------------------------------------------------------------------
     # No assertion — this @testset documents the discipline.  Tests 1.1.3
     # and 1.1.4 carry the empirical weight.

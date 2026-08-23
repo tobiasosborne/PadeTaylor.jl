@@ -107,6 +107,57 @@ using PadeTaylor.EdgeGatedSolve: edge_gated_pole_field_solve
         # Degenerate axes.
         @test_throws ArgumentError edge_gated_pole_field_solve(
             prob, [0.0, 1.0], ys)
+
+        # Bead padetaylor-lkrk (1): the docstring promises ArgumentError on
+        # a NON-uniform axis, not merely on a mismatched first step.  An
+        # axis whose first step matches the other axis but whose later
+        # steps drift must be rejected BEFORE any solve (the old check
+        # compared only xs[2]-xs[1] against ys[2]-ys[1]).
+        xs_bad = collect(xs); xs_bad[end] += 0.3          # last step 1.05 ≠ 0.75
+        ys_bad = collect(ys); ys_bad[5]  += 0.1           # interior step drift
+        @test_throws ArgumentError edge_gated_pole_field_solve(prob, xs_bad, ys)
+        @test_throws ArgumentError edge_gated_pole_field_solve(prob, xs, ys_bad)
+        # ... while the genuinely uniform `range` axes pass the same gate
+        # (EG.1.1 above already proves that; this pins the tolerance is not
+        # so tight that floating-point `range` steps trip it).
+        @test all(isapprox.(diff(collect(xs)), step(xs); rtol = 1e-10))
+
+        # Bead padetaylor-lkrk (2): `max_iter` is a safety cap, not a
+        # silent truncation.  max_iter < 1 is malformed; exhausting the cap
+        # before the region-growing fixpoint must throw, naming the
+        # frontier size and the pass count, instead of returning a
+        # half-grown field as if it had converged.  EG.1.1 proves this
+        # grid needs ≥ 2 passes, so max_iter = 1 is guaranteed to exhaust.
+        @test_throws ArgumentError edge_gated_pole_field_solve(
+            prob, xs, ys; max_iter = 0)
+        err = try
+            edge_gated_pole_field_solve(prob, xs, ys; h = 0.5, max_iter = 1)
+            nothing
+        catch e
+            e
+        end
+        @test err isa ArgumentError
+        @test occursin("max_iter", err.msg)
+        @test occursin("frontier", err.msg)
+        @test occursin("pass", err.msg)
+    end
+
+    @testset "EG.2.2: integer / mixed axes are promoted up front (lkrk 4)" begin
+        # Before the fix, `T = float(eltype(xs))` keyed the working type off
+        # `xs` ALONE: an `Int` `xs` happened to survive (the struct's `new`
+        # converts ranges), but a `Float32` `xs` paired with a `Float64` `ys`
+        # silently DEMOTED `ys` to Float32 and solved in single precision
+        # (observed RED-first: `EdgeGatedSolution{Float32}` came back).  The
+        # axes must be promoted to one common float type before any work.
+        egs_i = edge_gated_pole_field_solve(prob, -3:3, -3:3; h = 0.5,
+                                            grow_rings = 2)
+        @test egs_i isa EdgeGatedSolution{Float64}
+        @test eltype(egs_i.xs) === Float64 && eltype(egs_i.ys) === Float64
+        @test egs_i.xs == -3.0:1.0:3.0 && egs_i.ys == -3.0:1.0:3.0
+        # Mixed Float32 / Float64 axes promote to the wider type.
+        egs_m = edge_gated_pole_field_solve(prob, Float32.(-3:3), -3.0:3.0;
+                                            h = 0.5, grow_rings = 2)
+        @test egs_m isa EdgeGatedSolution{Float64}
     end
 end
 
@@ -136,6 +187,20 @@ end
 #        visited Padés are corrupted; spurious poles reappear in the
 #        pole-free sectors and EG.1.2 (`nfree ≤ 5`, `nfree < 0.1·npop`)
 #        goes RED.
+#
+#   M4 — (lkrk 1) revert the uniform-axis gate to the first-step-only
+#        check (`Δx = xs[2]-xs[1]` vs `Δy = ys[2]-ys[1]`).  The two
+#        `xs_bad` / `ys_bad` `@test_throws` in EG.2.1 go RED (the solve
+#        runs to completion on a non-uniform lattice).
+#
+#   M5 — (lkrk 2) delete the `iters == max_iter && n_new > 0` throw and
+#        the `max_iter ≥ 1` guard.  EG.2.1's `max_iter = 0` `@test_throws`
+#        and the four `err` assertions go RED.
+#
+#   M6 — (lkrk 4) revert `T = float(promote_type(eltype(xs), eltype(ys)))`
+#        + `collect(T, ·)` to `T = float(eltype(xs))`.  EG.2.2's mixed
+#        Float32/Float64 assertion goes RED (a Float32 solution returns).
+#        Observed 2026-08-23: M4 → 2 RED, M5 → 2 RED + 3 errored, M6 → 1 RED.
 #
 #   (A fourth candidate — shrinking the seed radius — does NOT bite:
 #   region growing bootstraps fine from even a single seed cell, since
