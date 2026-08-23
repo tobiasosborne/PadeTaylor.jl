@@ -142,6 +142,117 @@ using PadeTaylor
 end # @testset FW 2011 Fig 4.1
 
 # ======================================================================
+# BigFloat-256 rerun of step (i) — bead `padetaylor-7zw`, worklog 080.
+#
+# `bvp_solve` is generic in `T <: AbstractFloat` (src/BVP.jl §"Generic-T
+# discipline"; BV.5.1 in test/bvp_test.jl exercises the BigFloat-256
+# linear path).  This testset runs the SAME recipe — same segment, same
+# BCs, same N=240 — at 256-bit precision and pins what the path achieves.
+#
+# Probe result (worklog 080, 2026-08-23; 7 Newton iterations, ≈30 s):
+#     rel-err u(0)  = 1.85e-12      rel-err u'(0) = 1.75e-10
+#     |imag u(0)|   = 3.2e-76       ‖R‖_∞         = 1.1e-68
+# The u(0)/u'(0) errors are IDENTICAL (to three digits) to the Float64
+# figures of worklog 016 (3.5e-13 abs ⇔ 1.87e-12 rel; 5.3e-11 abs ⇔
+# 1.7e-10 rel).  At N=240 the error is spectral-truncation-limited, not
+# precision-limited — exactly as worklog 016 friction 3 predicted.  What
+# BF-256 genuinely buys at this N is the 1e-68 residual floor and the
+# 1e-76 Schwarz-imaginary floor (Float64 floors: ~1e-8 and ~1e-16), which
+# FB.1.3 pins — that assertion is the "did this actually run at 256 bits"
+# witness.  Reaching FW's own 16-digit quoting limit needs N=320
+# (rel-err u(0) = 1.6e-16, ≈75 s; worklog 080) and is deliberately NOT
+# run in-suite.
+#
+# References: FW2011...md:226 (eq. 4.1 reference values), :228 ("better
+# than 10⁻²⁰" via an extended-precision Maple BVP).
+# ======================================================================
+@testset "FW 2011 Fig 4.1 step-(i) BVP at BigFloat-256: tritronquée pin" begin
+    setprecision(BigFloat, 256) do
+        bvp_f(z, u)      = 6 * u^2 + z
+        bvp_∂f_∂u(z, u)  = 12 * u
+        leading(z)       = -sqrt(-z / 6)
+
+        # Endpoints and BCs constructed IN BigFloat so no Float64 rounding
+        # enters the BC data (leading(z) of a Complex{BigFloat} is BigFloat).
+        z_a = Complex{BigFloat}(0, -20)
+        z_b = Complex{BigFloat}(0, +20)
+        u_a = leading(z_a)
+        u_b = leading(z_b)
+
+        sol_bf = bvp_solve(bvp_f, bvp_∂f_∂u, z_a, z_b, u_a, u_b;
+                           N = 240, initial_guess = leading, max_iter = 20)
+        # `tol` left at its default `eps(BigFloat)^(3/4)` ≈ 1e-58 — the
+        # step-norm criterion scales with T; forcing 1e-13 here would
+        # stop Newton early and forfeit the BF-256 floors pinned below.
+
+        @testset "FB.1.1: Newton converged at BigFloat-256" begin
+            @test sol_bf.iterations ≤ 10
+            @test isfinite(sol_bf.residual_inf)
+        end
+
+        @testset "FB.1.2: u(0), u'(0) vs FW eq. 4.1 — rel-err pins" begin
+            # FW eq. 4.1 (FW2011...md:226) as big"" literals: the string
+            # is parsed directly to 256 bits, so the reference carries no
+            # Float64 rounding of its own (the 16 quoted digits are FW's
+            # limit, ≈1e-16 rel — irrelevant at the 1e-11/3e-10 pins).
+            u_at_0_FW  = big"-0.1875543083404949"
+            up_at_0_FW = big"0.3049055602612289"
+
+            u_0, up_0 = sol_bf(Complex{BigFloat}(0, 0))
+            rel_u  = abs(real(u_0)  - u_at_0_FW)  / abs(u_at_0_FW)
+            rel_up = abs(real(up_0) - up_at_0_FW) / abs(up_at_0_FW)
+
+            # Measured 1.85e-12 → pin 1e-11 (5.4× margin).  Tighter than
+            # the Float64 FF.1.2 pin (1e-10 abs ⇔ 5.3e-10 rel).
+            @test rel_u  ≤ 1e-11
+            # Measured 1.75e-10 → pin 3e-10 (1.7× margin).  The bead's
+            # "5× margin" would give 1e-9 rel ⇔ 3.0e-10 abs — LOOSER than
+            # the Float64 pin of 1e-10 abs (which itself has only 1.9×
+            # margin over its measured 5.3e-11).  3e-10 rel ⇔ 9.1e-11 abs
+            # keeps the BF-256 pin no looser than Float64.  The thin
+            # margin is acceptable because MPFR + GenericLinearAlgebra are
+            # bit-reproducible across platforms (no LAPACK variance).
+            @test rel_up ≤ 3e-10
+        end
+
+        @testset "FB.1.3: 256-bit floors — residual and Schwarz-imaginary" begin
+            # The precision witness.  At Float64 the converged residual
+            # floors near 1e-8 (worklog 016 lesson 25) and imag parts near
+            # 1e-16.  At BF-256 both collapse by ~60 orders of magnitude;
+            # a Float64 leak anywhere in the path (nodes, D₁, backslash,
+            # barycentric eval) would lift these back above 1e-60.
+            u_0, up_0 = sol_bf(Complex{BigFloat}(0, 0))
+            @test sol_bf.residual_inf ≤ 1e-60      # measured 1.1e-68
+            @test abs(imag(u_0))  ≤ 1e-60          # measured 3.2e-76
+            @test abs(imag(up_0)) ≤ 1e-60
+        end
+
+        @testset "FB.1.4: u(+20i) = imposed Dirichlet BC at 256 bits" begin
+            # Structural, not a precision witness (M2 leaves it GREEN):
+            # collocation imposes the BC exactly at every precision.
+            u_top, _ = sol_bf(z_b)
+            @test abs(u_top - u_b) ≤ 1e-70         # F64 analogue: 1e-13
+        end
+    end
+end # @testset FW 2011 Fig 4.1 at BigFloat-256
+
+# ----------------------------------------------------------------------
+# Mutation-proof procedure (BigFloat-256 testset), verified 2026-08-23:
+#   M1 — reference digit just inside the pin.  `u_at_0_FW` →
+#        big"-0.1875543083434949" (+3e-12 in the 12th decimal; the pin is
+#        1e-11 rel ⇔ 1.9e-12 abs, measured error 3.5e-13): FB.1.2 RED.
+#        `up_at_0_FW` → big"0.3049055603612289" (+1e-10; pin 3e-10 rel ⇔
+#        9.1e-11 abs, measured 5.3e-11): FB.1.2 RED.
+#   M2 — precision leak: build `z_a, z_b` as `-20.0im, 20.0im` (Float64,
+#        so CT promotes to ComplexF64 and the whole solve runs at 53
+#        bits): FB.1.3 RED on all three floors (residual 3.8e-8, imag
+#        parts ~1e-15).  FB.1.2 and FB.1.4 stay GREEN — the u(0) pin is
+#        truncation-limited and Dirichlet enforcement is exact at any
+#        precision — so FB.1.3 alone is the precision witness.
+# Each RED then reverted.
+# ----------------------------------------------------------------------
+
+# ======================================================================
 # Steps (ii) + (iii) — bead `padetaylor-gky`, worklog 029.
 #
 # Step (i) above pins the imaginary-axis BVP.  Steps (ii) and (iii)

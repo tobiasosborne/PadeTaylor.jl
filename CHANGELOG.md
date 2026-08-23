@@ -19,6 +19,19 @@ broken / 0 fail**, re-confirmed by `scripts/quality_gate.sh full` on 2026-08-23
 > day their bug is fixed.  Investigate only FAILs.  See
 > `scripts/quality_gate.sh` "EXPECTED-NOISE".
 
+### Tests — BigFloat-256 tritronquée pin (bead `padetaylor-7zw`)
+
+- **`padetaylor-7zw`** — `test/fw_fig_41_test.jl` gains a parallel
+  BigFloat-256 testset (8 assertions) rerunning the FW Fig 4.1 step-(i)
+  BVP at N=240 with the FW eq. 4.1 targets as `big"…"` literals
+  (FW2011 md:226).  Pins rel-err u(0) ≤ 1e-11 (measured 1.85e-12),
+  rel-err u'(0) ≤ 3e-10 (measured 1.75e-10), and the 256-bit floors
+  ‖R‖_∞, |imag| ≤ 1e-60 (measured 1e-68 / 1e-76) as the precision
+  witness.  Finding: at N=240 the u(0)/u'(0) error equals the Float64
+  figure — truncation-limited, not precision-limited; N=320 reaches FW's
+  16-digit limit (1.6e-16) in 75 s.  Mutation-proved (M1 reference
+  digit, M2 Float64 leak).  Worklog 080.  ≈60 s added to the suite.
+
 ### Fixed — quality gate
 
 - `scripts/quality_gate.sh fast` was RED on a clean tree: it ran
