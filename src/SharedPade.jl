@@ -102,11 +102,20 @@ bead `padetaylor-unk`).  A spurious pole at the expansion centre
 cancelling the common `z^λ` factor from `b` and every numerator (mirroring
 the scalar `:svd` path), **not** by throwing.
 
-Two failure modes still throw rather than return a NaN/zero lie:
+Three failure modes still throw rather than return a NaN/zero lie:
 
   1. **jet too short** — `length(jets[i]) < m+1`: cannot fill the block.
-  2. **all-zero jets** — every singular value below `τ = tol·‖c‖`: the
-     input is indistinguishable from zero at the requested tolerance.
+  2. **identically-zero jets** — `‖c‖₂ = 0` exactly: nothing to approximate.
+     The predicate is deliberately `iszero`, not `‖c‖ ≤ tol`: GGT 2013's
+     thresholds are all RELATIVE (`τ = tol·‖c‖₂`, md:213 and Algorithm 2
+     step 2, md:225), so the whole construction is homogeneous under
+     `c ↦ αc`, and an absolute zero-test was the one line that broke that
+     covariance — it falsely rejected valid small-amplitude jets with
+     `‖c‖ < tol` (bug `padetaylor-ked0`; pinned by `SP.6`, α ∈ {1e-20, 1e20}).
+  3. **non-finite input** — any `Inf`/`NaN` coefficient, or `tol ∉ [0, ∞)`:
+     an upstream Taylor-jet overflow must surface as an `ArgumentError`
+     ("reduce h or order"), never as a silent zero / garbage `Q` (bug
+     `padetaylor-lbqb`; pinned by `SP.7`).  Same guard as `robust_pade`.
 
 ## References
 
@@ -190,9 +199,11 @@ each must have length `≥ m+1`.  `m` is the (shared) denominator degree.
 Returns `d` numerator coefficient vectors `P₁,…,P_d` (low-to-high) and a
 single denominator `Q`, all normalised so `Q(0) = b[1] = 1`.
 
-For `d = 1` this reduces exactly to `robust_pade(jets[1], m, m;
-method=:svd)`.  Algorithm = pillar A §7 steps 1–8; see the module
-docstring for the block-Toeplitz rationale and the four defensive throws.
+For `d = 1`, full-rank inputs without degree reduction reproduce the scalar
+`robust_pade` path. Degenerate inputs can instead reduce to the full Taylor
+jet over `Q = [1]` (`docs/worklog/067-sharedpade-c1-c2-minimal-core.md:36-40`).
+Algorithm = pillar A §7 steps 1–8; see the module
+docstring for the block-Toeplitz rationale and the defensive throws.
 """
 function shared_denominator_pade(jets::AbstractVector{<:AbstractVector{T}},
                                  m::Integer;
@@ -210,20 +221,32 @@ function shared_denominator_pade(jets::AbstractVector{<:AbstractVector{T}},
             "shared_denominator_pade: jet $i too short for denominator " *
             "degree m=$m: length(jet)=$(length(jet)), need ≥ m+1=$(m+1). " *
             "Suggestion: extend the Taylor jet to at least m+1 coefficients."))
+        # Bug padetaylor-lbqb: an Inf/NaN coefficient would make every σ-vs-τ
+        # comparison vacuous and could yield a silent garbage Q (Rule 1).
+        all(isfinite, jet) || throw(ArgumentError(
+            "shared_denominator_pade: jet $i contains Inf/NaN coefficients — " *
+            "the Taylor jet overflowed; reduce h or order."))
     end
+    (0 ≤ tol < Inf) || throw(ArgumentError(
+        "shared_denominator_pade: tol must satisfy 0 ≤ tol < Inf; got tol=$tol. " *
+        "Suggestion: pass a finite relative tolerance such as 1e-14."))
 
     tol_t = real(T) <: AbstractFloat ? real(T)(tol) : tol
     cnorm = norm(reduce(vcat, [collect(j) for j in jets]))
     τ = tol_t * cnorm
 
-    # Failure mode 2 (genuinely-zero input): every coefficient is ~0, so there
-    # is nothing to approximate.  This is DISTINCT from a locally-regular jet
-    # whose high-order window vanishes (that reduces to Q=1 below) — here the
-    # whole jet, low-order included, is negligible.
-    cnorm ≤ tol_t && throw(ErrorException(
-        "shared_denominator_pade: the Taylor jets are indistinguishable from " *
-        "zero (‖c‖ = $cnorm ≤ tol = $tol_t). " *
-        "Suggestion: check the jets are non-trivial, or loosen tol."))
+    # Failure mode 2 (genuinely-zero input): ‖c‖ = 0 exactly, so there is
+    # nothing to approximate.  The predicate is `iszero`, NOT `cnorm ≤ tol`:
+    # every other threshold in this module is relative (τ = tol·‖c‖₂, GGT 2013
+    # md:213/225), so an absolute test here was the one non-scale-covariant
+    # line and falsely rejected valid jets scaled by α < tol/‖c‖ (bug
+    # padetaylor-ked0; SP.6 pins α ∈ {1e-20, 1e20}).  This is DISTINCT from a
+    # locally-regular jet whose high-order window vanishes (that reduces to
+    # Q=1 below) — here the whole jet, low-order included, is exactly zero.
+    iszero(cnorm) && throw(ErrorException(
+        "shared_denominator_pade: the Taylor jets are identically zero " *
+        "(‖c‖ = 0), so there is nothing to approximate. " *
+        "Suggestion: check the jets are non-trivial."))
 
     # --- Steps 2–4: build A_full, SVD, rank check + degree reduction --------
     # Vector analogue of RobustPade's reduction `while` loop (ADR-0027).

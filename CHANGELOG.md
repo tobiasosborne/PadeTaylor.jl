@@ -19,6 +19,11 @@ broken / 0 fail**, re-confirmed by `scripts/quality_gate.sh full` on 2026-08-23
 > day their bug is fixed.  Investigate only FAILs.  See
 > `scripts/quality_gate.sh` "EXPECTED-NOISE".
 
+### Fixed — input validation in the Padé layer (beads `padetaylor-ked0`, `padetaylor-lbqb`)
+
+  - **`src/SharedPade.jl`** — the zero-input guard was absolute (`‖c‖₂ ≤ tol`) and falsely rejected valid small-amplitude jets; it is now `iszero(‖c‖)`, restoring the scale covariance every other threshold already had (GGT 2013 `τ = tol·‖c‖₂`, md:213/225). Pinned by `SP.6` (α ∈ {1e-20, 1e20}); mutation-proven (`padetaylor-ked0`).
+  - **`src/RobustPade.jl` + `src/SharedPade.jl`** — `robust_pade` / `shared_denominator_pade` now throw `ArgumentError` ("the Taylor jet overflowed; reduce h or order") on any `Inf`/`NaN` coefficient or `tol ∉ [0, Inf)` instead of silently returning the zero approximant. Pinned by `2.1.9` and `SP.7`; mutation-proven (`padetaylor-lbqb`).
+
 ### Fixed — Fig 4.7 / 4.8 path-dependence seam (bug `padetaylor-vwgl`, ADR-0034, worklogs 077/078/079)
 
   - **`src/WindowedComposite.jl` — bounded-window composite solve** cures the

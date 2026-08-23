@@ -804,4 +804,85 @@ end
         @test aaa_poles ≈ sq_roots atol = 1e-9
     end
 
+    # =========================================================================
+    # SP.6 — scale covariance of the zero-input test (bug padetaylor-ked0).
+    #
+    # GGT 2013 md:213 / Algorithm 2 step 2 (md:225): every threshold is
+    # RELATIVE, τ = tol·‖c‖₂, so the algorithm is homogeneous under c ↦ αc.
+    # The pre-fix guard compared ‖c‖₂ against the ABSOLUTE `tol`, so a valid
+    # jet scaled by α = 1e-20 threw "indistinguishable from zero".  Pinned:
+    # numerators scale by α, the denominator and all degrees are unchanged,
+    # for α ∈ {1e-20, 1e20}; the genuinely-zero jet still throws.
+    # =========================================================================
+    @testset "SP.6 rescaling invariance of the zero-input guard (ked0)" begin
+        Qden = [1.0, -0.4, 0.2]
+        P1   = [1.0, 0.3]
+        P2   = [2.0, -0.7, 0.5]
+        m    = 2
+        jet1 = _ratio_jet(P1, Qden, 2m)
+        jet2 = _ratio_jet(P2, Qden, 2m)
+        nums0, den0 = shared_denominator_pade([jet1, jet2], m)
+        @test den0 ≈ Qden atol = 1e-12
+        for α in (1e-20, 1e20)
+            nums, den = shared_denominator_pade([α .* jet1, α .* jet2], m)
+            @test length(den) == length(den0)
+            @test den ≈ den0 atol = 1e-12
+            for i in 1:2
+                @test length(nums[i]) == length(nums0[i])
+                @test nums[i] ≈ α .* nums0[i] rtol = 1e-12
+            end
+        end
+        # Genuinely-zero input (‖c‖ = 0) must still fail loud with the
+        # Rule-1 suggestion text, independent of tol.
+        for tol in (1e-14, 0.0)
+            e = try; shared_denominator_pade([zeros(7), zeros(7)], 3; tol = tol); catch e; e; end
+            @test e isa ErrorException
+            msg = lowercase(sprint(showerror, e))
+            @test occursin("zero", msg) && occursin("suggestion", msg)
+        end
+    end
+
+    # =========================================================================
+    # SP.7 — non-finite coefficients / tol are rejected (bug padetaylor-lbqb).
+    # An upstream Taylor-jet overflow must surface as an ArgumentError with a
+    # concrete suggestion, never as a silent zero / garbage approximant.
+    # =========================================================================
+    # =========================================================================
+    # MUTATION-PROOF RECORD for SP.6 / SP.7 (beads padetaylor-ked0 / -lbqb).
+    # Each mutation was applied by hand to src/SharedPade.jl, the suite run
+    # with `julia --project=. test/shared_pade_test.jl`, then the file
+    # restored and the suite re-confirmed GREEN (192/192).
+    #
+    # ── Mutation M5 — absolute zero-input test (the ked0 bug, restored) ─────
+    #   Edit: `iszero(cnorm) && throw(ErrorException(`
+    #         →  `cnorm ≤ tol_t && throw(ErrorException(`
+    #   Result: 1 of 177 RED — SP.6 errored at α = 1e-20 (the valid jet was
+    #     rejected as "indistinguishable from zero").  Every other testset
+    #     GREEN: the bug is invisible to unit-amplitude jets, which is why it
+    #     survived the triple-oracle suite.
+    #
+    # ── Mutation M6 — drop both lbqb guards ─────────────────────────────────
+    #   Edit: `all(isfinite, jet) || throw(…)` → `true || throw(…)` and
+    #         `(0 ≤ tol < Inf) || throw(…)`   → `true || throw(…)`.
+    #   Result: 11 of 192 RED, all in SP.7 (Inf/-Inf/NaN coefficient and
+    #     Inf/negative/NaN tol each either returned silently or threw the
+    #     wrong exception type).
+    # =========================================================================
+    @testset "SP.7 non-finite input validation (lbqb)" begin
+        Qden = [1.0, -0.4, 0.2]
+        jet  = _ratio_jet([1.0, 0.3], Qden, 4)
+        for bad in (Inf, -Inf, NaN)
+            j2 = copy(jet); j2[3] = bad
+            e = try; shared_denominator_pade([jet, j2], 2); catch e; e; end
+            @test e isa ArgumentError
+            msg = sprint(showerror, e)
+            @test occursin("overflowed", msg) && occursin("reduce h or order", msg)
+        end
+        for badtol in (Inf, -1e-14, NaN)
+            e = try; shared_denominator_pade([jet, jet], 2; tol = badtol); catch e; e; end
+            @test e isa ArgumentError
+            @test occursin("tol", sprint(showerror, e))
+        end
+    end
+
 end

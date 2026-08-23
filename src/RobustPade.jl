@@ -51,6 +51,11 @@ exercise this regime explicitly under `method = :svd`.
 Given Taylor coefficients `c = [c_0, c_1, …]` of an analytic `f` and
 target type `(m, n)`:
 
+  0. **Input validation.**  Every coefficient must be finite and
+     `0 ≤ tol < Inf`; otherwise `ArgumentError`.  Without this, `tol = Inf`
+     or a single `Inf` coefficient makes step 1's threshold infinite and the
+     zero approximant is returned SILENTLY — a truthful-looking lie from an
+     overflowed Taylor jet (bug `padetaylor-lbqb`; test 2.1.9).
   1. **Special case.**  If `|c_0|, …, |c_m|` are all below a threshold,
      return `r ≡ 0` (`μ = -∞`, `ν = 0`).
   2. **Diagonal hopping.**  Build the lower-triangular Toeplitz `Z`
@@ -350,8 +355,9 @@ Default per element type: `:classical` for `Float32`, `Float64`,
 `Complex{Float32}`, `Complex{Float64}`; `:svd` for all others.  See the
 module docstring's dispatch table and ADR-0005 for rationale.
 
-Throws `ArgumentError` on negative `m`, negative `n`, or an unknown
-`method`.
+Throws `ArgumentError` on negative `m`, negative `n`, an unknown
+`method`, any non-finite coefficient in `c`, or `tol` outside `[0, Inf)`
+(bug `padetaylor-lbqb`: an overflowed jet must fail loud, Rule 1).
 """
 function robust_pade(c::AbstractVector{T}, m::Integer, n::Integer;
                      tol = default_tol(T),
@@ -361,6 +367,15 @@ function robust_pade(c::AbstractVector{T}, m::Integer, n::Integer;
     method ∈ (:classical, :svd) || throw(ArgumentError(
         "robust_pade: unknown method `:$method`; expected :classical or :svd. " *
         "See `docs/adr/0005-classical-pade-default-at-float64.md`."))
+    # Bug padetaylor-lbqb: with tol = Inf or any Inf coefficient the r ≡ 0
+    # test below is vacuously true and the ZERO approximant was returned
+    # silently; NaN went straight into LAPACK.  Fail loud instead (Rule 1).
+    all(isfinite, c) || throw(ArgumentError(
+        "robust_pade: coefficients contain Inf/NaN — the Taylor jet " *
+        "overflowed; reduce h or order."))
+    (0 ≤ tol < Inf) || throw(ArgumentError(
+        "robust_pade: tol must satisfy 0 ≤ tol < Inf; got tol=$tol. " *
+        "Suggestion: pass a finite relative tolerance such as 1e-14."))
 
     # Classical path: diagonal (m, m) with n > 0, T well-supported.
     # SingularException → fall through to SVD (FW 2011 line 346 fallback,

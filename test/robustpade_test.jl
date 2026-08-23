@@ -268,4 +268,42 @@ include("_oracles.jl")
             end
         end
     end
+
+    # -------------------------------------------------------------------------
+    # 2.1.9 — non-finite coefficients / tol are rejected (bug padetaylor-lbqb).
+    #
+    # Pre-fix, `tol = Inf` or any `Inf` coefficient made the r ≡ 0 test at
+    # GGT step 2 vacuously true and robust_pade SILENTLY returned a = [0],
+    # b = [1] (a truthful-looking lie, Rule 1); NaN coefficients went into
+    # LAPACK.  Now: ArgumentError naming the overflow and the remedy.
+    # -------------------------------------------------------------------------
+    # MUTATION-PROOF RECORD (CLAUDE.md Rule 4), bead padetaylor-lbqb.
+    #   Edit (src/RobustPade.jl, robust_pade): replace the two guards
+    #     `all(isfinite, c) || throw(ArgumentError(…))` and
+    #     `(0 ≤ tol < Inf) || throw(ArgumentError(…))`
+    #   with `true || throw(…)`; run `julia --project=. test/robustpade_test.jl`.
+    #   Result: 22 of 61 RED, all in 2.1.9 (Inf/-Inf/NaN coefficient and
+    #   Inf/negative/NaN tol, both methods): the zero approximant came back
+    #   silently or LAPACK threw a non-ArgumentError.  Restored → 61/61 GREEN.
+    # -------------------------------------------------------------------------
+    @testset "2.1.9 non-finite input validation (lbqb)" begin
+        c = Float64.([1 / factorial(big(k)) for k = 0:4])
+        for method in (:classical, :svd)
+            for bad in (Inf, -Inf, NaN)
+                cb = copy(c); cb[2] = bad
+                e = try; robust_pade(cb, 2, 2; method = method); catch e; e; end
+                @test e isa ArgumentError
+                msg = sprint(showerror, e)
+                @test occursin("overflowed", msg) && occursin("reduce h or order", msg)
+            end
+            for badtol in (Inf, -1e-14, NaN)
+                e = try; robust_pade(c, 2, 2; tol = badtol, method = method); catch e; e; end
+                @test e isa ArgumentError
+                @test occursin("tol", sprint(showerror, e))
+            end
+        end
+        # tol = 0 is a legal (exact-arithmetic) tolerance — must not throw.
+        P = robust_pade(c, 2, 2; tol = 0.0, method = :svd)
+        @test P.a ≈ [1.0, 0.5, 1/12] atol = 1e-13
+    end
 end
