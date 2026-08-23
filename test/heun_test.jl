@@ -169,3 +169,28 @@ end
     t = @elapsed heun_c(1, 1, 2, 3, -1; z = 0.3 + 0.2im)
     @test t < WALL_TIME_GATE
 end
+
+# ---------------------------------------------------------------------------
+# MUTATION-PROOF (Rule 4) — ACTUALLY EXECUTED 2026-08-23, bead `padetaylor-ll3t`,
+# then restored byte-for-byte (`git diff src/Heun.jl` empty).  Baseline 49/49.
+#
+# M-G (HeunG Frobenius recurrence, src/Heun.jl `_heun_g_frobenius_at_0`,
+#   DLMF 31.3.2 three-term recurrence): flip the sign of the lagged term,
+#   `c[j+2] = ((Q_j + q)·c[j+1] − P_j·c[j]) / R_j`  →  `… + P_j·c[j] …`.
+#   RESULT: HG.2 RED 3/6 — all three oracle value pins (z = 0.1, 0.5, 0.9)
+#   fail; the file aborts there.  HG.1 stays GREEN by design: its B1 case
+#   (q = 0, α = 0) has c_1 = 0 and P_1 = 0, so every higher c_j is zero and
+#   the perturbed term is never exercised (a coverage fact, not a gap — cf.
+#   test/corpus_heun_test.jl footer, CHN.3b).
+#
+# M-C (HeunC Frobenius recurrence, `_heun_c_frobenius_at_0`, Motygin 2018
+#   eq 3 / DLMF 31.12): flip the sign of the lagged term,
+#   `b[n+1] = (Q_n·b[n] + R_n·b[n-1]) / P_n`  →  `… − R_n·b[n-1] …`.
+#   RESULT: HC.2 RED 3/6 — all three two-source oracle pins fail; every
+#   HeunG testset and HC.1 stay GREEN (HC.1 only checks the leading
+#   order 1 + c_1·z, which the n ≥ 2 recurrence does not touch).
+#
+# Both mutants are caught by the 30-digit wolframscript oracles
+# (`external/probes/heun-oracle/oracles.txt`), not by "didn't throw"
+# (Rule 5).  The wall-time gates are untouched by either mutant.
+# ---------------------------------------------------------------------------

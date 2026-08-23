@@ -101,11 +101,17 @@ end
 
     @testset "VP.1.2 closed-form harmonic system over an interval" begin
         # y₁' = y₂, y₂' = −y₁, y0 = [1, 0] ⇒ y(z) = [cos z, −sin z].
-        # Both components entire (no poles) — under the correct GGT (m,m) window
-        # the shared Q reduces to its honest supported degree and carries a
-        # method-set residual ~5e-9 (F64) / ~1.6e-17 (BF) for this pole-free
-        # system (ADR-0027 / bead padetaylor-unk; cf. V3a VS.1.2).  Dispatch
-        # (ADR-0028) will recover the tighter accuracy via the (m−1,m) cell.
+        # Both components entire (no poles).  Under cell A alone (the
+        # diagonal (m,m) window, ADR-0027 / bead padetaylor-unk) the shared
+        # Q carried a ~5e-9 F64 least-squares residual and this pin sat at
+        # 1e-8.  The ADR-0028 dispatch (shipped; `src/SharedPadeDispatch.jl`)
+        # selects the wide-square cell B per step on this entire jet.
+        # Re-measured 2026-08-23 (bead `padetaylor-urmg`): max |error| at
+        # the 8 breakpoints `5.1e-14`, at the 5 dense points `4.5e-14`.
+        # Pinned at atol = 5e-13 (~10× margin on a roundoff-level figure).
+        # MUTATION-PROOF (verified 2026-08-23): forcing `pickB = false` in
+        # `SharedPadeDispatch.shared_pade_select` (always cell A) ⇒ 26/72
+        # RED in this file (error back to 1.27e-9); restore ⇒ 72/72 GREEN.
         harm = (z, y) -> [y[2], -y[1]]
         order = 24
 
@@ -115,16 +121,16 @@ end
         # Trajectory at every breakpoint.
         for k in 1:length(sol.z)
             z = sol.z[k]
-            @test sol.y[k][1] ≈ cos(z)  atol = 1e-8
-            @test sol.y[k][2] ≈ -sin(z) atol = 1e-8
+            @test sol.y[k][1] ≈ cos(z)  atol = 5e-13
+            @test sol.y[k][2] ≈ -sin(z) atol = 5e-13
         end
         @test sol.z[end] ≈ 2.0
 
         # Dense callable at several interior points.
         for z in (0.1, 0.37, 0.99, 1.5, 1.875)
             yz = sol(z)
-            @test yz[1] ≈ cos(z)  atol = 1e-8
-            @test yz[2] ≈ -sin(z) atol = 1e-8
+            @test yz[1] ≈ cos(z)  atol = 5e-13
+            @test yz[2] ≈ -sin(z) atol = 5e-13
         end
 
         # BigFloat (256-bit): far below Float64 reach.  The sin-jet
@@ -172,10 +178,12 @@ end
                                        order = 24)
         sol  = vector_solve_pade(prob; h = 0.25)
 
-        # Interior point not coincident with any breakpoint.
+        # Interior point not coincident with any breakpoint.  Measured
+        # 2026-08-23 under ADR-0028 dispatch: `9.1e-15` (bead
+        # `padetaylor-urmg`); pinned at 5e-13 like VP.1.2.
         yz = sol(0.42)
-        @test yz[1] ≈ cos(0.42)  atol = 1e-8
-        @test yz[2] ≈ -sin(0.42) atol = 1e-8
+        @test yz[1] ≈ cos(0.42)  atol = 5e-13
+        @test yz[2] ≈ -sin(0.42) atol = 5e-13
 
         # Endpoints return the IC / final state exactly.
         y_start = sol(0.0)

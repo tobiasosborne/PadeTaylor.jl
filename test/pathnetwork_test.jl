@@ -232,6 +232,48 @@ include(joinpath(@__DIR__, "_oracle_problems.jl"))
         @test length(sol_f64.visited_z) > 20_000  # Stage-1 walked ~24k nodes.
     end
 
+    @testset "PN.2.4: FW Table 5.1 z=28.261 end point high on a pole wall" begin
+        # FW 2011 Table 5.1 column (c): z = 28.261 is "medium range, but
+        # with the end point high up on a pole 'wall'; the rightmost
+        # real pole in Fig. 5.1", with reference value
+        #     u(28.261) = 9.876953517025014 × 10⁶
+        # (references/markdown/FW2011_painleve_methodology_JCP230/
+        # FW2011_painleve_methodology_JCP230.md:370-372; the table row
+        # at md:385-391 reports Padé rel-err 7.92(-10), RKN12 9.61(-10),
+        # ode45 4.30(-08)).  FW single this column out as the one where
+        # ode45 "has difficulties meeting the specified error tolerances"
+        # (md:378) — the target sits where |u| ~ 10⁷ and |u'| ~ 6·10¹⁰
+        # (`up_at_28261`), so the last Stage-2 Padé evaluation must hold
+        # relative accuracy on a steeply rising wall.
+        #
+        # Bead `padetaylor-aqw1`: the oracle constants have lived in
+        # `_oracle_problems.jl` since Phase 6 but no test asserted them.
+        #
+        # Measured 2026-08-23 (Float64, classical Padé, h=0.5, order=30,
+        # 72 visited nodes, ~4 s): rel-err `6.88·10⁻¹⁰` — BEATS FW's own
+        # Padé figure `7.92·10⁻¹⁰` — and |imag(u)|/|u| = `3.6·10⁻¹⁰`.
+        # The pin `rtol = 5·10⁻⁹` carries a ~7× cross-platform margin;
+        # the imaginary-part bound is relative because |u| ~ 10⁷ makes
+        # an absolute 1e-8 bound meaningless here.  A BF-256 one-shot
+        # of the same walk measured rel-err `7.83·10⁻¹¹` (10× better
+        # than FW) in ~52 s; it is NOT pinned in-suite because PN.2.2's
+        # BF-256 run is already the dominant suite cost.
+        prob_f64 = PadeTaylorProblem(fW, (u_0_FW, up_0_FW), (0.0, 28.261);
+                                     order = 30)
+        sol_f64 = path_network_solve(prob_f64, ComplexF64[28.261 + 0im];
+                                     h = 0.5, max_steps_per_target = 200)
+        u_c = sol_f64.grid_u[1]
+        @test isapprox(u_c, u_at_28261_FW_ref; rtol = 5e-9)
+        @test abs(imag(u_c)) / abs(u_c) < 5e-9    # Real solution on real axis.
+        @test abs(u_c) > 9e6                      # Genuinely high on the wall.
+
+        # MUTATION-PROOF (verified 2026-08-23, bead `padetaylor-aqw1`):
+        # perturbing `u_at_28261_FW_ref` in its 8th significant digit
+        # (9.876953517025014e6 → 9.876953617025014e6, rel shift 1e-8)
+        # turns the `rtol = 5e-9` pin RED; restoring the FW constant
+        # returns it to GREEN.
+    end
+
     @testset "PN.5.1: visited_parent is a well-formed Stage-1 path tree" begin
         # FW 2011 Fig 3.2 draws the Stage-1 path tree.  The tree edges
         # are `{(visited_parent[k], k) : k ≥ 2}`; this testset pins the

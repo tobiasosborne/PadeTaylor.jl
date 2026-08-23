@@ -19,6 +19,29 @@ broken / 0 fail**, re-confirmed by `scripts/quality_gate.sh full` on 2026-08-23
 > day their bug is fixed.  Investigate only FAILs.  See
 > `scripts/quality_gate.sh` "EXPECTED-NOISE".
 
+### Tests — rigour audit 2026-08-23 (beads `padetaylor-aqw1`, `padetaylor-urmg`, `padetaylor-ll3t`)
+
+- **`padetaylor-aqw1`** — `test/pathnetwork_test.jl` PN.2.4 pins FW 2011
+  Table 5.1 column (c), `u(28.261) = 9.876953517025014e6` (end point high on
+  a pole wall; `references/markdown/FW2011_painleve_methodology_JCP230/
+  FW2011_painleve_methodology_JCP230.md:370-372`, table at `:385-391`).
+  The oracle constant had sat in `test/_oracle_problems.jl` since Phase 6
+  with no assertion.  Measured F64 rel-err `6.88e-10` (FW's own Padé:
+  `7.92e-10`); pinned `rtol = 5e-9` plus a relative imag bound.  BF-256
+  one-shot `7.83e-11` (not in-suite, ~52 s).  Mutation-proven: 8th-digit
+  perturbation of the oracle → RED.
+- **`padetaylor-urmg`** — the harmonic `[cos, −sin]` pins in
+  `test/vector_step_control_test.jl` (VSC.1.4) and `test/vector_problems_test.jl`
+  (VP.1.2, VP.1.4) tighten `atol 1e-8 → 5e-13`.  Re-measured max error
+  `5.1e-14` (was `1.27e-9` at `decc32d`); bisected to commit `8f2cbfd`, the
+  ADR-0028 dispatch wiring, exactly as the now-deleted "forthcoming ADR-0028
+  will tighten" comment predicted.  Mutation-proven: forcing cell A in
+  `shared_pade_select` → 21/69 and 26/72 RED.
+- **`padetaylor-ll3t`** — `test/heun_test.jl` gains the MUTATION-PROOF footer
+  it lacked: sign-flipping the lagged term of the HeunG (`_heun_g_frobenius_at_0`)
+  and HeunC (`_heun_c_frobenius_at_0`) recurrences each RED the corresponding
+  30-digit oracle testset (HG.2 3/6, HC.2 3/6); restored, 49/49 GREEN.
+
 ### Fixed — input validation in the Padé layer (beads `padetaylor-ked0`, `padetaylor-lbqb`)
 
   - **`src/SharedPade.jl`** — the zero-input guard was absolute (`‖c‖₂ ≤ tol`) and falsely rejected valid small-amplitude jets; it is now `iszero(‖c‖)`, restoring the scale covariance every other threshold already had (GGT 2013 `τ = tol·‖c‖₂`, md:213/225). Pinned by `SP.6` (α ∈ {1e-20, 1e20}); mutation-proven (`padetaylor-ked0`).
@@ -335,11 +358,12 @@ steps shipped** as of worklog 045.
     (asserts main-module resolution, not the qualified
     `PadeTaylor.Painleve.…` path the other CF tests use).
 
-### Open follow-ups (B5 remaining)
+### B5 follow-ups — all shipped
 
-  - FFW Fig 3 (PVI phase portraits, bead `padetaylor-a1l`, blocked by
-    Fig 2 → now unblocked).
-  - FFW Fig 7 (generic PVI in η/ζ/z planes, bead `padetaylor-mgx`).
+  - FFW Fig 3 (PVI phase portraits, bead `padetaylor-a1l`) and Fig 7
+    (generic PVI in η/ζ/z planes, bead `padetaylor-mgx`) both closed;
+    see `figures/ffw2017_fig_{3,7}.jl`, `test/ffw_fig_{3,7}_test.jl`,
+    worklogs 046/047.  (Section was stale until 2026-08-23.)
 
 ## [0.1.0] — 2026-05-13
 
@@ -356,7 +380,7 @@ composition tiers shipped; 1311 / 1311 tests passing.
     `Matrix{Arb} → BigFloat` shim via the `PadeTaylorArblibExt`
     extension).
   - `RobustPade.robust_pade` + `PadeApproximant` — GGT 2013
-    Algorithm 2 with Chebfun's QR-reweighting (lines 278–280 of
+    Algorithm 2 with Chebfun's QR-reweighting (lines 111–117 of
     `padeapprox.m`).
   - `Coefficients.taylor_coefficients_1st` /
     `taylor_coefficients_2nd` — Taylor jet generation via

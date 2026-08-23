@@ -132,30 +132,35 @@ using PadeTaylor.VectorProblems:    VectorPadeTaylorProblem, vector_solve_pade
         @test sol_adaptive.z[end] ≈ 2.0
         # Same accuracy as :fixed against the closed form.  The harmonic
         # system [cos z, −sin z] is ENTIRE: the shared denominator Q has no
-        # genuine pole to fit, so under the CORRECT GGT diagonal (m,m) window
-        # (worklog 067 / ADR-0027) the construction reduces to the honest
-        # supported degree — the legitimate least-squares "best shared Q" for
-        # a pole-free system (bead padetaylor-unk).  Accumulated over the
-        # adaptive walk the residual is the method-set (m,m) shared-Q value
-        # (~1e-9 here); bumped to 1e-8 consistent with the sibling entire-
-        # system asserts (VS.1.2/1.3, VP.1.2/1.4).  The forthcoming dispatch
-        # layer (ADR-0028) is expected to tighten this back toward ~1e-11 by
-        # selecting the (m−1,m) cell when it validates better.  Closed form
-        # [cos z, −sin z] stays the exact Rule-5 oracle; only the achievable
-        # accuracy is method-set.
+        # genuine pole to fit.  Under the diagonal (m,m) cell A alone
+        # (worklog 067 / ADR-0027) the accumulated walk carried a ~1e-9
+        # least-squares shared-Q residual and this pin sat at 1e-8.  The
+        # ADR-0028 dispatch (`src/SharedPadeDispatch.jl`, wired at
+        # `VectorStepper.jl:242`) now selects the wide-square cell B per
+        # step by ODE defect on exactly this kind of jet (ADR-0028 A3.4/A3.5).
+        # Re-measured 2026-08-23 (bead `padetaylor-urmg`): max |error| over
+        # the 9 adaptive breakpoints is `5.1e-14`, dense points `3.8e-14` —
+        # roundoff-level.  Pinned at atol = 5e-13 (~10× margin on a
+        # roundoff figure; BLAS-order variation is the only residual
+        # cross-platform noise).  Closed form [cos z, −sin z] stays the
+        # exact Rule-5 oracle.  Bisected: the jump 1.27e-9 → 5.1e-14 lands
+        # exactly at commit 8f2cbfd (the one-line dispatch wiring).
+        #
+        # MUTATION-PROOF (verified 2026-08-23, bead `padetaylor-urmg`):
+        # forcing `pickB = false` in `SharedPadeDispatch.shared_pade_select`
+        # (always cell A) ⇒ 21/69 RED in this file, the error reverting to
+        # the old 1.27e-9; restoring the selector ⇒ 69/69 GREEN.
         for k in 1:length(sol_adaptive.z)
             z = sol_adaptive.z[k]
-            @test sol_adaptive.y[k][1] ≈ cos(z)  atol = 1e-8
-            @test sol_adaptive.y[k][2] ≈ -sin(z) atol = 1e-8
+            @test sol_adaptive.y[k][1] ≈ cos(z)  atol = 5e-13
+            @test sol_adaptive.y[k][2] ≈ -sin(z) atol = 5e-13
         end
-        # Dense callable still works under the adaptive policy.  Same honest
-        # (m,m) shared-Q accuracy as above — entire system, atol = 1e-8 per
-        # ADR-0027 / worklog 067 / padetaylor-unk (dispatch ADR-0028 will
-        # tighten this back toward ~1e-11).
+        # Dense callable still works under the adaptive policy; same
+        # measured `3.8e-14` (2026-08-23) under ADR-0028 dispatch.
         for z in (0.3, 1.1, 1.7)
             yz = sol_adaptive(z)
-            @test yz[1] ≈ cos(z)  atol = 1e-8
-            @test yz[2] ≈ -sin(z) atol = 1e-8
+            @test yz[1] ≈ cos(z)  atol = 5e-13
+            @test yz[2] ≈ -sin(z) atol = 5e-13
         end
 
         # An unknown policy symbol must throw (Rule 1).
