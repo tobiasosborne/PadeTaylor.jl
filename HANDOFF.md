@@ -8,7 +8,96 @@
 > previous session already paid for. The frictions surfaced are
 > recorded in `docs/worklog/001-stages-Z-1-2-handoff.md`.
 
-## 🧹 LATEST SESSION (2026-08-11) — orientation sweep: TRACKER REPAIRED + Law-2 doc-drift swept. NO code behaviour changed. SUITE NOT RE-RUN
+## 🔍 LATEST SESSION (2026-08-23) — multi-model audit sweep + 14 beads shipped. SUITE GREEN (see §0). Orchestrated: Claude subagents + GPT-5.6-sol (codex exec, xhigh) + stealth/ox-alpha (pi)
+
+**Headline.** First full gate since 2026-06-30 ran GREEN at session start
+(**9369 / 2 broken / 0 fail, 17m50s, Julia 1.12.3**) — that cleared the
+2026-08-11 handoff's "first job". Then five parallel READ-ONLY audits (codex
+gpt-5.6-sol ×2 on RobustPade/SharedPade and on WindowedComposite/EdgeGated/
+StepControl; ox-alpha whole-repo incongruity sweep; Claude on beads hygiene and
+test rigour) produced ~45 raw findings. Every "P0" the external models flagged
+was re-verified against the code and the references before any bead was filed:
+**none survived as P0** — the real harvest was 2 P1 bugs, ~10 P2 doc/test
+drifts, and a broken `fast` gate tier. 23 beads filed, 14 shipped and closed
+this session, 1 flagged for the maintainer (`9ffq`). Reports live only in the
+session scratchpad; the beads carry the evidence.
+
+### 0. Suite status
+Full gate GREEN at session start on `bed1e22`. Every later commit ran its
+touched test files standalone + `scripts/quality_gate.sh fast`; the FINAL full
+gate on HEAD `see git log` (after 7zw): **9501 pass / 2 broken / 0 fail, 17m00s, GREEN** — +132 tests this session.
+
+### 1. Bugs fixed (all mutation-proven, Rule 4)
+- `ked0` (P1): `shared_denominator_pade` zero-input test was ABSOLUTE (`‖c‖ ≤ tol`)
+  — the one non-scale-covariant line in a GGT construction whose thresholds are
+  all relative (GGT2013 md:213,225). Falsely rejected valid small-amplitude jets.
+- `lbqb` (P1): `robust_pade` / `shared_denominator_pade` accepted `Inf`/`NaN`
+  coefficients and `tol=Inf` and returned the zero approximant SILENTLY.
+- `lkrk`: edge-gate uniform-axis check covered only the first step; `max_iter`
+  exhaustion returned silently; length-2 jets gave `h=0`; and — found by the
+  RED-first test, worse than the audit claimed — mixed `Float32`/`Float64` axes
+  silently demoted the whole EdgeGated solve to Float32. All now throw / promote.
+- `0dw7` (P1, infra): `quality_gate.sh fast` was RED on a clean tree — it ran
+  `quality_test.jl` under `--project=.` and had only ever passed because Aqua sat
+  in the user's global env. Now `Pkg.test(test_args=["quality-only"])`.
+
+### 2. Tests hardened
+- `aqw1`: FW Table 5.1(c) `u(28.261)` — in the oracle file since Phase 6, asserted
+  nowhere. Now PN.2.4 at rtol 5e-9 (measured 6.9e-10; FW's own 7.9e-10).
+- `urmg`: harmonic-system pins were relaxed to 1e-8 in `decc32d` "until ADR-0028".
+  Bisected: ADR-0028's one-line wiring (`8f2cbfd`) took the error 1.3e-9 → 5e-14.
+  Nobody revisited. Now atol 5e-13.
+- `ps4g`: `eval_at(extrapolate=true)` was never value-pinned (only `isfinite`).
+  Measured ≤7e-16 just outside the disc; pinned 1e-12.
+- `divo`: ADR-0021's "2-norm never less conservative than ∞-norm" is FALSE in
+  relative mode (ratio √2 pinned); policy kept, rationale rewritten.
+- `044m`, `cwcp`, `ll3t`: tan(z⁴) captured poles pinned (1.35e-14 agreement);
+  QR-reweighting-removal mutant #6 added to the gate catalogue (KILLED);
+  complex null-vector test; Heun mutation-proof footer.
+- `7zw`: BF-256 tritronquée Fig 4.1 pin — see worklog 080.
+
+### 3. Structure / docs
+- `fqwf`: `@warn` when `window_extent ≥ span` collapses to one window (ADR-0034
+  claimed a warning that did not exist). Rule 6 forced a split: tiling helpers
+  moved verbatim to **new `src/WindowedTiling.jl`** (44 src files now).
+- Law-1 drift fixed: BigFloat SVD is NOT one-sided Jacobi (GenericLinearAlgebra
+  has no Jacobi code; `LinAlg.jl`/ADR-0002/RESEARCH.md rewritten, `ig11`);
+  `step_pade_root` is a project heuristic, not FW §3.1 (`1brh`); CLAUDE.md Rule 4
+  + ADR-0011 cited a Jorba–Zou equation the module itself calls wrong (`sr6j`).
+- Status flips: ADR-0004 and ADR-0027 → Accepted (both long shipped); ADR-0018
+  bead id filled; CHANGELOG "B5 open follow-ups" were closed months ago;
+  two impossible `padeapprox.m 278–280` citations → 111–117 (file is 157 lines);
+  `docs/src/index.md` still taught the deprecated `h_max`.
+- `psg4` closed WON'T-FIX: PainleveNamed/ClosedForm are `include`d files, not
+  modules — a bare docstring there attaches to the next expression (codex's
+  conversion was reverted unrun). Lesson: external-model doc fixes need a
+  Julia-semantics check even when "no code changed".
+
+### 4. Tracker
+`zzw` closed (superseded by krgy.11/12); epic `0ln` demoted in_progress→open
+(35/40 children closed, dormant since 06-22); `fe9` re-scoped (Laplace2D solver
+shipped; only the fill wiring remains); `6b5`/`pgc`/`zwh` cross-referenced.
+**Open for the maintainer: `9ffq`** (`bd human list`) — Rule 6's wording counts
+comment lines (12 files over cap) while practice excludes them (5 files). Pick
+one. Still open from the audits: `n3w0` (RobustPade.jl 233 LOC split), `qidl`
+(Documenter build is a false gate), `580u` (Voronoi boundary double-count,
+unmeasured), plus the older `us19`, `qum`, `f0n`.
+
+### 5. How the orchestration went (for the next agent)
+- External models: `codex exec -m gpt-5.6-sol -c model_reasoning_effort=xhigh`
+  and `pi --provider openrouter --model stealth/ox-alpha -p` (stdin for big
+  bundles; a >130 KB inline argument silently garbles). Both over-label
+  severity: ~all their "P0"s were P1–P3 under this repo's own rules, and two
+  were plainly refuted by a comment three lines away. Keep ONE verification
+  pass per report (the maintainer retired the heavier 3+1 pattern this session).
+- ox-alpha shares one OpenRouter key with other sessions on this box; keep ≤1
+  lane and back off 60 s on empty-output exits.
+- Rule 7 held: the implementer subagent was the only Julia user at any time;
+  codex/ox did docs only. `bd` embedded-dolt takes an exclusive lock — two
+  agents writing beads simultaneously get a transient "another process holds
+  the lock" error; retry.
+
+## 🧹 SESSION (2026-08-11) — orientation sweep: TRACKER REPAIRED + Law-2 doc-drift swept. NO code behaviour changed. SUITE NOT RE-RUN
 
 **Headline.** A full-repo orientation pass (9 parallel read-only agents + a
 completeness critic) surfaced two classes of rot, both now fixed: a **stale

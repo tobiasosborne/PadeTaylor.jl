@@ -176,7 +176,7 @@ Internally the core itself is four layers: an SVD dispatcher (`LinAlg`) → robu
 
 ## Status
 
-**v0.1.0 — research-grade; all architectural tiers shipped.** The package is not yet registered in the Julia General registry. **9369 tests passing, 0 failing** (plus 2 intentional `@test_broken` markers that track known-open-bug fixtures and auto-flip the day each bug is fixed), as of the full `scripts/quality_gate.sh full` run on 2026-08-23 (Julia 1.12.3, 17m50s).
+**v0.1.0 — research-grade; all architectural tiers shipped.** The package is not yet registered in the Julia General registry. **9501 tests passing, 0 failing** (plus 2 intentional `@test_broken` markers that track known-open-bug fixtures and auto-flip the day each bug is fixed), as of the full `scripts/quality_gate.sh full` run on 2026-08-23 (Julia 1.12.3, 17m00s).
 
 Headline empirical result: the FW 2011 Table 5.1 long-range integration of the equianharmonic Weierstrass ℘-function to `z = 30` reaches a relative error of `2.13·10⁻¹⁴` in 256-bit precision — beating the `8.34·10⁻¹⁴` reported by Fornberg & Weideman.
 
