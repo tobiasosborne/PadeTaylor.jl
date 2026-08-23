@@ -86,14 +86,24 @@ a residual independent of the data the stepper *already has*.  FFW's
 quality-per-cost factor we should not abandon.  Worth revisiting if
 this controller misfires on PVI (Tier-5 sheet-tracking).
 
-**C.  Jorba-Zou order-h product (Jorba & Zou 2005 §3.2 eq. 3-8).**
-The package's `StepControl` module already implements this; it was
+**C.  Fixed-order Taylor-coefficient control.** The package's
+`StepControl` module ports `external/TaylorIntegration.jl/src/integrator/
+stepsize.jl:17-89`; its adaptive-order derivation traces to Jorba & Zou
+2005 §3.3.1 eq. 11 (`references/markdown/JorbaZou2005_taylor_IVP_
+package_ExpMath14/JorbaZou2005_taylor_IVP_package_ExpMath14.md:613-645`).
+It was
 *not* adopted as the path-network default because worklog 004
 attempt-C showed it conflicts with FW's Padé-bridge paradigm (gives
 overly conservative steps that miss the off-axis detour opportunity).
 Rejected here for the same reason: the Jorba-Zou bound is a *Taylor*
 truncation bound, not a *Padé* one, so it ignores the Padé
 denominator's analytic-continuation effect.
+
+The separate `StepControl.step_pade_root` denominator-root cap is a
+project-specific safety heuristic. It is not derived from FW 2011 §3.1,
+which uses a fixed step length and selects the smallest-`|u|` result
+among five directions (`references/markdown/FW2011_painleve_methodology_
+JCP230/FW2011_painleve_methodology_JCP230.md:151-168`).
 
 **D.  Constant `q < 1` halving (FW-style step shrink).**  Replace
 the FFW q-formula with `q = 0.5` (or any constant) and iterate.

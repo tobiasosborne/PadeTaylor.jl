@@ -131,7 +131,7 @@ function build_square_cell(jets::AbstractVector{<:AbstractVector{T}},
     _, _, Vt = pade_svd(A_full; full = true)
     b_init = Vector{T}(Vt[end, :])
 
-    # QR-reweighting (padeapprox.m 278–280; identical to SharedPade.jl:264-268).
+    # QR-reweighting (padeapprox.m 111–117; identical to SharedPade.jl:264-268).
     eps_T = real(T) <: AbstractFloat ? sqrt(eps(real(T))) : sqrt(eps(Float64))
     D = Diagonal([abs(bk) + eps_T for bk in b_init])
     F = qr(adjoint(A_full * D))

@@ -1,6 +1,6 @@
 # ADR-0018 — Heun module: HeunG + HeunC as first-class citizens
 
-**Status**: Accepted (2026-05-18) | **Bead**: epic `padetaylor-?` (Heun
+**Status**: Accepted (2026-05-18) | **Bead**: epic `padetaylor-72w` (Heun
 arc) | **Worklog**: 051 (forthcoming)
 
 ## Decision

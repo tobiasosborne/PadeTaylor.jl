@@ -62,8 +62,10 @@ Numbered, non-negotiable. Re-read after compaction.
 4. **TDD discipline (two valid shapes).**
    - **Spec-from-scratch:** classic RED → GREEN → refactor.
    - **Port-and-verify:** port the algorithm faithfully (GGT 2013
-     Algorithm 2 verbatim from `padeapprox.m`; Jorba-Zou step
-     formula verbatim from §3.2 eq. 3-8), capture invariants in
+     Algorithm 2 verbatim from `padeapprox.m`; Jorba-Zou §3.3.1
+     eq. 11 step control in the fixed-order form of
+     `TaylorIntegration.jl`'s `stepsize.jl` — see `StepControl.jl`'s
+     header for why the §3.2 reading is wrong), capture invariants in
      tests, **mutation-prove** the tests catch regressions (perturb
      the impl, confirm RED, restore), cross-validate against an
      independent oracle (Chebfun's MATLAB output, closed-form

@@ -1,4 +1,4 @@
-# ADR-0002 — Bigfloat SVD via GenericLinearAlgebra (one-sided Jacobi)
+# ADR-0002 — Bigfloat SVD via GenericLinearAlgebra
 
 **Status**: Accepted (2026-05-09)
 **Context**: Stage 1 design lock; the GGT 2013 Padé routine requires
@@ -14,33 +14,31 @@ the arb-prec tier (`T ∈ {BigFloat, Arblib.Arb}`), Julia's stdlib
 |---|---|---|---|
 | `Float64` | `LinearAlgebra.svd` | LAPACK Demmel-Kahan (`DGESVD`) | Matches Chebfun's `padeapprox.m` exactly; GGT's `tol = 1e-14` rank-counting tolerates DK at Float64 precision. |
 | `Float32` | `LinearAlgebra.svd` | LAPACK Demmel-Kahan (`SGESVD`) | Same reasoning at `Float32`. |
-| `BigFloat` | `GenericLinearAlgebra.svd` | One-sided Jacobi (Demmel-Veselić) | Relative-accuracy guarantee `c · 2⁻ᵖ · σᵢ` per SV — load-bearing for arb-prec rank counting near a Padé table block boundary. |
-| `Arblib.Arb` | (extension) Convert to `BigFloat`, dispatch as above | One-sided Jacobi | `Arblib.jl` ships no SVD whatsoever (verified by source inspection — see `RESEARCH.md §5.1`). The `Arb → BigFloat` conversion is precision-lossy on the radius but acceptable for the SVD step alone (see "Caveats" below). |
+| `BigFloat` | `GenericLinearAlgebra.svd` | Householder bidiagonalisation + bidiagonal QR (including Demmel-Kahan zero-shift iterations) | The default `tol = 2^(-p+10)` keeps the rank threshold above the backend's absolute error scale for the small GGT matrices used here. |
+| `Arblib.Arb` | (extension) Convert to `BigFloat`, dispatch as above | As above | `Arblib.jl` ships no SVD whatsoever (verified by source inspection — see `RESEARCH.md §5.1`). The `Arb → BigFloat` conversion is precision-lossy on the radius but acceptable for the SVD step alone (see "Caveats" below). |
 | `Complex{T}` for `T <: AbstractFloat` | `GenericLinearAlgebra.svd` (or stdlib if `T = Float64`) | as above | Same dispatch logic. |
 
-## Why one-sided Jacobi for arb-prec
+## Why the generic SVD is sufficient for arb-prec
 
 For Float64 and the GGT-typical regime (matrices of size `n ≤ 60`,
 condition numbers up to `10¹²`), Demmel-Kahan implicit-shift QR is
 the right choice — used by Chebfun's `padeapprox.m` line 93 (`svd`).
 
-**At arbitrary precision the regime changes.** GGT 2013 Algorithm 2
-classifies a singular value as "zero" if `σ_i < tol · ||c||_2`. Near a
-block boundary in the Padé table, the gap between the smallest
-"signal" SV and the largest "noise" SV may span only a few orders of
-magnitude — far less than the dynamic range of the working precision.
+At arbitrary precision, GGT 2013 Algorithm 2 classifies a singular
+value as zero if `σ_i < tol · ||c||_2`. The implementation chooses
+`tol = 2^(-p+10)`, ten bits above the working-precision floor. For an
+`n × (n+1)` GGT Toeplitz block, each coefficient occurs in at most `n`
+entries, so `σ_max ≤ ||C̃||F ≤ √n · ||c||_2`. The backend's usual
+`O(2⁻ᵖ · σ_max)` absolute singular-value error is therefore below the
+threshold by a factor of order `2¹⁰/√n`; at the typical `n ≤ 60`, this
+leaves ample margin for rank counting. CRP.4 pins the outcome on the
+BigFloat corpus (`test/corpus_robust_pade_test.jl:190-201`).
 
-- **Demmel-Kahan** guarantees absolute error `c · 2⁻ᵖ · σ_max` on each
-  singular value. Small-but-genuine SVs may be perturbed below the
-  threshold and incorrectly classified as zero, causing spurious
-  block reduction.
-- **One-sided Jacobi (Demmel-Veselić 1992)** guarantees *relative*
-  error `c · 2⁻ᵖ · σ_i` per singular value. Small SVs stay reliably
-  above the threshold, regardless of `κ(A)`.
-
-For GGT matrices at `n ≤ 60` the runtime overhead of Jacobi is
-negligible (workbench's own SVD dispatcher routes `n ≤ 500` to Jacobi
-precisely on this trade-off; see `RESEARCH.md §5.3`).
+Source inspection shows that `GenericLinearAlgebra.svd` first performs
+Householder bidiagonalisation and then solves the bidiagonal problem by
+QR, selecting the Demmel-Kahan zero-shift iteration when needed. It is
+not a one-sided Jacobi implementation (`~/.julia/packages/
+GenericLinearAlgebra/X90Kh/src/svd.jl:328-345,648-654,81-87,235-244`).
 
 ## Why `GenericLinearAlgebra.jl` is the chosen library
 
@@ -53,9 +51,9 @@ precisely on this trade-off; see `RESEARCH.md §5.3`).
   (load-bearing for the PRD's "phone deployment" forcing function
   if we ever target it).
 - **Open issues at `κ > 10¹⁸`** — documented; not relevant for GGT
-  matrices at our typical sizes. If we hit an instance, fall back
-  to a hand-rolled Demmel-Veselić port; do not reach for Demmel-Kahan
-  at arb-prec.
+  matrices at our typical sizes. If such an instance appears, reassess
+  the backend against a pinned high-precision oracle rather than
+  assuming a different algorithm is already in use.
 
 ## Caveats
 
@@ -92,16 +90,14 @@ the extension package. Verify in Phase 8.
 - `RESEARCH.md §5.1` — empirical confirmation of the Julia SVD
   landscape (no SVD in `Arblib.jl`; `GenericLinearAlgebra.jl` as the
   only path; `LinearAlgebra.svd` throws `MethodError` on `BigFloat`).
-- `RESEARCH.md §5.3` — algorithm-choice argument: relative-accuracy
-  Jacobi vs absolute-accuracy Demmel-Kahan, applied to GGT's
-  rank-counting threshold.
+- `RESEARCH.md §5.3` — the absolute-accuracy margin supplied by the
+  ten-bit gap in `default_tol`, applied to GGT's rank-counting threshold.
 - `external/chebfun/padeapprox.m:93, 106` — Chebfun's MATLAB `svd`
   call (= LAPACK Demmel-Kahan); we deliberately diverge from this
   for `T ≠ Float64`.
 - `references/markdown/GGT2013_robust_pade_via_SVD_SIREV55/
-  GGT2013_robust_pade_via_SVD_SIREV55.md:213–217` — the `tol · ||c||₂`
-  thresholding that makes relative-accuracy SVD load-bearing at
-  arb-prec.
+  GGT2013_robust_pade_via_SVD_SIREV55.md:213-217` — the
+  `tol · ||c||₂` threshold used for rank counting.
 
 ## Consequences
 

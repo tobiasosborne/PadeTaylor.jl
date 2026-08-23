@@ -386,8 +386,9 @@ Other notes on `padeapprox.m`:
 - Output: `(r, a, b, mu, nu, poles, residues)` with `poles, residues`
   as optional outputs from `roots(b)` and a finite-difference residue
   estimate `[padeapprox.m lines 292–296]`.
-- Underlying SVD: MATLAB's `svd(C, 0)` = LAPACK Demmel-Kahan. **For
-  arb-prec we substitute one-sided Jacobi (Demmel-Veselić)** per §5.3.
+- Underlying SVD: MATLAB's `svd(C, 0)` = LAPACK Demmel-Kahan. For
+  arb-prec, `GenericLinearAlgebra.svd` supplies a generic Householder-
+  bidiagonalisation and bidiagonal-QR path; see §5.3.
 
 ### 2.3 Hermite–Padé (Baker & Graves-Morris) — deferred to v2
 
@@ -680,9 +681,12 @@ LinearAlgebra]`.
 
 #### `GenericLinearAlgebra.jl`
 
-Provides generic `svd` / `svd!` via **one-sided Jacobi** (Demmel-Veselić
-style) for any `T <: AbstractFloat` including `BigFloat`. CI-maintained,
-moderate maturity; convergence difficulties documented for `κ > 10¹⁸`.
+Provides generic `svd` / `svd!` by Householder bidiagonalisation followed
+by bidiagonal QR, with Demmel-Kahan zero-shift iterations selected when
+needed, for any `T <: AbstractFloat` including `BigFloat`. This is not a
+one-sided Jacobi implementation (`~/.julia/packages/GenericLinearAlgebra/
+X90Kh/src/svd.jl:328-345,648-654,81-87,235-244`). CI-maintained, moderate
+maturity; convergence difficulties documented for `κ > 10¹⁸`.
 For GGT 2013 matrices at `n ≤ 60` (the typical range) this is the only
 production-grade Julia path. **Works for `BigFloat`; `Arb`-element-type
 should work given the required scalar interface (`abs`, `sqrt`, `/`)
@@ -732,7 +736,7 @@ first-class sub-task of the TS implementation, comparable in scope to
 the Padé routine itself
 `[bigfloat-svd-synthesis: §5.2]`.
 
-### 5.3 Algorithm choice — one-sided Jacobi for both implementations
+### 5.3 Algorithm choice — absolute accuracy suffices for Julia rank counting
 
 **What GGT / Chebfun use** (confirmed in `external/chebfun/padeapprox.m`,
 lines 93 and 106): MATLAB's `svd(C, 0)` — LAPACK `DGESVD`,
@@ -743,38 +747,34 @@ dominated by large singular values, so Demmel-Kahan's weakness on
 where `κ · ε ≪ 1`
 `[bigfloat-svd-synthesis: §5.3 ¶1]`.
 
-**At arbitrary precision this changes.** Near a Padé-table block
-boundary the gap between the last "signal" SV and the first "noise"
-SV may span only a few orders of magnitude. Demmel-Kahan guarantees
-absolute error `c · 2⁻ᵖ · σ_max` per SV; **one-sided Jacobi
-(Demmel-Veselić 1992) guarantees relative error `c · 2⁻ᵖ · σᵢ` per
-SV**. For rank-counting at arb-prec, the relative guarantee is
-load-bearing — small-but-genuine singular values stay reliably above
-the threshold even as precision increases
-`[bigfloat-svd-synthesis: §5.3 ¶2]`.
+**At arbitrary precision the tolerance tracks the arithmetic.** The
+default is `tol = 2^(-p+10)`, so the rank threshold is
+`2¹⁰ · 2⁻ᵖ · ||c||_2`. For the GGT Toeplitz block, each coefficient is
+repeated at most `n` times, hence `σ_max ≤ ||C̃||F ≤ √n · ||c||_2`.
+The usual `O(2⁻ᵖ · σ_max)` absolute SVD error is therefore below the
+threshold by a factor of order `2¹⁰/√n`; the typical `n ≤ 60` leaves
+ample margin. The CRP.4 BigFloat corpus pins the rank-counting outcome
+empirically (`test/corpus_robust_pade_test.jl:190-201`).
 
 **Cost**: GGT matrices are at most `(n+1) × (n+1)` with `n ≤ 60` in
-typical use. The workbench's own SVD dispatch sends `n ≤ 500` to
-Jacobi precisely because small-SV accuracy outweighs Golub-Reinsch
-speed. At `n ≤ 60` Jacobi is trivially fast even with `BigFloat`
-multiplication.
+typical use, so the generic Householder-plus-QR implementation is small
+relative to the surrounding arbitrary-precision calculation.
 
 **Recommendation** `[bigfloat-svd-synthesis: §5.3 final block]`:
 
 - **Julia v1**: use `GenericLinearAlgebra.svd` over `Matrix{BigFloat}`
   (convert from `ArbMatrix` element-by-element). Verify the `Arb`
   element-type path compiles; a small `Arb`-sign-behaviour shim may be
-  needed. If `GenericLinearAlgebra` proves flaky on near-deficient GGT
-  matrices, port the Demmel-Veselić loop from the workbench as a
-  fallback — **do not reach for Golub-Reinsch**.
+  needed. If it proves flaky on near-deficient GGT matrices, compare
+  candidate replacements against a pinned high-precision rank oracle.
 - **TypeScript mirror v1**: add `svdJacobiBigFloat` in a new
   `@workbench/linalg-bigfloat` package as a direct port of
   `linalg-core/src/svd.ts:svdJacobi`, replacing `Float64Array` with
   `BigFloat[]` and routing all arithmetic through `@workbench/bigfloat`.
   ~200 LOC. Skip Golub-Reinsch entirely for v1.
-- **Do not** implement Demmel-Kahan bidiagonalisation from scratch at
-  arb-prec. Zero-shift correctness is subtle, and Chebfun's Float64
-  evidence does not transfer.
+- **Do not** replace the generic backend without a failing corpus case.
+  Householder bidiagonalisation and zero-shift correctness are subtle,
+  and CRP.4 currently pins the required rank decisions.
 
 ### 5.4 `@workbench/cas-core` Taylor / FPS class
 
@@ -1172,4 +1172,3 @@ v1 scope: ~1700 LOC Julia + ~1700 LOC TS (counting tests/docstrings),
 | TIDES papers (Barrio et al.) | Mature Taylor-IVP design lessons. | `https://www.unizar.es/acz/05Publicaciones/Revistas/Revista61/p_077.pdf` (main TIDES paper; save as `references/BarrioEtAl2005_TIDES_taylor_IVP_RealAcadZar.pdf`) |
 | Baker & Graves-Morris (Hermite-Padé) | v2 / branch-point detection. | Book; low priority for Stage 0. |
 | COSY Infinity / Berz Taylor models | Verified-bound thinking for v2. | Low priority for Stage 0. |
-

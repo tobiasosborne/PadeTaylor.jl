@@ -161,7 +161,7 @@ The package is a layered stack — each tier builds on the one below, and you ca
 
 | Tier | What it does | Key entry points |
 |---|---|---|
-| **Core** | Taylor series → robust Padé → one solver step | `robust_pade`, `taylor_coefficients_2nd`, `pade_step!` |
+| **Core** | Taylor series → robust Padé → one solver step | `robust_pade`, `taylor_coefficients_2nd`, `PadeStepper.pade_step!` (not exported) |
 | **IVP driver** | march along a path, with dense output | `PadeTaylorProblem`, `solve_pade` |
 | **Path network** | navigate the whole complex plane around pole fields | `path_network_solve`, `extract_poles`, `quality_diagnose` |
 | **Windowed composite** | bounded-window composite solve — tile, solve each window independently from the IC, composite by Voronoi-core; cures the Fig 4.7 path-dependence seam (ADR-0034) | `windowed_path_network_solve`, `windowed_extract_poles`, `edge_gated_windowed_poles`, `WindowedCompositeSolution` |
@@ -227,7 +227,7 @@ The repository carries its full design rationale and research record:
 - **`DESIGN.md`** — the original phased execution plan (a Stage-1 snapshot; see `HANDOFF.md` and the status table above for the current state).
 - **`HANDOFF.md`** — the running session log: where the project is, what shipped, and the hard-won lessons.
 - **`CLAUDE.md`** — the project discipline (ground-truth-before-code, test-driven development with mutation-proofing, literate programming, ≤ 200 LOC per module).
-- **`docs/adr/`** — 34 accepted Architecture Decision Records (0001–0034), from the four-layer core through the Painlevé/Heun layers and the vector stack to the bounded-window composite solve.
+- **`docs/adr/`** — 34 Architecture Decision Records (all accepted as of 2026-08-23) (0001–0034), from the four-layer core through the Painlevé/Heun layers and the vector stack to the bounded-window composite solve.
 - **`docs/worklog/`** — 79 frozen snapshots of substantive iterations, each recording the frictions surfaced and lessons learnt.
 - **`docs/figure_catalogue.md`** — the figure-acceptance catalogue across the whole Fornberg–Weideman family of papers.
 - **`references/`** — the load-bearing PDFs, each with a markdown extract under `references/markdown/` for line-cited reasoning in commits and ADRs.

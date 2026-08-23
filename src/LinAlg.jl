@@ -1,29 +1,27 @@
 """
     PadeTaylor.LinAlg
 
-SVD dispatcher with relative-accuracy guarantees on small singular values
-for the arb-prec tier.
+SVD dispatcher for LAPACK-supported and arbitrary-precision element types.
 
 ## Design rationale
 
 GGT 2013 Algorithm 2 classifies a singular value as "zero" if
 `σᵢ < tol · ‖c‖₂` (where `c` is the input Taylor-coefficient vector).
 At Float64 the typical regime is `tol = 10⁻¹⁴` and matrix condition
-numbers of `~10¹²`, so absolute-accuracy LAPACK Demmel-Kahan
-(`DGESVD`) is fine — it guarantees `c · 2⁻ᵖ · σ_max` per SV, well
-below the threshold. **At arb-prec the regime changes**: near a Padé
-table block boundary the gap between the smallest "signal" SV and the
-largest "noise" SV may span only a few orders of magnitude, far less
-than the dynamic range of the working precision. We need
-*relative-accuracy* guarantees on small SVs.
+numbers of `~10¹²`, so the usual `O(2⁻ᵖ · σ₁)` absolute singular-value
+error is below the rank threshold. The arbitrary-precision default
+preserves that separation: `default_tol = 2^(-p+10)` leaves ten bits
+between working precision and `tol`, while a GGT Toeplitz block of the
+typical `n ≤ 60` has `σ₁ ≤ ‖C̃‖F ≤ √n · ‖c‖₂`. Thus the threshold
+`tol · ‖c‖₂` remains comfortably above the absolute SVD error scale.
+The CRP.4 corpus cases pin the resulting BigFloat rank decisions
+empirically (`test/corpus_robust_pade_test.jl:190-201`).
 
-`GenericLinearAlgebra.svd` provides this via one-sided Jacobi
-(Demmel-Veselić 1992): error `c · 2⁻ᵖ · σᵢ` per SV. Small SVs stay
-reliably above the threshold regardless of `κ(A)`. Workbench's own
-SVD dispatcher routes `n ≤ 500` to Jacobi for the same reason
-(`scientist-workbench/tools/linalg-svd/`, ADR-0014/0015/0016).
-
-For GGT matrices at the typical `n ≤ 60` Jacobi is trivially fast.
+`GenericLinearAlgebra.svd` does not use one-sided Jacobi. It reduces
+the matrix to bidiagonal form with Householder reflectors, then applies
+bidiagonal QR with the Demmel-Kahan zero-shift iteration when required
+(`~/.julia/packages/GenericLinearAlgebra/X90Kh/src/svd.jl:328-345,
+648-654, 81-87, 235-244`).
 
 The `Arb`-element-type path lives in `ext/PadeTaylorArblibExt.jl`
 (per ADR-0003, loaded only when `using Arblib` is active in the user's
@@ -78,7 +76,7 @@ function pade_svd(A::AbstractMatrix{T}; full::Bool = false) where {T <: _LAPACK_
 end
 
 # -----------------------------------------------------------------------------
-# Generic AbstractFloat (e.g. BigFloat): GenericLinearAlgebra one-sided Jacobi.
+# Generic AbstractFloat (e.g. BigFloat): GenericLinearAlgebra SVD.
 # -----------------------------------------------------------------------------
 
 """
@@ -86,10 +84,12 @@ end
         where T <: AbstractFloat (non-LAPACK)
         -> (U::Matrix{T}, S::Vector{T}, Vt::Matrix{T})
 
-Dispatches to `GenericLinearAlgebra.svd` (one-sided Jacobi
-Demmel-Veselić). Provides `c · 2⁻ᵖ · σᵢ` relative-accuracy guarantees
-on every singular value, load-bearing for the GGT 2013 rank-counting
-threshold at arb-prec.
+Dispatches to `GenericLinearAlgebra.svd`: Householder bidiagonalisation
+followed by bidiagonal QR, with the Demmel-Kahan zero-shift iteration
+used when required. The ten-bit gap between working precision and
+`default_tol` keeps its absolute error scale below the GGT 2013
+rank-counting threshold at the supported matrix sizes; see the module
+docstring for the bound and empirical corpus pin.
 """
 function pade_svd(A::AbstractMatrix{T}; full::Bool = false) where {T <: AbstractFloat}
     F = GenericLinearAlgebra.svd(A; full = full)

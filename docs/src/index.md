@@ -68,12 +68,12 @@ using PadeTaylor
 
 f(z, u, up) = 6u^2
 
-# ONE local Padé built at z = 0 with h_max = 1.5 covers the lattice
+# ONE local Padé built at z = 0 with h = 1.5 covers the lattice
 # pole at z = 1 (which sits at the rescaled t = 1/1.5 ≈ 0.667, strictly
 # inside the segment).
 prob = PadeTaylorProblem(f, (1.071822516416917, 1.710337353176786),
                          (0.0, 1.5); order = 30)
-sol  = solve_pade(prob; h_max = 1.5)
+sol  = solve_pade(prob; h = 1.5)
 
 sol(0.5)    # ≈ (4.0044,    15.9643)   — before the pole
 sol(0.95)   # ≈ (400.00,    15999.9)   — just before

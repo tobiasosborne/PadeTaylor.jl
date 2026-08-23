@@ -1,9 +1,9 @@
 """
     PadeTaylor.StepControl
 
-Step-size selection for the Taylor-Padé stepper.  Two strategies live
-here, matching the two flavours of step control discussed in the
-literature for analytic IVPs:
+Step-size selection for the Taylor-Padé stepper. Two strategies live
+here: a literature-derived Taylor-coefficient controller and a
+project-specific Padé-denominator safety cap:
 
   - `step_jorba_zou` — the Jorba-Zou 2005 §3.3.1 first-step-size
     control, restricted to a fixed truncation order `p` (this project
@@ -14,12 +14,12 @@ literature for analytic IVPs:
     nearby singularities of the actual solution — the Padé layer is
     what handles the singularities.
 
-  - `step_pade_root` — the FW 2011 §3.1 pole-distance heuristic.
-    Given the Padé approximant of the local jet, the closest root of
-    the *denominator* polynomial in the forward direction tells us
-    how far we can step before crossing the singularity that the
-    Padé layer flagged.  This is the "alternative" / safety selector
-    you cap the Jorba-Zou step against in `PadeStepper`.
+  - `step_pade_root` — a project-specific safety heuristic. Given the
+    Padé approximant of the local jet, the closest forward projection
+    of a *denominator* root caps the requested step. Its provenance is
+    this project's step-control design (ADR-0011), not FW 2011 §3.1;
+    that section instead uses fixed-length steps and chooses among five
+    directions by the smallest resulting `|u|`.
 
 ## The Jorba-Zou step formula — three-source consensus
 
@@ -81,11 +81,11 @@ that `|c[j]| · h^j = 1` (TI.jl `stepsize.jl:77-89`).  If no nonzero
 coefficient exists at all, throw — Rule 1 (fail fast, never return
 garbage like `Inf` or `NaN` to the caller).
 
-## The FW 2011 pole-distance heuristic
+## The project-specific Padé-root safety cap
 
-`step_pade_root` implements the FW 2011 §3.1 idea: the Padé
-approximant `r(z) = a(z) / b(z)` exposes its (numerical) singularities
-as the roots of `b(z)`.  When stepping from `z_current` toward
+`step_pade_root` is a project-specific guard: the Padé approximant
+`r(z) = a(z) / b(z)` exposes its numerical singularities as roots of
+`b(z)`. When stepping from `z_current` toward
 `target`, the largest safe step is bounded by the distance to the
 *forward-most* such root projected onto the step direction.  Roots
 behind us, on us, or sideways (perpendicular to the path) carry no
@@ -120,9 +120,13 @@ deferred bead per Rule 9.
     JorbaZou2005_taylor_IVP_package_ExpMath14.md:613-645`.
   - `external/TaylorIntegration.jl/src/integrator/stepsize.jl:17-89`
     — canonical Julia implementation, ported verbatim.
-  - FW 2011 §3.1 pole-distance heuristic —
+  - FW 2011 §3.1 — fixed-length, five-direction, minimum-`|u|` path
+    selection; no denominator-root step cap appears there:
     `references/markdown/FW2011_painleve_methodology_JCP230/
-    FW2011_painleve_methodology_JCP230.md` §3.1.
+    FW2011_painleve_methodology_JCP230.md:151-168`.
+  - `docs/adr/0011-adaptive-pade-step.md:69-106` — the project's
+    step-control alternatives and the provenance of the separate
+    denominator-root safety heuristic.
   - `test/_oracle_stepcontrol.jl` — three-source-consensus pinned
     values (TI.jl, mpmath, Mathematica, 47 decimal digits).
 """
@@ -140,8 +144,10 @@ export step_jorba_zou, step_pade_root
     step_jorba_zou(coefs::AbstractVector{T}, eps_abs::Real;
                    eps_rel::Real = eps_abs) -> T
 
-Jorba-Zou 2005 §3.3.1 eq. 11 first step-size control, in the
-fixed-order form ported from `TaylorIntegration.jl`.
+Fixed-order Taylor-coefficient step-size control, ported verbatim from
+`TaylorIntegration.jl`'s `stepsize.jl`. Its adaptive-order derivation
+traces to Jorba-Zou 2005 §3.3.1 eq. 11; the formula below is the
+fixed-order implementation, not a transcription of that equation.
 
 Given Taylor coefficients `coefs = [c₀, c₁, …, c_p]` (length `p + 1`)
 and tolerances `eps_abs`, `eps_rel`, returns the step size
@@ -205,14 +211,15 @@ function step_jorba_zou(coefs::AbstractVector{T}, eps_abs::Real;
 end
 
 # -----------------------------------------------------------------------------
-# Pole-distance step (FW 2011 §3.1)
+# Project-specific Padé-root safety cap (ADR-0011)
 # -----------------------------------------------------------------------------
 
 """
     step_pade_root(P, z_current::Number, target::Number) -> Real
 
-FW 2011 §3.1 pole-distance heuristic.  Given a Padé approximant `P`
-(of the local Taylor jet) and a desired step `z_current → target`,
+Project-specific Padé-root safety heuristic (ADR-0011). Given a Padé
+approximant `P` of the local Taylor jet and a desired step
+`z_current → target`,
 returns the largest step length along the direction `target -
 z_current` that does not cross any forward-projecting root of `P.b`
 (the denominator polynomial).  The result is capped at the full

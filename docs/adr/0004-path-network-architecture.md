@@ -1,6 +1,6 @@
 # ADR-0004 — PathNetwork architecture (Tier-2 path-network module)
 
-**Status**: Proposed (2026-05-13) | **Bead**: `padetaylor-1jf`
+**Status**: Accepted (shipped — bead `padetaylor-1jf` closed; status flipped 2026-08-23). Known deviation: the ≤200-LOC clause is not met by `PathNetwork.jl` (tracked by bead `padetaylor-qum`) | **Bead**: `padetaylor-1jf`
 
 ## Context
 

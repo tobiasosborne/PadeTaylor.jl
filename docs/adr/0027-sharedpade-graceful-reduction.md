@@ -1,7 +1,7 @@
 # ADR-0027 — Shared-Padé graceful degree-reduction + z^λ cancellation (the C2 axis)
 
-**Status**: proposed (derivation complete + empirically validated; awaiting
-build, per worklog 066/067).
+**Status**: Accepted (built and shipped as beads `padetaylor-d3a`/`3p9c`, closed
+2026-06-02, per worklog 066/067; live at `src/SharedPade.jl` reduction loop; status flipped 2026-08-23).
 **Date**: 2026-06-02
 **Beads**: `padetaylor-3p9c` (C2), depends on `padetaylor-d3a` (C1, the `+2`
 window). **Supersedes** the `ρ ≥ m_cur` break, the dead `n_near > 1` guard, and
@@ -44,9 +44,10 @@ Mirror the scalar `robust_pade` semantics on the vector path:
      `m_cur -= 1`, rebuild. *(No exact shared denominator at this degree.)*
    - `ρ == m_cur`: **accept** (isolated 1-D null space, Mano–Tsuda "unique iff
      rank = m", `tex:1427`).
-   - `ρ == 0`: throw (all σ below τ — jets indistinguishable from zero).
-   - `m_cur` reaches 0 without acceptance: throw (no shared denominator exists —
-     the components share no common-pole structure; Rule 1).
+   - `ρ == 0`: decrement `m_cur` and rebuild. If no degree `m_cur ≥ 1`
+     remains, return `Q = [1]` with the full Taylor-polynomial numerators;
+     only identically-zero jets fail the earlier `iszero(‖c‖)` guard
+     (`docs/worklog/067-sharedpade-c1-c2-minimal-core.md:36-40`).
 
 2. **`z^λ` cancellation** (replaces the `Q(0) ≈ 0` throw) — after the
    QR-reweighting yields `b`, cancel the common leading `z^λ` factor exactly as
@@ -83,8 +84,9 @@ Mirror the scalar `robust_pade` semantics on the vector path:
   (both place spurious poles). `VS.1.2`'s `−sin` tolerance is updated from `1e-10`
   to its honest value, with a comment citing this ADR and `padetaylor-unk`. *This
   is a correctness-driven tolerance correction, not a relaxation to pass.*
-- **`reduce-vs-throw` resolved**: REDUCE (to the isolated degree, with `z^λ`
-  cancellation); throw only when no degree ≥ 1 yields an isolated null space.
+- **`reduce-vs-throw` resolved**: REDUCE (to the supported degree, with `z^λ`
+  cancellation); when no degree ≥ 1 remains, return the Taylor numerator over
+  `Q = [1]`. Genuinely-zero input still throws before the SVD loop.
 
 ## Relation to the deferred dispatch/Pareto layer (future ADR-0028)
 
@@ -103,5 +105,7 @@ reduction. The two compose; this ADR is the prerequisite core.
 - `references/tex/hermite_pade/ManoTsuda2017_..._MathZ285/hp_arXiv_final.tex:1427`
   ("unique iff rank = m").
 - `docs/worklog/066-sharedpade-window-rootcause-resolved.md` (the `+2` resolution).
+- `docs/worklog/067-sharedpade-c1-c2-minimal-core.md:36-40` (the shipped `Q=1`
+  Taylor fallback for `ρ==0`).
 - `external/probes/sharedpade-offbyone-confirm/c2_reduction_study.jl` (validation).
 - `docs/adr/0019-shared-denominator-pade.md` (the construction this refines).

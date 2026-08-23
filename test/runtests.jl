@@ -3,7 +3,7 @@ using PadeTaylor
 
 @testset "PadeTaylor.jl" begin
     @testset "umbrella loads" begin
-        # Confirms the umbrella module + its 8 sub-modules load cleanly.
+        # Confirms the umbrella module + its sub-modules (count asserted below) load cleanly.
         @test isdefined(PadeTaylor, :LinAlg)
         @test isdefined(PadeTaylor, :RobustPade)
         @test isdefined(PadeTaylor, :SharedPade)
