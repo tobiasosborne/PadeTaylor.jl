@@ -8,8 +8,9 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 ## [Unreleased]
 
 Post-v0.1.0 work, all on `main` and pushed.  Test suite **9369 pass / 2
-broken / 0 fail** at the last recorded full `Pkg.test()` run (2026-06-30,
-the Fig 4.7 seam cure; up from 1311 at the v0.1.0 tag).  43 source modules
+broken / 0 fail**, re-confirmed by `scripts/quality_gate.sh full` on 2026-08-23
+(Julia 1.12.3, 17m50s; unchanged since the 2026-06-30 Fig 4.7 seam cure; up from
+1311 at the v0.1.0 tag).  43 source modules
 (up from 14); 34 ADRs (up from 4); 79 worklog shards (up from 18).
 
 > The two `@test_broken` markers are intentional deferred-feature fixtures
