@@ -168,5 +168,5 @@ kkg_pi2_abs_phase_surface.png  463511 bytes
     complex-function-visualisation companions to those
   - `figures/output/kkg_pi2_kernel_cache.jld2` — the JLD2 cache
     that made these renders ~30 s instead of 7 min
-  - beads `padetaylor-tf9.4` (new), `padetaylor-tf9` (closed in
+  - beads `padetaylor-tf9.4` (cited here and in commit f839fc8 but never actually recorded in the tracker — see bead `padetaylor-zt73`), `padetaylor-tf9` (closed in
     worklog 061; the umbrella bead this work refines under)

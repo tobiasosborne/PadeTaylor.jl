@@ -2,7 +2,7 @@
 #
 # A SINGLE-PANEL 3D MODULUS SURFACE, PHASE-COLOURED, of the
 # P_I^(2) tritronquée `V₀(x, 0)` over the disc |x| ≤ SURF_XY_LIM (bead
-# `padetaylor-tf9.4`).  Companion to the 2D `|V₀|` viridis heatmap in
+# `padetaylor-tf9.4` — an id that was never recorded in the tracker; the work is the closed parent `padetaylor-tf9`, see bead `padetaylor-zt73`).  Companion to the 2D `|V₀|` viridis heatmap in
 # `kkg_pi2_abs_heatmap.jl`; both are *dishonest* renderings — they paint
 # the FW-extrapolated kernel matrices (`res.Re_u_extrap`,
 # `res.Im_u_extrap`) over the full disc with NO certified-vs-extrapolated
