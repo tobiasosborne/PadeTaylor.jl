@@ -212,14 +212,22 @@ When the session is winding down:
    `.beads/issues.jsonl` after a session that touched beads, you have
    this bug. Note `bd export` auto-STAGES, so plain `git diff` reads
    empty — check `git diff --cached .beads/`.
-   **A repo-tracked `pre-commit` hook now does this for you** — it exports
-   and stages the JSONL on every commit, fail-soft (a missing `bd` or a
-   locked database warns and lets the commit through, never blocks it), and
-   skips mid-merge/rebase so it cannot clobber a resolution in progress.
-   `core.hooksPath` is per-clone config that no clone or pull carries, so
-   **run `./scripts/git-hooks/install.sh` once per machine**. The hook is a
-   safety net, not a licence to stop checking: if it warned, the export did
-   not happen.
+   **ADR-0035: the git-tracked `.beads/issues.jsonl` on GitHub is CANONICAL**;
+   `.beads/embeddeddolt/` is a derived working replica, and where they
+   disagree the JSONL wins. Two repo-tracked hooks keep the loop closed:
+   `pre-commit` exports and stages the JSONL on every commit, `post-merge`
+   imports it after a pull and warns if the replica still diverges. Both are
+   fail-soft (a missing `bd` or a locked database warns and proceeds, never
+   blocks), and `pre-commit` skips mid-merge/rebase so it cannot clobber a
+   resolution in progress. `core.hooksPath` is per-clone config that no clone
+   or pull carries, so **run `./scripts/git-hooks/install.sh` once per
+   machine**. The hooks are a safety net, not a licence to stop checking: if
+   one warned, it did not do its job.
+   **Know the two ways `bd import` fails to converge** (both measured, ADR-0035):
+   it never deletes a bead absent from the JSONL, and it keeps the *local*
+   row's `created_at` instead of taking canonical's — which silently reverted
+   23 recovered creation dates on 2026-09-07. The repair is
+   delete-then-import; ADR-0035 has the procedure.
 3. Commit work with messages that cite the relevant
    `references/markdown/<file>.md:<lines>` or ADR.
 4. If a non-obvious lesson surfaced, note it in a new bead or a

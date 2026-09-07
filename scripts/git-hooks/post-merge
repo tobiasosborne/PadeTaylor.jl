@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+#
+# post-merge — pull canonical tracker state into the local replica.
+#
+# The other half of the loop that `pre-commit` opens.  Per ADR-0035 the
+# git-tracked `.beads/issues.jsonl` is CANONICAL and `.beads/embeddeddolt/`
+# is a derived working replica.  `pre-commit` exports on the way out; this
+# imports on the way in, so a `git pull` that brings someone else's bead
+# state actually reaches the database instead of sitting unread in a file.
+#
+# Runs after `git merge` and therefore after `git pull`.  Fast-forward pulls
+# fire it too, which is the common case here.
+#
+# WHY IT WARNS INSTEAD OF REPAIRING.  `bd import` is an UPSERT, not a
+# reconciliation: it never deletes a bead absent from the JSONL, and it
+# preserves the local row's `created_at` rather than taking the canonical
+# one.  Both were measured on 2026-09-07 — the second silently reverted the
+# recovered 2026-08-23 creation dates on 23 beads (commit df5f20f).  So this
+# hook imports, then re-exports to a temp file and compares: any residual
+# divergence is reported with the ids, and the repair is the
+# delete-then-import procedure in ADR-0035 "Reconciliation procedure".
+# Repairing unattended would mean deleting rows on the strength of a diff,
+# which is exactly the class of action that cost this project 23 beads.
+#
+# Fail-soft throughout: a tracker sync must never break a pull.
+
+set -uo pipefail
+
+repo_root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+cd "$repo_root" || exit 0
+[ -f .beads/issues.jsonl ] || exit 0
+
+# Only act when the merge actually changed the tracker.
+if git diff-tree -r --name-only --no-commit-id ORIG_HEAD HEAD 2>/dev/null \
+     | grep -qx '.beads/issues.jsonl'; then
+    :
+else
+    exit 0
+fi
+
+if ! command -v bd >/dev/null 2>&1; then
+    echo "beads: WARNING — \`bd\` not on PATH; local replica NOT updated from the" >&2
+    echo "beads:           pulled .beads/issues.jsonl. Run \`bd import\` when available." >&2
+    exit 0
+fi
+
+if ! bd import .beads/issues.jsonl >/dev/null 2>&1; then
+    echo "beads: WARNING — \`bd import\` failed; local replica is STALE against" >&2
+    echo "beads:           canonical .beads/issues.jsonl (ADR-0035)." >&2
+    exit 0
+fi
+echo "beads: imported pulled tracker state into the local replica." >&2
+
+# Divergence canary — see WHY IT WARNS INSTEAD OF REPAIRING.
+command -v python3 >/dev/null 2>&1 || exit 0
+tmp="$(mktemp -t beads-verify-XXXXXX.jsonl)" || exit 0
+trap 'rm -f "$tmp"' EXIT
+bd export -o "$tmp" >/dev/null 2>&1 || exit 0
+
+python3 - "$tmp" <<'PY' >&2
+import json, sys
+def load(p):
+    d = {}
+    with open(p, encoding="utf-8") as fh:
+        for ln in fh:
+            ln = ln.strip()
+            if not ln:
+                continue
+            try:
+                o = json.loads(ln)
+            except Exception:
+                continue
+            if isinstance(o.get("id"), str):
+                d[o["id"]] = o
+    return d
+canon, replica = load(".beads/issues.jsonl"), load(sys.argv[1])
+only_canon = sorted(set(canon) - set(replica))
+only_replica = sorted(set(replica) - set(canon))
+fields = ("status", "created_at", "closed_at", "title", "description", "notes",
+          "close_reason", "priority", "issue_type")
+drift = sorted(i for i in set(canon) & set(replica)
+               if any((canon[i].get(f) or "") != (replica[i].get(f) or "") for f in fields))
+if only_canon or only_replica or drift:
+    print("beads: WARNING — replica diverges from canonical .beads/issues.jsonl (ADR-0035).")
+    if only_canon:
+        print(f"beads:   missing locally ({len(only_canon)}): {' '.join(only_canon[:12])}")
+    if only_replica:
+        print(f"beads:   local-only, will be re-exported ({len(only_replica)}): {' '.join(only_replica[:12])}")
+    if drift:
+        print(f"beads:   field drift ({len(drift)}): {' '.join(drift[:12])}")
+    print("beads:   repair: ADR-0035 'Reconciliation procedure' (delete-then-import).")
+PY
+exit 0
