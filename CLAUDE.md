@@ -198,11 +198,25 @@ right but aren't.
 When the session is winding down:
 
 1. `bd close <id1> <id2> ...` — close completed issues.
-2. Commit work with messages that cite the relevant
+2. **`bd export -o .beads/issues.jsonl`, then commit it with the code.**
+   Non-negotiable, and the step that is actually forgotten. The `bd`
+   database lives in `.beads/embeddeddolt/`, which is **git-ignored** —
+   it never leaves the machine it was written on. Only the exported
+   JSONL is tracked, so **the tracker crosses machines exclusively via
+   git**. A session that closes beads and does not commit that file
+   forks the tracker from the code: the code reaches every checkout by
+   push, the bead state reaches none of them. That is not hypothetical
+   — it happened on 2026-08-23 and cost 23 beads, which had to be
+   reconstructed from commit messages on 2026-09-07 (bead
+   `padetaylor-05ti`). If `git status` shows no change to
+   `.beads/issues.jsonl` after a session that touched beads, you have
+   this bug. Note `bd export` auto-STAGES, so plain `git diff` reads
+   empty — check `git diff --cached .beads/`.
+3. Commit work with messages that cite the relevant
    `references/markdown/<file>.md:<lines>` or ADR.
-3. If a non-obvious lesson surfaced, note it in a new bead or a
+4. If a non-obvious lesson surfaced, note it in a new bead or a
    docstring (don't just hold it in memory).
-4. **Pushing to remote is allowed any time.** Push freely once work
+5. **Pushing to remote is allowed any time.** Push freely once work
    is committed and the suite is GREEN — no need to wait for an
    explicit instruction. (Superseded 2026-05-14; the earlier
    "do not auto-push" rule is retired.)
