@@ -328,6 +328,15 @@ function shared_denominator_pade(jets::AbstractVector{<:AbstractVector{T}},
     # `:svd` path does exactly this, and the stepper evaluates at t=1 where the
     # spurious origin pole–zero pair cancels.  Throw only if ALL of b is below
     # tol (genuine rank-0 — should have been caught by the ρ==0 mode above).
+    #
+    # REACHABILITY (measured + argued 2026-09-07, bead `padetaylor-sptd`).
+    # `b ./= norm(b)` above leaves ‖b‖₂ = 1, so max|bₖ| ≥ 1/√(m_cur+1) and
+    # this guard can fire only when `tol_t ≥ max|bₖ|`.  Sweeping `tol` over
+    # 1e-14 … 1e3 on a representative jet never reaches it: the `m_cur < 1`
+    # Taylor-polynomial fallback above returns `Q = [1]` first.  The guard is
+    # therefore DEFENSIVE — deliberately untested rather than accidentally so,
+    # because a test that cannot fire asserts nothing (Rule 5).  If you find a
+    # reachable input, add the test and delete this paragraph.
     lam_idx = findfirst(x -> abs(x) > tol_t, b)
     lam_idx === nothing && throw(ErrorException(
         "shared_denominator_pade: every denominator coefficient is below " *
@@ -344,6 +353,14 @@ function shared_denominator_pade(jets::AbstractVector{<:AbstractVector{T}},
     # reduces *exactly* to robust_pade(jet,m,m;:svd).
     b1 = b[1]
     denominator = Vector{T}(b ./ b1)
+    #
+    # UNREACHABLE BY CONSTRUCTION (proved 2026-09-07, bead `padetaylor-sptd`),
+    # which is why its message says "algorithm bug".  `denominator[1] = b[1]/b1`
+    # with `b1 = b[1]` is exactly `1.0`, so `findlast` returns `nothing` only
+    # when `tol_t ≥ 1`.  But ‖b‖₂ = 1 forces every |bₖ| ≤ 1, so `tol_t ≥ 1`
+    # would already have tripped the `lam_idx === nothing` guard above.  This
+    # branch is strictly dominated and cannot be entered through the public
+    # API.  Kept as a cheap invariant tripwire; do NOT write a test for it.
     last_b = findlast(x -> abs(x) > tol_t, denominator)
     last_b === nothing && error(
         "shared_denominator_pade: denominator collapsed below tol after " *

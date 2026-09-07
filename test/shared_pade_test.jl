@@ -1,8 +1,9 @@
 # =============================================================================
 # shared_pade_test.jl — triple-oracle test suite for PadeTaylor.SharedPade.
 #
-# Beads: padetaylor-0ln.2 (V1a — SP.1.* scalar/d=2 + the four throws + the
-# original mutation-proof record) and padetaylor-0ln.6 (V1e — this expansion:
+# Beads: padetaylor-0ln.2 (V1a — SP.1.* scalar/d=2 + what were then the four
+# defensive throws + the original mutation-proof record; two of those four were
+# removed by 127edae — see the SP.5 header and bead `padetaylor-sptd`) and padetaylor-0ln.6 (V1e — this expansion:
 # the full mutation-proof suite against THREE independent oracles + ADR-0019).
 #
 # TDD shape = port-and-verify (CLAUDE.md Rule 4): `shared_denominator_pade`'s
@@ -300,14 +301,19 @@ end
     end
 
     # -------------------------------------------------------------------------
-    # SP.1.5 — Q(0) ≈ 0 guard (structural; pillar A §7 failure mode 3).
+    # SP.1.5 — Q(0) normalisation on the well-posed path (was: "Q(0) ≈ 0
+    # guard", pillar A §7 failure mode 3).
     #
-    # A function regular at 0 cannot produce Q(0)=0 from a finite Taylor jet
-    # (Q(0)=0 means a pole AT the expansion centre, which has no Taylor
-    # expansion).  Per Rule 9 this testset is a documented STRUCTURAL check:
-    # verify the well-posed path does NOT spuriously trip the guard.  The
-    # guard's wiring is covered by code review of the `b[1]` check in
-    # `src/SharedPade.jl`.
+    # THERE IS NO LONGER A Q(0) ≈ 0 GUARD to test.  Commit 127edae removed it
+    # and ADR-0027 replaced it with λ-cancellation: a denominator root at the
+    # expansion centre is divided out of b and every numerator instead of
+    # throwing.  The `b[1]` check this comment used to defer to no longer
+    # exists (bead `padetaylor-sptd`).
+    #
+    # What the assertion below actually pins is the POST-CANCELLATION
+    # NORMALISATION: a well-posed jet comes back with Q(0) = 1 and no spurious
+    # origin pole.  That is a real invariant, so the testset is kept — under
+    # an honest name.
     # -------------------------------------------------------------------------
     @testset "SP.1.5 Q(0)≈0 guard (structural, Rule 9 honest non-test)" begin
         Qden = [1.0, -0.4, 0.2]
@@ -643,14 +649,26 @@ end
     end
 
     # -------------------------------------------------------------------------
-    # SP.5 — all four defensive throws (Rule 1; pillar A §7 failure modes).
+    # SP.5 — the failure modes that still exist (Rule 1; pillar A §7).
     #
-    # SP.1.3/1.4/1.5 above cover modes 1–3; SP.5 re-exercises them in one
-    # place alongside mode 4, so the V1e expansion has a single complete
-    # failure-mode testset.  Each asserts the throw IS raised AND that the
-    # message is informative (not a bare bounds error) — Rule 1.
+    # HISTORICAL NOTE (bead `padetaylor-sptd`): this header read "all four
+    # defensive throws" until 2026-09-07, describing the code as it was
+    # before commit 127edae.  Only TWO of the four are throws today:
+    #   Mode 1  jet too short              — throws (asserted below)
+    #   Mode 2  all-zero jets              — throws (asserted below)
+    #   Mode 3  Q(0) ≈ 0                   — NO LONGER A THROW.  ADR-0027
+    #           λ-cancellation divides the origin root out instead.  The
+    #           assertion below pins the resulting Q(0) = 1 normalisation on
+    #           the well-posed path; it is not a guard test.
+    #   Mode 4  non-isolated null space    — NO LONGER A THROW.  The
+    #           `ρ == m_cur` break enforces isolation, so the algorithm
+    #           reduces the degree; the removed `n_near > 1` guard was dead
+    #           code for d ≥ 2 (ADR-0027).  The assertion below accepts
+    #           either a valid reduced Q or an informative throw.
+    # Modes 1–2 assert the throw IS raised AND that the message is
+    # informative (not a bare bounds error) — Rule 1.
     # -------------------------------------------------------------------------
-    @testset "SP.5 four defensive throws (Rule 1)" begin
+    @testset "SP.5 failure modes: 2 throws + 2 post-127edae invariants (Rule 1)" begin
         # Mode 1 — jet too short.
         @test_throws Exception shared_denominator_pade([[1.0, 2.0]], 3)
         e1 = try; shared_denominator_pade([[1.0, 2.0]], 3); catch e; e; end

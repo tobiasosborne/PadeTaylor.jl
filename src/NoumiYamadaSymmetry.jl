@@ -86,15 +86,28 @@ lines 580–588 for `A_2`):
     needs a non-trivial intermediate rational solution for `A_{2n}`,
     `n ≠ 2`".
 
-## Zero-component caveat (bead V5b)
+## Zero-component caveat (bead V5b; mechanism corrected 2026-09-07, `padetaylor-sptd`)
 
-The vector solver's shared-`Q` Padé throws `Q(0) ≈ 0` when a component
-is **identically zero**.  Type A `(t, 0, …, 0)` and Type B
-`(t/3, t/3, t/3, 0, 0)` have zero components — they **cannot** be
-vector-solved directly.  Validate Type A/B by RHS-residual only
-(substitute the closed form into `noumi_yamada_rhs`, check `f_j′ = RHS_j`
-exactly); use Type C for the `vector_solve_pade` cross-check (all
-components `t/(2n+1) ≠ 0`).
+Type A `(t, 0, …, 0)` and Type B `(t/3, t/3, t/3, 0, 0)` have identically
+zero components.  This caveat used to justify itself by the claim that the
+vector solver's shared-`Q` Padé **throws** `Q(0) ≈ 0` on such a component.
+**That mechanism no longer exists.**  Commit `127edae` replaced the
+`Q(0) ≈ 0` throw with the λ-cancellation of ADR-0027, and
+`shared_denominator_pade` now accepts a zero component among live
+siblings: measured 2026-09-07, the jets `[live, zeros]` and
+`[live, zeros × 4]` built from the `1/(1 − t/2)` jet both return
+`Q = [1.0, −0.5]` with `Q(0) = 1.0` — identical to the `d = 1` result.
+Only an input whose jets are **all** zero still throws (`iszero(cnorm)`,
+`SharedPade.jl:246`).
+
+Whether Type A/B therefore solve END-TO-END is a separate and still
+unmeasured question — the shared-`Q` layer is only one of the places a
+zero component could bite — and is tracked by bead `padetaylor-0o9`.
+Until that measurement exists, keep the conservative practice: validate
+Type A/B by RHS-residual (substitute the closed form into
+`noumi_yamada_rhs`, check `f_j′ = RHS_j` exactly) and use Type C for the
+`vector_solve_pade` cross-check (all components `t/(2n+1) ≠ 0`).  What has
+changed is the REASON, not yet the recipe.
 
 ## References
 

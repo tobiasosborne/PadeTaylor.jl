@@ -66,9 +66,12 @@ For `vector_pade_step!(state, f, order, h)`:
   5. **Mutate state.**  `state.z += h`; `state.y` becomes the new
      `d`-vector.  Return the same `state` object.
 
-Each subcall inherits the fail-fast contract (Rule 1): a too-short jet,
-all-zero jets, `Q(0) ≈ 0`, a non-isolated shared null space — all throw
-inside `shared_denominator_pade`.  This module adds one further check:
+Each subcall inherits the fail-fast contract (Rule 1): a too-short jet and
+all-zero jets throw inside `shared_denominator_pade`.  Two further guards
+were listed here until 2026-09-07 and no longer exist: commit `127edae`
+replaced the `Q(0) ≈ 0` throw with the λ-cancellation of ADR-0027, and
+retired the non-isolated-shared-null-space throw as dead code for `d ≥ 2`
+once the `ρ == m_cur` break enforced isolation (bead `padetaylor-sptd`).  This module adds one further check:
 a denominator that is (essentially) zero at `t = 1` — `|Q(1)| ≤ √ε·‖Q‖`,
 meaning the step landed on or within roundoff of a pole — throws
 `DomainError` with a shorten-the-step suggestion.  The relative `√ε·‖Q‖`
@@ -196,9 +199,10 @@ rescaling are documented in the module docstring.
 
 Throws if any subcall throws — the failure modes inherited from
 `vector_taylor_coefficients` (`order < 1`, empty `y0`) and
-`shared_denominator_pade` (jet too short, all-zero jets, `Q(0) ≈ 0`,
-non-isolated null space) — or the local `DomainError` for a shared
-denominator that vanishes exactly at `t = 1`.
+`shared_denominator_pade` (jet too short, all-zero jets) — or the local
+`DomainError` for a shared denominator that vanishes exactly at `t = 1`.
+The `Q(0) ≈ 0` and non-isolated-null-space throws once named here were
+removed by `127edae`; see the module docstring and bead `padetaylor-sptd`.
 """
 function vector_pade_step!(state::VectorPadeStepperState{T}, f,
                            order::Int, h::Number) where {T}
