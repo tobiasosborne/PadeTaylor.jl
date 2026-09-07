@@ -212,6 +212,14 @@ When the session is winding down:
    `.beads/issues.jsonl` after a session that touched beads, you have
    this bug. Note `bd export` auto-STAGES, so plain `git diff` reads
    empty — check `git diff --cached .beads/`.
+   **A repo-tracked `pre-commit` hook now does this for you** — it exports
+   and stages the JSONL on every commit, fail-soft (a missing `bd` or a
+   locked database warns and lets the commit through, never blocks it), and
+   skips mid-merge/rebase so it cannot clobber a resolution in progress.
+   `core.hooksPath` is per-clone config that no clone or pull carries, so
+   **run `./scripts/git-hooks/install.sh` once per machine**. The hook is a
+   safety net, not a licence to stop checking: if it warned, the export did
+   not happen.
 3. Commit work with messages that cite the relevant
    `references/markdown/<file>.md:<lines>` or ADR.
 4. If a non-obvious lesson surfaced, note it in a new bead or a

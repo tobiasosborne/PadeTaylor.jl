@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+#
+# pre-commit — keep the beads tracker in the same commit stream as the code.
+#
+# WHY THIS EXISTS.  The `bd` issue tracker stores its data in
+# `.beads/embeddeddolt/`, which is **git-ignored**.  The only artifact that
+# ever leaves this machine is the exported `.beads/issues.jsonl`.  So the
+# tracker crosses machines exclusively via git, and a session that closes
+# beads without exporting them forks the tracker from the code: the code
+# reaches every checkout by push, the bead state reaches none of them.
+#
+# That is not hypothetical.  On 2026-08-23 a session filed ~23 beads and
+# closed ~19 on one machine, committed its code, and never ran `bd export`.
+# Three months later the two checkouts disagreed by 15 issues and 10
+# statuses, and all 23 beads had to be reconstructed from commit messages
+# before the originals were recovered.  See bead `padetaylor-05ti` and
+# CLAUDE.md "Session close" step 2.
+#
+# WHAT IT DOES.  Before each commit, re-export the tracker and stage the
+# result, so `.beads/issues.jsonl` is never staler than the code it ships
+# with.  If nothing changed, the export is a no-op and nothing is staged.
+#
+# WHY IT IS FAIL-SOFT.  A tracker export must never block a commit.  Every
+# failure path here warns and exits 0: a missing `bd`, a locked database
+# (bd is single-writer — a concurrent agent holds an exclusive lock), an
+# export error.  Losing the export costs one stale JSONL; blocking the
+# commit costs the work itself.  Rule 1's "fail fast, fail loud" governs
+# the *numerics*, where a silent wrong answer is the danger; here the loud
+# part is the warning, and proceeding is correct.
+#
+# WHY IT SKIPS MERGES.  During a merge or rebase the working tree holds a
+# resolution in progress.  Re-exporting the local database over
+# `.beads/issues.jsonl` at that moment would silently discard whichever
+# side of the merge is not yet imported — exactly the clobber this hook
+# exists to prevent.  Merge commits are therefore left alone.
+#
+# INSTALL: scripts/git-hooks/install.sh (sets core.hooksPath).  The hook is
+# tracked in the repo so every clone gets the same one; `core.hooksPath` is
+# per-clone config, so each machine runs the installer once.
+
+set -uo pipefail
+
+repo_root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+cd "$repo_root" || exit 0
+
+[ -d .beads ] || exit 0
+
+# Skip mid-merge / mid-rebase / mid-cherry-pick: see WHY IT SKIPS MERGES.
+git_dir="$(git rev-parse --git-dir 2>/dev/null)" || exit 0
+for marker in MERGE_HEAD REBASE_HEAD CHERRY_PICK_HEAD REVERT_HEAD; do
+    if [ -e "$git_dir/$marker" ]; then
+        echo "beads: mid-$marker — skipping tracker export (resolve, then commit again)" >&2
+        exit 0
+    fi
+done
+if [ -d "$git_dir/rebase-merge" ] || [ -d "$git_dir/rebase-apply" ]; then
+    echo "beads: rebase in progress — skipping tracker export" >&2
+    exit 0
+fi
+
+if ! command -v bd >/dev/null 2>&1; then
+    echo "beads: WARNING — \`bd\` not on PATH; .beads/issues.jsonl NOT refreshed." >&2
+    echo "beads:           the tracker may ship staler than this commit's code." >&2
+    exit 0
+fi
+
+before=""
+[ -f .beads/issues.jsonl ] && before="$(git hash-object .beads/issues.jsonl)"
+
+if ! bd export -o .beads/issues.jsonl >/dev/null 2>&1; then
+    echo "beads: WARNING — \`bd export\` failed (database locked by another agent?);" >&2
+    echo "beads:           .beads/issues.jsonl NOT refreshed for this commit." >&2
+    exit 0
+fi
+
+after="$(git hash-object .beads/issues.jsonl 2>/dev/null || echo '')"
+
+if [ -n "$after" ] && [ "$before" != "$after" ]; then
+    git add .beads/issues.jsonl 2>/dev/null || true
+    echo "beads: tracker changed — staged .beads/issues.jsonl into this commit." >&2
+fi
+
+exit 0
