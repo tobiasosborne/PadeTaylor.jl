@@ -65,41 +65,66 @@ remotes configured", `.beads/embeddeddolt/` is still git-ignored, and `bd backup
 was never initialised. The committed JSONL remains the ONLY off-machine copy of the
 tracker, and it is only ever as fresh as the last `bd export` + commit.
 
-### 3. Staleness sweep — 72 open beads, 17 flagged, 0 overruled
+### 3. Staleness sweep — 72 open beads swept, 17 flagged, 0 overruled, ALL APPLIED
 No new "shipped but still open" beads (the `gvz`/`0xn` pattern does not recur), so
-the repaired tracker is status-clean. 15 NEEDS-RESCOPE, 1 OBSOLETE (`wso`), 2
-downgraded. **The adjudications and critic report are NOT yet applied** — they live
-in the session scratchpad (`tasks/wokwa4qhl.output`, `result.actionable` +
-`result.critic`). Four findings a per-bead read could not see:
-1. **Untracked blocker** shared by `6pj`/`adn`/`s1q`: worklog 077 item 3, the
-   `quality_diagnose` sheet-0 mask silently dropping ~87% of nodes
-   (`ext/PadeTaylorDiagnosticsExt.jl` ~:153-161, predicate at :157). Never filed.
-2. **`dngl` contained the bug it exists to fix** — `?fr` is a FIFTH misattributed
-   site (real bead `ykg`), not a census entry. Corrected in `dngl`'s notes.
-3. **`xw3` is an epic in name only**: `issue_type=feature`, zero parent-child edges,
-   its six phase children (`x1y 8j6 pl4 7cy mmw hop`) wired as a `blocks` chain with
-   the epic depending on its own last child. 7 open P2 beads ≈ half the P2 queue.
-4. **The `qur` audit queue is frozen and anchor-rotten**: rows 4-12 (`e0k cr6 1nz bbl
-   s1q brf 289 kdx egc`) untouched since 2026-05-16, **7 of 9 file:line anchors no
-   longer land**.
+the repaired tracker is status-clean. 15 NEEDS-RESCOPE notes are now appended (each
+naming which of its bead's own sentences no longer hold, ending in an explicit
+REMAINING SCOPE); 1 OBSOLETE (`wso`) is closed; 2 downgraded. Four structural
+findings a per-bead read could not see became beads or fixes:
+1. `qdsm` (P2 bug) — worklog 077's never-filed third next-step, the
+   `quality_diagnose` sheet-0 mask dropping ~87% of nodes. It had been living as
+   prose caveats inside `6pj`, `adn` and `s1q`.
+2. `dngl` — **CLOSED**: commit `abdd769` misattributed `tf9.4` to the parent `tf9`.
+   `tf9.N` and `0ln.40.a` are TITLE PREFIXES, not ids (`h9o`/`tux`/`t3g`). Five
+   sites corrected, each now stating the rule so the inference cannot recur.
+3. `tgrh` (P3) — `xw3` is titled EPIC but has `issue_type=feature`, zero
+   parent-child edges, and **depends on its own last child** (`bd blocked` confirms).
+   Seven open P2 beads with no unit identity. Also prose-only epic membership on
+   `25og`, `l7yt`, `flnr`. The closed-epic edge cases are a real judgment call —
+   adding edges would create closed epics with open children — so the bead asks
+   for the decision rather than presuming it.
+4. `qrre` (P2) — the `qur` audit queue frozen since 2026-05-16; rows 4-12 open with
+   **8 of 9** file:line anchors no longer landing.
 
-### 4. Cut off mid-flight — what the next agent should pick up
-A third workflow was composing the sweep's applications when the session ended.
-**Recovered and applied:** `dngl` census correction, `vovw` subsumption note (do
-`ykg` first — it subsumes `vovw`), and a `wso` note. **NOT written:** 16 rescope
-notes and 4 new-bead payloads (`qdsm` sheet-0 mask, `sptd` SharedPade doc-drift,
-`qrre` re-anchor the `qur` queue, `tgrh` graph hygiene). Re-derive them from
-`tasks/wokwa4qhl.output`; a drafted `wso` close reason survives at
-`scratchpad/sweep-fixups/wso-close-reason.txt`.
-**`wso` is deliberately NOT closed**: closing it while
-`test/shared_pade_test.jl:645-690` still claims to cover "all four defensive throws"
-(two were removed by `127edae`, and the two replacements at `src/SharedPade.jl:332`
-and `:348` have zero test references) would trade an honest open bead for a
-dishonestly-green test. File `sptd` first, then close.
+**Trust calibration for these notes.** They survived four adversarial passes and
+each pass caught the one before: the composers corrected citations from the
+adjudication (`HANDOFF.md:240-241` → `:333-334`), a checker opened every
+`path:line` and found 8 more errors, and a fix pass caught 2 errors in the
+CHECKER. The sharpest catch: `qrre` claimed three of `e0k`'s four bare `error(`
+sites were already converted — false, and it would have gutted a bead whose work
+is entirely undone. Its `^\s*error\(` pattern cannot see the `X || error(` form;
+the honest pattern finds 6 sites. **Lesson worth keeping: an anchored grep is not
+evidence of absence.**
+
+### 4. Beads worked and closed this session
+- **`dngl`** — five misattributed citations re-pointed (above).
+- **`sptd`** — `127edae` removed the `Q(0)≈0` and non-isolated-null-space guards;
+  four shipped sites still promised them and `SP.5` advertised "all four defensive
+  throws" when only two are throws. All corrected. Two findings worth carrying:
+  (a) `src/NoumiYamadaSymmetry.jl:89` was FALSE, not merely stale — it used the
+  removed throw to declare Type A/B unsolvable. Measured: a zero component among
+  live siblings returns `Q=[1.0,−0.5]`, `Q(0)=1.0`, identical to `d=1`, because
+  `cnorm` (`SharedPade.jl:235`) is the norm of all jets CONCATENATED. The docstring
+  now says the mechanism is dead and defers the end-to-end question to `0o9` —
+  the reason changed, not yet the recipe.
+  (b) `src/SharedPade.jl:348` is **UNREACHABLE BY CONSTRUCTION**: `denominator[1]`
+  is exactly `1.0`, so it fires only when `tol_t ≥ 1`, but `‖b‖₂=1` forces every
+  `|bₖ| ≤ 1`, so the guard above always fires first. Both guards carry the
+  argument in-code. No test was written for either — a test that cannot fire is
+  the same Rule 5 defect the bead existed to remove.
+- **`wso`** — closed obsolete, held until `sptd` landed so we did not trade an
+  honest open bead for a dishonestly-green testset.
+
+**`Pkg.instantiate()` was needed** — `TaylorSeries` was not installed in this
+checkout (unused since June). Budget for it.
 
 ### 5. Suite
-**NOT RUN this session — no `src/` or `test/` behaviour changed.** Last recorded full
-gate remains GREEN on `6d4047b`: 9501 pass / 2 broken / 0 fail, 17m00s, Julia 1.12.3.
+**Full gate NOT run.** Changes were comment/docstring/test-header only, verified by
+running the touched modules standalone: SharedPade 192/192, VectorStepper 55/55,
+NoumiYamadaSymmetry 175/175, all GREEN, plus `Meta.parseall` on every edited `.jl`.
+Last recorded FULL gate remains GREEN on `6d4047b`: 9501 pass / 2 broken / 0 fail,
+17m00s, Julia 1.12.3. **First job next session: `scripts/quality_gate.sh full`** —
+this session touched `src/` docstrings in three modules and has not seen a full run.
 
 ## 🔍 LATEST SESSION (2026-08-23) — multi-model audit sweep + 14 beads shipped. SUITE GREEN (see §0). Orchestrated: Claude subagents + GPT-5.6-sol (codex exec, xhigh) + stealth/ox-alpha (pi)
 
