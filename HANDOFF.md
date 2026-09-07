@@ -8,6 +8,83 @@
 > previous session already paid for. The frictions surfaced are
 > recorded in `docs/worklog/001-stages-Z-1-2-handoff.md`.
 
+## 🚑 LATEST SESSION (2026-09-07) — TRACKER RECOVERY. The beads DB had forked from the code for 3 months; 23 lost beads reconstructed. SUITE NOT RUN (no code changed)
+
+**Read this before touching `bd`.** Two workflows ran (forensics, then a staleness
+sweep); a third was cut off mid-flight. Gate commit `d1e84d6`.
+
+### 0. What was actually wrong — NOT what it looked like
+`bd` read 298 issues while the git-tracked `.beads/issues.jsonl` held 313, and the
+**entire 2026-08-23 session's tracker work was in neither store**. First diagnosis
+("the Dolt DB stopped persisting") was WRONG and is corrected in bead
+`padetaylor-05ti`. The truth, from `git reflog`: this checkout's last local commit
+was `d950914` (2026-06-19); everything after arrived by `pull: Fast-forward` on
+2026-09-07, and **not one of the ten commits in `bed1e22..HEAD` touches `.beads/`**.
+The 06-30 / 08-11 / 08-23 sessions ran **on another machine**, and that session never
+ran `bd export` + committed the JSONL. The code crossed machines by push; the bead
+state crossed nothing. `.beads/embeddeddolt/` is git-ignored — **the tracker crosses
+machines exclusively via the committed JSONL**. `CLAUDE.md` Session close step 2 now
+says so.
+
+### 1. Repair applied (313 → 338 issues; DB == committed JSONL; 0 in_progress)
+- `bd --dolt-auto-commit on import .beads/issues.jsonl` → 313/313, 0 status mismatches.
+- **23 beads RECONSTRUCTED** from commit/HANDOFF/CHANGELOG/source evidence and
+  re-created under their ORIGINAL ids so citations in `src/`, `test/`, `CHANGELOG.md`
+  resolve: `ked0 lbqb lkrk 0dw7` (P1 bugs), `aqw1 urmg ll3t ps4g divo 044m cwcp fqwf
+  ig11 1brh sr6j 4tw4 8up9 zt73 psg4` (shipped → closed), `9ffq n3w0 qidl 580u` (open).
+  **Every one carries a `[RECONSTRUCTED 2026-09-07 …]` footer — their wording is an
+  author's reconstruction, NOT a maintainer decision. Do not cite it as precedent.**
+- 7 status corrections: `7zw` closed (shipped in `6d4047b`; its acceptance item (b)
+  was misspecified — see worklog 080), `zzw` closed (superseded by `krgy.11/.12`),
+  `0ln` in_progress→open, `fe9` re-scoped (`src/Laplace2D.jl` shipped and exported at
+  `src/PadeTaylor.jl:385`; only `smooth_fill_2d` remains), `6b5`/`pgc`/`zwh` x-refed.
+- New: `05ti` (root cause + recovery + backup gap), `dngl` (commit `abdd769`
+  misattributed `tf9.4` to parent `tf9` — **`tf9.N` and `0ln.40.a` are TITLE PREFIXES**,
+  real beads `h9o`/`tux`/`t3g`; five sites to fix, plus a placeholder census).
+
+### 2. THE RECOVERY THAT BEATS RECONSTRUCTION — do this first
+The other machine's `.beads/embeddeddolt` very likely holds all 23 **originals
+verbatim**. Run `bd export` there, commit the JSONL, pull, `bd import` here — it
+upserts by id, so originals cleanly overwrite the reconstructions. Tracked as the
+first item of `padetaylor-05ti`. Also still true: **no off-machine backup exists**
+(`bd dolt remote list` → none; `bd backup` never initialised).
+
+### 3. Staleness sweep — 72 open beads, 17 flagged, 0 overruled
+No new "shipped but still open" beads (the `gvz`/`0xn` pattern does not recur), so
+the repaired tracker is status-clean. 15 NEEDS-RESCOPE, 1 OBSOLETE (`wso`), 2
+downgraded. **The adjudications and critic report are NOT yet applied** — they live
+in the session scratchpad (`tasks/wokwa4qhl.output`, `result.actionable` +
+`result.critic`). Four findings a per-bead read could not see:
+1. **Untracked blocker** shared by `6pj`/`adn`/`s1q`: worklog 077 item 3, the
+   `quality_diagnose` sheet-0 mask silently dropping ~87% of nodes
+   (`ext/PadeTaylorDiagnosticsExt.jl` ~:153-161, predicate at :157). Never filed.
+2. **`dngl` contained the bug it exists to fix** — `?fr` is a FIFTH misattributed
+   site (real bead `ykg`), not a census entry. Corrected in `dngl`'s notes.
+3. **`xw3` is an epic in name only**: `issue_type=feature`, zero parent-child edges,
+   its six phase children (`x1y 8j6 pl4 7cy mmw hop`) wired as a `blocks` chain with
+   the epic depending on its own last child. 7 open P2 beads ≈ half the P2 queue.
+4. **The `qur` audit queue is frozen and anchor-rotten**: rows 4-12 (`e0k cr6 1nz bbl
+   s1q brf 289 kdx egc`) untouched since 2026-05-16, **7 of 9 file:line anchors no
+   longer land**.
+
+### 4. Cut off mid-flight — what the next agent should pick up
+A third workflow was composing the sweep's applications when the session ended.
+**Recovered and applied:** `dngl` census correction, `vovw` subsumption note (do
+`ykg` first — it subsumes `vovw`), and a `wso` note. **NOT written:** 16 rescope
+notes and 4 new-bead payloads (`qdsm` sheet-0 mask, `sptd` SharedPade doc-drift,
+`qrre` re-anchor the `qur` queue, `tgrh` graph hygiene). Re-derive them from
+`tasks/wokwa4qhl.output`; a drafted `wso` close reason survives at
+`scratchpad/sweep-fixups/wso-close-reason.txt`.
+**`wso` is deliberately NOT closed**: closing it while
+`test/shared_pade_test.jl:645-690` still claims to cover "all four defensive throws"
+(two were removed by `127edae`, and the two replacements at `src/SharedPade.jl:332`
+and `:348` have zero test references) would trade an honest open bead for a
+dishonestly-green test. File `sptd` first, then close.
+
+### 5. Suite
+**NOT RUN this session — no `src/` or `test/` behaviour changed.** Last recorded full
+gate remains GREEN on `6d4047b`: 9501 pass / 2 broken / 0 fail, 17m00s, Julia 1.12.3.
+
 ## 🔍 LATEST SESSION (2026-08-23) — multi-model audit sweep + 14 beads shipped. SUITE GREEN (see §0). Orchestrated: Claude subagents + GPT-5.6-sol (codex exec, xhigh) + stealth/ox-alpha (pi)
 
 **Headline.** First full gate since 2026-06-30 ran GREEN at session start
