@@ -11,7 +11,8 @@
 ## 🚑 LATEST SESSION (2026-09-07) — TRACKER RECOVERY. The beads DB had forked from the code for 3 months; 23 lost beads reconstructed. SUITE NOT RUN (no code changed)
 
 **Read this before touching `bd`.** Two workflows ran (forensics, then a staleness
-sweep); a third was cut off mid-flight. Gate commit `d1e84d6`.
+sweep); a third was cut off mid-flight. Gate commit `d1e84d6`; tracker settled at
+`c1dfdea` after the 2026-08-23 machine synced its stranded originals back (§2).
 
 ### 0. What was actually wrong — NOT what it looked like
 `bd` read 298 issues while the git-tracked `.beads/issues.jsonl` held 313, and the
@@ -42,12 +43,27 @@ says so.
   misattributed `tf9.4` to parent `tf9` — **`tf9.N` and `0ln.40.a` are TITLE PREFIXES**,
   real beads `h9o`/`tux`/`t3g`; five sites to fix, plus a placeholder census).
 
-### 2. THE RECOVERY THAT BEATS RECONSTRUCTION — do this first
-The other machine's `.beads/embeddeddolt` very likely holds all 23 **originals
-verbatim**. Run `bd export` there, commit the JSONL, pull, `bd import` here — it
-upserts by id, so originals cleanly overwrite the reconstructions. Tracked as the
-first item of `padetaylor-05ti`. Also still true: **no off-machine backup exists**
-(`bd dolt remote list` → none; `bd backup` never initialised).
+### 2. RECOVERY — DONE later the same day (`c1dfdea`); durability still open
+The prediction held: the 2026-08-23 checkout still had all 23 **originals verbatim**
+in its `.beads/embeddeddolt`, and that machine merged both stores losslessly
+(`c1dfdea`). Its DB held 337 issues, git held 338, and **neither was a superset** —
+a bare `bd export` there would have deleted `05ti`/`dngl`, a bare `bd import` would
+have destroyed the originals. Merge policy: the 2026-09-07 reconstructions are
+**ACCEPTED AS CANONICAL** for title/description/close_reason (richer, and carrying
+verified `file:line` citations), with the verbatim original of every altered field
+appended to that bead's `notes` under a
+`--- ORIGINAL 2026-08-23 BEAD TEXT ---` header. **31 beads carry such a block** —
+read it before trusting a reconstruction's wording. One genuine original also
+arrived: `padetaylor-66d8`, closed 2026-08-23 as "duplicate of padetaylor-zt73
+(created twice by orchestrator)". Tracker is now **339 issues, DB == committed
+JSONL, 0 field mismatches**; the `corpus-v2-expected-broken-count` memory picked up
+its 2026-08-23 revision (**2**, matching `CLAUDE.md:181` and
+`scripts/quality_gate.sh:31`; the stale **3** is gone).
+
+**STILL OPEN — the durability leg of `05ti`.** `bd dolt remote list` is still "No
+remotes configured", `.beads/embeddeddolt/` is still git-ignored, and `bd backup`
+was never initialised. The committed JSONL remains the ONLY off-machine copy of the
+tracker, and it is only ever as fresh as the last `bd export` + commit.
 
 ### 3. Staleness sweep — 72 open beads, 17 flagged, 0 overruled
 No new "shipped but still open" beads (the `gvz`/`0xn` pattern does not recur), so
