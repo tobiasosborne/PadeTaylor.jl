@@ -886,8 +886,12 @@ end
     end
 
     # =========================================================================
-    # VPN.5.* — the resilient Stage-1 walk (bead padetaylor-0ln.40.a,
-    # ADR-0026 D1).  `on_target_failure = :skip` makes a per-target walk
+    # VPN.5.* — the resilient Stage-1 walk (bead `padetaylor-t3g`, whose
+    # title begins "0ln.40.a — resilient vector Stage-1 walk", ADR-0026
+    # D1).  `0ln.40.a` is a TITLE PREFIX on an ordinary random id, not a
+    # dotted child id (.b→4ko, .c→d4a, .d→eii, .e→zcz); an earlier comment
+    # here cited `padetaylor-0ln.40.a` as though it were the id — see bead
+    # `padetaylor-dngl`.  `on_target_failure = :skip` makes a per-target walk
     # failure record a `VectorWalkFailure` in `sol.failed_targets` and
     # continue, rather than aborting the whole run; `:throw` (default) is
     # byte-identical to the pre-ADR-0026 behaviour.  See the module

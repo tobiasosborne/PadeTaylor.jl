@@ -168,5 +168,11 @@ kkg_pi2_abs_phase_surface.png  463511 bytes
     complex-function-visualisation companions to those
   - `figures/output/kkg_pi2_kernel_cache.jld2` — the JLD2 cache
     that made these renders ~30 s instead of 7 min
-  - beads `padetaylor-tf9.4` (cited here and in commit f839fc8 but never actually recorded in the tracker — see bead `padetaylor-zt73`), `padetaylor-tf9` (closed in
-    worklog 061; the umbrella bead this work refines under)
+  - beads `padetaylor-h9o` — the real bead for this work, titled
+    "tf9.4 — Two single-panel complex-function figures of P_I^(2)".
+    `tf9.N` is a TITLE PREFIX on an ordinary random id, not a dotted
+    child id (tf9.1→kuy, .2→dqu, .3→apn, .4→h9o, .5→tux), so the
+    `padetaylor-tf9.4` cited here and in commit f839fc8 was never an id.
+    An earlier annotation credited the work to the parent instead; that
+    was wrong (bead `padetaylor-dngl`).  `padetaylor-tf9` (closed in
+    worklog 061) remains the umbrella bead this work refines under

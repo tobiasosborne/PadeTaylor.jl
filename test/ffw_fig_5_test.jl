@@ -391,7 +391,9 @@ end
 # (BF-256 + a_3+ helper + tighter N).  Two follow-up beads:
 #
 #   * `padetaylor-7zw`-style BF-256 PIII tronquée pin.
-#   * `padetaylor-?fr` (to be filed): implement `pIII_asymptotic_ic`
+#   * `padetaylor-ykg` (filed 2026-05-15, open — NOT "to be filed"; the
+#     placeholder `padetaylor-?fr` that stood here was never an id):
+#     implement `pIII_asymptotic_ic`
 #     a_3, a_4, ..., a_N via TaylorSeries.jl substitution per FFW
 #     md:232 "optimal truncation".
 # =============================================================================

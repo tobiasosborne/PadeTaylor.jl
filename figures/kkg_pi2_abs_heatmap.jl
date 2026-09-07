@@ -2,7 +2,12 @@
 #
 # A SINGLE-PANEL 2D HEATMAP of the P_I^(2) tritronquée modulus |V₀(x,0)|
 # over the disc |x| ≤ SURF_XY_LIM in the complex x-plane (bead
-# `padetaylor-tf9.4` — an id that was never recorded in the tracker; the work is the closed parent `padetaylor-tf9`, see bead `padetaylor-zt73`).  Companion to the 3D modulus + phase surface in
+# `padetaylor-h9o`, whose title begins "tf9.4 —").  NB `tf9.N` is a TITLE
+# PREFIX on ordinary random ids, not a dotted child id: tf9.1→kuy, .2→dqu,
+# .3→apn, .4→h9o, .5→tux.  The earlier annotation here called
+# `padetaylor-tf9.4` a phantom and credited this work to the parent
+# `padetaylor-tf9`; that was wrong (bead `padetaylor-dngl`).
+# Companion to the 3D modulus + phase surface in
 # `kkg_pi2_abs_phase_surface.jl`; both are *dishonest* renderings — they
 # present the FW-extrapolated kernel matrix (`res.Re_u_extrap`,
 # `res.Im_u_extrap`) over the full disc with NO certified-vs-extrapolated

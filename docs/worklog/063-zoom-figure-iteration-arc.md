@@ -230,5 +230,6 @@ limits state.
   - `figures/_kkg_pi2_vc45.jl:330` — `vc4_validate` (the cross-node
     validation idiom in the surface kernel that the zoom kernel
     deliberately skips)
-  - beads `padetaylor-tf9.5` (closed) — the [-2, 2]² zoom
+  - beads `padetaylor-tux` (closed) — the [-2, 2]² zoom; its title begins
+    "tf9.5 —", and `tf9.N` is a title prefix, not an id (bead `padetaylor-dngl`)
   - bead `padetaylor-(zoom-iteration-arc)` (this work)
