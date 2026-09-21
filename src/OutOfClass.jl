@@ -138,7 +138,7 @@ legacy unguarded behaviour.  The escape hatch is documented on
 module OutOfClass
 
 using ..Coefficients: taylor_coefficients_2nd
-using ..RobustPade:   PadeApproximant, robust_pade
+using ..RobustPade:   robust_pade
 using ..PadeStepper:  PadeStepperState, _rescale_by_powers, _evaluate_pade,
                       _evaluate_pade_deriv
 

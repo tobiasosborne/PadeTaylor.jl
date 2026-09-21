@@ -8,6 +8,55 @@
 > previous session already paid for. The frictions surfaced are
 > recorded in `docs/worklog/001-stages-Z-1-2-handoff.md`.
 
+## 🧪 LATEST SESSION (2026-09-21) — tracker re-synced on this machine; uh3x shipped; FULL GATE run: 9500 / 1 error / 2 broken — the 1 error was uh3x's own stale import, fixed; read-only bug-risk audit filed 2 beads
+
+### 0. Tracker + hooks (this clone)
+This clone had `core.hooksPath` pointing at a non-existent `.beads/hooks`, so
+neither ADR-0035 hook had ever run here; the replica was one session behind the
+canonical JSONL (5 beads missing, 3 statuses stale, 18 rows drifted, no local-only
+edits, no `created_at` disagreement). Plain `bd import` converged it (344/344, zero
+drift) and `scripts/git-hooks/install.sh` was run. **If you are on a machine that
+has not run the installer, do it first** (`CLAUDE.md` Session close step 2).
+
+### 1. Work shipped — `uh3x` (`d920a61` + this commit)
+`OutOfClass.pade_step_with_defect!` now imports `PadeStepper._evaluate_pade_deriv`
+instead of carrying a verbatim copy (`_evaluate_pade_deriv_via`, deleted; 303→294
+LOC). **Lesson, paid for:** the first commit was verified only with standalone test
+files (corpus_out_of_class 14/14, problems 12/12, scalar_pole_bridge 27/27,
+padestepper 16/16) and NOT the `fast` static tier — the deletion left
+`PadeApproximant` as a stale explicit import, which is exactly what
+`quality_test.jl`'s ExplicitImports gate catches. **Run `scripts/quality_gate.sh
+fast` before every commit that touches `src/`; it is ~1.5 min.**
+
+### 2. Suite
+`scripts/quality_gate.sh full` on `d920a61` (Julia 1.12.3, 17m45s):
+**9500 pass / 1 error / 2 broken / 0 fail → RED.** The single error is the stale
+import above (`test/quality_test.jl:151`); every numerical testset is GREEN and the
+Broken count is the expected 2 (bd memory `corpus-v2-expected-broken-count`).
+After the one-line import fix the `fast` tier is GREEN. **The full tier was NOT
+re-run after the fix** (session wound up on user request); the fix is import-only
+and the failing gate is the one re-run. Next session: run `full` to re-baseline.
+
+### 3. Read-only bug-risk audit (user asked "are there lurking worse things?")
+Grep/read only, no probes run; conclusions are in the session transcript, the two
+actionable findings are beads:
+- **`padetaylor-orb5`** (P2 bug) — `PadeTaylorDiagnosticsExt` drops edges whose Padé eval
+  throws/non-finite with `continue` and the report has no dropped count — the
+  `qdsm` family; the seam detector can hide seams.
+- **`padetaylor-lg4y`** (P2) — the VECTOR walk has no field-level two-seed path-independence
+  gate; VPN.4.3 checks one pole value. The scalar seam class (worklog 077) is
+  unmeasured on the vector pipeline; vector edge detection / sheet tracking are
+  deferred (`0ln.21/.22`).
+Other observations (no bead; judgment calls for the maintainer): the automated
+mutation gate covers 12 mutants in 4 hotspots for 44 modules, the other footers are
+hand claims; ~19 test files pin the implementation's own prior output (regression,
+not truth); ~30 FW-family figures have infrastructure but no quantitative pin
+(`bhw`); `shared_pade_select` falls back to cell A on a non-finite defect with
+`@warn maxlog=5`, effectively silent on long walks; `580u` pole double-count and
+`0o9` end-to-end zero-component remain UNMEASURED. Reassuring: the fail-loud culture
+holds under grep (few silent returns, all documented/opt-in), three independent
+SharedPade oracles since C1, certified Arb oracles, enforced oracle provenance.
+
 ## 🚑 LATEST SESSION (2026-09-07) — TRACKER RECOVERY. The beads DB had forked from the code for 3 months; 23 lost beads reconstructed. SUITE NOT RUN (no code changed)
 
 **Read this before touching `bd`.** Two workflows ran (forensics, then a staleness
