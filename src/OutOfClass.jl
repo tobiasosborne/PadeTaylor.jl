@@ -139,7 +139,8 @@ module OutOfClass
 
 using ..Coefficients: taylor_coefficients_2nd
 using ..RobustPade:   PadeApproximant, robust_pade
-using ..PadeStepper:  PadeStepperState, _rescale_by_powers, _evaluate_pade
+using ..PadeStepper:  PadeStepperState, _rescale_by_powers, _evaluate_pade,
+                      _evaluate_pade_deriv
 
 export OutOfClassError, OutOfClassChecker,
        pade_step_with_defect!, check_in_class!,
@@ -275,7 +276,11 @@ Taylor jet, rescale by `h^k`, diagonal `[m, n]` Padé with `m = n =
 order ÷ 2`, evaluate `u` and `u'` at `t = 1`, mutate state).  The only
 addition is the reduced-order `[m-1, n-1]` Padé and the δ it yields — one
 extra `robust_pade` plus two Horner evals on the jet already in hand, no
-extra ODE/jet evaluation.
+extra ODE/jet evaluation.  `u'` comes from the same
+`PadeStepper._evaluate_pade_deriv` quotient-rule sweep the unchecked
+stepper uses — imported, not re-derived, so the checked and unchecked
+paths cannot drift apart (bead `padetaylor-uh3x` removed a verbatim
+local copy).
 """
 function pade_step_with_defect!(state::PadeStepperState{T}, f,
                                 order::Int, h::Number) where {T}
@@ -289,26 +294,11 @@ function pade_step_with_defect!(state::PadeStepperState{T}, f,
     δ   = two_order_defect(coefs_u_scaled, m, n)
     one_T  = one(T)
     new_u  = _evaluate_pade(P_u, one_T)
-    new_up = _evaluate_pade_deriv_via(P_u, one_T) / h_T
+    new_up = _evaluate_pade_deriv(P_u, one_T) / h_T
     state.z  = state.z + h_T
     state.u  = new_u
     state.up = new_up
     return state, P_u, δ
-end
-
-# The checked stepper recomputes u' by the same quotient-rule sweep as
-# PadeStepper._evaluate_pade_deriv.  We re-derive it locally rather than
-# import the private symbol, keeping the checked path self-contained.
-function _evaluate_pade_deriv_via(P::PadeApproximant{T}, z::T) where {T}
-    n = length(P.a); m = length(P.b)
-    N = zero(T);  @inbounds for k in n:-1:1; N = N * z + P.a[k]; end
-    D = zero(T);  @inbounds for k in m:-1:1; D = D * z + P.b[k]; end
-    Nt = zero(T); @inbounds for k in n:-1:2; Nt = Nt * z + (k - 1) * P.a[k]; end
-    Dt = zero(T); @inbounds for k in m:-1:2; Dt = Dt * z + (k - 1) * P.b[k]; end
-    iszero(D) && throw(DomainError(z,
-        "pade_step_with_defect!: local Padé denominator vanishes at the step " *
-        "endpoint.  Suggestion: shorten the step length."))
-    return (Nt * D - N * Dt) / (D * D)
 end
 
 # -----------------------------------------------------------------------------

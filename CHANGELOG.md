@@ -19,6 +19,18 @@ sweep; up from 1311 at the v0.1.0 tag).  44 source modules
 > day their bug is fixed.  Investigate only FAILs.  See
 > `scripts/quality_gate.sh` "EXPECTED-NOISE".
 
+### Internal — OutOfClass imports the PadeStepper derivative sweep (bead `padetaylor-uh3x`)
+
+- **`padetaylor-uh3x`** — `src/OutOfClass.jl`'s `pade_step_with_defect!` now
+  calls `PadeStepper._evaluate_pade_deriv` directly instead of a verbatim
+  local copy (`_evaluate_pade_deriv_via`, deleted).  The checked and
+  unchecked steppers therefore share one quotient-rule `u'` sweep and cannot
+  drift apart.  Behaviour is unchanged except the `DomainError` text on a
+  denominator zero at the step endpoint, which now reads as the PadeStepper
+  message (no test pinned the old wording).  `OutOfClass.jl` drops from 303
+  to 294 effective LOC.  Ground truth: `src/PadeStepper.jl:397-409`,
+  ADR-0033.
+
 ### Tests — BigFloat-256 tritronquée pin (bead `padetaylor-7zw`)
 
 - **`padetaylor-7zw`** — `test/fw_fig_41_test.jl` gains a parallel
