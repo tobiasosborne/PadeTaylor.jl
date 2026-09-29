@@ -16,10 +16,10 @@ Taylor jet: the seed has a live slope.
 Canonical seeds at orders 6 and 30 cover cell-B's d>m fallback and the
 production (15,15) dispatch. Fixed and Jorba–Zou policies preserve these seeds.
 A separate live-first meromorphic mixed jet pins a genuine shared pole.
-This is a measured scope: zero-first blocks can defeat unpivoted QR in direct
-SharedPade, and order-6 rotated seeds can fail end to end. Those counterexamples
-and the unrelated ComplexF64 driver failure are recorded with reproduction
-code in the worklog. Mutation evidence is in
+The zero-first QR counterexamples recorded in worklog 083 are now pinned by
+`shared_pade_order_invariance_test.jl` and repaired by ADR-0036's SVD recovery.
+The unrelated ComplexF64 driver failure remains recorded in worklog 083.
+Mutation evidence for this original end-to-end coverage is in
 `docs/worklog/083-zero-component-end-to-end.md` (Rules 4–5).
 """
 
@@ -106,8 +106,8 @@ using PadeTaylor.NoumiYamadaSymmetry: noumi_yamada_rational
                     segments += length(sol.h)
                 end
             end
-            # Default-order dispatch recovers the rotated cases, although direct
-            # cell A can lose their slope. Compare values, not a nonunique Q.
+            # Default-order dispatch also recovers the rotated cases.
+            # Compare values, not a nonunique cell-B Q.
             for t0 in (0.0, 1.0), rotation in 1:(length(weights)-1)
                 slopes = Float64.(circshift(weights, rotation))
                 prob = NoumiYamadaProblem(n; α = slopes, f0 = t0 .* slopes,

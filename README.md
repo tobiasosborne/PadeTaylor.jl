@@ -175,9 +175,13 @@ The package is a layered stack — each tier builds on the one below, and you ca
 For A₂/A₄ with Float64 data, `NoumiYamadaProblem` supports the canonical seeds Type A
 `(t,0,…,0)` and A₄ Type B `(t/3,t/3,t/3,0,0)` through `vector_solve_pade`,
 including dense output. Cyclic rotations are tested at the default order 30.
-Zero-first component blocks can still defeat direct shared-Padé QR and some
-lower-order vector solves; [worklog 083](docs/worklog/083-zero-component-end-to-end.md)
-records the measured scope and counterexamples.
+`shared_denominator_pade` recovers multicomponent denominators from the SVD,
+so component permutations preserve the denominator and permute the values
+to roundoff for an isolated smallest singular direction. The zero-first
+geometric jet and rotated Type A seed at order 6 are regression tested;
+[ADR-0036](docs/adr/0036-sharedpade-order-invariant-null-vector.md) and
+[worklog 088](docs/worklog/088-sharedpade-order-invariant-null-vector.md)
+record the repaired QR failure and validation.
 
 Internally the core itself is four layers: an SVD dispatcher (`LinAlg`) → robust Padé conversion (`RobustPade`) → Taylor jet generation (`Coefficients`) and step control (`StepControl`) → the one-step orchestrator (`PadeStepper`). Every source module is a self-contained, literate "chapter", held to 200 *effective* lines (blank lines and pure docstring blocks excluded) wherever practical — five of the 43 currently exceed it and carry split plans or an ADR that accepted the overrun (`PathNetwork`, `IVPBVPHybrid`, `VectorPathNetwork`, `BVP`, `VectorBVP`; see bead `padetaylor-qum` and `docs/adr/0014-ivp-bvp-hybrid.md`). See `docs/adr/0001-four-layer-architecture.md` for the rationale.
 

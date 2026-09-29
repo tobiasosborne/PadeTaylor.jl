@@ -77,15 +77,21 @@ this is benign: the stepper evaluates real ODE jets (full-rank in practice),
 and V7/V8 pole extraction roots only the DENOMINATOR (a constant `Q = [1]` has
 no roots).
 
-## The QR-reweighting (ported unchanged from padeapprox.m)
+## Order-independent denominator recovery (ADR-0036)
 
-After the SVD picks the null vector `b₀ = Vt[end,:]`, Chebfun's
-`padeapprox.m` (lines 111–117, *beyond* GGT 2013 Algorithm 2 itself)
-refines it: `D = diag(|b₀| + √ε)`, `QR((A_full·D)ᵀ)`, `b = D·Q[:,end]`.
-The column-reweighting better preserves the genuine exact zeros of `b`
-for blocks at accuracy near the tolerance (pillar A §4, last bullet:
-"the QR reweighting step ports without change to A_full").  We port it
-unchanged from the scalar `RobustPade.jl` path.
+For multiple components, use `conj.(Vt[end,:])` from the accepted SVD,
+as in GGT 2013 Algorithm 2 step 6 (`references/markdown/GGT2013_robust_pade_via_SVD_SIREV55/GGT2013_robust_pade_via_SVD_SIREV55.md:228-236`).
+Permuting the component blocks preserves the right singular vectors up to
+phase, removed by normalising `Q(0)=1`. This also retains the smallest-σ
+least-squares denominator when the stack has full column rank.
+
+Chebfun's additional QR reweighting (`padeapprox.m:111-117`) is retained
+only for `d=1`, preserving the scalar oracle. In a stacked system the
+first `m_cur` constraints need not span the row space: a zero first block
+can make the selected unpivoted QR column non-null even at rank `m_cur`.
+For full column rank there is no QR null column at all. The existing SVD
+already supplies the correct vector without another factorisation. Its
+`Vt` is an adjoint, so conjugation is essential for complex coefficients.
 
 ## Graceful reduction and defensive throws (Rule 1 — fail loud)
 
@@ -124,8 +130,9 @@ Three failure modes still throw rather than return a NaN/zero lie:
   - `references/hermite_pade/ManoTsuda2017_hermite_pade_isomonodromic_MathZ285.pdf`
     §2.2 eq. (2.6), p. 12 — the block-Toeplitz null-space system.
   - `src/RobustPade.jl` — the scalar `d=1` special case; conventions
-    (`_lower_tri_toeplitz`, QR-reweighting, `b[1]=1`) mirrored here.
-  - `external/chebfun/padeapprox.m` lines 111–117 — QR-reweighting port.
+    (`_lower_tri_toeplitz`, scalar QR-reweighting, `b[1]=1`) mirrored here.
+  - `external/chebfun/padeapprox.m:106-117` — SVD vector and scalar refinement.
+  - `docs/adr/0036-sharedpade-order-invariant-null-vector.md` — stacked SVD recovery.
 """
 module SharedPade
 
@@ -197,7 +204,9 @@ approximant for a `d`-component vector of formal power series.
 `jets[i] = [c₀, c₁, …]` are the Taylor coefficients of component `i`;
 each must have length `≥ m+1`.  `m` is the (shared) denominator degree.
 Returns `d` numerator coefficient vectors `P₁,…,P_d` (low-to-high) and a
-single denominator `Q`, all normalised so `Q(0) = b[1] = 1`.
+single denominator `Q`, all normalised so `Q(0) = b[1] = 1`. Permuting the
+components preserves `Q` and permutes the numerators, up to roundoff, when
+the accepted smallest right singular vector is unique up to phase.
 
 For `d = 1`, full-rank inputs without degree reduction reproduce the scalar
 `robust_pade` path. Degenerate inputs can instead reduce to the full Taylor
@@ -298,20 +307,18 @@ function shared_denominator_pade(jets::AbstractVector{<:AbstractVector{T}},
         end
     end
 
-    # --- Step 5: QR-reweighting (padeapprox.m lines 111–117) ----------------
-    # Ported unchanged from RobustPade's `:svd` path.  `Vt[end,:]` is the
-    # smallest-singular-value right null vector = denominator estimate b₀.
-    b_init = Vector{T}(Vt[end, :])
-
-    # Null-space isolation is now enforced by the `ρ == m_cur` break above
-    # (exactly one σ ≤ τ ⇒ an isolated 1-D null space, Mano–Tsuda p.12 "unique
-    # iff rank = m").  The old `n_near > 1` guard was dead code for d≥2 and is
-    # removed (ADR-0027).
-
-    eps_T = real(T) <: AbstractFloat ? sqrt(eps(real(T))) : sqrt(eps(Float64))
-    D = Diagonal([abs(bk) + eps_T for bk in b_init])
-    F = qr(adjoint(A_full * D))                  # (A_full·D)ᵀ in MATLAB
-    b = D * F.Q[:, m_cur + 1]
+    # --- Step 5: denominator from the accepted SVD (ADR-0036) --------------
+    # GGT Algorithm 2 step 6; Vt is V', hence conjugate its last row.
+    b = Vector{T}(conj.(Vt[end, :]))
+    if d == 1
+        # Preserve the scalar Chebfun refinement (padeapprox.m:111-117).
+        # For stacked blocks its first m_cur QR columns need not span the
+        # live constraints, and full column rank has no null column at all.
+        eps_T = real(T) <: AbstractFloat ? sqrt(eps(real(T))) : sqrt(eps(Float64))
+        D = Diagonal([abs(bk) + eps_T for bk in b])
+        F = qr(adjoint(A_full * D))
+        b = D * F.Q[:, m_cur + 1]
+    end
     b ./= norm(b)
 
     # --- Steps 6–7: recover numerators, cancel common z^λ, normalise Q(0)=1 -
@@ -340,7 +347,7 @@ function shared_denominator_pade(jets::AbstractVector{<:AbstractVector{T}},
     lam_idx = findfirst(x -> abs(x) > tol_t, b)
     lam_idx === nothing && throw(ErrorException(
         "shared_denominator_pade: every denominator coefficient is below " *
-        "tol after the QR step; the jets carry no recoverable shared " *
+        "tol after denominator recovery; the jets carry no recoverable shared " *
         "denominator. Suggestion: check the jets are non-trivial, or loosen tol."))
     lam = lam_idx - 1
     if lam > 0
