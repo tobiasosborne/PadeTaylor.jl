@@ -193,6 +193,9 @@ end
     # pins VALUES.
     include("property_test.jl")
     include("diagnose_test.jl")
+    # Sampling accounting (beads qdsm, orb5): the certificate must report
+    # how many nodes and edges it dropped, and why.  See docs/worklog/081.
+    include("diagnostics_sampling_test.jl")
     include("fw_fig_41_test.jl")
     include("coord_transforms_test.jl")
     include("sheet_tracker_test.jl")
@@ -205,6 +208,9 @@ end
     include("ffw_fig_1_test.jl")
     include("ffw_fig_4_test.jl")
     include("ivp_bvp_hybrid_test.jl")
+    # z^{1/3} branch on the upper sector Im ζ > 2π (bead w80i), pinned
+    # against FFW's published u(z₁).  See docs/worklog/087.
+    include("ivp_bvp_hybrid_branch_test.jl")
     include("ffw_fig_5_test.jl")
     include("ffw_fig_2_test.jl")
     include("ffw_fig_3_test.jl")
