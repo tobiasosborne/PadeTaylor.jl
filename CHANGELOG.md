@@ -20,6 +20,37 @@ sweep; up from 1311 at the v0.1.0 tag).  44 source modules
 > day their bug is fixed.  Investigate only FAILs.  See
 > `scripts/quality_gate.sh` "EXPECTED-NOISE".
 
+### Fixed — 2026-09-29 pace session (full gate NOT yet re-run; expected broken count is now 3)
+
+- **`padetaylor-xbxm`** — `step_jorba_zou` and `vector_step_jorba_zou` throw
+  `ArgumentError` on a non-finite Taylor coefficient. Before, a `NaN`
+  coefficient returned `NaN` as the step and an `Inf` one returned `0`
+  (worklog 085).
+- **`padetaylor-580u`** — `windowed_extract_poles` assigns pole ownership by
+  clustering cross-window estimates first. The per-estimate rule dropped 4 and
+  duplicated 3 of 246 exact poles on the Weierstrass-℘ lattice over
+  [-20,20]². **API change:** the composite-level `merge_atol` kwarg is removed;
+  `merge_atol` now forwards to `PoleField.extract_poles`. New kwarg
+  `boundary_atol` (default 0.1) (worklog 084, ADR-0034).
+- **`padetaylor-orb5`, `padetaylor-qdsm` (first half)** — `quality_diagnose`
+  no longer applies the FFW ζ-strip to z-frame nodes (39 of 303 nodes were
+  retained; all 303 are now), throws on unrequested node loss, and reports
+  retained/dropped node and edge counts. **API change:** `DiagnosticReport`
+  has eight more fields (worklog 081, ADR-0016a).
+- **`padetaylor-w80i`** — `solve_pole_free_hybrid` evaluates the PIII tronquée
+  series on the branch of z^(1/3) fixed by ζ; `pIII_asymptotic_ic` gains an
+  `argz` keyword. Above Im ζ = 2π the old code threw or silently used another
+  branch (5.389 from FFW's published u(z₁) against 8.41e-6) (worklog 087).
+
+### Added — 2026-09-29 pace session
+
+- **`padetaylor-lg4y`** — `test/vector_field_seam_test.jl`, a field-level
+  two-seed path-independence gate for the vector walk. It carries the suite's
+  third intentional `@test_broken` (bead `padetaylor-rxbo`) (worklog 082, 086).
+- **`padetaylor-0o9`** — `test/zero_component_end_to_end_test.jl`: canonical
+  zero-component Noumi–Yamada seeds solve to 2.22e-16. Zero-first orderings do
+  not (bead `padetaylor-brbv`) (worklog 083).
+
 ### Internal — OutOfClass imports the PadeStepper derivative sweep (bead `padetaylor-uh3x`)
 
 - **`padetaylor-uh3x`** — `src/OutOfClass.jl`'s `pade_step_with_defect!` now

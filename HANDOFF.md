@@ -8,7 +8,105 @@
 > previous session already paid for. The frictions surfaced are
 > recorded in `docs/worklog/001-stages-Z-1-2-handoff.md`.
 
-## 🧪 LATEST SESSION (2026-09-21) — tracker re-synced on this machine; uh3x shipped; FULL GATE run: 9500 / 1 error / 2 broken — the 1 error was uh3x's own stale import, fixed; read-only bug-risk audit filed 2 beads
+## ⚡ LATEST SESSION (2026-09-29) — one-hour pace session, multi-agent. Five fixes and two measurements merged; `fast` gate GREEN; FULL GATE NOT RUN; ASTRA REVIEW OWED
+
+### 0. FIRST THINGS FIRST for the next session
+1. **Run `scripts/quality_gate.sh full`.** It was NOT run this session. Every
+   merged change was verified by its own test files (re-run by the
+   orchestrator, not only by the worker) and by the `fast` tier, nothing more.
+   Expected: **3** `@test_broken` (was 2; the third is VFSEAM.3, bead `rxbo`).
+2. **Run the larger code review that was held back** (maintainer's instruction:
+   "hold the astra review, put it in the handoff"). Reviewer: GPT-6 Astra via
+   `codex exec -m gpt-6-astra --sandbox read-only`. Range: `68215d6..HEAD`
+   (`git diff 68215d6..HEAD -- src ext test`). Point it at, in priority order:
+   - `src/WindowedTiling.jl` `_own_poles` — single linkage with no width cap;
+     widest linked group on the PI fixture is 0.164 > `boundary_atol` 0.1;
+     the owner-absent fallback adds +15 / +6 poles on PI with only indirect
+     evidence they are real (worklog 084 §6);
+   - `ext/diagnostics_*.jl` + `src/diagnostics_reports.jl` — a 500-line
+     restructuring of the diagnostics extension; `DiagnosticReport` grew eight
+     fields (worklog 081, ADR-0016a). **Not spot-reviewed by anyone.**
+   - `src/IVPBVPHybrid.jl` `argz` / `_call_asymptotic_on_branch` — uses
+     `hasmethod(fn, ..., (:argz,))` to detect an argz-aware callable
+     (worklog 087). **Not spot-reviewed by anyone.**
+   - anything landed after this section was written (see §4).
+3. The ADR-0035 hooks were not checked on this clone at session start; the
+   `pre-commit` hook did fire on every commit ("staged .beads/issues.jsonl").
+
+### 1. What merged (all on `main`)
+| Bead | Commit | What | Worklog | Spot review |
+|---|---|---|---|---|
+| `xbxm` | `1868374` | `step_jorba_zou` / `vector_step_jorba_zou` returned NaN (NaN coefficient) or 0 (Inf coefficient); now throw | 085 | Sonnet: approve |
+| `lg4y` | `2b2a140` | Field-level two-seed gate for the vector walk, `test/vector_field_seam_test.jl` | 082 | none |
+| `0o9` | `420fb2f` | Zero-component Noumi–Yamada seeds measured end to end (2507 assertions); seven stale caveat sites corrected | 083 | Sonnet: clean |
+| `580u` | `5c8fe12`, `7bdd446` | Windowed pole ownership: cluster first, then assign; owner-absent fallback; `boundary_atol` decoupled from `cluster_atol` | 084 | Sonnet: two gaps, both measured and addressed |
+| `orb5`, `qdsm` (half) | `ec93a50` | Diagnostics no longer truncate the sample silently; counts exposed | 081 | none |
+| `w80i` | `81c0916` | Hybrid driver evaluates the PIII series on the branch fixed by ζ | 087 | none |
+| `rxbo` | (diagnosis) | Root cause of the vector walk defect, no code change | 086 | none |
+
+### 2. Defects FOUND this session and still OPEN
+- **`padetaylor-rxbo` (P1) — the walk behind the shipped P_I^(2) figure is wrong
+  on the far wedge.** Random-seed walks agree to ≤ 5.84e-6; the DEFAULT ordering
+  at h = 0.1 (`figures/_kkg_pi2_helpers.jl:339`) is off by up to 2.18 relative
+  on 65 nodes, all |z| ≥ 5.82. Root cause (worklog 086): no single step is wrong
+  (local error 1e-16..7e-12); the ring-by-ring order reaches the far wedge
+  through a near-pole passage at z ≈ 5.1 − 2.46i and a ~125-step arc amplifies
+  the error 1e5–6e6×. **MAINTAINER DECISION NEEDED:** fix the figure (h = 0.05
+  or an upper-first order — changes pinned counts and Panel B) or fix the walk
+  (re-route on h-collapse — breaks the ADR-0001 default-order bit-identity).
+- **`padetaylor-brbv` (P1) — `shared_denominator_pade` depends on component
+  ORDER.** `[live, zeros]` → Q = [1, −0.5], value 2.0 (exact);
+  `[zeros, live]` → Q = [1], value 1.0. Reproduced by the orchestrator. 32 of
+  104 scanned low-order trajectories fail end to end. Known-correct RED
+  reproducer in worklog 083. A codex fix was in flight at the time of writing
+  — see §4.
+- Also reported, no bead yet: a ComplexF64 driver failure at
+  `src/VectorProblems.jl:307` (complex vs real step magnitudes compared).
+
+### 3. Scout findings filed (read-only Sonnet; code confirmed by reading, NOT run)
+`ncfa` (CommonSolve descending span returns one node; no out-of-class guard —
+fix in flight, §4), `yvdq` (`jacobian = nothing` selects the analytic Jacobian;
+the test that claims an analytic-vs-autodiff cross-check is vacuous), `wpdl`
+(bare `catch` in the wedge evaluators swallows user errors and Ctrl-C), `l48t`
+(`:steepest_descent` ignores failed candidates; the real-axis-symmetry path
+reads an empty `visited_sheet` under `@inbounds`), `8m0t` (`tol` ignored on the
+Float64 `:classical` path; zero approximant fed silently to the stepper;
+`heun_g` has no radius check), `x1j3` (edge-gated solve silently treats
+unreached targets as "not pole field"), `aox6` (three docstring-vs-code
+contradictions, incl. the VectorBVP endpoint pairing stated backwards).
+The scout diffed the `:svd` port of `src/RobustPade.jl` line by line against
+`external/chebfun/padeapprox.m` and found it matching on every load-bearing
+step.
+
+### 4. In flight when this was written
+See the end of this section's git log for whether they landed: `w8` (codex,
+bead `brbv`, branch `pace/w8-qrnull`), `w9` (Opus, bead `ncfa`, branch
+`pace/w9-commonsolve`). If a branch exists but is not merged, its work is
+unverified.
+
+### 5. How the parallel Julia work was done (it worked; reuse it)
+Rule 7 forbids parallel Julia because of precompile-cache contention. This
+session ran up to five Julia-using agents at once with **one git worktree per
+agent** (`~/Projects/PadeTaylor.jl-wt/<name>`, branch `pace/<name>`) and a
+**private depot stacked on the shared one**:
+`JULIA_DEPOT_PATH="$PWD/.depot:$HOME/.julia"`. Compile caches are written
+privately; installed packages are read from the shared depot. `.depot/` is in
+`.git/info/exclude`. Costs measured: first package load 39 s; first `fast`
+gate 10 min (recompiles Makie and JET), 1.5 min thereafter. Tests that need a
+weak dependency (DelaunayTriangulation) load it offline with
+`JULIA_LOAD_PATH="$PWD:$PWD/external/probes/loop-closure-fig1:@stdlib"`.
+Workers did not commit, run `bd`, or edit `HANDOFF.md` / `CHANGELOG.md` /
+`test/runtests.jl`; the orchestrator did. The worktrees and `pace/*` branches
+are still on disk — remove with `git worktree remove` once nothing is owed.
+
+### 6. Also this session
+`CLAUDE.md` and `AGENTS.md` were replaced by one short numbered list
+(`b9f4132`); Law/Rule numbers are preserved so citations in the tree resolve.
+Section names cited by `scripts/quality_gate.sh:84` and
+`scripts/git-hooks/pre-commit:17` ("Practical guidance", "Session close
+step 2") no longer exist.
+
+## 🧪 PREVIOUS SESSION (2026-09-21) — tracker re-synced on this machine; uh3x shipped; FULL GATE run: 9500 / 1 error / 2 broken — the 1 error was uh3x's own stale import, fixed; read-only bug-risk audit filed 2 beads
 
 ### 0. Tracker + hooks (this clone)
 This clone had `core.hooksPath` pointing at a non-existent `.beads/hooks`, so
