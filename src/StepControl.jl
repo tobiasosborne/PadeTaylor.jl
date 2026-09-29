@@ -163,8 +163,11 @@ zero, falls back to the TI.jl second-stepsize scan over indices
 Throws `ArgumentError` if `coefs` has fewer than 3 entries (`p ≥ 2`;
 with `p = 1` the candidate set contains `k = 0` and `x^(1/0)` silently
 yields `h = 0`), or if every nonzero candidate has been exhausted —
-both indicate caller-side bugs that we surface loudly per Rule 1
-rather than silently returning a meaningless `Inf` or `0`.
+or if any coefficient is non-finite (a `NaN` would otherwise be
+returned as the step, an `Inf` would give `h = 0`; bead
+`padetaylor-xbxm`) — all indicate caller-side bugs that we surface
+loudly per Rule 1 rather than silently returning a meaningless `Inf`,
+`NaN` or `0`.
 """
 function step_jorba_zou(coefs::AbstractVector{T}, eps_abs::Real;
                         eps_rel::Real = eps_abs) where {T}
@@ -173,6 +176,18 @@ function step_jorba_zou(coefs::AbstractVector{T}, eps_abs::Real;
         "the formula uses the last two coefficients c_{p-1}, c_p with " *
         "p ≥ 2 — for p = 1 the k = 0 candidate (ε/|c_0|)^(1/0) silently " *
         "gives h = 0. Suggestion: pass a Taylor jet of order ≥ 2."))
+
+    # A non-finite coefficient must not reach the formula: `min(h, NaN)`
+    # is NaN and the `!isinf(h)` exit below lets it through, while an
+    # `Inf` coefficient gives `ε/Inf = 0` — either way the integrator is
+    # handed a meaningless step with no error (bead padetaylor-xbxm).
+    all(isfinite, coefs) || throw(ArgumentError(
+        "step_jorba_zou: coefs contains a non-finite entry (first at " *
+        "index $(findfirst(!isfinite, coefs))); a NaN/Inf Taylor " *
+        "coefficient would yield a NaN or zero step. Suggestion: the " *
+        "jet was expanded at or too near a singularity, or the right-" *
+        "hand side overflowed — shorten the previous step or raise the " *
+        "working precision."))
 
     p = length(coefs) - 1
     R = float(real(T))

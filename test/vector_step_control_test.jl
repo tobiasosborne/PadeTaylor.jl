@@ -218,6 +218,21 @@ using PadeTaylor.VectorProblems:    VectorPadeTaylorProblem, vector_solve_pade
         # Empty jet collection — d = 0, nothing to integrate.
         @test_throws ArgumentError vector_step_jorba_zou(
             Vector{Float64}[], 1e-9)
+
+        # Non-finite coefficients (bead padetaylor-xbxm): before the guard
+        # a NaN returned a NaN step and an Inf returned h = 0.  The bad
+        # entry sits in the SECOND component to prove every jet is checked.
+        for bad in (NaN, Inf), idx in 1:3
+            j2 = Float64[2.0, 0.5, 0.25]
+            j2[idx] = bad
+            err = try
+                vector_step_jorba_zou([Float64[1.0, 0.5, 0.25], j2], 1e-9)
+                nothing
+            catch e; e end
+            @test err isa ArgumentError && occursin("jet 2", err.msg) &&
+                  occursin("index $idx", err.msg) &&
+                  occursin("Suggestion", err.msg)
+        end
     end
 
     # -------------------------------------------------------------------------

@@ -173,7 +173,9 @@ For `d = 1` this reduces bit-identically to
 Throws `ArgumentError` (Rule 1 — fail loud) if `jets` is empty, if any
 jet has fewer than 3 entries (`p ≥ 2`; a length-2 jet puts `k = 0` in
 the candidate set and `x^(1/0)` silently yields `h = 0`), if
-the jets are ragged (unequal length — a malformed vector jet), or if
+the jets are ragged (unequal length — a malformed vector jet), if any
+coefficient is non-finite (a `NaN` would otherwise be returned as the
+step, an `Inf` would give `h = 0`; bead `padetaylor-xbxm`), or if
 every coefficient vector has zero norm (no nonzero coefficient to
 estimate a step from).
 """
@@ -198,6 +200,19 @@ function vector_step_jorba_zou(jets::AbstractVector{<:AbstractVector{T}},
             "but jet $i has length $(length(jets[i])); a vector Taylor " *
             "jet must have one common order across all components. " *
             "Suggestion: truncate every component's jet to a common order."))
+    end
+
+    # Non-finite coefficients: same hazard as the scalar control — a NaN
+    # norm survives `min` and the `!isinf(h)` exit, an Inf norm gives
+    # h = 0 (bead padetaylor-xbxm).
+    for i in 1:d
+        all(isfinite, jets[i]) || throw(ArgumentError(
+            "vector_step_jorba_zou: jet $i contains a non-finite entry " *
+            "(first at index $(findfirst(!isfinite, jets[i]))); a NaN/Inf " *
+            "Taylor coefficient would yield a NaN or zero step. " *
+            "Suggestion: the jet was expanded at or too near a " *
+            "singularity, or the right-hand side overflowed — shorten " *
+            "the previous step or raise the working precision."))
     end
 
     p = len - 1

@@ -107,6 +107,28 @@ include("_oracle_stepcontrol.jl")
         @test 0 < h3 < Inf
         @test h3 ≈ min((1e-12 / 0.5)^(1 / 1), (1e-12 / 0.25)^(1 / 2))
     end
+
+    @testset "4.1.7 step_jorba_zou: non-finite coefficients must throw (xbxm)" begin
+        # Before the guard these RETURNED a step: NaN for a NaN coefficient
+        # (`min(h, NaN)` is NaN and `!isinf(NaN)` holds), 0 for an Inf one
+        # (`ε/Inf`).  Every position matters — the fallback scan reads the
+        # low-order coefficients too — so each slot is probed.
+        for bad in (NaN, Inf, -Inf), idx in 1:4
+            c = [1.0, 0.5, 0.25, 0.125]
+            c[idx] = bad
+            err = try step_jorba_zou(c, 1e-12); nothing catch e; e end
+            @test err isa ArgumentError
+            @test err isa ArgumentError && occursin("non-finite", err.msg) &&
+                  occursin("index $idx", err.msg) &&
+                  occursin("Suggestion", err.msg)
+        end
+        @test_throws ArgumentError step_jorba_zou(
+            ComplexF64[1.0, 0.5, complex(0.25, NaN)], 1e-12)
+        @test_throws ArgumentError step_jorba_zou(
+            BigFloat[1, 0.5, NaN], 1e-12)
+        # The guard must not reject a legitimate jet with zero entries.
+        @test step_jorba_zou([1.0, 0.0, 0.25], 1e-12) ≈ (1e-12 / 0.25)^(1 / 2)
+    end
 end
 
 #=
@@ -114,6 +136,10 @@ Phase 4 mutation-proof procedure (test 4.1.5) — VERIFIED 2026-05-09
 ──────────────────────────────────────────────────────────────────
 Both load-bearing functions independently mutation-tested before commit;
 both mutations RED'd the test suite.
+
+  Mutation E (bead xbxm, 2026-09-29) — delete the `all(isfinite, coefs)`
+    guard: 4.1.7 goes RED (the calls return NaN / 0 instead of throwing).
+    Observed counts are recorded in docs/worklog/085.
 
   Mutation D (bead lkrk 3, 2026-08-23) — revert the `length(coefs) ≥ 3`
     guard to `≥ 2`: 4.1.6's `@test_throws` and the `err` assertions go
