@@ -112,6 +112,11 @@ end
     # mono 77.6% RED vs composite 97.2% GREEN) certifies real path-independence,
     # not a frozen pipeline.  See docs/worklog/078-fig47-seam-cure-scoping.md.
     include("field_seam_test.jl")
+    # Vector analogue (bead lg4y): field-level two-seed agreement on the
+    # P_I^(2) wedge march.  Random seeds agree to ≤ 5.84e-6; the DEFAULT
+    # ordering at h = 0.1 does not (bead rxbo) and VFSEAM.3 carries the
+    # suite's third intentional @test_broken.  See docs/worklog/082.
+    include("vector_field_seam_test.jl")
     # Public-API kwarg deprecation shims (beads xds, 0xn; api-review §3(a)).
     # Asserts each renamed kwarg's deprecated alias still WORKS (same result)
     # AND WARNS.  The WARNS half is meaningful under Pkg.test's `--depwarn=yes`.

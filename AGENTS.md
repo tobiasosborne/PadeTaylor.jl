@@ -27,7 +27,7 @@ Rule numbers are stable: `src/`, `test/`, `scripts/` and the ADRs cite them.
   limit becomes a deferred bead naming the condition that forces the work.
 - **Rule 11 — Gates are local, no CI.** `scripts/quality_gate.sh fast` before
   every commit touching `src/`, `full` before push; single test files while
-  iterating. Exactly 2 `@test_broken` is expected.
+  iterating. Exactly 3 `@test_broken` is expected.
 - **Rule 12 — No outreach** to the original authors.
 - **Rule 13 — Re-read this file** at session start and after compaction.
 - **Session close.** Close beads, export and commit the JSONL, then commit and
