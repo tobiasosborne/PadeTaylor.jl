@@ -94,8 +94,9 @@ const NY_D = 2 * NY_N + 1
 # Generic parameter set: five distinct values summing to exactly 1.
 const NY_ALPHA = ComplexF64[0.30, 0.10, 0.25, 0.15, 0.20]
 
-# All-nonzero initial condition (V5b: no component may be identically
-# zero).  The fifth entry is pinned to `-Σ(first four)` so that the
+# All-nonzero initial condition chosen for this generic pole-field fixture;
+# zero-component rational seeds are measured separately in worklog 083.
+# The fifth entry is pinned to `-Σ(first four)` so that the
 # constraint Σf0 = t0 = 0 holds *exactly* (not just to sqrt(eps)).
 const NY_F0_HEAD = ComplexF64[0.7, -0.3, 0.5, -0.55]
 const NY_F0 = vcat(NY_F0_HEAD, ComplexF64[-sum(NY_F0_HEAD)])

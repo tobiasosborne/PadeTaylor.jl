@@ -172,6 +172,13 @@ The package is a layered stack — each tier builds on the one below, and you ca
 | **Vector tier** (v0.2, in progress) | the whole stack lifted to systems `y' = f(z, y)`, `y ∈ ℂᵈ`, on a *shared* denominator (type-II Hermite–Padé) — one `Q` per node whose roots are every component's poles | `shared_denominator_pade`, `vector_solve_pade`, `vector_bvp_solve`, `vector_path_network_solve`, `extract_poles_shared_q` |
 | **Higher Painlevé** (v0.2, in progress) | multi-component Painlevé-type systems built on the vector tier: Noumi–Yamada `A_n^(1)` and the Painlevé-I hierarchy | `NoumiYamadaProblem`, `noumi_yamada_backlund`, `painleve_hierarchy`, `pI2_tritronquee_ic` |
 
+For A₂/A₄ with Float64 data, `NoumiYamadaProblem` supports the canonical seeds Type A
+`(t,0,…,0)` and A₄ Type B `(t/3,t/3,t/3,0,0)` through `vector_solve_pade`,
+including dense output. Cyclic rotations are tested at the default order 30.
+Zero-first component blocks can still defeat direct shared-Padé QR and some
+lower-order vector solves; [worklog 083](docs/worklog/083-zero-component-end-to-end.md)
+records the measured scope and counterexamples.
+
 Internally the core itself is four layers: an SVD dispatcher (`LinAlg`) → robust Padé conversion (`RobustPade`) → Taylor jet generation (`Coefficients`) and step control (`StepControl`) → the one-step orchestrator (`PadeStepper`). Every source module is a self-contained, literate "chapter", held to 200 *effective* lines (blank lines and pure docstring blocks excluded) wherever practical — five of the 43 currently exceed it and carry split plans or an ADR that accepted the overrun (`PathNetwork`, `IVPBVPHybrid`, `VectorPathNetwork`, `BVP`, `VectorBVP`; see bead `padetaylor-qum` and `docs/adr/0014-ivp-bvp-hybrid.md`). See `docs/adr/0001-four-layer-architecture.md` for the rationale.
 
 ## Status

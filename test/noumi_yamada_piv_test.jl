@@ -84,11 +84,10 @@ Sources, verified from the LaTeX (Law 1):
            A_2^(1) parameters mapping to `(0,-2)` are `α = (0,1,0)`
            (`a = α_0−α_2 = 0`, `b = -2α_1² = -2`), whose A_2^(1) seed
            solution is `f_1 = τ` ⇒ `y = √2·τ = √2·(-√2 t) = -2t`.
-           (The exact seed `f = (0,τ,0)` has zero components and is a
-           shared-`Q` Padé degeneracy for the vector solver — a
-           documented v1 limit — so the closed-form leg is verified on
-           the scalar side; combined with NYPIV.1 it pins the chain
-           v0.2 ≡ v0.1 ≡ closed form.)
+           The scalar anchor remains an independent oracle. The exact
+           vector seed `f = (0,τ,0)` is now checked directly at order 30
+           in `zero_component_end_to_end_test.jl`; low-order rotated
+           seeds can still fail through unpivoted QR (worklog 083).
   NYPIV.4  mutation-proof — recorded in the file footer.
 
 Self-contained: `using Test, PadeTaylor` only — runnable standalone
@@ -137,8 +136,8 @@ end
     # -------------------------------------------------------------------------
     # A concrete, fully generic test case.  α chosen so all three of
     # (α_0, α_1, α_2) are distinct and nonzero ⇒ no component of the
-    # solution is forced to vanish (the vector solver's shared-Q Padé
-    # needs every component nonzero), and (a, b) is a generic PIV point.
+    # solution is forced to vanish, and (a, b) is a generic PIV point.
+    # This is a generic fixture choice, not a shared-Q input requirement.
     # -------------------------------------------------------------------------
     α = [0.5, 0.3, 0.2]                       # Σα = 1 (k = 1)
     pv = _a2_to_piv_params(α)
@@ -259,12 +258,11 @@ end
     # f_2 = 0), so y = √2 f_1 = √2 τ = √2·(-√2 t) = -2t — exactly the
     # PIV closed form `u = -2z`.
     #
-    # The exact seed f = (0,τ,0) has zero components, a shared-Q Padé
-    # degeneracy for the vector solver (documented v1 limit), so the
-    # closed-form ≡ vector leg is not run directly; instead this anchor
-    # confirms v0.1 PIV reproduces the closed form, which — together
-    # with NYPIV.1 (v0.2 ≡ v0.1) — pins the full chain
-    # v0.2 A_2^(1) ≡ v0.1 PIV ≡ closed form.
+    # This scalar anchor confirms v0.1 PIV reproduces the closed form.
+    # The order-30 vector seed f = (0,τ,0) is checked independently in
+    # zero_component_end_to_end_test.jl. Zero-first blocks remain unsafe
+    # at some lower degrees because unpivoted QR can select a non-null
+    # column; worklog 083 records that surviving mechanism.
     # -------------------------------------------------------------------------
     @testset "NYPIV.3 closed-form anchor (a,b)=(0,-2)" begin
         # The A_2^(1) parameter map sends α = (0,1,0) to (a,b) = (0,-2).

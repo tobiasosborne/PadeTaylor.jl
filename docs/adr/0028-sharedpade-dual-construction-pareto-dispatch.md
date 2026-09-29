@@ -424,9 +424,13 @@ The audition measured **isolated single steps**. Before/with build, verify on:
 the multi-step **path-network walk** (accumulating error, adaptive `h`); the
 **~49-tolerance contract** (the corrected cell (B) lets the worklog-067 tolerances
 tighten back — confirm none asserts the loose value as a *lower* bound); cell-(B)
-**degenerate guards** (`d > m`, identically-zero component jet `padetaylor-0o9`;
-the prototype skips the ADR-0027 reduction loop on the square variants); and a
-**close-call probe** for the defect selector (all audition cases were decisive;
+**degenerate guards** (`d > m`, zero-component ordering `padetaylor-0o9`;
+the prototype skips the ADR-0027 reduction loop on the square variants). The
+2026-09-29 measurement in [worklog 083](../worklog/083-zero-component-end-to-end.md)
+resolves canonical Type A/B seeds and their order-30 cyclic rotations, but
+finds a surviving unpivoted-QR failure in zero-first direct cell A and some
+order-6 rotated solves; this item remains open for that precise mechanism. A
+**close-call probe** is also needed for the defect selector (all audition cases were decisive;
 A1.4's in-step-pole fallback is now *resolved* — Amendment 2).
 
 ### A1 references
@@ -478,8 +482,10 @@ poles, not merely accidentally correct.
   optional independent cross-check on pole-free steps. Drop `g` (A1.4).
 - **Resolved sign-off #1**: relative ODE defect; no `g`, no ε-floor, no fallback.
 - **Remaining before build** (A1.7 minus the now-resolved fallback): the
-  ~49-tolerance contract; cell-(B) degenerate guards (`d>m`, zero-component jet
-  `padetaylor-0o9`, ADR-0027 reduction loop on the square variant); a multi-step
+  ~49-tolerance contract; cell-(B) degenerate guards (`d>m`, zero-component
+  ordering `padetaylor-0o9` — now measured as a QR column-selection failure,
+  see [worklog 083](../worklog/083-zero-component-end-to-end.md) — and the
+  ADR-0027 reduction loop on the square variant); a multi-step
   path-network walk; and a **close-call probe** (all audition cases were decisive
   — a within-one-order A≈B step has not been stress-tested, though a misrank there
   costs ≈ nothing by definition).

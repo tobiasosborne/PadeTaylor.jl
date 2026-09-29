@@ -315,11 +315,11 @@ end
     # origin pole.  That is a real invariant, so the testset is kept — under
     # an honest name.
     # -------------------------------------------------------------------------
-    @testset "SP.1.5 Q(0)≈0 guard (structural, Rule 9 honest non-test)" begin
+    @testset "SP.1.5 Q(0) normalisation on a well-posed jet" begin
         Qden = [1.0, -0.4, 0.2]
         jet  = _ratio_jet([1.0, 0.3], Qden, 4)
         nums, den = shared_denominator_pade([jet], 2)
-        @test abs(den[1]) > 1e-8         # guard correctly did NOT fire
+        @test abs(den[1]) > 1e-8         # normalised constant term is nonzero
     end
 
     # -------------------------------------------------------------------------
@@ -680,8 +680,8 @@ end
         msg2 = lowercase(sprint(showerror, e2))
         @test occursin("zero", msg2) || occursin("indistinguishable", msg2)
 
-        # Mode 3 — Q(0)≈0 guard: structural (no finite jet yields Q(0)=0 for a
-        # function regular at 0).  Verify the well-posed path does NOT trip it.
+        # Mode 3 — the deleted Q(0)≈0 throw is replaced by cancellation.
+        # This well-posed jet checks the resulting nonzero constant term.
         okjet = _ratio_jet([1.0, 0.3], [1.0, -0.4, 0.2], 4)
         _, okden = shared_denominator_pade([okjet], 2)
         @test abs(okden[1]) > 1e-8
