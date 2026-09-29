@@ -2,6 +2,12 @@
 
 **Status**: Accepted (2026-05-16) | **Bead**: `padetaylor-5t4` | **Worklog**: 048
 
+The sheet-mask and failure-accounting paragraphs below describe the original
+design. [Amendment 0016a](0016a-diagnostics-sampling.md) (2026-09-29,
+`padetaylor-qdsm` / `padetaylor-orb5`) supersedes those parts: branchless
+walks retain every node, node loss needs an explicit fraction budget, and
+reports display coverage and failed midpoint-evaluation counts.
+
 ## Decision
 
 Promote the FFW 2017 Fig 1 loop-closure probe (shipped as
