@@ -185,9 +185,12 @@ portrait. Cheap, oracle-free, and decisive (it flags 35 % of cells here).
    K-nearest / overlap-consensus Stage-2 (`padetaylor-6b5`). The Voronoi
    stitch itself needs no change; the WALK's path-dependence does. `sny7`
    is the acceptance test for whichever cure lands.
-3. Secondary: fix the `quality_diagnose` sheet-0 mask scope (it silently
+3. Secondary (`padetaylor-qdsm`): fix the `quality_diagnose` sheet-0 mask scope (it silently
    drops ~87 % of nodes on a [-50,50] PI window — `src/Diagnostics.jl:50-58`)
    and promote it from percentiles to a localized `max ΔP_rel` gate.
+   Mask/accounting portion implemented in pace session 2026-09-29; see
+   [worklog 081](081-diagnostics-silent-drops.md) and ADR-0016a.
+   The localized maximum gate remains open under `padetaylor-qdsm`.
 
 ## Reproduction
 

@@ -181,6 +181,21 @@ records the measured scope and counterexamples.
 
 Internally the core itself is four layers: an SVD dispatcher (`LinAlg`) → robust Padé conversion (`RobustPade`) → Taylor jet generation (`Coefficients`) and step control (`StepControl`) → the one-step orchestrator (`PadeStepper`). Every source module is a self-contained, literate "chapter", held to 200 *effective* lines (blank lines and pure docstring blocks excluded) wherever practical — five of the 43 currently exceed it and carry split plans or an ADR that accepted the overrun (`PathNetwork`, `IVPBVPHybrid`, `VectorPathNetwork`, `BVP`, `VectorBVP`; see bead `padetaylor-qum` and `docs/adr/0014-ivp-bvp-hybrid.md`). See `docs/adr/0001-four-layer-architecture.md` for the rationale.
 
+`quality_diagnose(sol)` requires `using DelaunayTriangulation` alongside
+`PadeTaylor`. Branchless scalar walks and vector walks retain every node;
+branched scalar walks select sheet 0 from `visited_sheet[k] == [0]`.
+The scalar default `min_retained_fraction=1.0` rejects any node loss with a
+suggestion. To diagnose an intentional subset, supply its minimum fraction,
+for example `quality_diagnose(sol; min_retained_fraction=0.75)`.
+
+`DiagnosticReport` displays `n_nodes_retained / n_nodes` and
+`n_edges / n_edges_candidate`, with `n_nodes_dropped`, `n_edges_dropped`,
+`n_edges_threw` and `n_edges_nonfinite`. `n_tree_edges_off_sheet` separately
+counts excluded parent links. Statistics describe successfully evaluated
+edges; losing all candidate edges throws. Median/p90/p99/max remain context,
+and a localized seam acceptance gate is still pending under `padetaylor-qdsm`.
+See [ADR-0016a](docs/adr/0016a-diagnostics-sampling.md).
+
 ## Status
 
 **v0.1.0 — research-grade; all architectural tiers shipped.** The package is not yet registered in the Julia General registry. **9501 tests passing, 0 failing** (plus 2 intentional `@test_broken` markers that track known-open-bug fixtures and auto-flip the day each bug is fixed), as of the full `scripts/quality_gate.sh full` run on 2026-08-23 (Julia 1.12.3, 17m00s).

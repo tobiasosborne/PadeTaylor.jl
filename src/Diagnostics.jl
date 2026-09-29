@@ -9,7 +9,7 @@ shipped in `5a4d0a7` and documented at
 ## What this module is for
 
 `path_network_solve` walks a **tree** rooted at the IC (FW 2011 §3.1).
-Two visited nodes that are geometrically adjacent in the ζ-plane — i.e.
+Two visited nodes that are geometrically adjacent in the solve's plane — i.e.
 neighbours under the Delaunay triangulation of the visited-node cloud —
 but tree-distant (their LCA sits deep in the IC) carry *independent*
 accumulated truncation error along their respective IC-to-node paths.
@@ -47,15 +47,15 @@ attention.
     `DiagnosticReport` to the returned solution's `diagnostics` field.
     The default `diagnose=false` keeps `diagnostics === nothing`,
     preserving every existing test invariant byte-for-byte.
-  - **Sheet 0 only at v1.**  Mirrors the probe verbatim (REPORT.md:7-32):
-    when `visited_sheet[k]` is empty (`branch_points = ()` solves),
-    sheet 0 is defined by the FFW ζ-strip predicate `-2π < imag(z) ≤
-    2π` (`references/markdown/FFW2017_painleve_riemann_surfaces_preprint/
-    FFW2017_painleve_riemann_surfaces_preprint.md:103`); when populated,
-    sheet 0 is `visited_sheet[k] == [0]`.  Multi-sheet support (which
-    requires explicit branch-cut bookkeeping for the Delaunay step)
-    is deferred to bead `padetaylor-8py`; the `n_branch_cut` field
-    on `DiagnosticReport` is reserved for it and is always `0` in v1.
+  - **Sheet 0 only at v1 (ADR-0016a).** Branchless walks retain every
+    node. Empty `visited_sheet` metadata does not identify a ζ-frame:
+    the strip in FFW 2017 md:103 belongs to the specific map z=exp(ζ/2).
+    Populated metadata retains `visited_sheet[k] == [0]`. Any node loss
+    throws unless explicitly budgeted by `min_retained_fraction`.
+    `DiagnosticReport` records retained/dropped nodes, candidate/evaluated/
+    dropped edges, pole exceptions, nonfinite results, and excluded
+    off-sheet parent links. Multi-sheet Delaunay support remains deferred
+    to `padetaylor-8py`; `n_branch_cut` is reserved and always 0 in v1.
 
 ## Edge categories
 
@@ -97,88 +97,24 @@ module Diagnostics
 
 export DiagnosticReport, EdgeReport, quality_diagnose
 
-"""
-    EdgeReport
-
-One non-tree Delaunay edge of the visited-node cloud.  Fields:
-
-  - `A`, `B`             — global indices into the parent
-                            `PathNetworkSolution`'s `visited_*` arrays.
-  - `ΔP_abs`             — `|P_A(M) - P_B(M)|` at the midpoint `M`.
-  - `ΔP_rel`             — `ΔP_abs / (|P_A(M)| + |P_B(M)| + ε)`.
-  - `tree_dist`          — number of tree edges on the path A↔B
-                            (LCA-based; tree-distant edges are the
-                            interesting loop-closure population).
-  - `extrap_max`         — `max(|t_A|, |t_B|)` where
-                            `t_X = (M - z_X) / visited_h[X]`.  Values
-                            `> 1` indicate the edge midpoint sits
-                            outside one (or both) endpoints' canonical
-                            Padé disc.
-  - `midpoint`           — `M = (z_A + z_B) / 2`.
-  - `category`           — `:well_closed | :noisy | :extrap_driven |
-                            :depth_driven | :branch_cut`; see the
-                            module docstring for thresholds.
-"""
-struct EdgeReport
-    A          :: Int
-    B          :: Int
-    ΔP_abs     :: Float64
-    ΔP_rel     :: Float64
-    tree_dist  :: Int
-    extrap_max :: Float64
-    midpoint   :: ComplexF64
-    category   :: Symbol
-end
-
-"""
-    DiagnosticReport
-
-Loop-closure quality certificate for a `PathNetworkSolution`.
-
-Tallies (`n_*`) sum to `n_edges` on the analysed sheet.  Quantiles
-(`median_ΔP_rel`, `p90_ΔP_rel`, `p99_ΔP_rel`, `max_ΔP_rel`) are over
-all evaluated non-tree edges.  `worst_edges` carries the top-N
-offenders sorted by `ΔP_rel` descending; `n_worst` defaults to 10.
-
-`bad_centroid` is the arithmetic mean of midpoints of edges with
-`ΔP_rel > tol_bad`; `NaN+NaN·im` when none exist.  Useful for figure
-scripts that want to circle the catastrophic region.
-
-`sheet` records which sheet was analysed (`0` in v1; see the module
-docstring's "Sheet 0 only" note).  `tol_well` and `tol_bad` echo the
-thresholds the report was computed at, so a serialised report stays
-self-describing.
-"""
-struct DiagnosticReport
-    n_edges         :: Int
-    n_well_closed   :: Int
-    n_noisy         :: Int
-    n_extrap_driven :: Int
-    n_depth_driven  :: Int
-    n_branch_cut    :: Int
-    median_ΔP_rel   :: Float64
-    p90_ΔP_rel      :: Float64
-    p99_ΔP_rel      :: Float64
-    max_ΔP_rel      :: Float64
-    worst_edges     :: Vector{EdgeReport}
-    bad_centroid    :: ComplexF64
-    sheet           :: Int
-    tol_well        :: Float64
-    tol_bad         :: Float64
-end
+include("diagnostics_reports.jl")
 
 """
     quality_diagnose(sol::PathNetworkSolution; sheet=0, tol_well=1e-10,
-                     tol_bad=1e-6, n_worst=10) -> DiagnosticReport
+                     tol_bad=1e-6, n_worst=10,
+                     min_retained_fraction=1.0) -> DiagnosticReport
 
-Compute a loop-closure quality certificate on `sol`.  Sheet 0 only at
-v1: the function filters visited nodes to sheet 0 (via
-`visited_sheet[k] == [0]` when the solve carried branch points, or the
-FFW ζ-strip predicate `-2π < imag(z) ≤ 2π` when `visited_sheet[k]` is
-empty), Delaunay-triangulates them, extracts non-tree edges, and
-records `ΔP_rel` at each edge midpoint.  See the module docstring for
-the category thresholds; bead `padetaylor-8py` tracks multi-sheet
-support.
+Compute a loop-closure quality certificate on `sol`. Branchless walks
+retain every visited node. Branched walks select `visited_sheet[k] == [0]`;
+`sheet != 0` remains unsupported (padetaylor-8py). The default
+`min_retained_fraction=1.0` throws on any node loss with a suggestion.
+For an intentional sheet-0 subset, explicitly supply a lower fraction in
+[0,1]; the report still records retained and dropped counts. No coordinate
+strip is inferred. Delaunay-triangulate the retained cloud, extract
+non-tree edges, and record midpoint disagreement. Pole exceptions and
+nonfinite evaluations count as dropped edges; unexpected exceptions and
+all-candidate failure throw. Quantiles describe evaluated edges only.
+See the module docstring for category thresholds and ADR-0016a for coverage.
 
 This generic is **method-less in core PadeTaylor**: the Delaunay-backed
 implementation lives in `ext/PadeTaylorDiagnosticsExt.jl` and activates
@@ -196,27 +132,13 @@ ADR-0025 (Amendment 3 §"D-VC7 scope"; Amendment 7).  It differs from
 the scalar method in exactly three ways: it evaluates each node's
 shared-`Q` approximant `Pᵢ(t)/Q(t)` (not a scalar `PadeApproximant`),
 it generalises `ΔP_rel` to the vector 2-norm
-`‖y_A − y_B‖ / (‖y_A‖ + ‖y_B‖ + ε)`, and it takes **no** `sheet` kwarg
-— the `P_I⁽²⁾` companion system is single-sheeted, so there is no
+`‖y_A − y_B‖ / (‖y_A‖ + ‖y_B‖ + ε)`, and it takes **no** `sheet` or
+`min_retained_fraction` kwarg — the `P_I⁽²⁾` companion system is
+single-sheeted, so there is no
 `visited_sheet` field and the report's `sheet` is fixed at `0`.  The
 Delaunay / tree-edge / LCA / categorise / aggregate machinery is
 identical.  See the extension module's docstring for the full design.
 """
 function quality_diagnose end
-
-# Compact text/plain summary.  Keep narrow (≤80 cols) so the default
-# REPL print stays legible after `display(sol.diagnostics)`.
-function Base.show(io::IO, ::MIME"text/plain", r::DiagnosticReport)
-    println(io, "DiagnosticReport — sheet $(r.sheet), $(r.n_edges) non-tree Delaunay edges")
-    pct(n) = r.n_edges == 0 ? 0.0 : 100 * n / r.n_edges
-    println(io, "  well_closed     : $(r.n_well_closed) ($(round(pct(r.n_well_closed); digits=1))%)  (ΔP_rel ≤ $(r.tol_well))")
-    println(io, "  noisy           : $(r.n_noisy) ($(round(pct(r.n_noisy); digits=1))%)")
-    println(io, "  extrap_driven   : $(r.n_extrap_driven) ($(round(pct(r.n_extrap_driven); digits=1))%)  (|t| > 1 at midpoint)")
-    println(io, "  depth_driven    : $(r.n_depth_driven) ($(round(pct(r.n_depth_driven); digits=1))%)  (in-disc loop-closure failure)")
-    println(io, "  branch_cut      : $(r.n_branch_cut)  (reserved — v1 sheet-0 only)")
-    println(io, "  median ΔP_rel   : $(r.median_ΔP_rel)")
-    println(io, "  p99 ΔP_rel      : $(r.p99_ΔP_rel)")
-    print(io,   "  bad centroid    : $(r.bad_centroid)")
-end
 
 end # module Diagnostics
