@@ -64,6 +64,11 @@ end
     include("vector_problems_test.jl")
     include("noumi_yamada_test.jl")
     include("noumi_yamada_symmetry_test.jl")
+    # Zero-component rational seeds solved end to end (bead 0o9): canonical
+    # Type A / Type B orderings at machine precision.  Zero-FIRST orderings
+    # are NOT covered — they hit the order-sensitivity defect of bead brbv.
+    # See docs/worklog/083-zero-component-end-to-end.md.
+    include("zero_component_end_to_end_test.jl")
     # Metamorphic-relation test layer (oracle-free invariants), bead
     # padetaylor-krgy.3.  Symmetry MRs (conjugate, PII α-negation, PIV parity)
     # + consistency MRs (step additivity, forward∘reverse).  The canonical
