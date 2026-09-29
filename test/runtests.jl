@@ -122,6 +122,10 @@ end
     # ordering at h = 0.1 does not (bead rxbo) and VFSEAM.3 carries the
     # suite's third intentional @test_broken.  See docs/worklog/082.
     include("vector_field_seam_test.jl")
+    # Windowed pole ownership (bead 580u): each exact Weierstrass-℘ pole is
+    # kept exactly once across window core lines (the per-estimate rule
+    # dropped 4 and duplicated 3 of 246).  See docs/worklog/084.
+    include("windowed_pole_ownership_test.jl")
     # Public-API kwarg deprecation shims (beads xds, 0xn; api-review §3(a)).
     # Asserts each renamed kwarg's deprecated alias still WORKS (same result)
     # AND WARNS.  The WARNS half is meaningful under Pkg.test's `--depwarn=yes`.
