@@ -65,8 +65,15 @@ three public names:
 
 - `windowed_path_network_solve(prob, xs, ys; window_extent, overlap, ...)`
   — the composite solver.
-- `windowed_extract_poles(wsol; merge_atol, ...)` — composite pole field
-  from the output.
+- `windowed_extract_poles(wsol; boundary_atol, ...)` — composite pole field
+  from the output.  *Amended 2026-09-29 (bead `padetaylor-580u`, worklog
+  084):* pole ownership is now decided once per physical pole
+  (cross-window estimates within `boundary_atol` are linked, the group
+  mean picks one owner) instead of once per estimate, which measured 4
+  duplicated + 4 dropped real-axis poles on the ℘ lattice over
+  `[-20,20]²`.  The old opt-in greedy `merge_atol` dedup is removed, and
+  `merge_atol` now forwards to `PoleField.extract_poles` like every other
+  extraction kwarg.
 - `WindowedCompositeSolution{T}` — the result struct carrying the composited
   field, per-window solves, Voronoi assignments, and per-window seeds.
 

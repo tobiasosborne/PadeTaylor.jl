@@ -64,7 +64,12 @@ construction* — there is no second subtree to disagree with.
      window's own (`_nearest_center == wi`).  Because the core ⊂ the
      solve extent, the owning window always solved the cell, so every
      cell is written exactly once — a hard partition, no double
-     counting, no boundary seam.
+     counting, no boundary seam.  *Poles* need one more step, because
+     two windows give one pole two slightly different positions:
+     `windowed_extract_poles` links cross-window estimates first and
+     assigns each linked pole to one core (`_own_poles`, bead
+     `padetaylor-580u`) — the per-estimate test kept real-axis poles
+     twice or not at all.
 
 ## Why per-window seeding is load-bearing (non-gameable gate)
 
@@ -129,7 +134,7 @@ using ..PathNetwork: path_network_solve, PathNetworkSolution
 using ..PoleField:   extract_poles
 using ..EdgeGatedSolve: edge_gated_pole_field_solve
 using ..WindowedTiling: _window_seed, _nearest_center, _tile_centers,
-                        _warn_single_window
+                        _warn_single_window, _own_poles
 
 export windowed_path_network_solve, windowed_extract_poles,
        edge_gated_windowed_poles, WindowedCompositeSolution
@@ -330,46 +335,49 @@ end
 
 """
     windowed_extract_poles(wsol::WindowedCompositeSolution;
-                           merge_atol = nothing, extract_kwargs...)
+                           boundary_atol = nothing, extract_kwargs...)
         -> Vector{Complex{T}}
 
 Composite pole field of a `WindowedCompositeSolution`: extract poles
-from each window's independent solve, keep only those in the window's
-own Voronoi core, and union across windows.  This is the pole-side
-counterpart of the field composite — the same hard core partition that
-prevents a tile-boundary seam prevents double-counting a pole that two
-overlapping windows both resolve.
+from each window's independent solve, keep each *physical* pole only
+from the window whose Voronoi core owns it, and union across windows.
+This is the pole-side counterpart of the field composite.
+
+Ownership is decided once per physical pole, not once per estimate
+(`WindowedTiling._own_poles`; bead `padetaylor-580u`, worklog 084).
+Estimates of one pole from two overlapping windows differ in the last
+digits, so a per-estimate "is it in my core?" test is a partition of
+the plane, not of the pole set: a pole ON a core line — every
+real-axis pole of a real-symmetric problem on an even tiling — was
+measured kept twice or dropped outright (℘ lattice on `[-20,20]²`:
+4 duplicates + 4 drops of 246 at seed 0).  Cross-window estimates
+within `boundary_atol` are therefore linked first, and the group's mean
+position picks the single owner.  This is always on; it changes
+nothing for a pole seen by one window only.
+
+`boundary_atol` defaults to the `cluster_atol` passed through (else
+`extract_poles`' default `0.1`) — the scale at which the extractor
+already calls two roots one pole; measured cross-window spread is
+≤ 6e-5, pole spacing ≳ 0.3 on the dense PI field.
 
 `extract_kwargs...` pass straight through to `PoleField.extract_poles`
-(`radius_t`, `min_residue`, `cluster_atol`, `min_support`, …).
-
-`merge_atol` is an *optional* boundary-dedup refinement: when not
-`nothing`, a greedy keep-first pass drops any pole within `merge_atol`
-of an already-kept pole.  The default `nothing` is faithful to the p5
-confirmation, which reached 99.4 % seed-agreement with **no** final
-merge — the Voronoi-core partition already prevents almost all
-double-counting, so the merge is only for the rare pole that straddles
-a core line at the cluster scale.
+(`radius_t`, `min_residue`, `cluster_atol`, `min_support`, **and
+`merge_atol`** — the extractor's own post-pass self-merge).  Before
+580u this function captured `merge_atol` itself as an opt-in greedy
+boundary dedup, silently shadowing the extractor's same-named kwarg;
+that dedup is superseded by the always-on ownership rule above and
+the name now means one thing package-wide.
 """
 function windowed_extract_poles(wsol::WindowedCompositeSolution{T};
-                                merge_atol::Union{Nothing,Real} = nothing,
+                                boundary_atol::Union{Nothing,Real} = nothing,
                                 extract_kwargs...) where {T}
-    centers = wsol.centers
-    kept = Complex{T}[]
-    for wi in eachindex(wsol.window_sols)
-        ps = extract_poles(wsol.window_sols[wi]; extract_kwargs...)
-        for p in ps
-            # Voronoi-core ownership: this window keeps only its own poles.
-            _nearest_center(p, centers) == wi || continue
-            # Optional light boundary dedup (greedy, keep first).
-            if merge_atol !== nothing &&
-               any(q -> abs(p - q) ≤ merge_atol, kept)
-                continue
-            end
-            push!(kept, p)
-        end
-    end
-    return kept
+    atol = boundary_atol === nothing ? get(extract_kwargs, :cluster_atol, 0.1) :
+                                       boundary_atol
+    atol > 0 || throw(ArgumentError(
+        "windowed_extract_poles: boundary_atol must be > 0 (got $atol); " *
+        "it is the cross-window same-pole radius (bead padetaylor-580u)"))
+    ps = [extract_poles(ws; extract_kwargs...) for ws in wsol.window_sols]
+    return _own_poles(ps, wsol.centers, atol)
 end
 
 # True iff pole `p`'s nearest grid cell, or any of its 8 neighbours (a 1-ring
