@@ -155,13 +155,18 @@ interpret() {
     [[ "$failed" == "?" ]] && grep -q "Test Summary:" "$log" && failed=0
     if [[ "$rc" -eq 0 && "$failed" == "0" ]]; then
       echo "  PASS  correctness suite — $passed pass / $broken broken / 0 fail"
-      echo "        ($broken broken is EXPECTED: intentional @test_broken markers —"
-      echo "         v1ub auto-flip + 2 deferred-feature (cm-n2, pi2-tritronquee)."
-      echo "         q0yq/53tu/61um were FIXED. NOT a regression; investigate only"
-      echo "         FAILs. Two dormant CONDITIONAL markers at"
-      echo "         test/kkg_pi2_figure_test.jl:154,178 count only if Stage-B fails;"
-      echo "         a Broken count of 4 means the Stage-B march regressed and must be"
-      echo "         investigated. bd memory corpus-v2-expected-broken-count.)"
+      if [[ "$broken" == "3" ]]; then
+        echo "        (3 broken is EXPECTED: intentional @test_broken markers —"
+        echo "         cm-n2 and pi2-tritronquee (deferred features) and VFSEAM.3"
+        echo "         (default-order vector walk, bead rxbo). NOT a regression;"
+        echo "         investigate only FAILs. bd memory"
+        echo "         corpus-v2-expected-broken-count.)"
+      else
+        echo "  WARN  broken count is $broken, expected 3. More than 3 usually means"
+        echo "        the Stage-B march regressed (the CONDITIONAL markers in"
+        echo "        test/kkg_pi2_figure_test.jl fired); fewer means a marker was"
+        echo "        fixed and should be removed. Investigate before trusting GREEN."
+      fi
       return 0
     fi
     echo "  FAIL  correctness suite — $failed failed (exit $rc). INVESTIGATE: real"

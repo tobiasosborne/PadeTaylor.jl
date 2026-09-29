@@ -20,7 +20,7 @@ sweep; up from 1311 at the v0.1.0 tag).  44 source modules
 > day their bug is fixed.  Investigate only FAILs.  See
 > `scripts/quality_gate.sh` "EXPECTED-NOISE".
 
-### Fixed — 2026-09-29 pace session (full gate NOT yet re-run; expected broken count is now 3)
+### Fixed — 2026-09-29 pace session (full gate GREEN: 12185 pass / 3 broken / 0 fail on `c3bf581`)
 
 - **`padetaylor-xbxm`** — `step_jorba_zou` and `vector_step_jorba_zou` throw
   `ArgumentError` on a non-finite Taylor coefficient. Before, a `NaN`

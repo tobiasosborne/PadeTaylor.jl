@@ -8,13 +8,15 @@
 > previous session already paid for. The frictions surfaced are
 > recorded in `docs/worklog/001-stages-Z-1-2-handoff.md`.
 
-## ⚡ LATEST SESSION (2026-09-29) — one-hour pace session, multi-agent. Five fixes and two measurements merged; `fast` gate GREEN; FULL GATE NOT RUN; ASTRA REVIEW OWED
+## ⚡ LATEST SESSION (2026-09-29) — one-hour pace session, multi-agent. Six fixes and two measurements merged; FULL GATE GREEN 12185 / 3 broken / 0 fail; ASTRA REVIEW OWED
 
 ### 0. FIRST THINGS FIRST for the next session
-1. **Run `scripts/quality_gate.sh full`.** It was NOT run this session. Every
-   merged change was verified by its own test files (re-run by the
-   orchestrator, not only by the worker) and by the `fast` tier, nothing more.
-   Expected: **3** `@test_broken` (was 2; the third is VFSEAM.3, bead `rxbo`).
+1. **The full gate is GREEN: 12185 pass / 3 broken / 0 fail** —
+   `scripts/quality_gate.sh full` on `c3bf581` (Julia 1.12.3, 17m40s,
+   2026-09-29 21:46–22:04), which holds every code change of the session.
+   Up from 9500; the 3 broken are the expected markers (the third is
+   VFSEAM.3, bead `rxbo`). The runner now WARNS when the broken count is not
+   3; before, it printed "EXPECTED" for any count.
 2. **Run the larger code review that was held back** (maintainer's instruction:
    "hold the astra review, put it in the handoff"). Reviewer: GPT-6 Astra via
    `codex exec -m gpt-6-astra --sandbox read-only`. Range: `68215d6..HEAD`
