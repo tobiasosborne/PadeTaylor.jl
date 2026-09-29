@@ -29,7 +29,7 @@
    - `src/IVPBVPHybrid.jl` `argz` / `_call_asymptotic_on_branch` — uses
      `hasmethod(fn, ..., (:argz,))` to detect an argz-aware callable
      (worklog 087). **Not spot-reviewed by anyone.**
-   - anything landed after this section was written (see §4).
+   - branch `pace/w8-qrnull` (§4), as a second review target.
 3. The ADR-0035 hooks were not checked on this clone at session start; the
    `pre-commit` hook did fire on every commit ("staged .beads/issues.jsonl").
 
@@ -59,8 +59,7 @@
   ORDER.** `[live, zeros]` → Q = [1, −0.5], value 2.0 (exact);
   `[zeros, live]` → Q = [1], value 1.0. Reproduced by the orchestrator. 32 of
   104 scanned low-order trajectories fail end to end. Known-correct RED
-  reproducer in worklog 083. A codex fix was in flight at the time of writing
-  — see §4.
+  reproducer in worklog 083. A partial fix exists on a branch — see §4.
 - Also reported, no bead yet: a ComplexF64 driver failure at
   `src/VectorProblems.jl:307` (complex vs real step magnitudes compared).
 
@@ -79,11 +78,18 @@ The scout diffed the `:svd` port of `src/RobustPade.jl` line by line against
 `external/chebfun/padeapprox.m` and found it matching on every load-bearing
 step.
 
-### 4. In flight when this was written
-See the end of this section's git log for whether they landed: `w8` (codex,
-bead `brbv`, branch `pace/w8-qrnull`), `w9` (Opus, bead `ncfa`, branch
-`pace/w9-commonsolve`). If a branch exists but is not merged, its work is
-unverified.
+### 4. NOT merged: the `brbv` fix is on branch `pace/w8-qrnull` (pushed)
+The codex lane fixed the order sensitivity — for `d > 1` the denominator is
+read from the SVD's smallest right singular vector, conjugated, instead of an
+unpivoted QR column (zero-first residual 0.5 → 0, live value 1 → 2; 32
+rotations agree to 6.22e-15; new `test/shared_pade_order_invariance_test.jl`
+664/0). **It is not mergeable:** `test/shared_pade_dispatch_test.jl` goes
+26/26 → 21 pass / 5 fail, because the corrected cell A changes four expected
+cell choices in the ADR-0028 dispatcher and one near-roundoff choice flips
+under ε perturbation. No assertion or tolerance was touched. **Decision for
+the maintainer:** are the four pinned cell choices ground truth, or a record
+of the old cell A's wrong answers? Worklog 088 and ADR-0036 are on the branch
+only. These numbers are the worker's; the orchestrator did not re-run them.
 
 ### 5. How the parallel Julia work was done (it worked; reuse it)
 Rule 7 forbids parallel Julia because of precompile-cache contention. This
