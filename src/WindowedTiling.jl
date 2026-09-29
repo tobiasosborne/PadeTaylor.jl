@@ -86,8 +86,21 @@ before.  Same-window estimates are never linked: collapsing one
 window's own near-coincident roots is `PoleField.extract_poles`'s job
 (its `cluster_atol` / `merge_atol`), not the composite's.  `atol` must
 sit far above the cross-window spread and far below the inter-pole
-spacing; the caller defaults it to `extract_poles`' own `cluster_atol`
-(the scale at which the extractor already calls two roots one pole).
+spacing.  The caller's default is a fixed `0.1`, deliberately NOT
+coupled to `extract_poles`' `cluster_atol`: a dense-field caller passing
+`cluster_atol = 0.4` must not thereby link distinct poles ~0.3 apart
+(review follow-up, worklog 084 §6).
+
+**Owner-absent groups.**  The mean's nearest centre may name a window
+that has no member in the group (it did not resolve the pole).  A
+*multi-window* such group — two or more windows independently agree on
+the pole — is kept once, from the member window whose centre is nearest
+the mean (lowest index on a tie).  A *singleton* such group (one window
+saw a pole in someone else's core, and the owner did not) is dropped,
+which is exactly the pre-580u behaviour: measured, these are 2 / 1 / 647
+groups on ℘ `[-20,20]²` / ℘ `[-30,30]²` / PI `[-30,30]²`, none of the ℘
+ones costing an in-domain lattice pole (worklog 084 §6), and on PI they
+are dominated by the un-gated windows' smooth-sector bloom.
 
 ## Per-window seeding (`_window_seed`)
 
@@ -190,7 +203,23 @@ function _own_poles(ps::AbstractVector{<:AbstractVector{Complex{T}}},
         gsum[r] = get(gsum, r, zero(Complex{T})) + z[a]
         gcnt[r] = get(gcnt, r, 0) + 1
     end
-    owner = Dict(r => _nearest_center(gsum[r] / gcnt[r], centers) for r in keys(gsum))
+    wins = Dict{Int,Vector{Int}}()
+    for a in 1:n
+        push!(get!(wins, root(a), Int[]), win[a])
+    end
+    owner = Dict{Int,Int}()
+    for (r, ws) in wins
+        m = gsum[r] / gcnt[r]
+        o = _nearest_center(m, centers)
+        # Owner-absent fallback, MULTI-window groups only: ≥2 windows agree on
+        # the pole but its core owner did not resolve it ⇒ hand it to the
+        # resolving window nearest the mean (lowest index on a tie).  An
+        # owner-absent SINGLETON is still dropped, exactly as before 580u.
+        if !(o in ws) && length(unique(ws)) ≥ 2
+            o = ws[argmin([abs2(m - centers[w]) for w in ws])]
+        end
+        owner[r] = o
+    end
     return Complex{T}[z[a] for a in 1:n if owner[root(a)] == win[a]]
 end
 

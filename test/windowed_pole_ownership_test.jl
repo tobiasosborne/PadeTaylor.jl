@@ -28,11 +28,51 @@
 #
 # MEASURED (seed 0, order 30; worklog 084): legacy rule 4 dropped + 3 exact
 # poles duplicated (4 cross-window kept pairs) of 246; fixed rule 0 / 0.
-# Mutation proof in worklog 084 §4.
+# Mutation proof in worklog 084 §4 and §6 (review follow-up: WPO.0 synthetic
+# kernel cases, owner-absent fallback, decoupled boundary_atol default).
 # ============================================================================
 
 using PadeTaylor, Test, Printf
 using PadeTaylor.WindowedTiling: _nearest_center, _own_poles
+
+# ----------------------------------------------------------------------------
+# WPO.0  SYNTHETIC `_own_poles` cases, answers known by construction (580u
+#        review follow-up, worklog 084 §6).  2×2 centres, index order fixed so
+#        the lowest-index tie-break is predictable: 1=SW 2=SE 3=NW 4=NE; core
+#        lines Re z = 0 and Im z = 0.
+# ----------------------------------------------------------------------------
+@testset "WPO.0: _own_poles synthetic cases" begin
+    C = ComplexF64[-10 - 10im, 10 - 10im, -10 + 10im, 10 + 10im]
+    e = 1e-8
+    E = ComplexF64[]
+    # Straddle, duplicate-shaped: each estimate in its own core.  Mean is
+    # exactly -5 (on Im=0), equidistant from c1,c3 => tie-break -> window 1.
+    @test _own_poles([[-5 - e*im], E, [-5 + e*im], E], C, 0.1) == [-5 - e*im]
+    # Straddle, drop-shaped: each estimate in the OTHER core.  Kept once.
+    @test _own_poles([[-5 + e*im], E, [-5 - e*im], E], C, 0.1) == [-5 + e*im]
+    # 4-window corner: mean exactly 0, equidistant from all four => window 1.
+    @test _own_poles([[e + 0im], [-e + 0im], [e*im], [-e*im]], C, 0.1) == [e + 0im]
+    # Owner-absent MULTI-window group: pole at -5+2i (core 3) seen by windows
+    # 1 and 4 only.  Kept once, from window 1 (|m-c1| = 13 < |m-c4| = 17).
+    @test _own_poles([[-5 + 2im], E, E, [-5 + 2im + e]], C, 0.1) == [-5 + 2im]
+    # Owner-absent SINGLETON: dropped (the pre-580u behaviour).
+    @test isempty(_own_poles([[-5 + 2im], E, E, E], C, 0.1))
+    # Chain: distinct P (core 3) and Q (core 1) 0.3 apart, P seen by windows
+    # 3,4 and Q by 1,2.  At the default 0.1 both survive (window-major: Q, P);
+    # at 0.4 single-linkage fuses them and one real pole is lost -- why the
+    # driver default is NOT coupled to a dense-field cluster_atol = 0.4.
+    P, Q = -5 + 0.2im, -5 - 0.1im
+    ps = [[Q], [Q + e], [P], [P + e]]
+    @test _own_poles(ps, C, 0.1) == [Q, P]
+    @test length(_own_poles(ps, C, 0.4)) == 1
+    # Empty input.
+    @test _own_poles([E, E, E, E], C, 0.1) == ComplexF64[]
+    # BigFloat: element type preserved, straddle resolved the same way.
+    Cb = Complex{BigFloat}.(C); eb = big"1e-30"; Eb = Complex{BigFloat}[]
+    rb = _own_poles([[big(-5) - eb*im], Eb, [big(-5) + eb*im], Eb], Cb, 0.1)
+    @test rb isa Vector{Complex{BigFloat}}
+    @test rb == [big(-5) - eb*im]
+end
 
 @testset "Windowed pole ownership: each physical pole kept once (WPO)" begin
     f(z, u, up) = 6u^2
@@ -85,9 +125,8 @@ using PadeTaylor.WindowedTiling: _nearest_center, _own_poles
         @test all(==(1), m)                # no drop, no duplicate
         @test xpairs(kept, kw) == 0        # no cross-window pair within 0.5
         @test spur == 0
-        # Same answer as calling the ownership kernel directly (the driver
-        # adds nothing but the default boundary_atol = cluster_atol = 0.1).
-        @test kept == _own_poles(per_win, C, 0.1)
+        # (The kernel itself is pinned by construction in WPO.0; the former
+        # self-comparison `kept == _own_poles(per_win, C, 0.1)` is dropped.)
     end
 
     # ------------------------------------------------------------------------
@@ -98,7 +137,14 @@ using PadeTaylor.WindowedTiling: _nearest_center, _own_poles
     @testset "WPO.3: merge_atol forwards; boundary_atol validated" begin
         fwd = [extract_poles(ws; merge_atol = 3.0) for ws in wsol.window_sols]
         @test fwd != per_win     # merge_atol = 3 (> spacing 2ω) genuinely changes extraction
+        # WIRING checks (the kernel is pinned in WPO.0): merge_atol reaches
+        # extract_poles, and boundary_atol stays 0.1 whatever cluster_atol is.
+        # cluster_atol = 3.0 (> spacing 2ω) is deliberately extreme: on ℘ a
+        # 0.4 coupling is invisible, 3.0 makes coupled != decoupled (asserted).
         @test windowed_extract_poles(wsol; merge_atol = 3.0) == _own_poles(fwd, C, 0.1)
+        c3 = [extract_poles(ws; cluster_atol = 3.0) for ws in wsol.window_sols]
+        @test _own_poles(c3, C, 0.1) != _own_poles(c3, C, 3.0)
+        @test windowed_extract_poles(wsol; cluster_atol = 3.0) == _own_poles(c3, C, 0.1)
         @test_throws ArgumentError windowed_extract_poles(wsol; boundary_atol = 0)
     end
 end

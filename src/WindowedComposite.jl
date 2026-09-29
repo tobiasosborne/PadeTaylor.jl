@@ -353,12 +353,16 @@ measured kept twice or dropped outright (℘ lattice on `[-20,20]²`:
 4 duplicates + 4 drops of 246 at seed 0).  Cross-window estimates
 within `boundary_atol` are therefore linked first, and the group's mean
 position picks the single owner.  This is always on; it changes
-nothing for a pole seen by one window only.
+nothing for a pole seen by one window only.  If that owner did not
+resolve the pole, a group seen by ≥2 windows is kept once from the
+resolving window nearest the mean; a single-window estimate in another
+window's core is dropped, as before (`_own_poles` docstring).
 
-`boundary_atol` defaults to the `cluster_atol` passed through (else
-`extract_poles`' default `0.1`) — the scale at which the extractor
-already calls two roots one pole; measured cross-window spread is
-≤ 6e-5, pole spacing ≳ 0.3 on the dense PI field.
+`boundary_atol` defaults to a fixed `0.1`, independent of any
+`cluster_atol` passed through (a dense-field `cluster_atol = 0.4` must
+not link distinct poles ~0.3 apart).  Measured largest linked-group
+diameter at 0.1: 1.8e-2 / 9.4e-2 / 0.16 on ℘ `[-20,20]²` / ℘
+`[-30,30]²` / PI `[-30,30]²` (worklog 084 §6).
 
 `extract_kwargs...` pass straight through to `PoleField.extract_poles`
 (`radius_t`, `min_residue`, `cluster_atol`, `min_support`, **and
@@ -371,8 +375,7 @@ the name now means one thing package-wide.
 function windowed_extract_poles(wsol::WindowedCompositeSolution{T};
                                 boundary_atol::Union{Nothing,Real} = nothing,
                                 extract_kwargs...) where {T}
-    atol = boundary_atol === nothing ? get(extract_kwargs, :cluster_atol, 0.1) :
-                                       boundary_atol
+    atol = boundary_atol === nothing ? 0.1 : boundary_atol   # NOT cluster_atol (580u review)
     atol > 0 || throw(ArgumentError(
         "windowed_extract_poles: boundary_atol must be > 0 (got $atol); " *
         "it is the cross-window same-pole radius (bead padetaylor-580u)"))

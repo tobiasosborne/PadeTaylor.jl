@@ -73,7 +73,9 @@ three public names:
   duplicated + 4 dropped real-axis poles on the ℘ lattice over
   `[-20,20]²`.  The old opt-in greedy `merge_atol` dedup is removed, and
   `merge_atol` now forwards to `PoleField.extract_poles` like every other
-  extraction kwarg.
+  extraction kwarg.  Review follow-up (worklog 084 §6): an owner-absent
+  multi-window group is kept from the nearest resolving window; the
+  `boundary_atol` default is a fixed 0.1, not the caller's `cluster_atol`.
 - `WindowedCompositeSolution{T}` — the result struct carrying the composited
   field, per-window solves, Voronoi assignments, and per-window seeds.
 

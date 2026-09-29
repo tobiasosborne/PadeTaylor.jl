@@ -122,3 +122,87 @@ Mutations (each run, observed RED, restored by copying back the saved file):
 - `boundary_atol` default 0.1 is justified by measured spread ≤ 6.4e-5 and
   PI spacing ≳ 0.3; a field denser than `cluster_atol` would need it lowered
   (the extractor's own `cluster_atol` would already be wrong there).
+
+## 6. Review follow-up (after commit 5c8fe12)
+
+Three reviewer claims, each measured before acting.  Probe:
+`external/probes/voronoi-boundary-580u/p3_owner_absent_groups.jl` (seed 0,
+linking radius 0.1, same fixtures as §2).
+
+**6.1 Owner-absent groups** (the mean's nearest centre has no member in the
+group, so 5c8fe12 discarded the whole group):
+
+| fixture | groups | owner-absent singletons | owner-absent multi-window | largest group diameter |
+|---|---|---|---|---|
+| ℘ `[-20,20]²` | 312 | 2 (1 near a lattice point) | 0 | 1.78e-2 |
+| ℘ `[-30,30]²` | 646 | 1 (1 near a lattice point) | 0 | 9.35e-2 |
+| PI `[-30,30]²` | 2817 | 647 | **15** | 0.164 |
+
+℘ oracle: no in-domain lattice pole is lost to an owner-absent singleton.
+WPO.2 (`[-20,20]²`) and the p1 probe (`[-30,30]²`: mult0 = 0 at both
+seeds) find every in-box exact pole kept exactly once, so the lattice
+hits among the discarded singletons are poles outside the box or second
+estimates of a pole that is already kept.  Singletons are therefore
+**unchanged**: dropped, as under the pre-580u rule.  On PI they are
+dominated by the un-gated windows' smooth-sector bloom (ADR-0034:
+4475 of 7353 poles off-wedge un-gated), so keeping them would be wrong.
+The 15 PI multi-window owner-absent groups are poles that two or three
+independent windows agree on (< 0.1) but that the core owner did not
+resolve.  Both the pre-580u rule and 5c8fe12 dropped them.
+
+Decision: a **multi-window** owner-absent group is now kept once, from the
+member window whose centre is nearest the mean (lowest index on a tie):
+`src/WindowedTiling.jl` `_own_poles`, the owner loop.  Effect on the PI
+FSEAM fixture: 2159 → 2174 poles (seed 0), 2156 → 2162 (seed 42).  FSEAM.2
+two-way match stays 97.2 % / 97.0 %, and Δcount goes 3 → 12 (gate ≤ 10 %).
+There is no PI oracle.  The evidence that the added poles are real is
+indirect: had all 15 seed-0 additions been unmatched in seed 42,
+match(0→42) would have fallen to about 96.5 %, and it did not move.  ℘ is
+unaffected (0 multi-window owner-absent groups).
+
+**6.2 Chaining / coupled default.**  The claim is real at the kernel level.
+Synthetic case: P at -5+0.2i (core 3, seen by windows 3 and 4) and Q at
+-5-0.1i (core 1, seen by windows 1 and 2) are 0.3 apart.  At
+`atol = 0.4` single linkage fuses them and one real pole is lost; at 0.1
+both survive.  Fix: the driver default is now a fixed `0.1`, no longer
+the caller's `cluster_atol` (`src/WindowedComposite.jl`,
+`windowed_extract_poles`).  I did **not** add a diameter cap that throws.
+The measured largest linked group on the production PI fixture is 0.164,
+which is above `atol` = 0.1, so a throw-at-`atol` cap would crash
+`edge_gated_windowed_poles` on the FSEAM configuration.  A cap needs its
+own measurement of what those 0.16-wide groups are (see §6.5).
+
+**6.3 Synthetic kernel tests.**  New testset WPO.0 (10 assertions) in
+`test/windowed_pole_ownership_test.jl`, with answers known by construction:
+- both straddle shapes on a core line (tie-break goes to window 1);
+- a 4-window corner (mean exactly 0 goes to window 1);
+- an owner-absent multi-window group (kept from window 1);
+- an owner-absent singleton (dropped);
+- the chain case at 0.1 (both kept) and at 0.4 (one kept);
+- empty input;
+- BigFloat input (element type preserved, same answer).
+
+WPO.2's self-comparison assertion is removed.  WPO.3's merge_atol routing
+check is kept and labelled as a *wiring* check.  I added a
+decoupling wiring check at `cluster_atol = 3.0`, together with a
+non-triviality assertion that the coupled and decoupled outputs differ on
+this fixture (at 0.4 the ℘ fixture cannot tell them apart).
+
+**6.4 Mutation proof** (each observed RED, then restored by copying back
+and confirmed with `cmp`; line numbers are those at run time, and a
+header-comment edit afterwards moved them +1):
+- M3, owner-absent fallback disabled (`length(unique(ws)) ≥ 2` changed to
+  `false`): WPO.0 9/10, RED at the multi-window owner-absent assertion (:56).
+- M4, fallback also applied to singletons (`≥ 2` changed to `≥ 1`): WPO.0
+  9/10, RED at the singleton assertion (:58).
+- M5, default re-coupled (`get(extract_kwargs, :cluster_atol, 0.1)`):
+  first survived the `cluster_atol = 0.4` wiring check, which is why that
+  check was replaced; with the 3.0 version, WPO.3 is RED (10/11, :146).
+
+Final runs: `test/windowed_pole_ownership_test.jl` WPO.0 10/10 + WPO 11/11;
+`test/field_seam_test.jl` 8/8, 7/7, 4/4.
+
+**6.5 Open.**  Groups wider than `atol` on PI (0.164) mean single linkage
+does chain there.  Before any cap is chosen, someone should measure whether
+those groups are one pole or two.  The same-window duplicates (§5) are
+unchanged.
