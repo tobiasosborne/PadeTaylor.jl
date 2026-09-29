@@ -74,6 +74,15 @@ boundaries" terminology (which refers to the z-plane image of those
 ζ-rays).  The driver therefore takes its sector parameters in the
 ζ-frame as a `(im_lo, im_hi, re_anchor, re_extent)` NamedTuple.
 
+Branch note (bead w80i): that strip is 3π wide in `arg z`, but `exp`
+folds `Im ζ > 2π` back onto principal arguments, so `z = exp(ζ/2)` alone
+does not fix the branch of `z^{1/3}`.  Evaluating the series there on the
+principal root silently lands on another tronquée solution (the series
+is branch-covariant, so it still satisfies PIII; measured |Δu| = 5.39 at
+FFW's z₁, md:243).  The driver therefore hands the IC callable the
+continuous `arg z = Im ζ / 2` as an `argz` keyword whenever it is off
+the principal slice, and throws if the callable cannot accept it.
+
 ## Asymptotic-IC helper `pIII_asymptotic_ic` (FFW md:222 + md:230)
 
 The boundary ICs at the two ζ-frame entry points come from the FFW
@@ -128,7 +137,8 @@ export solve_pole_free_hybrid, IVPBVPSolution, pIII_asymptotic_ic
 # -----------------------------------------------------------------------------
 
 """
-    pIII_asymptotic_ic(z; n_terms = 10, α = 1, β = -1/20, γ = 0, δ = -1) -> (u, u')
+    pIII_asymptotic_ic(z; n_terms = 10, α = 1, β = -1/20, γ = 0, δ = -1,
+                       argz = nothing) -> (u, u')
 
 Truncated asymptotic series for the tronquée P_III solution
 
@@ -184,13 +194,27 @@ This helper validates `(α, γ) = (1, 0)` because the ansatz derivation
 above relies on those choices; other values throw `ArgumentError`.
 `δ` and `β` are free.
 
+**Branch (`argz` keyword, bead w80i).**  A `Complex` z cannot say which
+sheet of `z^{1/3}` it lies on, and the FFW sector is 3π wide, so the
+upper part `π < arg z < 9π/4` wraps.  Evaluating there with the
+principal root gives a *different* solution: the series is invariant
+under `z^{1/3} → e^{2πi/3} z^{1/3}` (it is a Laurent series in the root
+itself), so the wrong-branch value still satisfies PIII to truncation
+order — only continuity along the sector tells them apart.  Measured at
+FFW's `z₁ = 30e^{13πi/6}` (md:243): principal root gives `|u − u_FFW| =
+5.39`, continued root `8.4e-6`.  Pass `argz` (the continuous `arg z`;
+`imag(ζ)/2` for `z = exp(ζ/2)`) to select the continued branch.  Without
+`argz`, only principal `arg z ∈ (-3π/4, π]` is accepted.
+
 Throws `ArgumentError` on `n_terms < 1`, `|z| < 1` (series unreliable
-near origin), or `arg z ∉ (-3π/4, 9π/4)` (outside the existence
-sector).
+near origin), `arg z` outside the existence sector (principal slice
+`(-3π/4, π]` without `argz`, `(-3π/4, 9π/4)` with it), or an `argz`
+that disagrees with `z` mod 2π.
 """
 function pIII_asymptotic_ic(z::Number;
                             n_terms::Integer = 10,
-                            α = 1, β = -1/20, γ = 0, δ = -1)
+                            α = 1, β = -1/20, γ = 0, δ = -1,
+                            argz::Union{Nothing, Real} = nothing)
     n_terms ≥ 1 || throw(ArgumentError(
         "pIII_asymptotic_ic: n_terms must be ≥ 1 (got $n_terms)."))
     abs(z) ≥ 1 || throw(ArgumentError(
@@ -214,20 +238,32 @@ function pIII_asymptotic_ic(z::Number;
         "δ = −α (FFW md:222 existence theorem of ref [21]); got δ = $δ " *
         "with α = $α, so δ + α = $(δ + α) ≠ 0.  Suggestion: pass δ = $(-α) " *
         "(the FFW Fig 5 value is δ = −1 with α = 1)."))
-    # Sector check (FFW md:222): `-3π/4 < arg z < 9π/4`.  Note `arg z` from
-    # Julia's principal `angle` returns values in `(-π, π]`; we accept
-    # any z whose principal argument lies in (-3π/4, π], which is a
-    # subset of the FFW sector.  Callers wanting the Im z > 0 part of
-    # the (π, 9π/4) sub-range encode it by adding `4π·i·s` in the
-    # ζ-frame, which is the SheetTracker / sheet-index convention.
-    az = angle(z)
-    -3π/4 < az ≤ π || throw(ArgumentError(
-        "pIII_asymptotic_ic: principal arg(z) = $az is outside the " *
-        "pole-free sector `(-3π/4, 9π/4)` (Julia's `angle` returns " *
-        "principal values, so only the slice `(-3π/4, π]` is reachable " *
-        "by a direct call; the upper part `(π, 9π/4)` requires the " *
-        "caller to evaluate at z*e^{-2πi} and then map via the sheet " *
-        "index).  Suggestion: pass a z with `-3π/4 < arg z ≤ π`."))
+    # Sector check (FFW md:222): `-3π/4 < arg z < 9π/4`.  A Complex `z`
+    # cannot carry which sheet of `z^{1/3}` it lives on: Julia's `angle`
+    # folds every argument into `(-π, π]`.  Without `argz` we therefore
+    # accept only the principal slice `(-3π/4, π]`.  With `argz` the caller
+    # names the continuous argument (the hybrid driver passes Im ζ / 2) and
+    # the whole FFW sector `(-3π/4, 9π/4)` is reachable.  `argz` must agree
+    # with `z` mod 2π: a mismatch means the caller's bookkeeping is wrong,
+    # and we throw rather than evaluate an unrelated branch (bead w80i).
+    if argz === nothing
+        az = angle(z)
+        -3π/4 < az ≤ π || throw(ArgumentError(
+            "pIII_asymptotic_ic: principal arg(z) = $az is outside the " *
+            "principal slice `(-3π/4, π]` of the pole-free sector " *
+            "`(-3π/4, 9π/4)`.  A Complex z cannot say which sheet it is " *
+            "on.  Suggestion: pass the continuous argument via the `argz` " *
+            "keyword (e.g. argz = imag(ζ)/2 for z = exp(ζ/2))."))
+    else
+        az = float(argz)
+        -3π/4 < az < 9π/4 || throw(ArgumentError(
+            "pIII_asymptotic_ic: argz = $az is outside the pole-free " *
+            "sector `(-3π/4, 9π/4)` (FFW md:222)."))
+        abs(cis(az) - z / abs(z)) ≤ 1e-8 || throw(ArgumentError(
+            "pIII_asymptotic_ic: argz = $az is inconsistent with z = $z " *
+            "(angle(z) = $(angle(z)); they must agree mod 2π).  Suggestion: " *
+            "for z = exp(ζ/2) pass argz = imag(ζ)/2."))
+    end
 
     # Compute a_n.  We carry `a` as Vector{ComplexF64} length n_terms.
     a = _pIII_asymptotic_coeffs(β, δ, n_terms)
@@ -235,7 +271,11 @@ function pIII_asymptotic_ic(z::Number;
     # Sum the series and its derivative termwise.
     #   u  = s · (1 + Σ a_n s^{-2n})       where s = z^{1/3}
     #   du/dz = (1/(3s²)) · ( 1 - Σ (2n-1)·a_n·s^{-2n} )         (chain rule)
-    s = z^(1/3)
+    # `s = z^{1/3}` on the branch named by `az`.  Without `argz` this is
+    # Julia's principal `z^(1/3)` (kept verbatim so default calls are
+    # bit-identical to before); with `argz` it is |z|^{1/3}·e^{i·argz/3},
+    # the analytic continuation of the principal root along the sector.
+    s = argz === nothing ? z^(1/3) : cbrt(abs(z)) * cis(az / 3)
     Z = promote_type(typeof(s), typeof(complex(0.0)))
     s_z = Z(s)
     s_inv2 = inv(s_z^2)
@@ -431,7 +471,12 @@ Im ζ ≤ im_hi}`.
 returns the boundary IC at z-frame point `z`; the driver maps each
 asymptotic point through `pp.to_frame` into the ζ-frame.  Users on
 the PIII Fig 5 family should pass
-`z -> pIII_asymptotic_ic(z; n_terms = 10, β = pp.params.β, δ = pp.params.δ)`.
+`(z; argz = nothing) -> pIII_asymptotic_ic(z; argz, n_terms = 10, β = pp.params.β, δ = pp.params.δ)`.
+Wherever the driver evaluates the callable at a ζ with `Im ζ / 2` off
+the principal slice `(-π, π]` (i.e. `Im ζ > 2π`, the upper part of the
+FFW sector), it passes the continuous argument `argz = Im ζ / 2`; a
+callable without an `argz` keyword then throws `ArgumentError` rather
+than silently returning a wrong-branch `z^{1/3}` (bead w80i).
 
 `degenerate_full_plane = true` is a regression-test mode: the sector
 is treated as empty (no BVP), and the returned object's `sol(ζ)`
@@ -496,8 +541,10 @@ function solve_pole_free_hybrid(pp::PainleveProblem,
     ζ_bot   = complex(T(sector.re_anchor), T(sector.im_lo) + ε)
     z_top   = _coord(pp.from_frame, ζ_top)
     z_bot   = _coord(pp.from_frame, ζ_bot)
-    u_top, up_top = _eval_asymptotic(asymptotic_ic_fn, z_top, "top")
-    u_bot, up_bot = _eval_asymptotic(asymptotic_ic_fn, z_bot, "bot")
+    u_top, up_top = _eval_asymptotic(asymptotic_ic_fn, z_top,
+                                     _branch_arg(pp, ζ_top), "top")
+    u_bot, up_bot = _eval_asymptotic(asymptotic_ic_fn, z_bot,
+                                     _branch_arg(pp, ζ_bot), "bot")
 
     # Map (z, u, u') → (ζ, w, w').
     _, w_top, wp_top = pp.to_frame(z_top, u_top, up_top)
@@ -558,9 +605,41 @@ end
 # Internal helpers
 # -----------------------------------------------------------------------------
 
+# Call the user's asymptotic-IC callable at the z-frame image of the
+# ζ-frame point `ζ`, on the branch that ζ determines (bead w80i).
+#
+# For PIII `z = exp(ζ/2)` is single-valued, but `arg z` is not: the ζ-strip
+# `Im ζ ∈ (-3π/2, 9π/2)` covers `arg z ∈ (-3π/4, 9π/4)`, 3π wide, and
+# `exp` folds the upper part `Im ζ > 2π` onto principal arguments.  A
+# series in `z^{1/3}` evaluated there on the principal root lands on
+# another sheet (measured: |Δu| = 5.4 at FFW's z₁, see worklog 087).
+# So when `Im ζ / 2` is not the principal argument we pass it to the
+# callable as the `argz` keyword; a callable that does not accept
+# `argz` cannot be told its branch, and we throw instead of silently
+# evaluating the wrong one.  On the principal slice the call is the
+# plain `fn(z)` it always was.
+function _call_asymptotic_on_branch(fn, z::Complex, θ, label)
+    θ === nothing && return fn(z)
+    abs(θ - angle(z)) ≤ 1e-12 * max(1, abs(θ)) && return fn(z)
+    hasmethod(fn, Tuple{typeof(z)}, (:argz,)) || throw(ArgumentError(
+        "solve_pole_free_hybrid: the $label point z = $z has " *
+        "continuous arg z = $θ, off the principal slice (angle(z) = " *
+        "$(angle(z))), and asymptotic_ic_fn does not accept an `argz` " *
+        "keyword, so it cannot be told which branch of z^{1/3} to use.  " *
+        "Suggestion: pass `(z; argz = nothing) -> pIII_asymptotic_ic(z; " *
+        "argz, ...)`."))
+    return fn(z; argz = θ)
+end
+
+# Continuous `arg z` of `z = from_frame(ζ)`: `Im ζ / 2` for PIII
+# (`z = exp(ζ/2)`), `Im ζ` for PV (`z = exp(ζ)`); `nothing` (plain
+# `fn(z)` call, pre-w80i behaviour) for any other equation.
+_branch_arg(pp, ζ) = pp.equation === :III ? imag(ζ) / 2 :
+                     pp.equation === :V   ? imag(ζ)     : nothing
+
 # Evaluate the user-supplied asymptotic-IC callable and validate.
-function _eval_asymptotic(fn, z, label)
-    out = fn(z)
+function _eval_asymptotic(fn, z, θ, label)
+    out = _call_asymptotic_on_branch(fn, z, θ, label)
     out isa Tuple && length(out) == 2 || throw(ArgumentError(
         "solve_pole_free_hybrid: asymptotic_ic_fn at $label boundary " *
         "(z = $z) must return a 2-tuple (u, u'); got $out."))
@@ -660,14 +739,16 @@ function _bvp_solve_on_slice(pp::PainleveProblem,
     ∂f_wp  = (ζ, w, wp) -> 2*wp/w
 
     # Per-node asymptotic-IC initial guess.  Maps each ζ-node to
-    # z = exp(ζ/2), evaluates u(z) via asymptotic_ic_fn, and maps
-    # back to w = z·u (PIII convention).
+    # z = exp(ζ/2), evaluates u(z) via asymptotic_ic_fn ON THE BRANCH
+    # Im ζ/2 (bead w80i), and maps back to w = z·u (PIII convention).
     initial_guess = if asymptotic_ic_fn === nothing
         nothing
     else
         ζ -> begin
             z  = exp(ζ / 2)
-            u, _ = asymptotic_ic_fn(z)
+            u, _ = _call_asymptotic_on_branch(asymptotic_ic_fn, z,
+                                               imag(ζ) / 2,
+                                               "BVP initial-guess")
             return z * u
         end
     end

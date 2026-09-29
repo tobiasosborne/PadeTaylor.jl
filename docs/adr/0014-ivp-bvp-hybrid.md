@@ -260,6 +260,29 @@ component dedicated to the 2D-sector composition.
     (FW 2011 §3.2 ADR-0004 deferred this; current bead does not
     re-open).
 
+## Addendum 2026-09-29 — branch of z^{1/3} on the upper sector (bead w80i)
+
+The ζ-strip `-3π/2 < Im ζ < 9π/2` is 3π wide in `arg z`; `z = exp(ζ/2)`
+folds `Im ζ > 2π` onto principal arguments.  The driver used to call
+`asymptotic_ic_fn(exp(ζ/2))`, so any series in `z^{1/3}` was evaluated on
+the principal root there — a *different* tronquée solution (FFW md:222:
+one per branch).  Because the series is a Laurent series in the root
+itself, the wrong-branch value still satisfies PIII to truncation order;
+only analytic continuation (FFW's published `u(z₁)`, md:243) separates
+them.  Measured at `z₁ = 30e^{13πi/6}`: principal |Δu| = 5.39, continued
+8.4e-6 (worklog 087).
+
+Decision: the driver owns the branch.  `_branch_arg(pp, ζ)` gives the
+continuous `arg z` (`Im ζ/2` for PIII, `Im ζ` for PV); off the principal
+slice it is passed to the callable as the `argz` keyword, and a callable
+without `argz` throws `ArgumentError` (Rule 1) instead of silently
+returning the wrong sheet.  `pIII_asymptotic_ic` gained `argz`
+(validated against the sector and against `z` mod 2π).  On the principal
+slice the call is the unchanged `fn(z)`, so existing callers are
+unaffected.  Rejected: changing the callable contract to `fn(ζ)` —
+that is the broader API of bead `padetaylor-5k9`, and would break every
+existing caller.  Pinned by `test/ivp_bvp_hybrid_branch_test.jl`.
+
 ## References
 
   - **FFW 2017 §3** — `references/markdown/FFW2017_painleve_riemann_surfaces_preprint/FFW2017_painleve_riemann_surfaces_preprint.md:203-247` (algorithm), md:252-264 (condition number κ_r), md:222 + md:230 (sector + asymptotic series), md:240-244 (Fig 5 IC values), md:43 (P̃_III RHS).
