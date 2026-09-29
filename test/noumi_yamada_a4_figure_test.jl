@@ -17,7 +17,7 @@
 # structural invariants:
 #
 #   NYF.1.1 — IC / α validity: Σα = 1, Σf0 = t0 exactly, every f0
-#             component non-zero (the V5b all-nonzero requirement).
+#             component non-zero (the chosen generic figure fixture).
 #   NYF.1.2 — the flow invariant `Σf_j(t) = t` holds at every visited
 #             node of the walk (pillar B §1.2).
 #   NYF.1.3 — the extracted pole field is finite and non-empty over
@@ -69,8 +69,9 @@ include(joinpath(@__DIR__, "..", "figures", "_noumi_yamada_a4_helpers.jl"))
         @test sum(NY_ALPHA) ≈ 1.0 + 0.0im atol = 1.0e-14
         # Σf0 = t0 exactly — the constraint Σf_j = t at the start point.
         @test sum(NY_F0) ≈ NY_T0 atol = 1.0e-14
-        # Every IC component non-zero — the V5b shared-Q degeneracy
-        # is triggered by an identically-zero component.
+        # Every IC component is non-zero in this generic figure fixture.
+        # Canonical zero-component seeds solve too; worklog 083 records
+        # the ordering/degree-dependent QR failure for rotated seeds.
         @test all(c -> abs(c) > 1.0e-3, NY_F0)
         # The α are genuinely *generic*: five distinct values (not the
         # Type-C 1/5,…,1/5 rational-solution parameters, which would

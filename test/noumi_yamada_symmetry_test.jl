@@ -19,6 +19,8 @@ asserts an invariant against a known-correct value (Rule 5):
     NYS.1.1  rational solutions satisfy the ODE   — f_j′ = noumi_yamada_rhs
                                                     exactly (Rational algebra)
     NYS.1.2  Type C vector-solve cross-check      — A_4 f_j(t)=t/5 to ~1e-10
+             Types A/B and order-30 rotations are checked independently in
+             zero_component_end_to_end_test.jl; worklog 083 records the limits.
     NYS.1.3  s_i² = id                            — reflection is involutive
     NYS.1.4  commutativity + braid                — W(A_{2n}^{(1)}) relations
     NYS.1.5  rotation relations                   — π^{2n+1}=id, πs_i=s_{i+1}π
@@ -86,8 +88,9 @@ using PadeTaylor.VectorProblems: vector_solve_pade
     end
 
     # -------------------------------------------------------------------------
-    # NYS.1.2 — Type C vector-solve cross-check (all-nonzero, no zero-component
-    # degeneracy).  A_4 Type C: f_j(t) = t/5, α = (1/5,…,1/5).  The vector
+    # NYS.1.2 — Type C vector-solve cross-check. Canonical Type A/B and
+    # order-30 rotated seeds are also covered in zero_component_end_to_end_test.jl.
+    # A_4 Type C: f_j(t) = t/5, α = (1/5,…,1/5). The vector
     # Padé solver must reproduce f_j(t) = t/5 along the trajectory.
     # -------------------------------------------------------------------------
     @testset "NYS.1.2 Type C vector-solve cross-check" begin

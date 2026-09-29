@@ -71,8 +71,8 @@ lines 580–588 for `A_2`):
   - **`:C`** — `f_j = t/(2n+1)` for all `j`,  `α_j = 1/(2n+1)` for all
     `j`.  Valid for every `n`: each bracket has `n` odd-offset and `n`
     even-offset terms all equal to `t/(2n+1)`, so the bracket is zero and
-    `f_j′ = 1/(2n+1) = α_j`.  All components nonzero — the **only** type
-    safe for a `vector_solve_pade` cross-check (see the caveat below).
+    `f_j′ = 1/(2n+1) = α_j`.  Type A/B also support vector-solve
+    cross-checks in the measured regimes below.
 
   - **`:B`** — `f = (t/3, t/3, t/3, 0, 0)`, `α = (1/3, 1/3, 1/3, 0, 0)`
     — the intermediate `A_4` solution (pillar B §5.2; Matsuda 2012).
@@ -86,28 +86,33 @@ lines 580–588 for `A_2`):
     needs a non-trivial intermediate rational solution for `A_{2n}`,
     `n ≠ 2`".
 
-## Zero-component caveat (bead V5b; mechanism corrected 2026-09-07, `padetaylor-sptd`)
+## Zero components: measured support and a surviving QR failure (padetaylor-0o9)
 
-Type A `(t, 0, …, 0)` and Type B `(t/3, t/3, t/3, 0, 0)` have identically
-zero components.  This caveat used to justify itself by the claim that the
-vector solver's shared-`Q` Padé **throws** `Q(0) ≈ 0` on such a component.
-**That mechanism no longer exists.**  Commit `127edae` replaced the
-`Q(0) ≈ 0` throw with the λ-cancellation of ADR-0027, and
-`shared_denominator_pade` now accepts a zero component among live
-siblings: measured 2026-09-07, the jets `[live, zeros]` and
-`[live, zeros × 4]` built from the `1/(1 − t/2)` jet both return
-`Q = [1.0, −0.5]` with `Q(0) = 1.0` — identical to the `d = 1` result.
-Only an input whose jets are **all** zero still throws (`iszero(cnorm)`,
-`SharedPade.jl:246`).
+Canonical A_2/A_4 Type A `(t, 0, …, 0)` and A_4 Type B `(t/3, t/3, t/3, 0, 0)`
+solve through `shared_denominator_pade`, `VectorStepper`, and
+`vector_solve_pade`: measured 2026-09-29 at orders 6 and 30, starting at
+`t = 0` and `t = 1`. The default order-30 dispatcher also solves every
+cyclic rotation tested for A_2 Type A and A_4 Types A/B. The regression
+`test/zero_component_end_to_end_test.jl` pins nodes and dense values to
+the closed forms; worst measured error is `2.22e-16` (Float64).
 
-Whether Type A/B therefore solve END-TO-END is a separate and still
-unmeasured question — the shared-`Q` layer is only one of the places a
-zero component could bite — and is tracked by bead `padetaylor-0o9`.
-Until that measurement exists, keep the conservative practice: validate
-Type A/B by RHS-residual (substitute the closed form into
-`noumi_yamada_rhs`, check `f_j′ = RHS_j` exactly) and use Type C for the
-`vector_solve_pade` cross-check (all components `t/(2n+1) ≠ 0`).  What has
-changed is the REASON, not yet the recipe.
+The deleted `Q(0) ≈ 0` throw is not the surviving problem. The norm of
+all concatenated jets (`SharedPade.jl:235`) correctly distinguishes one
+zero component from all-zero input. However, unpivoted QR selects column
+`m_cur+1` (`SharedPade.jl:313-314`) without ensuring the preceding columns
+span the live constraints. With a zero block first, this column can fail
+the null-vector equation: `[zeros(7), live]`, `live[k+1] = 0.5^k`, returns
+`Q = [1]` instead of the known `[1, -0.5]`. Some rotated Type A/B seeds
+therefore lose their live slope in direct cell A. The order-30 square-cell
+dispatch recovers the measured seeds, but order-6 rotated seeds can return
+wrong values silently, including a Type A endpoint error of `1.0`.
+
+Use the closed forms as vector oracles within the tested scope; retain
+exact RHS-residual validation for arbitrary component orderings/degrees.
+`docs/worklog/083-zero-component-end-to-end.md` records the counterexamples,
+QR residual, and the condition requiring a QR/null-space repair. The
+Bäcklund reflection's division by a zero component is a separate genuine
+failure and still throws.
 
 ## References
 
