@@ -56,6 +56,52 @@ iteration order.  With the strict `<`, the lower window index always
 wins on the boundary, which matches the closed-on-the-left convention
 of the tiling, and the assignment is reproducible bit-for-bit.
 
+## Pole ownership: cluster first, then assign (`_own_poles`)
+
+The same nearest-centre rule does NOT transfer verbatim to *poles*.  A
+grid cell has one exact position, so `_nearest_center(cell)` is
+single-valued.  A physical pole in the overlap of two windows has *two*
+positions — each window's own independently-computed estimate — and
+they differ in the last digits (measured 1e-8 … 6e-5 on the ℘ lattice,
+worklog 084).  Asking "is this estimate in my core?" once per estimate
+is a partition of the *plane*, not of the *pole set*: when the pole sits
+on a core line the two estimates can land on opposite sides of it and
+the pole is kept **twice** (each estimate is in its own window's core)
+or **zero** times (each is in the other's core).  This is not a
+hypothetical corner: a real-coefficient problem with real initial data
+is symmetric about the real axis, its real-axis poles sit exactly on the
+`Im z = 0` core line of any even tiling, and on the ℘ lattice over
+`[-20,20]²` (2×2 windows) the per-estimate rule measured 4 duplicated
+and 4 dropped poles out of 246 (bead `padetaylor-580u`, worklog 084).
+
+`_own_poles` therefore decides ownership once per *physical pole*.  It
+first links estimates from **different** windows that lie within
+`atol` of each other (a sweep over real-part-sorted candidates, union-
+find), then gives each linked group ONE canonical position — the mean
+of its members — and ONE owner, `_nearest_center(mean)`.  Only the
+owner's own estimate(s) are kept.  So a straddling pole is kept exactly
+once (the deterministic tie-break settles a mean that lands exactly on
+the line), and a pole seen by only one window is judged exactly as
+before.  Same-window estimates are never linked: collapsing one
+window's own near-coincident roots is `PoleField.extract_poles`'s job
+(its `cluster_atol` / `merge_atol`), not the composite's.  `atol` must
+sit far above the cross-window spread and far below the inter-pole
+spacing.  The caller's default is a fixed `0.1`, deliberately NOT
+coupled to `extract_poles`' `cluster_atol`: a dense-field caller passing
+`cluster_atol = 0.4` must not thereby link distinct poles ~0.3 apart
+(review follow-up, worklog 084 §6).
+
+**Owner-absent groups.**  The mean's nearest centre may name a window
+that has no member in the group (it did not resolve the pole).  A
+*multi-window* such group — two or more windows independently agree on
+the pole — is kept once, from the member window whose centre is nearest
+the mean (lowest index on a tie).  A *singleton* such group (one window
+saw a pole in someone else's core, and the owner did not) is dropped,
+which is exactly the pre-580u behaviour: measured, these are 2 / 1 / 647
+groups on ℘ `[-20,20]²` / ℘ `[-30,30]²` / PI `[-30,30]²`, none of the ℘
+ones costing an in-domain lattice pole (worklog 084 §6), and on PI they
+are dominated by the un-gated windows' smooth-sector bloom.
+
 ## Per-window seeding (`_window_seed`)
 
 Each window is solved at its own seed derived from the caller's global
@@ -94,7 +140,8 @@ both the warning and its absence on a genuine tiling.
 """
 module WindowedTiling
 
-export _window_seed, _nearest_center, _tile_centers, _warn_single_window
+export _window_seed, _nearest_center, _tile_centers, _warn_single_window,
+       _own_poles
 
 # Deterministic, version-stable per-window seed.  Two distinct global
 # seeds re-randomise every window (the non-gameability property the
@@ -122,6 +169,58 @@ function _nearest_center(z::Complex, centers::AbstractVector{<:Complex})
         end
     end
     return best
+end
+
+# Voronoi ownership of per-window pole estimates, decided once per physical
+# pole (see the module docstring "Pole ownership").  `ps[wi]` is window
+# `wi`'s extracted pole list.  Returns the kept poles in window-major
+# order — identical to the per-estimate rule whenever no pole straddles.
+function _own_poles(ps::AbstractVector{<:AbstractVector{Complex{T}}},
+                    centers::AbstractVector{<:Complex}, atol::Real) where {T}
+    z   = reduce(vcat, ps; init = Complex{T}[])
+    win = reduce(vcat, [fill(wi, length(ps[wi])) for wi in eachindex(ps)]; init = Int[])
+    n   = length(z)
+    parent = collect(1:n)
+    root(a) = (while parent[a] != a; parent[a] = parent[parent[a]]; a = parent[a]; end; a)
+    # Link cross-window estimates within `atol`: sweep a real-part-sorted
+    # order so only candidates inside the `atol` strip are compared.
+    ord = sortperm(real.(z))
+    # (Two nested loops, NOT `for a in …, b in …`: a `break` in Julia's
+    # comma form would exit both loops and silently skip every later `a`.)
+    for (ii, a) in enumerate(ord)
+        for jj in ii+1:n
+            b = ord[jj]
+            real(z[b]) - real(z[a]) > atol && break
+            (win[a] != win[b] && abs(z[a] - z[b]) ≤ atol) || continue
+            ra, rb = root(a), root(b)
+            ra == rb || (parent[rb] = ra)
+        end
+    end
+    # One canonical position (the group mean) ⇒ one owner per group.
+    gsum = Dict{Int,Complex{T}}(); gcnt = Dict{Int,Int}()
+    for a in 1:n
+        r = root(a)
+        gsum[r] = get(gsum, r, zero(Complex{T})) + z[a]
+        gcnt[r] = get(gcnt, r, 0) + 1
+    end
+    wins = Dict{Int,Vector{Int}}()
+    for a in 1:n
+        push!(get!(wins, root(a), Int[]), win[a])
+    end
+    owner = Dict{Int,Int}()
+    for (r, ws) in wins
+        m = gsum[r] / gcnt[r]
+        o = _nearest_center(m, centers)
+        # Owner-absent fallback, MULTI-window groups only: ≥2 windows agree on
+        # the pole but its core owner did not resolve it ⇒ hand it to the
+        # resolving window nearest the mean (lowest index on a tie).  An
+        # owner-absent SINGLETON is still dropped, exactly as before 580u.
+        if !(o in ws) && length(unique(ws)) ≥ 2
+            o = ws[argmin([abs2(m - centers[w]) for w in ws])]
+        end
+        owner[r] = o
+    end
+    return Complex{T}[z[a] for a in 1:n if owner[root(a)] == win[a]]
 end
 
 # Core-centre coordinates tiling `[lo, hi]` at `extent` spacing.  We use
