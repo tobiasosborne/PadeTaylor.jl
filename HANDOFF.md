@@ -42,6 +42,7 @@
 | `580u` | `5c8fe12`, `7bdd446` | Windowed pole ownership: cluster first, then assign; owner-absent fallback; `boundary_atol` decoupled from `cluster_atol` | 084 | Sonnet: two gaps, both measured and addressed |
 | `orb5`, `qdsm` (half) | `ec93a50` | Diagnostics no longer truncate the sample silently; counts exposed | 081 | none |
 | `w80i` | `81c0916` | Hybrid driver evaluates the PIII series on the branch fixed by ζ | 087 | none |
+| `ncfa` | `3aa2935` (merge) | CommonSolve extension honours span direction; exposes `check_in_class`; exact equality with `solve_pade` pinned | 089 | none |
 | `rxbo` | (diagnosis) | Root cause of the vector walk defect, no code change | 086 | none |
 
 ### 2. Defects FOUND this session and still OPEN
@@ -65,7 +66,7 @@
 
 ### 3. Scout findings filed (read-only Sonnet; code confirmed by reading, NOT run)
 `ncfa` (CommonSolve descending span returns one node; no out-of-class guard —
-fix in flight, §4), `yvdq` (`jacobian = nothing` selects the analytic Jacobian;
+FIXED this session, §1; its complex-span residue is bead `z7v8`), `yvdq` (`jacobian = nothing` selects the analytic Jacobian;
 the test that claims an analytic-vs-autodiff cross-check is vacuous), `wpdl`
 (bare `catch` in the wedge evaluators swallows user errors and Ctrl-C), `l48t`
 (`:steepest_descent` ignores failed candidates; the real-axis-symmetry path
